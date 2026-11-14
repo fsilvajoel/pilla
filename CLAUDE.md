@@ -17,3 +17,6 @@ Sistema de gestão de empréstimos (financeira), modular. Produto de estudo de a
 - Variável nova: adicionar no `.env` **e** no `.env.example` no mesmo commit.
 - O código lê tudo do ambiente (`.env`); nada de segredo escrito no código.
 - Antes de cada commit: `git status` e conferir que o `.env` não aparece.
+
+## Skills
+- Skills de terceiros em `.claude/skills/` (fixadas em commit revisado; ver `.claude/skills/README.md`). Regras locais de lá prevalecem: `the-judge` revisa em pt-BR e **só publica no GitHub com ok do Joel**; ADRs/RFCs vencem qualquer sugestão das skills.
