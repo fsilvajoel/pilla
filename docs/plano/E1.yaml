@@ -15,6 +15,7 @@ cards:
   - packages/finance/src/date.ts
   - packages/finance/src/money.test.ts
   - packages/finance/src/date.test.ts
+  - packages/finance/vitest.config.ts
   protectedTests: []
   checks:
   - pnpm --filter @pilla/finance test -- money
@@ -25,6 +26,7 @@ cards:
   - parse/format between reais strings ('1.234,56') and Cents without floats
   - adding Cents to Bps does not compile (type test)
   - all tests in money.test.ts and date.test.ts pass
+  - remove passWithNoTests from packages/finance/vitest.config.ts (no package without tests)
   budget:
     attempts: 5
     toolCalls: 30

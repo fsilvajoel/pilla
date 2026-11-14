@@ -2,7 +2,7 @@
 
 > Detalhe do [AGENTS.md](../../AGENTS.md). Listas de sites oficiais, arquivos protegidos, padrões proibidos e limites: fonte única em [`.agents/policy.yaml`](../../.agents/policy.yaml).
 
-Coluna "Quando": `E0` = entra no esqueleto do projeto; `E1+` = entra junto com o primeiro código do tipo; `Futuro` = planejado.
+Implementação da E0: configs na raiz, `packages/config/`, `scripts/` e `.github/` (`pnpm verify` roda tudo). Coluna "Quando": `E0` = entra no esqueleto do projeto; `E1+` = entra junto com o primeiro código do tipo; `Futuro` = planejado.
 
 ## 4.1 Especificação executável (testes)
 | Trava | Detalhe | Quando |
@@ -24,7 +24,7 @@ Coluna "Quando": `E0` = entra no esqueleto do projeto; `E1+` = entra junto com o
 | Tipos de marca (branded) | `Cents`, `Bps`, `IsoDate`, `PersonId`, `LoanId`… impossível somar `Cents` com `Bps` ou trocar ids | E1 |
 | Dinheiro só `bigint` | `Cents = bigint & {__brand}`; conversão só por funções de `packages/finance` | E1 |
 | Fronteiras com Zod | toda entrada externa (HTTP, evento, CSV, env) passa por `schema.parse`; dentro do sistema só tipos já validados | E2+ |
-| Variáveis de ambiente validadas | `env.ts` com Zod; app não sobe com config inválida | E0 |
+| Variáveis de ambiente validadas | `env.ts` com Zod; app não sobe com config inválida | E2 (junto com os apps) |
 
 ## 4.3 Lint (ESLint) — proibições
 | Proibido | Por quê | Quando |
@@ -66,8 +66,8 @@ O domínio verifica e **lança erro** se violar: soma das alocações = valor do
 |---|---|
 | gitleaks (pre-commit e CI): nenhum segredo no git | E0 |
 | `.env` fora do git; `.env.example` sempre sincronizado (script de CI compara as chaves) | E0 |
-| logger com redação automática de `cpf`, `phone`, `email`, `password`, `token` | E0 |
-| dados de teste só fictícios; gerador de CPF válido falso; proibido dado da planilha real | E0 |
+| logger com redação automática de `cpf`, `phone`, `email`, `password`, `token` | E2 (junto com os apps) |
+| dados de teste só fictícios; gerador de CPF válido falso; proibido dado da planilha real | E2 (junto com os apps) |
 | `pnpm audit` no CI (falha em vulnerabilidade alta) | E0 |
 | **lista de dependências permitidas**: CI falha se `package.json` ganhar dependência fora da lista (ver "Dependências permitidas" abaixo); nova dependência = pedido ao Claude/Joel | E0 |
 | lockfile congelado no CI (`pnpm install --frozen-lockfile`) | E0 |
@@ -79,7 +79,7 @@ O domínio verifica e **lança erro** se violar: soma das alocações = valor do
 | commits em inglês no padrão Conventional Commits (commitlint) | E0 |
 | hooks locais (lefthook): pre-commit = format + lint + gitleaks; pre-push = typecheck + testes | E0 |
 | CI obrigatório: install, typecheck, lint, fronteiras, testes, cobertura, gitleaks, audit, dependências permitidas | E0 |
-| `main` protegida: só via PR, CI verde e aprovação do Joel | E0 (configurar no GitHub) |
+| `main` protegida: só via PR, CI verde e aprovação do Joel | E0 (configurar no GitHub: pendente, Joel) |
 | CODEOWNERS: `docs/adr/`, `docs/prd/`, `AGENTS.md`, configs de lint/CI → Joel | E0 |
 | modelo de PR (pt-BR) com checklist: IDs, testes, docs, prints | E0 |
 | PR pequeno: aviso acima de 400 linhas alteradas (exceto gerados) | E0 |

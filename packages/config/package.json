@@ -1,0 +1,11 @@
+{
+  "name": "@pilla/config",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "description": "tsconfig e regras de ESLint compartilhadas (travas: docs/agents/travas.md §2 e §3)",
+  "exports": {
+    "./tsconfig.base.json": "./tsconfig.base.json",
+    "./eslint": "./eslint.mjs"
+  }
+}
