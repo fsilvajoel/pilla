@@ -235,3 +235,29 @@ IDs estáveis: agentes devem citá-los em commits/PRs.
 - ~~PEND-05~~ Taxa com periodicidade não mensal → resolvido: taxa ao mês, proporcional (RN-C02).
 - **PEND-06** UX da escolha de datas (calendário).
 - **PEND-04** Carência padrão de encargos (dias) → valor inicial no formulário.
+
+## 12. Fluxos de exceção (status: **Proposto** — aguardando validação do Joel)
+
+### Renovação (detalha RN-C07)
+- **RN-C13** Os juros do período são pagos com um **pagamento normal** (RF-20), distribuído na parcela como sempre (encargos → juros → principal). A parcela fica PARCIAL, com o principal em aberto.
+- **RN-C14** "Renovar" só é permitido quando **juros e encargos vencidos estão pagos**. Juros pagos em parte → renovação bloqueada; o caminho é a renegociação (RN-C17).
+- **RN-C15** O novo contrato nasce com principal = **principal em aberto** do anterior, mesmas condições (podem ser ajustadas antes de ativar), 1º vencimento negociado, `contrato_origem_id` preenchido. O anterior vai para RENOVADO.
+- **RN-C16** Renovação **não movimenta dinheiro** (nada sai nem entra da conta): não gera desembolso nem recebimento.
+
+### Renegociação
+- **RN-C17** Novo principal = **saldo devedor na data** (principal em aberto + juros vencidos não pagos + encargos). A parte que não era principal fica registrada no novo contrato como `valor_capitalizado`, para a tesouraria separar juros de retorno de principal quando for paga.
+- **RN-C18** Também não movimenta dinheiro. O anterior vai para RENEGOCIADO.
+
+### Baixa como perda
+- **RN-C19** Contrato vai para BAIXADO_PERDA com justificativa obrigatória. O saldo deixa de ser cobrado e de contar como capital emprestado; o valor baixado aparece no indicador **perdas** da tesouraria. Não há movimentação de dinheiro.
+- **RN-C20** Pagamento recebido depois da baixa é permitido (**recuperação**): entra na conta como recebimento e no indicador "recuperado"; o contrato continua BAIXADO_PERDA.
+
+### Pagamento em contrato encerrado
+- **RN-R09** Contratos QUITADO, RENOVADO, RENEGOCIADO e CANCELADO **não aceitam pagamento**. A mensagem indica o contrato sucessor, quando houver. Exceção: BAIXADO_PERDA (RN-C20).
+
+### Estorno depois de mudança de status
+- **RN-R10** Estorno que faz um contrato QUITADO voltar a ter saldo → contrato volta para ATIVO (evento `ContratoReaberto`).
+- **RN-R11** Estorno de pagamento de contrato RENOVADO ou RENEGOCIADO é **bloqueado** (o contrato seguinte já depende dele). Correção = ajuste manual justificado no contrato sucessor.
+
+### Operação
+- **RNF-07** Backup diário do banco, com retenção mínima de 30 dias, e teste de restauração antes de usar com dados reais.

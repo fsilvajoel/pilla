@@ -32,6 +32,8 @@ Fluxo: **PRD** define a necessidade → **RFC** propõe a solução → as decis
 - [RFC-001 — Domínios, modelo e integração entre módulos](rfc/RFC-001-dominios-e-integracao.md) · Em discussão
 - [RFC-002 — Motor de cálculo financeiro](rfc/RFC-002-motor-de-calculo-financeiro.md) · Em discussão
 - [RFC-003 — Stack tecnológica](rfc/RFC-003-stack-tecnologica.md) · Em discussão
+- [RFC-004 — Contrato da API e catálogo de eventos](rfc/RFC-004-api-e-eventos.md) · Em discussão
+- [RFC-005 — Modelo físico do banco](rfc/RFC-005-modelo-fisico-banco.md) · Em discussão
 
 ### ADR
 | # | Decisão | Status |

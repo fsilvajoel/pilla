@@ -46,6 +46,8 @@ Fonte única dos nomes usados no código ([ADR-0012](adr/0012-idioma-codigo-ingl
 | Quitação / quitação antecipada | `payoff` / `earlyPayoff` | |
 | Baixa como perda | `writeOff` | |
 | Contrato de origem | `originLoanId` | |
+| Valor capitalizado | `capitalizedAmount` | renegociação |
+| Recuperação (pagamento após baixa) | `recovery` | |
 | Pagamento | `Payment` | |
 | Alocação (distribuição do pagamento) | `PaymentAllocation` (`allocate`) | |
 | Comprovante | `receipt` (arquivo: `Attachment`) | |
@@ -94,6 +96,7 @@ Fonte única dos nomes usados no código ([ADR-0012](adr/0012-idioma-codigo-ingl
 | ContratoRenovado | `LoanRenewed` |
 | ContratoRenegociado | `LoanRenegotiated` |
 | ContratoBaixado | `LoanWrittenOff` |
+| ContratoReaberto | `LoanReopened` |
 | PagamentoConfirmado | `PaymentConfirmed` |
 | PagamentoEstornado | `PaymentReversed` |
 | ParcelaPaga | `InstallmentPaid` |
