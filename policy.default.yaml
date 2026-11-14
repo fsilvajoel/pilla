@@ -1,0 +1,88 @@
+officialDomains:
+  - nodejs.org
+  - typescriptlang.org
+  - docs.nestjs.com
+  - orm.drizzle.team
+  - zod.dev
+  - nextjs.org
+  - react.dev
+  - tailwindcss.com
+  - ui.shadcn.com
+  - react-hook-form.com
+  - tanstack.com
+  - vitest.dev
+  - fast-check.dev
+  - stryker-mutator.io
+  - playwright.dev
+  - testcontainers.com
+  - node.testcontainers.org
+  - postgresql.org
+  - pnpm.io
+  - turbo.build
+  - eslint.org
+  - typescript-eslint.io
+  - developer.mozilla.org
+  - docs.python.org
+  - github.com
+
+denyRead:
+  - .env
+  - .env.*
+  - "*/.env"
+  - "*/.env.*"
+  - .git
+  - ".git/*"
+  - "*/.git/*"
+  - "node_modules/*"
+  - "*/node_modules/*"
+
+protectedWrite:
+  - "*.test.ts"
+  - "*.spec.ts"
+  - "*.test.tsx"
+  - "*.spec.tsx"
+  - "test/*"
+  - "*/test/*"
+  - "tests/*"
+  - "*/tests/*"
+  - "test_*.py"
+  - "*/test_*.py"
+  - "docs/*"
+  - "AGENTS.md"
+  - "CLAUDE.md"
+  - "package.json"
+  - "*/package.json"
+  - "pnpm-lock.yaml"
+  - "tsconfig*"
+  - "*/tsconfig*"
+  - "eslint*"
+  - "*/eslint*"
+  - ".dependency-cruiser*"
+  - "vitest*"
+  - "*/vitest*"
+  - "stryker*"
+  - "*/stryker*"
+  - ".github/*"
+  - "*/migrations/*"
+  - ".claude/*"
+
+forbiddenAdded:
+  - label: "suppression"
+    pattern: "eslint-disable"
+  - label: "suppression"
+    pattern: "@ts-(ignore|expect-error|nocheck)"
+  - label: "suppression"
+    pattern: "#\\s*(noqa|type:\\s*ignore)"
+  - label: "any"
+    pattern: "(:\\s*any\\b|<any>|\\bas\\s+any\\b)"
+  - label: "console"
+    pattern: "\\bconsole\\."
+  - label: "focused/skipped test"
+    pattern: "\\b(it|describe|test)\\.(only|skip)\\b"
+  - label: "TODO without id"
+    pattern: "\\b(TODO|FIXME)\\b(?!\\s*\\(?[A-Z]+-[A-Z]?\\d+)"
+
+limits:
+  maxWriteLines: 400
+  maxToolOutput: 6000
+  maxContextChars: 90000

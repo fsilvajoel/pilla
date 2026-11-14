@@ -1,0 +1,14 @@
+id: H-02
+title: "Implement policy.py + policy.default.yaml: guardrail policy as data, overridable per repo"
+refs: [AUDIT-V1-05]
+readFirst: [tests/test_policy.py, alice.py]
+allowedPaths: [policy.py, policy.default.yaml]
+protectedTests: [tests/test_policy.py]
+checks:
+  - python3 -m unittest tests.test_policy -v
+  - python3 -m py_compile policy.py
+done:
+  - "policy.default.yaml holds the CURRENT values of OFFICIAL_DOMAINS, DENY_READ, PROTECTED_WRITE, FORBIDDEN_ADDED (as list of {label, pattern}) and the limits MAX_WRITE_LINES, MAX_TOOL_OUTPUT, MAX_CONTEXT_CHARS from alice.py, copied exactly (keys: officialDomains, denyRead, protectedWrite, forbiddenAdded, limits.maxWriteLines/maxToolOutput/maxContextChars)"
+  - "policy.py: load_policy(repo) reads policy.default.yaml next to policy.py, then <repo>/.agents/policy.yaml if present; lists are replaced, limits merged per key; unknown keys or invalid regex raise ValueError; forbiddenAdded returned as list of (label, compiled re.Pattern)"
+  - "Do NOT edit alice.py (integration is done by Claude). PyYAML + standard library only"
+budget: {attempts: 4, toolCalls: 25}
