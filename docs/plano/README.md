@@ -47,3 +47,16 @@ Checks padrão de implementação: `pnpm --filter @pilla/finance test -- <arquiv
 
 ## Métricas que esta fase alimenta (estudo)
 Por cartão: tentativas, tokens da Alice, segundos, correções do Claude na revisão. Comparação planejada: repetir 1 par (T06/T07) feito só pelo Claude.
+
+## Status da E0 (2026-11-14)
+Concluída: `pnpm verify` verde; cada trava testada com uma violação de exemplo (lint, fronteiras, segredo, commit, dependência fora da lista).
+
+| Trava E0 | Status |
+|---|---|
+| 23 de 26 linhas E0 de travas.md | ✅ ativas |
+| Determinismo: relógio injetado | ✅ (lint em `finance` e `domain/`) · "teste sem rede / sem sleep": ⏳ E1 |
+| Cobertura 85% nos módulos | ⏳ E2 (ainda não há módulos) |
+| `main` protegida no GitHub | ⏳ Joel configura (Settings → Branches) |
+| env com Zod, logger com redação, gerador de CPF falso | movidas para E2 (dependem dos apps) |
+
+Pré-revisão da Alice (E0-T09): respondeu "sem achados" em 39 s, um falso negativo (LI-013). Revisão feita pelo Claude.
