@@ -1,0 +1,30 @@
+id: E0-T09
+title: Pre-review E0 against travas.md and list missing E0 guardrails
+kind: pre-review
+assignee: alice
+rules: []
+refs:
+- RFC-003 §4
+- docs/agents/travas.md
+dependsOn:
+- E0-T08
+allowedPaths: []
+protectedTests: []
+checks:
+- pnpm verify
+done:
+- list 'trava - status - evidence' for every E0 row in travas.md, or 'sem achados'
+budget:
+  attempts: 5
+  toolCalls: 30
+readFirst:
+- docs/agents/travas.md
+- package.json
+- packages/config/eslint.mjs
+- .dependency-cruiser.cjs
+- lefthook.yml
+- .github/workflows/ci.yml
+- scripts/check-allowed-deps.mjs
+- scripts/check-env-example.mjs
+- packages/finance/vitest.config.ts
+think: false
