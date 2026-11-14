@@ -6,6 +6,13 @@ Projeto do Joel, desenvolvido na VM 258 `dev` (`~/code/pilla`). Regras gerais da
 (a definir com o Joel)
 
 ## Regras do projeto
-- Segredos só em `.env` (fora do git; modelo em `.env.example`).
-- Commits pequenos, mensagem em português; `main` sempre funcionando.
+- Repositório **público**: nada de IP, senha, token ou detalhe da infraestrutura em arquivo versionado.
+- Commits pequenos; `main` sempre funcionando.
 - Trabalho combinado com a Alice: `NOTAS-ALICE.md`.
+
+## Configuração e segredos (`.env`)
+- `.env`: valores reais (senhas, tokens, chaves, URLs internas). **Nunca vai para o git** (está no `.gitignore`), permissão `600`. Não exibir o conteúdo dele em respostas, logs ou commits, e não mandá-lo à Alice.
+- `.env.example`: vai para o git. Mesmas variáveis do `.env`, com valores de exemplo e um comentário por variável.
+- Variável nova: adicionar no `.env` **e** no `.env.example` no mesmo commit.
+- O código lê tudo do ambiente (`.env`); nada de segredo escrito no código.
+- Antes de cada commit: `git status` e conferir que o `.env` não aparece.
