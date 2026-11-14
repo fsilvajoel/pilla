@@ -39,6 +39,7 @@ denyRead:
   - "*/node_modules/*"
 
 protectedWrite:
+  - tools/alice-harness/*   # a Alice não edita as próprias travas (cartão do harness libera caminho exato)
   - "*.test.ts"
   - "*.spec.ts"
   - "*.test.tsx"

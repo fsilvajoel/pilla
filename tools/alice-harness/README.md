@@ -32,6 +32,6 @@ O histórico de execuções e métricas de uso é armazenado em `runs/metrics.js
 
 ## SSH Gate
 O script `scripts/alice-gate.sh` atua como um comando forçado para a chave SSH dedicada da Alice, permitindo apenas comandos do harness e inspeção de leitura. Em `~/.ssh/authorized_keys`:
-`command="~/code/alice-harness/scripts/alice-gate.sh",no-port-forwarding,no-agent-forwarding,no-pty ssh-ed25519 <chave da Alice>`
+`command="~/code/pilla/tools/alice-harness/scripts/alice-gate.sh",no-port-forwarding,no-agent-forwarding,no-pty ssh-ed25519 <chave da Alice>`
 
 - `scripts/check-brave.sh` — testa a chave da API de busca do Brave.
