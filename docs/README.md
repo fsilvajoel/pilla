@@ -26,14 +26,14 @@ Fluxo: **PRD** define a necessidade → **RFC** propõe a solução → as decis
 ## Índice
 
 ### PRD
-- [PRD-001 — MVP de gestão de empréstimos](prd/PRD-001-mvp-gestao-emprestimos.md) · Em revisão
+- [PRD-001 — MVP de gestão de empréstimos](prd/PRD-001-mvp-gestao-emprestimos.md) · Aprovado
 
 ### RFC
-- [RFC-001 — Domínios, modelo e integração entre módulos](rfc/RFC-001-dominios-e-integracao.md) · Em discussão
-- [RFC-002 — Motor de cálculo financeiro](rfc/RFC-002-motor-de-calculo-financeiro.md) · Em discussão
-- [RFC-003 — Stack tecnológica](rfc/RFC-003-stack-tecnologica.md) · Em discussão
-- [RFC-004 — Contrato da API e catálogo de eventos](rfc/RFC-004-api-e-eventos.md) · Em discussão
-- [RFC-005 — Modelo físico do banco](rfc/RFC-005-modelo-fisico-banco.md) · Em discussão
+- [RFC-001 — Domínios, modelo e integração entre módulos](rfc/RFC-001-dominios-e-integracao.md) · Aprovado
+- [RFC-002 — Motor de cálculo financeiro](rfc/RFC-002-motor-de-calculo-financeiro.md) · Aprovado
+- [RFC-003 — Stack tecnológica](rfc/RFC-003-stack-tecnologica.md) · Aprovado
+- [RFC-004 — Contrato da API e catálogo de eventos](rfc/RFC-004-api-e-eventos.md) · Aprovado
+- [RFC-005 — Modelo físico do banco](rfc/RFC-005-modelo-fisico-banco.md) · Aprovado
 
 ### ADR
 | # | Decisão | Status |
@@ -50,7 +50,7 @@ Fluxo: **PRD** define a necessidade → **RFC** propõe a solução → as decis
 | [0010](adr/0010-stack-typescript-ponta-a-ponta.md) | TypeScript ponta a ponta (NestJS, Next.js, PostgreSQL) em monorepo | Aceito |
 | [0011](adr/0011-autenticacao-cpf-senha-sessao.md) | Acesso do cliente só por CPF (leitura) e do ADMIN por login e senha | Aceito |
 | [0012](adr/0012-idioma-codigo-ingles-docs-portugues.md) | Código em inglês, documentação em português | Aceito |
-| [0013](adr/0013-estado-no-frontend.md) | Gerenciamento de estado no frontend | Proposto |
+| [0013](adr/0013-estado-no-frontend.md) | Gerenciamento de estado no frontend | Aceito |
 
 ### Glossário
 - [Glossário português → código](glossario.md) — nomes obrigatórios no código

@@ -2,7 +2,7 @@
 
 | Campo | Valor |
 |---|---|
-| Status | Em discussão |
+| Status | Aprovado |
 | Autor | Claude (tech lead) |
 | Criado | 2026-11-14 |
 | Implementa | [PRD-001](../prd/PRD-001-mvp-gestao-emprestimos.md) |

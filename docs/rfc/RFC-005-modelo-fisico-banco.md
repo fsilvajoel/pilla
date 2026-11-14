@@ -2,7 +2,7 @@
 
 | Campo | Valor |
 |---|---|
-| Status | Em discussão |
+| Status | Aprovado |
 | Autor | Claude (tech lead) |
 | Criado | 2026-11-14 |
 | Implementa | [RFC-001](RFC-001-dominios-e-integracao.md) §3 |

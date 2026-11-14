@@ -2,7 +2,7 @@
 
 | Campo | Valor |
 |---|---|
-| Status | Proposto |
+| Status | Aceito |
 | Data | 2026-11-14 |
 | Origem | Pergunta do Joel; [RFC-003](../rfc/RFC-003-stack-tecnologica.md) §4.4 |
 

@@ -2,7 +2,7 @@
 
 | Campo | Valor |
 |---|---|
-| Status | Em revisão |
+| Status | Aprovado |
 | Dono | Joel |
 | Criado | 2026-11-14 |
 | Relacionados | [RFC-001](../rfc/RFC-001-dominios-e-integracao.md), [RFC-002](../rfc/RFC-002-motor-de-calculo-financeiro.md), [Legal](../legal/pontos-legais.md) |
@@ -236,7 +236,7 @@ IDs estáveis: agentes devem citá-los em commits/PRs.
 - **PEND-06** UX da escolha de datas (calendário).
 - **PEND-04** Carência padrão de encargos (dias) → valor inicial no formulário.
 
-## 12. Fluxos de exceção (status: **Proposto** — aguardando validação do Joel)
+## 12. Fluxos de exceção (aprovado em 2026-11-14)
 
 ### Renovação (detalha RN-C07)
 - **RN-C13** Os juros do período são pagos com um **pagamento normal** (RF-20), distribuído na parcela como sempre (encargos → juros → principal). A parcela fica PARCIAL, com o principal em aberto.

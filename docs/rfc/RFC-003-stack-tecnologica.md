@@ -2,7 +2,7 @@
 
 | Campo | Valor |
 |---|---|
-| Status | Em discussão |
+| Status | Aprovado |
 | Autor | Claude (tech lead) |
 | Criado | 2026-11-14 |
 | Relacionados | [ADR-0002](../adr/0002-monolito-modular.md), [ADR-0003](../adr/0003-eventos-de-dominio-com-outbox.md), [ADR-0004](../adr/0004-dinheiro-em-centavos.md) |
