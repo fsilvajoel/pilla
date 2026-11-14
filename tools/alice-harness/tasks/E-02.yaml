@@ -1,0 +1,24 @@
+id: E-02
+title: "Polish docs/estudo/graficos.py (review fixes from Claude)"
+kind: implement
+readFirst: [docs/estudo/graficos.py, docs/estudo/dados.json]
+allowedPaths: [docs/estudo/graficos.py, docs/estudo/graficos/*.png]
+checks:
+  - python3 -m py_compile docs/estudo/graficos.py
+  - python3 docs/estudo/graficos.py
+  - test -s docs/estudo/graficos/01-toy-antes-depois.png
+  - test -s docs/estudo/graficos/02-think.png
+  - test -s docs/estudo/graficos/03-tarefas.png
+  - test -s docs/estudo/graficos/04-divisao-tokens.png
+done:
+  - "Keep everything that already works. Apply ONLY these fixes (use edit_file):"
+  - "1) Gridlines behind bars: ax.set_axisbelow(True) on every axes; gridlines only along the value axis (x for horizontal bars, y for vertical), color #e1e0d9, linewidth 1"
+  - "2) Axes background equals figure background #fcfcfb (ax.set_facecolor)"
+  - "3) Thinner bars: height=0.5 (barh) / width=0.5 (bar)"
+  - "4) Value labels right next to the bar end (offset = 1% of the axis max), fontsize 13, color #0b0b0b; set the value-axis limit to 1.3 x the largest value so no label overflows"
+  - "5) 02-think.png: figure title must not be clipped: fig.suptitle(..., x=0.02, ha=left) and fig.tight_layout(rect=[0,0,1,0.93]); category tick labels horizontal (no rotation)"
+  - "6) 03-tarefas.png: label text = value + \" · N tentativa\" (or \"tentativas\" when N>1) + \" · ✓\", failed = value + \" · ✗ falso positivo\""
+  - "7) Legends: fontsize 13, frameon=False, loc=lower right"
+  - "8) Use bbox_inches=tight with pad_inches=0.3 when saving"
+budget: {attempts: 4, toolCalls: 25}
+refactor: false

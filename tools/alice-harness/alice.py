@@ -136,6 +136,22 @@ def host_allowed(host: str) -> bool:
 
 # ---------------------------------------------------------------- tools
 
+def clean_path(p: str) -> str:
+    """Local models sometimes leak markdown debris into path arguments (e.g. 'a.py`)\n')."""
+    p = str(p).strip().strip("`'\"")
+    while p and (p[-1] in "`'\",; \n" or (p.endswith(")") and p.count("(") < p.count(")"))):
+        p = p[:-1].rstrip()
+    return p.strip("`'\"")
+
+def missing_args_message(name: str, args: dict) -> str | None:
+    missing = [k for k in REQUIRED.get(name, []) if k not in args]
+    if not missing:
+        return None
+    props = next(pr for n, _, pr in TOOLS_SPEC if n == name)
+    hint = " Para mudança grande, use write_file com o arquivo inteiro." if name == "edit_file" else ""
+    return (f"ERRO: faltou argumento {', '.join(missing)}. Assinatura: {name}({', '.join(props)}). "
+            f"Mande cada argumento separado em JSON válido.{hint}")
+
 TOOLS_SPEC = [
     ("list_files", "Lista arquivos de um diretório do repositório (recursivo, até 300).", {"path": "string"}),
     ("read_file", "Lê um arquivo do repositório. Opcional: start e end (linhas).", {"path": "string", "start": "integer", "end": "integer"}),
@@ -455,13 +471,20 @@ Fluxo: ler → escrever → run_check → corrigir → finish(summary de até 3 
                         result = "VERIFICAÇÃO REPROVADA. Corrija e chame finish de novo:\n" + problems
                     tool_calls_this_attempt = 0
                 else:
+                    if "path" in args:
+                        args["path"] = clean_path(args["path"])
+                    missing = missing_args_message(name, args) if name in REQUIRED else None
                     try:
+                        if missing:
+                            raise ValueError(missing)
                         fn = getattr(tools, name)
                         result = fn(**{k: v for k, v in args.items() if k in fn.__code__.co_varnames})
                     except AttributeError:
                         result = f"ERRO: ferramenta inexistente: {name}"
                     except PermissionError as e:
                         result = f"BLOQUEADO: {e}"
+                    except ValueError as e:
+                        result = str(e) if str(e).startswith("ERRO") else f"ERRO: {e}"
                     except Exception as e:  # noqa: BLE001 - report any tool failure back to the model
                         result = f"ERRO: {type(e).__name__}: {e}"
                 self.log("tool", {"name": name, "args": {k: (v if len(str(v)) < 200 else str(v)[:200] + "…") for k, v in args.items()}, "result": str(result)[:500]})
