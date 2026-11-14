@@ -1,0 +1,15 @@
+id: C-01
+title: "Draft delivery cards E0 and E1 from docs/plano/README.md"
+kind: cards
+readFirst: [docs/plano/README.md, docs/agents/cartao-de-tarefa.md]
+allowedPaths: [docs/plano/E0.yaml, docs/plano/E1.yaml]
+checks:
+  - python3 tools/alice-harness/alice.py cards docs/plano/E0.yaml docs/plano/E1.yaml --repo .
+done:
+  - "Two YAML files, each: 'delivery: E0' (or E1), 'title', 'cards:' list. One card per row of the README tables; E1 'Par' rows become TWO cards (tests then implementation), e.g. E1-T02 tests of roundToStep and E1-T03 implementation, E1-T03 dependsOn E1-T02"
+  - "Card fields: id, title (English, imperative), kind, assignee, rules (IDs from the table, may be empty list), refs (e.g. 'RFC-002 §3.1'), dependsOn, allowedPaths, protectedTests, checks, done (2-4 verifiable bullets), budget {attempts: 5, toolCalls: 30}"
+  - "Tests cards: kind test-author, allowedPaths = the .test.ts file; assignee claude unless the README says Alice test-author. Implementation cards (Alice): kind implement, allowedPaths = the .ts file, protectedTests = the .test.ts file, checks = the 3 standard checks with the file name"
+  - "E0 cards: assignee claude, kind implement, protectedTests [] ; E0-T09 kind pre-review with allowedPaths []. E1 cards depend on E0-T03 (first E1 card) and on their tests card"
+  - "Copy facts only from the README; do not invent tools, files or rules"
+budget: {attempts: 4, toolCalls: 30}
+refactor: false

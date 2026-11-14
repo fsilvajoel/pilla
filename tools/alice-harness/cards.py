@@ -1,0 +1,126 @@
+import re
+
+def validate_plan(plan: dict, known_rules: set[str], external_ids: set[str]) -> list[str]:
+    problems = []
+    
+    # Top-level requirements
+    if "delivery" not in plan or "cards" not in plan:
+        problems.append("plano sem 'delivery' ou 'cards'")
+        return problems
+
+
+    cards = plan.get("cards", [])
+    card_ids = set()
+    card_map = {}
+    
+    # First pass: collect IDs and basic structure
+    for card in cards:
+        cid = card.get("id")
+        if not cid:
+            problems.append("cartão sem id")
+            continue
+        
+        if cid in card_ids:
+            problems.append(f"{cid}: id duplicado")
+        card_ids.add(cid)
+        card_map[cid] = card
+
+    # Validation of each card
+    for card in cards:
+        cid = card.get("id")
+        if not cid: continue
+        
+        # Required fields
+        for field in ["title", "kind", "assignee", "allowedPaths", "checks", "done"]:
+            if field not in card:
+                problems.append(f"{cid}: falta o campo {field}")
+        
+        # ID format
+        if cid and not re.match(r"^E\d+-T\d{2}$", cid):
+            problems.append(f"{cid}: id fora do formato E<n>-T<nn>")
+            
+        # Kind
+        kind = card.get("kind")
+        if kind and kind not in ["implement", "test-author", "pre-review", "docs", "cards"]:
+            problems.append(f"{cid}: kind inválido: {kind}")
+            
+        # Assignee
+        assignee = card.get("assignee")
+        if assignee and assignee not in ["alice", "claude"]:
+            problems.append(f"{cid}: assignee inválido: {assignee}")
+            
+        # Rules
+        rules = card.get("rules", [])
+        for rule in rules:
+            if rule not in known_rules:
+                problems.append(f"{cid}: regra inexistente nos docs: {rule}")
+                
+        # Dependencies
+        deps = card.get("dependsOn", [])
+        for dep in deps:
+            if dep not in card_ids and dep not in external_ids:
+                problems.append(f"{cid}: dependência inexistente: {dep}")
+                
+        # Checks and Done
+        checks = card.get("checks")
+        done = card.get("done")
+        if checks is not None and (not isinstance(checks, list) or len(checks) == 0):
+            problems.append(f"{cid}: checks vazio")
+        if done is not None and (not isinstance(done, list) or len(done) == 0):
+            problems.append(f"{cid}: done vazio")
+            
+        # Alice + Implement requires protectedTests
+        if assignee == "alice" and kind == "implement":
+            if not card.get("protectedTests"):
+                problems.append(f"{cid}: implement da Alice exige protectedTests (TDD)")
+                
+        # AllowedPaths vs ProtectedTests
+        allowed_paths = card.get("allowedPaths", [])
+        protected_tests = card.get("protectedTests", [])
+        for path in allowed_paths:
+            if path in protected_tests:
+                problems.append(f"{cid}: {path} é teste protegido e não pode estar em allowedPaths")
+                
+        # AllowedPaths empty only for pre-review
+        if not allowed_paths and kind != "pre-review":
+            problems.append(f"{cid}: allowedPaths vazio só em pre-review")
+            
+        # Budget
+        budget = card.get("budget", {})
+        attempts = budget.get("attempts", 0)
+        tool_calls = budget.get("toolCalls", 0)
+        if attempts > 6:
+            problems.append(f"{cid}: budget.attempts > 6")
+        if tool_calls > 40:
+            problems.append(f"{cid}: budget.toolCalls > 40")
+
+    # Cycle detection
+    visited = set()
+    path = set()
+    
+    def has_cycle(cid):
+        if cid in path:
+            return True
+        if cid in visited:
+            return False
+        
+        visited.add(cid)
+        path.add(cid)
+        
+        card = card_map.get(cid)
+        if card:
+            deps = card.get("dependsOn", [])
+            for dep in deps:
+                if dep in card_map:
+                    if has_cycle(dep):
+                        return True
+        
+        path.remove(cid)
+        return False
+
+    for cid in card_ids:
+        if cid not in visited:
+            if has_cycle(cid):
+                problems.append(f"{cid}: ciclo de dependências")
+
+    return problems

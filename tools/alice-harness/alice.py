@@ -7,6 +7,7 @@ Usage:
   alice.py chat "<prompt>" [--file <path>]...    one-shot question, no tools
   alice.py rule <ID>... [--repo <path>]          print rule definitions (RN-C03, T-13…) from docs
   alice.py metrics                               summary of runs/metrics.jsonl
+  alice.py cards <plan.yaml>... [--repo <path>]  validate delivery plans (docs/plano/E*.yaml)
 
 Exit codes: 0 done, 2 failed (budget/verification), 3 needs input (ask_claude), 1 usage/config error.
 Only the Python standard library + PyYAML. See docs/agents/travas.md (Ambiente da Alice) in the pilla repo for the rules enforced here.
@@ -30,6 +31,7 @@ from pathlib import Path
 import yaml
 
 import metrics
+from cards import validate_plan
 from edits import apply_edit
 from policy import load_policy
 from rules import find_rule, rules_text
@@ -540,6 +542,21 @@ def cmd_chat(prompt: str, files: list[str]) -> int:
     print(f"\n[tokens alice: prompt={data.get('prompt_eval_count', 0)} saída={data.get('eval_count', 0)}]", file=sys.stderr)
     return 0
 
+def cmd_cards(plans: list[Path], repo: Path) -> int:
+    """Validate delivery plans; ids from every docs/plano/*.yaml count as known dependencies."""
+    from rules import index_rules
+    known = set(index_rules(repo))
+    all_ids = {c.get("id") for f in (repo / "docs" / "plano").glob("*.yaml")
+               for c in (yaml.safe_load(f.read_text()) or {}).get("cards", []) or []}
+    bad = 0
+    for f in plans:
+        problems = validate_plan(yaml.safe_load(f.read_text()) or {}, known, all_ids)
+        print(f"{f}: {'ok' if not problems else str(len(problems)) + ' problema(s)'}")
+        for pr in problems:
+            print(f"  - {pr}")
+        bad += len(problems)
+    return 1 if bad else 0
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -548,10 +565,13 @@ def main() -> int:
     c = sub.add_parser("chat"); c.add_argument("prompt"); c.add_argument("--file", action="append", default=[])
     d = sub.add_parser("rule"); d.add_argument("ids", nargs="+"); d.add_argument("--repo", type=Path, default=Path("."))
     sub.add_parser("metrics")
+    e = sub.add_parser("cards"); e.add_argument("plans", nargs="+", type=Path); e.add_argument("--repo", type=Path, default=Path("."))
     ns = ap.parse_args()
     if ns.cmd == "rule":
         print(rules_text(ns.repo.resolve(), ns.ids))
         return 0
+    if ns.cmd == "cards":
+        return cmd_cards(ns.plans, ns.repo.resolve())
     if ns.cmd == "metrics":
         print(json.dumps(metrics.summary(metrics.load(RUNS / "metrics.jsonl")), ensure_ascii=False, indent=1))
         return 0
