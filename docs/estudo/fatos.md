@@ -48,6 +48,12 @@
 - Gráficos: script escrito pela Alice (E-01, 74 s, 1ª tentativa). Ajustes (E-02): 1ª execução reprovada porque o Claude escreveu arquivos na mesma pasta durante a execução e porque o modelo montou mal chamadas de ferramenta com código grande; harness corrigido; 2ª execução aprovada em 45 s.
 - Rascunho do artigo: Alice em 22 s (1.217 palavras, 4 erros factuais); versão final reescrita pelo Claude.
 
+## Plano de entrega (cartões E0/E1)
+- Validador de cartões (cards.py) escrito pela Alice a partir de testes do Claude (H-06): 54 s, 2 tentativas.
+- Cartões num arquivo só, via ferramenta: 41 min, 2,6 milhões de tokens de entrada, sem terminar; o E0 gravado fugiu do plano.
+- Mesmos cartões gerados por partes em modo texto (um par por pedido) e montados por script: 29 s, ~15 mil tokens; estrutura válida, mas 6 de 17 com critérios de pronto inventados, corrigidos pelo Claude.
+- Lição: o modelo local rende em pedidos pequenos e fechados; sessões longas e saídas grandes degradam.
+
 ## Ainda NÃO testado (conclusões pendentes)
 - Geração de código TypeScript do produto (E1: motor financeiro; depois API, banco, frontend).
 - Modo test-author (Alice escrevendo testes), pre-review, fila de tarefas, CI com todas as travas (lint, tipos, fronteiras, mutação).

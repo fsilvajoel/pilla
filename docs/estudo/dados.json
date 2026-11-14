@@ -159,5 +159,29 @@
       "segundos": 22,
       "nota": "4 erros factuais; reescrito pelo Claude"
     }
-  ]
+  ],
+  "cartoes": {
+    "um_arquivo_por_ferramenta": {
+      "minutos": 41,
+      "chamadas": 86,
+      "entrada": 2588215,
+      "saida": 140418,
+      "resultado": "E0 gravado mas fora do plano; E1 nunca gravado (JSON malformado)"
+    },
+    "por_partes_modo_texto": {
+      "segundos": 29,
+      "pedidos": 9,
+      "entrada": 12189,
+      "saida": 3397,
+      "resultado": "17 cartões estruturalmente válidos; 6 com critérios inventados corrigidos pelo Claude"
+    },
+    "validador_H-06": {
+      "status": "done",
+      "tentativas": 2,
+      "ferramentas": 21,
+      "entrada": 194790,
+      "saida": 5387,
+      "segundos": 54
+    }
+  }
 }

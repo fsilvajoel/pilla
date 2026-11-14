@@ -1,0 +1,194 @@
+# Escrito pelo Claude a partir de docs/plano/README.md (rascunho da Alice rejeitado: fugiu do plano).
+delivery: E0
+title: Project skeleton with every E0 guardrail enforced
+cards:
+- id: E0-T01
+  title: Set up Node LTS, pnpm workspaces and Turborepo
+  kind: implement
+  assignee: claude
+  rules: []
+  refs:
+  - RFC-003 §4
+  - docs/agents/travas.md
+  dependsOn: []
+  allowedPaths:
+  - package.json
+  - pnpm-workspace.yaml
+  - turbo.json
+  - .nvmrc
+  - pnpm-lock.yaml
+  protectedTests: []
+  checks:
+  - pnpm install --frozen-lockfile
+  - pnpm -r exec true
+  done:
+  - pnpm install --frozen-lockfile works on a clean clone
+  - Node version pinned in .nvmrc and engines
+  budget: &id001
+    attempts: 5
+    toolCalls: 30
+- id: E0-T02
+  title: Add shared strict tsconfig and ESLint rules (packages/config)
+  kind: implement
+  assignee: claude
+  rules: []
+  refs:
+  - RFC-003 §4
+  - docs/agents/travas.md
+  dependsOn:
+  - E0-T01
+  allowedPaths:
+  - packages/config/**
+  protectedTests: []
+  checks:
+  - pnpm lint
+  - pnpm typecheck
+  done:
+  - tsconfig flags from travas.md §2 (strict, noUncheckedIndexedAccess, exactOptionalPropertyTypes...)
+  - ESLint bans from travas.md §3 active (any, as, non-null, ts-ignore, floats in finance, Date in domain, console, .only/.skip, default export)
+  - a sample violation fails lint
+  budget: *id001
+- id: E0-T03
+  title: Create empty packages/finance with Vitest, 100% coverage gate and Stryker
+  kind: implement
+  assignee: claude
+  rules: []
+  refs:
+  - RFC-003 §4
+  - docs/agents/travas.md
+  dependsOn:
+  - E0-T02
+  allowedPaths:
+  - packages/finance/package.json
+  - packages/finance/tsconfig.json
+  - packages/finance/vitest.config.ts
+  - packages/finance/stryker.config.json
+  - packages/finance/src/index.ts
+  protectedTests: []
+  checks:
+  - pnpm --filter @pilla/finance test
+  - pnpm --filter @pilla/finance typecheck
+  - pnpm --filter @pilla/finance lint
+  done:
+  - test, typecheck, lint and mutation scripts exist
+  - coverage threshold 100% lines/branches
+  - zero runtime dependencies
+  budget: *id001
+- id: E0-T04
+  title: Create empty packages/schemas (Zod)
+  kind: implement
+  assignee: claude
+  rules: []
+  refs:
+  - RFC-003 §4
+  - docs/agents/travas.md
+  dependsOn:
+  - E0-T02
+  allowedPaths:
+  - packages/schemas/**
+  protectedTests: []
+  checks:
+  - pnpm --filter @pilla/schemas typecheck
+  - pnpm --filter @pilla/schemas lint
+  done:
+  - package builds and exports an empty index
+  - zod is the only runtime dependency
+  budget: *id001
+- id: E0-T05
+  title: Add dependency-cruiser boundary rules
+  kind: implement
+  assignee: claude
+  rules: []
+  refs:
+  - RFC-003 §4
+  - docs/agents/travas.md
+  dependsOn:
+  - E0-T02
+  allowedPaths:
+  - .dependency-cruiser.cjs
+  protectedTests: []
+  checks:
+  - pnpm depcruise
+  done:
+  - rules from travas.md §4 (public-only cross-module imports, pure domain, finance imports nothing, web never imports api, no cycles)
+  - a sample forbidden import fails
+  budget: *id001
+- id: E0-T06
+  title: Add lefthook, commitlint and gitleaks pre-commit hooks
+  kind: implement
+  assignee: claude
+  rules: []
+  refs:
+  - RFC-003 §4
+  - docs/agents/travas.md
+  dependsOn:
+  - E0-T03
+  - E0-T04
+  - E0-T05
+  allowedPaths:
+  - lefthook.yml
+  - commitlint.config.cjs
+  protectedTests: []
+  checks:
+  - pnpm lefthook run pre-commit
+  done:
+  - commit with a non-conventional message is rejected
+  - commit containing a fake secret is rejected
+  budget: *id001
+- id: E0-T07
+  title: Add guard scripts and pnpm verify
+  kind: implement
+  assignee: claude
+  rules: []
+  refs:
+  - RFC-003 §4
+  - docs/agents/travas.md
+  dependsOn:
+  - E0-T06
+  allowedPaths:
+  - scripts/**
+  - package.json
+  protectedTests: []
+  checks:
+  - pnpm verify
+  done:
+  - .env.example keys match the env schema
+  - dependency allowlist check (AGENTS/travas list) fails on an unlisted package
+  - pnpm verify runs lint, typecheck, test, depcruise and both scripts
+  budget: *id001
+- id: E0-T08
+  title: Add GitHub Actions CI running pnpm verify and gitleaks
+  kind: implement
+  assignee: claude
+  rules: []
+  refs:
+  - RFC-003 §4
+  - docs/agents/travas.md
+  dependsOn:
+  - E0-T07
+  allowedPaths:
+  - .github/workflows/ci.yml
+  protectedTests: []
+  checks:
+  - pnpm verify
+  done:
+  - CI green on an empty PR
+  - CI red on a PR with each sample violation
+  budget: *id001
+- id: E0-T09
+  title: Pre-review E0 against travas.md and list missing E0 guardrails
+  kind: pre-review
+  assignee: alice
+  rules: []
+  refs:
+  - RFC-003 §4
+  - docs/agents/travas.md
+  dependsOn:
+  - E0-T08
+  allowedPaths: []
+  protectedTests: []
+  checks:
+  - pnpm verify
+  done:
+  - list 'trava - status - evidence' for every E0 row in travas.md, or 'sem achados'
+  budget: *id001
