@@ -3,11 +3,12 @@
 Projeto do Joel, desenvolvido na VM 258 `dev` (`~/code/pilla`). Regras gerais da casa e como chamar a Alice: `~/.claude/CLAUDE.md`.
 
 ## O que é
-(a definir com o Joel)
+Sistema de gestão de empréstimos (financeira), modular. Produto de estudo de arquitetura escalável. **Antes de codar, leia `docs/README.md`** (PRD, RFCs, ADRs e regras para agentes). Só implementar PRD/RFC aprovados e ADRs aceitas; citar os IDs nos commits.
 
 ## Regras do projeto
 - Repositório **público**: nada de IP, senha, token ou detalhe da infraestrutura em arquivo versionado.
 - Commits pequenos; `main` sempre funcionando.
+- Idioma (ADR-0012): código, commits e títulos de PR em **inglês**; docs, corpo de PR e textos do sistema em **pt-BR**. Nomes do domínio: `docs/glossario.md`.
 - Trabalho combinado com a Alice: `NOTAS-ALICE.md`.
 
 ## Configuração e segredos (`.env`)
