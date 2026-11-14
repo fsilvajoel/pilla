@@ -1,22 +1,163 @@
 {
   "_sobre": "Métricas medidas no estudo (tokens da Alice medidos pelo Ollama; tokens do Claude estimados). Data: 2026-11-14.",
   "toy": [
-    {"rotulo": "v1 · 1ª rodada (falhou)", "entrada": 86339, "saida": 32846, "tentativas": 4, "status": "failed", "nota": "falso positivo: __pycache__ contado como alteração"},
-    {"rotulo": "v1 · 2ª rodada", "entrada": 12859, "saida": 34991, "tentativas": 1, "status": "done", "nota": "raciocínio estendido ligado"},
-    {"rotulo": "v2 · harness novo", "entrada": 30540, "saida": 2327, "tentativas": 2, "status": "done", "segundos": 20.5, "nota": "think=false, regra injetada, rodada de refatoração"}
+    {
+      "rotulo": "v1 · 1ª rodada (falhou)",
+      "entrada": 86339,
+      "saida": 32846,
+      "tentativas": 4,
+      "status": "failed",
+      "nota": "falso positivo: __pycache__ contado como alteração"
+    },
+    {
+      "rotulo": "v1 · 2ª rodada",
+      "entrada": 12859,
+      "saida": 34991,
+      "tentativas": 1,
+      "status": "done",
+      "nota": "raciocínio estendido ligado"
+    },
+    {
+      "rotulo": "v2 · harness novo",
+      "entrada": 30540,
+      "saida": 2327,
+      "tentativas": 2,
+      "status": "done",
+      "segundos": 20.5,
+      "nota": "think=false, regra injetada, rodada de refatoração"
+    }
   ],
   "think": [
-    {"modo": "think ligado", "saida": 301, "segundos": 61},
-    {"modo": "think desligado", "saida": 14, "segundos": 9}
+    {
+      "modo": "think ligado",
+      "saida": 301,
+      "segundos": 61
+    },
+    {
+      "modo": "think desligado",
+      "saida": 14,
+      "segundos": 9
+    }
   ],
   "tarefas": [
-    {"id": "H-01", "o_que": "busca de regra por ID", "kind": "implement", "status": "done", "tentativas": 3, "ferramentas": 23, "entrada": 762508, "saida": 49112, "segundos": 536, "revisao": "Claude endureceu o formato do ID"},
-    {"id": "H-02", "o_que": "política como dado", "kind": "implement", "status": "failed", "tentativas": 4, "ferramentas": 35, "entrada": 968597, "saida": 43434, "segundos": 474, "revisao": "falso positivo do harness; 1 regex corrigida"},
-    {"id": "H-03", "o_que": "edição por trecho", "kind": "implement", "status": "done", "tentativas": 1, "ferramentas": 10, "entrada": 29449, "saida": 1585, "segundos": 22, "revisao": "aceito sem mudança"},
-    {"id": "H-04", "o_que": "métricas", "kind": "implement", "status": "done", "tentativas": 1, "ferramentas": 5, "entrada": 11222, "saida": 884, "segundos": 9, "revisao": "aceito sem mudança"},
-    {"id": "H-05", "o_que": "README do harness", "kind": "docs", "status": "done", "tentativas": 1, "ferramentas": 12, "entrada": 58586, "saida": 778, "segundos": 12, "revisao": "3 linhas corrigidas"}
+    {
+      "id": "H-01",
+      "o_que": "busca de regra por ID",
+      "kind": "implement",
+      "status": "done",
+      "tentativas": 3,
+      "ferramentas": 23,
+      "entrada": 762508,
+      "saida": 49112,
+      "segundos": 536,
+      "revisao": "Claude endureceu o formato do ID"
+    },
+    {
+      "id": "H-02",
+      "o_que": "política como dado",
+      "kind": "implement",
+      "status": "failed",
+      "tentativas": 4,
+      "ferramentas": 35,
+      "entrada": 968597,
+      "saida": 43434,
+      "segundos": 474,
+      "revisao": "falso positivo do harness; 1 regex corrigida"
+    },
+    {
+      "id": "H-03",
+      "o_que": "edição por trecho",
+      "kind": "implement",
+      "status": "done",
+      "tentativas": 1,
+      "ferramentas": 10,
+      "entrada": 29449,
+      "saida": 1585,
+      "segundos": 22,
+      "revisao": "aceito sem mudança"
+    },
+    {
+      "id": "H-04",
+      "o_que": "métricas",
+      "kind": "implement",
+      "status": "done",
+      "tentativas": 1,
+      "ferramentas": 5,
+      "entrada": 11222,
+      "saida": 884,
+      "segundos": 9,
+      "revisao": "aceito sem mudança"
+    },
+    {
+      "id": "H-05",
+      "o_que": "README do harness",
+      "kind": "docs",
+      "status": "done",
+      "tentativas": 1,
+      "ferramentas": 12,
+      "entrada": 58586,
+      "saida": 778,
+      "segundos": 12,
+      "revisao": "3 linhas corrigidas"
+    }
   ],
-  "divisao_v1": {"claude_estimado": 45000, "alice_entrada": 1860902, "alice_saida": 98120},
-  "documentacao": {"palavras_total": 16734, "agents_md_antes": 2422, "agents_md_depois": 1154, "ids_de_regra_indexados": 129, "testes_do_harness": 27},
-  "porteiro_ssh": {"comandos_testados": 8, "permitidos": 3, "negados": 5}
+  "divisao_v1": {
+    "claude_estimado": 45000,
+    "alice_entrada": 1860902,
+    "alice_saida": 98120
+  },
+  "documentacao": {
+    "palavras_total": 16734,
+    "agents_md_antes": 2422,
+    "agents_md_depois": 1154,
+    "ids_de_regra_indexados": 129,
+    "testes_do_harness": 27
+  },
+  "porteiro_ssh": {
+    "comandos_testados": 8,
+    "permitidos": 3,
+    "negados": 5
+  },
+  "tarefas_estudo": [
+    {
+      "id": "E-01",
+      "o_que": "script dos gráficos",
+      "status": "done",
+      "tentativas": 1,
+      "ferramentas": 13,
+      "entrada": 80171,
+      "saida": 5358,
+      "segundos": 74
+    },
+    {
+      "id": "E-02",
+      "o_que": "ajustes dos gráficos (1ª)",
+      "status": "failed",
+      "tentativas": 4,
+      "ferramentas": 33,
+      "entrada": 778059,
+      "saida": 26827,
+      "segundos": 372,
+      "nota": "Claude editou a mesma pasta + chamada de ferramenta malformada"
+    },
+    {
+      "id": "E-02",
+      "o_que": "ajustes dos gráficos (2ª, harness corrigido)",
+      "status": "done",
+      "tentativas": 1,
+      "ferramentas": 6,
+      "entrada": 40671,
+      "saida": 5393,
+      "segundos": 45
+    },
+    {
+      "id": "artigo",
+      "o_que": "rascunho do artigo (chat)",
+      "status": "done",
+      "entrada": 2866,
+      "saida": 2113,
+      "segundos": 22,
+      "nota": "4 erros factuais; reescrito pelo Claude"
+    }
+  ]
 }

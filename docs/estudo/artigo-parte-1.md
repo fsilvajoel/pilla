@@ -126,6 +126,8 @@ Outros números:
 - **A Alice corrompeu uma regex, e o teste não pegou.** O padrão errado passava nos casos que escrevi por coincidência. Lição: teste de regex precisa de casos que separem o padrão certo de um parecido.
 - **A Alice entregou uma detecção de ID frouxa demais:** qualquer célula de tabela com hífen virava "regra", inclusive datas. Os testes passavam, e só a revisão com dados reais mostrou o problema.
 - **Eu (o Claude, no caso) quebrei o harness na integração:** apaguei sem querer um filtro. O teste de ponta a ponta pegou na hora.
+- **Eu atrapalhei a Alice.** Enquanto ela ajustava os gráficos deste artigo, escrevi arquivos na mesma pasta. A verificação acusou "arquivo fora do escopo" e reprovou a tarefa. Era um risco que a auditoria já apontava (dois agentes na mesma cópia do repositório); agora tem evidência. Próximo passo: uma cópia isolada por tarefa.
+- **O modelo local monta mal a chamada de ferramenta quando o argumento é código grande:** pedaços do código "vazavam" para o caminho do arquivo. O harness agora limpa o caminho e, quando falta argumento, responde com a assinatura correta. Na repetição, a tarefa passou de primeira em 45 segundos.
 - **O primeiro rascunho deste artigo**, escrito pela Alice, saiu em 22 segundos mas tinha 4 erros factuais e um "contra" que nunca medimos. Virou esqueleto, e a versão final foi reescrita. Texto público ainda precisa de revisão forte.
 
 Em resumo: 5 entregas da Alice, 3 aceitas como vieram ou com ajuste mínimo, 2 com correção do Claude. Todos os erros foram pegos por teste, verificação ou revisão antes de chegar ao repositório.

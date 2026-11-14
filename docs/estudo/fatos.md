@@ -44,6 +44,10 @@
 - AGENTS.md: 2.422 → 1.154 palavras. 129 IDs de regra indexados. 27 testes do harness. Porteiro: 8 comandos testados, 3 permitidos, 5 negados.
 - Erros encontrados: 2 falsos positivos do harness, 1 erro de integração do Claude, 1 regex corrompida pela Alice. Todos pegos por teste/verificação ou revisão.
 
+## Produção deste estudo
+- Gráficos: script escrito pela Alice (E-01, 74 s, 1ª tentativa). Ajustes (E-02): 1ª execução reprovada porque o Claude escreveu arquivos na mesma pasta durante a execução e porque o modelo montou mal chamadas de ferramenta com código grande; harness corrigido; 2ª execução aprovada em 45 s.
+- Rascunho do artigo: Alice em 22 s (1.217 palavras, 4 erros factuais); versão final reescrita pelo Claude.
+
 ## Ainda NÃO testado (conclusões pendentes)
 - Geração de código TypeScript do produto (E1: motor financeiro; depois API, banco, frontend).
 - Modo test-author (Alice escrevendo testes), pre-review, fila de tarefas, CI com todas as travas (lint, tipos, fronteiras, mutação).

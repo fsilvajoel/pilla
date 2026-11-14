@@ -10,3 +10,5 @@
 | LI-006 | 2026-11-14 | `think: false` cortou a saída da Alice de ~35 mil para ~2,3 mil tokens na mesma tarefa (TOY-T01: 48 mil → 33 mil no total, 21 s), sem perder qualidade. Padrão agora é `false`. | TOY-T01 v2 |
 | LI-007 | 2026-11-14 | O custo de entrada da Alice cresce com o histórico: cada chamada reenvia tudo (H-01: 23 chamadas = 762 mil tokens de entrada). Cartão pequeno e regra injetada reduzem chamadas; compactação mais cedo é item da V2. | H-01, H-02 |
 | LI-008 | 2026-11-14 | Teste de regex precisa de casos que distinguem o padrão certo de um parecido: a Alice corrompeu a regex do TODO e o teste passou por coincidência. | H-02 |
+| LI-009 | 2026-11-14 | Não editar a cópia do repositório enquanto a Alice roda: a verificação conta qualquer arquivo novo como "fora do escopo" (E-02 reprovada por arquivos do Claude). Até existir cópia isolada por tarefa, esperar o fim da execução. | E-02 |
+| LI-010 | 2026-11-14 | Com argumento de código grande, o modelo local monta mal a chamada de ferramenta (pedaço do código vaza para `path`, `old` some). O harness limpa o caminho e devolve a assinatura; mudança grande → `write_file`. | E-02 |
