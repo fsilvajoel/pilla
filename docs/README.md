@@ -15,6 +15,8 @@ Fluxo: **PRD** define a necessidade → **RFC** propõe a solução → as decis
 
 ## Regras para agentes construtores de código
 
+> O guia completo (fluxo TDD, travas, papéis Claude × Alice, definição de pronto) está em [AGENTS.md](../AGENTS.md).
+
 1. **Antes de implementar, leia**: o PRD vigente, as RFCs relacionadas e **todas as ADRs com status `Aceito`**.
 2. Implemente só o que está em PRD/RFC com status `Aprovado` e ADR `Aceito`. Status `Proposto`/`Em discussão` = não implementar; perguntar.
 3. **Cite os IDs** nos commits e PRs (ex.: `RN-C05`, `ADR-0003`).
