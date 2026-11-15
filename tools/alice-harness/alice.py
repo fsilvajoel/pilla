@@ -197,6 +197,15 @@ EVIDENCE_REF = re.compile(r"([\w./@-]+\.\w+):(\d+)")
 UNIVERSAL_MIN_FILES = 3
 
 
+def resolve_ref(repo: Path, f: str) -> Path | None:
+    """A cited path, or a short suffix of it ('src/index.ts') when exactly one tracked file ends that way (LI-037)."""
+    if (repo / f).is_file():
+        return repo / f
+    out = subprocess.run(["git", "-C", str(repo), "ls-files"], capture_output=True, text=True).stdout.split()
+    hits = [x for x in out if x == f or x.endswith("/" + f)]
+    return repo / hits[0] if len(hits) == 1 else None
+
+
 def weak_evidence(summary: str, items: list[str], repo: Path) -> list[str]:
     """'ok' must be proven (LI-026): an existing file:line, or the search_code/run_check that shows it."""
     weak = []
@@ -206,7 +215,7 @@ def weak_evidence(summary: str, items: list[str], repo: Path) -> list[str]:
         if not re.match(rf"{re.escape(key)}\s+ok\b", line, re.I):
             continue
         refs = [(f, int(n)) for f, n in EVIDENCE_REF.findall(line)]
-        real = {f for f, n in refs if (repo / f).is_file() and 0 < n <= len((repo / f).read_text(errors="replace").splitlines())}
+        real = {f for f, n in refs if (p := resolve_ref(repo, f)) and 0 < n <= len(p.read_text(errors="replace").splitlines())}
         searched = re.search(r"\b(search_code|run_check)\b", line)
         # LI-033: "every X" proven by one file is a sample, not a proof
         universal = re.search(r"\b(every|all|each|todos?|todas?|cada)\b", str(item), re.I)
@@ -687,7 +696,7 @@ Fluxo: ler → escrever → run_check → corrigir → finish(summary de até 3 
                             result = str(e) if str(e).startswith("ERRO") else f"ERRO: {e}"
                     except Exception as e:  # noqa: BLE001 - report any tool failure back to the model
                         result = f"ERRO: {type(e).__name__}: {e}"
-                self.log("tool", {"name": name, "args": {k: (v if len(str(v)) < 200 else str(v)[:200] + "…") for k, v in args.items()}, "result": str(result)[:500]})
+                self.log("tool", {"name": name, "args": {k: (v if len(str(v)) < 200 or name == "finish" else str(v)[:200] + "…") for k, v in args.items()}, "result": str(result)[:500]})
                 self.messages.append({"role": "tool", "tool_name": name, "content": truncate(str(result))})
             self.save("running")
             if tool_calls_this_attempt >= self.max_tools:

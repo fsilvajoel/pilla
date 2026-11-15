@@ -202,5 +202,20 @@ class PreReviewGateTest(unittest.TestCase):
             self.assertFalse(implement.verify()[0])
 
 
+class ShortPathEvidenceTest(unittest.TestCase):
+    def test_unique_suffix_counts_as_a_real_file(self):  # LI-037
+        import subprocess
+        from alice import weak_evidence
+        with tempfile.TemporaryDirectory() as d:
+            repo = Path(d)
+            (repo / "pkg/a/src").mkdir(parents=True); (repo / "pkg/b/src").mkdir(parents=True)
+            (repo / "pkg/a/src/index.ts").write_text("1\n2\n3\n")
+            (repo / "pkg/b/src/index.ts").write_text("1\n")
+            (repo / "pkg/a/src/only.ts").write_text("1\n2\n")
+            subprocess.run(["git", "init", "-q", d], check=True)
+            subprocess.run(["git", "-C", d, "add", "."], check=True)
+            self.assertEqual(weak_evidence("C1 ok - only.ts:2\nC2 ok - src/index.ts:1", ["C1 x", "C2 y"], repo), ["C2"])
+
+
 if __name__ == "__main__":
     unittest.main()
