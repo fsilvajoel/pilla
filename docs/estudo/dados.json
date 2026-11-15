@@ -480,6 +480,38 @@
     "achado": "correto, 0 erros de ferramenta depois da LI-028",
     "licoes": [],
     "mudanca": "—"
+   },
+   {
+    "cartao": "E2-T05",
+    "kind": "implement",
+    "harness": "1dbf955",
+    "status": "done",
+    "segundos": 55,
+    "tentativas": 2,
+    "chamadas": 22,
+    "erros_ferramenta": 2,
+    "tokens_entrada": 131635,
+    "tokens_saida": 2296,
+    "achado": "correto; trocou só a linha do z.never() e depois reenviou o arquivo inteiro com o texto antigo",
+    "licoes": [
+     "LI-029"
+    ],
+    "mudanca": "—"
+   },
+   {
+    "cartao": "E2-T06",
+    "kind": "implement",
+    "harness": "1dbf955",
+    "status": "done",
+    "segundos": 32,
+    "tentativas": 2,
+    "chamadas": 19,
+    "erros_ferramenta": 0,
+    "tokens_entrada": 101610,
+    "tokens_saida": 2043,
+    "achado": "correto de primeira, só a ordem dos imports diferente",
+    "licoes": [],
+    "mudanca": "—"
    }
   ]
  }
