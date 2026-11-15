@@ -2,9 +2,10 @@
 // sai com código 0 mesmo quando o schema.ts quebra (LI-061).
 import { spawnSync } from "node:child_process";
 
-const name = process.argv[2];
+// O módulo é o schema do PostgreSQL e o nome do arquivo em drizzle-kit/ (RFC-005 §8); padrão: core.
+const [name, module = "core"] = process.argv.slice(2);
 if (!name) {
-  process.stderr.write("uso: node scripts/db-regen.mjs <nome-da-migracao>\n");
+  process.stderr.write("uso: node scripts/db-regen.mjs <nome-da-migracao> [modulo]\n");
   process.exit(2);
 }
 const run = (cmd, args) => spawnSync(cmd, args, { encoding: "utf8" });
@@ -18,7 +19,7 @@ for (const args of [
     process.exit(1);
   }
 }
-const r = run("drizzle-kit", ["generate", "--config", "drizzle-kit/core.config.ts", "--name", name]);
+const r = run("drizzle-kit", ["generate", "--config", `drizzle-kit/${module}.config.ts`, "--name", name]);
 const out = `${r.stdout}\n${r.stderr}`;
 const error = out.split("\n").find((l) => /^\s*\w*Error\b/.test(l));
 if (r.status !== 0 || error) {

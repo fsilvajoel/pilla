@@ -10,15 +10,12 @@ import {
   pgSchema,
   primaryKey,
   text,
-  timestamp,
   uuid,
 } from "drizzle-orm/pg-core";
+import { instant } from "../../db/columns";
 
 // Schema `core` (RFC-005 §2): infraestrutura compartilhada entre os módulos.
 export const core = pgSchema("core");
-
-// Instante sempre com fuso (RFC-005 §1); o modo "date" devolve Date em vez de string.
-const instant = (name: string) => timestamp(name, { withTimezone: true, mode: "date" });
 
 // Outbox transacional: o evento é gravado na mesma transação da mudança e publicado depois pelo worker.
 export const outbox = core.table(
