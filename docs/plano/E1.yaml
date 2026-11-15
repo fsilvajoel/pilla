@@ -31,7 +31,7 @@ cards:
     attempts: 5
     toolCalls: 30
 - id: E1-T21
-  title: Implement IsoDate arithmetic (isoDate, addDays, addMonths, daysBetween)
+  title: Implement isoDate, addDays, addMonths and daysBetween using the calendar core
   kind: implement
   assignee: alice
   rules:
@@ -49,13 +49,14 @@ cards:
   - pnpm --filter @pilla/finance typecheck
   - pnpm --filter @pilla/finance lint
   done:
-  - all tests in date.test.ts pass
-  - 'integer arithmetic only: no Date, Math or Number'
-  - 100% line and branch coverage of date.ts
-  - civil-date <-> day-number conversion (e.g. days-from-civil algorithm) with integer division via (a - a % b) / b
+  - all tests in date.test.ts pass with 100% coverage of date.ts
+  - use the ready helpers parseParts, daysInMonth, toDayNumber, fromDayNumber, formatDate; do not rewrite them
+  - each public function has 3 to 8 lines; only edit_file on the four 'throw new Error' bodies
+  - invalid input throws DateError (not Error)
   budget:
     attempts: 5
     toolCalls: 30
+    minutes: 8
   readFirst:
   - packages/finance/src/date.test.ts
   - packages/finance/src/date.ts
@@ -115,6 +116,7 @@ cards:
   budget:
     attempts: 5
     toolCalls: 30
+    minutes: 8
   readFirst:
   - packages/finance/src/rounding.test.ts
   - packages/finance/src/rounding.ts
@@ -147,6 +149,7 @@ cards:
   budget:
     attempts: 5
     toolCalls: 30
+    minutes: 8
   readFirst:
   - packages/finance/src/split.ts
   - packages/finance/src/money.ts
@@ -178,6 +181,7 @@ cards:
   budget:
     attempts: 5
     toolCalls: 30
+    minutes: 8
   readFirst:
   - packages/finance/src/split.test.ts
   - packages/finance/src/split.ts
@@ -236,6 +240,7 @@ cards:
   budget:
     attempts: 5
     toolCalls: 30
+    minutes: 8
   readFirst:
   - packages/finance/src/interest.test.ts
   - packages/finance/src/interest.ts
@@ -301,6 +306,7 @@ cards:
   budget:
     attempts: 5
     toolCalls: 30
+    minutes: 8
   readFirst:
   - packages/finance/src/due-dates.test.ts
   - packages/finance/src/due-dates.ts
@@ -370,6 +376,7 @@ cards:
   budget:
     attempts: 5
     toolCalls: 30
+    minutes: 8
   readFirst:
   - packages/finance/src/schedule.test.ts
   - packages/finance/src/schedule.ts
@@ -403,6 +410,7 @@ cards:
   budget:
     attempts: 5
     toolCalls: 30
+    minutes: 8
   readFirst:
   - packages/finance/src/late-charges.ts
   - packages/finance/src/money.ts
@@ -437,6 +445,7 @@ cards:
   budget:
     attempts: 5
     toolCalls: 30
+    minutes: 8
   readFirst:
   - packages/finance/src/late-charges.test.ts
   - packages/finance/src/late-charges.ts
@@ -498,6 +507,7 @@ cards:
   budget:
     attempts: 5
     toolCalls: 30
+    minutes: 8
   readFirst:
   - packages/finance/src/allocation.test.ts
   - packages/finance/src/allocation.ts
@@ -556,6 +566,7 @@ cards:
   budget:
     attempts: 5
     toolCalls: 30
+    minutes: 8
   readFirst:
   - packages/finance/src/balance.test.ts
   - packages/finance/src/balance.ts
@@ -604,6 +615,7 @@ cards:
   budget:
     attempts: 3
     toolCalls: 30
+    minutes: 8
   checklist:
   - C1 every T-01..T-14 and CA-01 has a test named with its ID
   - C2 coverage 100% lines and branches
@@ -632,3 +644,4 @@ cards:
   budget:
     attempts: 3
     toolCalls: 20
+    minutes: 8

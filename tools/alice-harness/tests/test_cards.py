@@ -73,6 +73,10 @@ class CardsTest(unittest.TestCase):
         self.assertEqual(self.check([card(budget={"attempts": 5, "toolCalls": 30})]), [])
         self.assertTrue(self.check([card(budget={"attempts": 5, "toolCalls": 31})]))
 
+    def test_time_budget_limit(self):
+        self.assertEqual(self.check([card(budget={"attempts": 5, "toolCalls": 30, "minutes": 10})]), [])
+        self.assertTrue(self.check([card(budget={"attempts": 5, "toolCalls": 30, "minutes": 16})]))
+
     def test_alice_tasks_stay_small(self):
         three = ["packages/finance/src/a.ts", "packages/finance/src/b.ts", "packages/finance/src/c.ts"]
         self.assertTrue(any("pequen" in p for p in self.check([card(allowedPaths=three)])))

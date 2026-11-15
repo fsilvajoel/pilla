@@ -97,6 +97,8 @@ def validate_plan(plan: dict, known_rules: set[str], external_ids: set[str]) -> 
         tool_calls = budget.get("toolCalls", 0)
         if attempts > 6:
             problems.append(f"{cid}: budget.attempts > 6")
+        if budget.get("minutes", 0) > 15:
+            problems.append(f"{cid}: budget.minutes > 15 (tarefa pequena termina rápido)")
         if tool_calls > 30:
             problems.append(f"{cid}: budget.toolCalls > 30")
 
