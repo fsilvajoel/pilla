@@ -334,6 +334,7 @@ cards:
   - E2-T08
   - E2-T09
   - E2-T10
+  - E2-T12
   allowedPaths: []
   protectedTests: []
   checks:
@@ -352,3 +353,30 @@ cards:
   - C5 no regex or z.string() for ids, dates or money outside common.ts
   - C6 every schema is exported from src/index.ts
   - C7 field names match docs/glossario.md and RFC-004 §7 exactly
+  - C8 every zod API used exists and follows the zod sheet (docs/memoria/libs/zod.md; zod.dev when it is not there)
+- id: E2-T12
+  title: Draft the zod 4 cheat sheet from the official docs
+  kind: docs
+  assignee: alice
+  rules: []
+  refs:
+  - https://zod.dev/api
+  dependsOn:
+  - E2-T01
+  allowedPaths:
+  - docs/memoria/libs/zod.md
+  protectedTests: []
+  checks:
+  - node scripts/check-lib-sheet.mjs docs/memoria/libs/zod.md packages/schemas zod z zod.dev 400
+  done:
+  - '<= 400 words in pt-BR, sections: Use (the right zod 4 call, one code line each), Evite (zod 3 habit -> zod 4 call), Fonte'
+  - 'cover what this repo uses: z.strictObject, z.int, z.uuidv7, z.iso.date, z.iso.datetime({offset}), z.literal, .refine, z.infer'
+  - every API comes from fetch_page of zod.dev (cite the URL); never from memory
+  - the check runs each z.* call against the installed zod and lists the ones that do not exist
+  readFirst:
+  - packages/schemas/src/common.ts
+  - packages/schemas/src/events/payment-confirmed.ts
+  budget:
+    attempts: 3
+    toolCalls: 20
+    minutes: 8

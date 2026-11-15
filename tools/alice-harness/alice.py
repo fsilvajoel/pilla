@@ -74,7 +74,7 @@ MAX_RULES_CHARS = 8000
 MAX_WRITE_CALL_LINES = 150  # LI-011/LI-016: big tool-call payloads break the local model
 GENERATED = re.compile(r"(^|/)(__pycache__|node_modules|dist|coverage|\.turbo|\.next|\.pytest_cache|reports)(/|$)|\.(pyc|tsbuildinfo)$")
 POLICY_FILE = re.compile(r"(^|/)(policy\.default\.yaml|\.agents/policy\.yaml)$")
-KINDS = ("implement", "test-author", "pre-review", "docs", "cards")
+KINDS = ("implement", "test-author", "pre-review", "docs", "cards", "research")
 
 def apply_policy(repo: Path) -> None:
     global OFFICIAL_DOMAINS, DENY_READ, PROTECTED_WRITE, FORBIDDEN_ADDED, MAX_WRITE_LINES, MAX_TOOL_OUTPUT, MAX_CONTEXT_CHARS
@@ -398,6 +398,9 @@ KIND_NOTES = {
     "docs": ("Rascunhe a documentação pedida em pt-BR, curta e factual, só com o que está no código e nos docs. O Claude faz a curadoria. "
              "Fontes: os comentários /** */ das funções exportadas (citam os IDs das regras), read_rule do documento citado em refs "
              "(sumário de RFC/ADR/PRD ou uma seção, ex.: 'RFC-002 §3.4') e docs/memoria/licoes.md. Pergunte ao Claude só o que não estiver nessas fontes."),
+    "research": ("Pesquisa externa (o cartão traz a pergunta e o motivo). Use web_search/fetch_page só em documentação oficial. "
+                 "Escreva no arquivo do cartão: '## Pergunta', '## Resposta' (até 5 tópicos, cada um com a URL https da fonte) e "
+                 "'## Não encontrado' (o que ficou sem fonte). Nada de opinião nem fato sem fonte. O Claude lê só esse resumo."),
     "cards": "Rascunhe cartões de tarefa YAML no formato de docs/agents/cartao-de-tarefa.md, um por função/endpoint, com rules por ID.",
 }
 # LI-027: notas que valem só para um pacote (a de dinheiro bigint do motor vazou para os esquemas JSON).
@@ -406,6 +409,27 @@ PATH_NOTES = {
     "packages/schemas/": ("Esquemas de fio (JSON): dinheiro e taxa são número inteiro, nunca bigint. Use as primitivas de src/common.ts "
                           "(idSchema, centsSchema, positiveCentsSchema, isoDateSchema, instantSchema, reasonSchema) sem refine que repita o que elas já garantem."),
 }
+
+LIB_SHEET_CHARS = 2500
+
+
+def lib_sheets(repo: Path, card: dict) -> str:
+    """Colas de biblioteca revisadas pelo Claude (docs/memoria/libs/<lib>.md): as dependências do pacote do cartão + card.libs."""
+    libs = list(card.get("libs", []))
+    for a in card.get("allowedPaths", []) + card.get("readFirst", []):
+        parts = Path(str(a)).parts
+        if len(parts) >= 2 and parts[0] == "packages":
+            pkg = repo / parts[0] / parts[1] / "package.json"
+            if pkg.exists():
+                data = json.loads(pkg.read_text())
+                libs += [*data.get("dependencies", {}), *data.get("devDependencies", {})]
+    out = []
+    for lib in dict.fromkeys(libs):
+        f = repo / "docs/memoria/libs" / f"{lib.replace('@', '').replace('/', '-')}.md"
+        if f.exists():
+            out.append(f"Cola de {lib} (revisada; vale mais que a sua memória):\n{f.read_text()[:LIB_SHEET_CHARS]}")
+    return "\n".join(out)
+
 
 def path_notes(allowed: list[str]) -> str:
     return "\n".join(note for prefix, note in PATH_NOTES.items() if any(str(a).startswith(prefix) for a in allowed))
@@ -464,6 +488,7 @@ class Run:
             kind_note = CHECKLIST_NOTE + "\n" + "\n".join(f"{str(i).split()[0]} ? - ?" for i in c["checklist"])
         return f"""Você é a Alice, desenvolvedora do projeto. Tarefa {c['id']}: {c['title']}.
 Tipo de tarefa: {self.kind}. {kind_note}
+{("Pergunta: " + str(c["question"]) + chr(10) + "Motivo: " + str((c.get("why") or {}).get("reason", ""))) if c.get("question") else ""}
 Referências: {', '.join(map(str, c.get('refs', [])))}.
 Regras desta tarefa (texto oficial; use read_rule para outras):
 {rules}
@@ -484,6 +509,7 @@ Tarefa pequena: mexa só nos arquivos do cartão. write_file com no máximo 150 
 Use as funções auxiliares que já existem no arquivo (não reescreva o que já está pronto). Se a tarefa parecer grande ou ambígua, ou faltar uma função/tipo de outro arquivo: ask_claude (não improvise).
 TypeScript: sem any, as, !, console, Math, Number, parseFloat, new Date; export nomeado.
 {path_notes(c['allowedPaths'])}
+{lib_sheets(self.guard.repo, c)}
 Fluxo: ler → escrever → run_check → corrigir → finish(summary de até 3 linhas, lessons opcional)."""
 
     def chat(self) -> dict:

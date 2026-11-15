@@ -56,3 +56,27 @@ NUNCA invente API, opção ou comportamento. Ao terminar, chame finish com resum
 | `budget.attempts` | ≤ 6 | |
 | `implement` da Alice | exige `protectedTests` | TDD |
 | `pre-review` | exige `checklist` | LI-013 |
+| "reusar X" no `done` | traz a linha de `import` de X | LI-030 |
+| `research` | `why.category`, `why.reason` (≥ 30 caracteres), `question`, um arquivo em `docs/pesquisa/` | pesquisa externa só com bom motivo |
+
+## Colas de biblioteca (`docs/memoria/libs/<lib>.md`)
+O modelo local conhece versões antigas das bibliotecas. A cola de cada uma é curta (≤ 400 palavras), escrita pela Alice a partir da
+documentação oficial (`fetch_page`), revisada pelo Claude e conferida por `scripts/check-lib-sheet.mjs`, que executa cada chamada
+`z.*` citada contra a versão instalada. O harness põe a cola no contexto de todo cartão cujo pacote depende da biblioteca
+(ou que a lista em `libs:`). Versão nova da biblioteca = rodar o check de novo e revisar a cola.
+
+## Pesquisa externa (`kind: research`)
+Custa busca, tempo e risco (texto da web é dado não confiável), então só com **bom motivo**: o fato **não está no repositório**
+e a resposta **muda uma decisão ou um código**. Categorias aceitas em `why.category`:
+
+| Categoria | Exemplo |
+|---|---|
+| `regulation` | regra do Banco Central ou lei que limita juros ou multa |
+| `external-spec` | especificação do Pix ou formato de um arquivo bancário |
+| `lib-behavior` | comportamento de uma biblioteca que a cola não cobre |
+| `security-advisory` | alerta de segurança de uma dependência |
+
+Não é motivo: regra de negócio (pergunte ao Claude ou ao Joel), dúvida que o código ou a RFC respondem, curiosidade.
+O resultado é um resumo em `docs/pesquisa/` (seções Pergunta, Resposta com até 5 tópicos com fonte oficial, Não encontrado),
+conferido por `scripts/check-research.mjs`. O Claude lê só o resumo. Domínio novo (ex.: o do Banco Central) entra em
+`.agents/policy.yaml` por PR revisado pelo Joel.

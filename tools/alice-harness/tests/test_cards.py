@@ -93,6 +93,16 @@ class CardsTest(unittest.TestCase):
         ok = card(done=["reuse allocationSchema", 'import { allocationSchema } from "./payment-confirmed"'])
         self.assertEqual(self.check([ok]), [])
 
+    def test_research_needs_a_good_reason(self):
+        base = dict(kind="research", protectedTests=[], allowedPaths=["docs/pesquisa/pix.md"], rules=[])
+        bad = self.check([card(**base)])
+        self.assertEqual(len([x for x in bad if "research" in x]), 3)
+        good = card(**base, question="Qual o limite do Pix noturno?",
+                    why={"category": "regulation", "reason": "regra do Banco Central; não está nos docs e muda o limite RN-X"})
+        self.assertEqual(self.check([good]), [])
+        self.assertTrue(self.check([card(**{**base, "allowedPaths": ["src/x.ts"]}, question="q",
+                                          why={"category": "regulation", "reason": "x" * 40})]))
+
 
 if __name__ == "__main__":
     unittest.main()

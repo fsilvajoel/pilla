@@ -1,5 +1,8 @@
 import re
 
+# bons motivos para gastar uma busca externa (docs/agents/cartao-de-tarefa.md)
+RESEARCH_REASONS = ("regulation", "external-spec", "lib-behavior", "security-advisory")
+
 def validate_plan(plan: dict, known_rules: set[str], external_ids: set[str]) -> list[str]:
     problems = []
     
@@ -41,7 +44,7 @@ def validate_plan(plan: dict, known_rules: set[str], external_ids: set[str]) -> 
             
         # Kind
         kind = card.get("kind")
-        if kind and kind not in ["implement", "test-author", "pre-review", "docs", "cards"]:
+        if kind and kind not in ["implement", "test-author", "pre-review", "docs", "cards", "research"]:
             problems.append(f"{cid}: kind inválido: {kind}")
             
         # Assignee
@@ -97,6 +100,18 @@ def validate_plan(plan: dict, known_rules: set[str], external_ids: set[str]) -> 
             for name in re.findall(r"\breuse\s+([a-z]+[A-Z]\w*)", line):
                 if not any(re.search(rf"\bimport\b.*\b{name}\b", other) for other in lines):
                     problems.append(f"{cid}: 'reuse {name}' sem a linha de import (LI-030)")
+
+        # Pesquisa externa só com bom motivo: o fato não está no repositório e cabe numa destas categorias
+        if kind == "research":
+            why = card.get("why") or {}
+            if why.get("category") not in RESEARCH_REASONS:
+                problems.append(f"{cid}: research exige why.category em {', '.join(RESEARCH_REASONS)}")
+            if len(str(why.get("reason", ""))) < 30:
+                problems.append(f"{cid}: research exige why.reason (por que o repositório não responde e o que muda com a resposta)")
+            if not card.get("question"):
+                problems.append(f"{cid}: research exige question (uma pergunta fechada)")
+            if len(allowed_paths) != 1 or not str(allowed_paths[0]).startswith("docs/pesquisa/"):
+                problems.append(f"{cid}: research escreve um único arquivo em docs/pesquisa/")
 
         # Budget
         budget = card.get("budget", {})

@@ -158,6 +158,21 @@ class ToolsLI028Test(unittest.TestCase):
         self.assertIn("conteúdo atual", alice.current_view("a\nb\n"))
         self.assertEqual(alice.current_view("x\n" * 60), "")
 
+    def test_lib_sheets_follow_the_package_dependencies(self):
+        import json, tempfile, alice
+        from pathlib import Path
+        with tempfile.TemporaryDirectory() as d:
+            r = Path(d)
+            (r / "packages/schemas").mkdir(parents=True)
+            (r / "packages/schemas/package.json").write_text(json.dumps({"dependencies": {"zod": "^4"}}))
+            (r / "docs/memoria/libs").mkdir(parents=True)
+            (r / "docs/memoria/libs/zod.md").write_text("use z.int()")
+            (r / "docs/memoria/libs/react.md").write_text("hooks")
+            out = alice.lib_sheets(r, {"allowedPaths": ["packages/schemas/src/a.ts"]})
+            self.assertIn("z.int()", out)
+            self.assertNotIn("hooks", out)
+            self.assertIn("hooks", alice.lib_sheets(r, {"allowedPaths": [], "libs": ["react"]}))
+
 
 if __name__ == "__main__":
     unittest.main()
