@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { index, integer, jsonb, pgSchema, primaryKey, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import { check, index, inet, integer, jsonb, pgSchema, primaryKey, text, timestamp, uuid } from "drizzle-orm/pg-core";
 
 // Schema `core` (RFC-005 §2): infraestrutura compartilhada entre os módulos.
 export const core = pgSchema("core");
@@ -39,3 +39,26 @@ export const processedEvents = core.table(
   },
   (t) => [primaryKey({ columns: [t.consumer, t.eventId] })],
 );
+
+// Tabela de auditoria: registro de todas as alterações de entidades (RFC-005 §2).
+export const auditLog = core.table(
+  "audit_log",
+  {
+    id: uuid("id").primaryKey(),
+    actorType: text("actor_type").notNull(),
+    actorId: uuid("actor_id"),
+    action: text("action").notNull(),
+    entityType: text("entity_type").notNull(),
+    entityId: uuid("entity_id").notNull(),
+    before: jsonb("before"),
+    after: jsonb("after"),
+    at: instant("at").notNull(),
+    ip: inet("ip"),
+  },
+  (t) => [
+    index("audit_log_history_idx").on(t.entityType, t.entityId, t.at),
+    check("audit_log_actor_type_check", sql`${t.actorType} IN ('ADMIN', 'CLIENT', 'SYSTEM')`),
+  ],
+);
+
+export type AuditLogRow = typeof auditLog.$inferSelect;
