@@ -96,5 +96,23 @@ class TreeFingerprintTest(unittest.TestCase):
             self.assertNotEqual(edited, tree_fingerprint(repo))
 
 
+class WeakEvidenceTest(unittest.TestCase):
+    def test_ok_needs_existing_line_or_search_or_check(self):
+        from alice import weak_evidence
+        with tempfile.TemporaryDirectory() as d:
+            repo = Path(d)
+            (repo / "a.ts").write_text("x\ny\n")
+            items = ["C1 a", "C2 b", "C3 c", "C4 d", "C5 e", "C6 f"]
+            summary = "\n".join([
+                "C1 ok - a.ts:2",
+                "C2 ok - a.ts:9",
+                "C3 ok - a.ts",
+                "C4 ok - search_code 'Math' -> 0 resultados",
+                "C5 falta - nada",
+                "C6 ok - run_check 1 -> 94%",
+            ])
+            self.assertEqual(weak_evidence(summary, items, repo), ["C2", "C3"])
+
+
 if __name__ == "__main__":
     unittest.main()

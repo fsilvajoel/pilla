@@ -394,6 +394,24 @@
     "achado": "ficha completa de primeira com a trava nova (13 IDs, 44 nomes, 257 palavras); curadoria do Claude: 2 termos",
     "licoes": [],
     "mudanca": "—"
+   },
+   {
+    "cartao": "E1-T19",
+    "kind": "pre-review",
+    "harness": "dcb6804",
+    "status": "done",
+    "segundos": 65,
+    "tentativas": 2,
+    "chamadas": 32,
+    "erros_ferramenta": 0,
+    "checks_em_cache": 4,
+    "tokens_entrada": 267334,
+    "tokens_saida": 980,
+    "achado": "A/B do mesmo cartão: 284 s -> 65 s (-77%), 476 mil -> 267 mil tokens; sem 'sem achados'. Evidência ainda fraca (arquivo sem linha; C4 é ausência e precisa de busca)",
+    "licoes": [
+     "LI-026"
+    ],
+    "mudanca": "verificação recusa 'ok' sem arquivo:linha existente, search_code ou run_check"
    }
   ]
  }

@@ -192,6 +192,22 @@ def checklist_gaps(summary: str, items: list[str]) -> list[str]:
             gaps.append(key)
     return gaps
 
+EVIDENCE_REF = re.compile(r"([\w./@-]+\.\w+):(\d+)")
+
+def weak_evidence(summary: str, items: list[str], repo: Path) -> list[str]:
+    """'ok' must be proven (LI-026): an existing file:line, or the search_code/run_check that shows it."""
+    weak = []
+    for item in items:
+        key = str(item).split()[0]
+        line = next((l.strip() for l in summary.splitlines() if l.strip().startswith(key + " ")), "")
+        if not re.match(rf"{re.escape(key)}\s+ok\b", line, re.I):
+            continue
+        refs = [(f, int(n)) for f, n in EVIDENCE_REF.findall(line)]
+        real = any((repo / f).is_file() and 0 < n <= len((repo / f).read_text(errors="replace").splitlines()) for f, n in refs)
+        if not (real or re.search(r"\b(search_code|run_check)\b", line)):
+            weak.append(key)
+    return weak
+
 def missing_args_message(name: str, args: dict) -> str | None:
     missing = [k for k in REQUIRED.get(name, []) if k not in args]
     if not missing:
@@ -363,7 +379,8 @@ KIND_NOTES = {
     "cards": "Rascunhe cartões de tarefa YAML no formato de docs/agents/cartao-de-tarefa.md, um por função/endpoint, com rules por ID.",
 }
 CHECKLIST_NOTE = ("Revise contra o checklist abaixo. NÃO escreva arquivos. 'sem achados' NÃO é resposta válida: o summary do finish é "
-                  "exatamente este modelo preenchido, trocando '?' por ok|falta|parcial|n/a e a evidência (arquivo:linha específica ou comando). "
+                  "exatamente este modelo preenchido, trocando '?' por ok|falta|parcial|n/a e a evidência: arquivo:linha que exista, "
+                  "ou a busca/check que prova (\"search_code 'Math\\.' -> 0 resultados\", \"run_check 1 -> 94,4%\"). "
                   "Cada check custa tempo: rode cada um no máximo uma vez.")
 REFACTOR_PROMPT = ("Verificação APROVADA. Agora UMA rodada de limpeza, sem mudar comportamento: use view_diff; remova duplicação e código morto "
                    "que você criou; nomes claros (glossário); funções curtas. Rode run_check(-1). Se não houver o que melhorar, chame finish de novo direto.")
@@ -555,6 +572,11 @@ Fluxo: ler → escrever → run_check → corrigir → finish(summary de até 3 
                     ok, problems = self.verify()
                     if self.card.get("checklist"):
                         gaps = checklist_gaps(str(args.get("summary", "")), self.card["checklist"])
+                        weak = [] if gaps else weak_evidence(str(args.get("summary", "")), self.card["checklist"], self.guard.repo)
+                        if weak:
+                            ok = False
+                            problems += ("\n" if problems else "") + ("'ok' sem prova em: " + ", ".join(weak) +
+                                         ". Cite arquivo:linha que exista, ou a busca que prova (ex.: \"search_code 'Math\\.' -> 0 resultados\") ou o check (\"run_check 1 -> 94,4%\").")
                         if gaps:
                             ok = False
                             problems += ("\n" if problems else "") + ("summary sem linha para: " + ", ".join(gaps) +
