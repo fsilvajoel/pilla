@@ -102,7 +102,7 @@ class WeakEvidenceTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             repo = Path(d)
             (repo / "a.ts").write_text("x\ny\n")
-            items = ["C1 a", "C2 b", "C3 c", "C4 d", "C5 e", "C6 f"]
+            items = ["C1 a", "C2 b", "C3 c", "C4 d", "C5 e", "C6 mutation score"]
             summary = "\n".join([
                 "C1 ok - a.ts:2",
                 "C2 ok - a.ts:9",
@@ -234,6 +234,26 @@ class LineRangeEvidenceTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             repo = Path(d); (repo / "index.ts").write_text("x\n" * 13)
             self.assertEqual(weak_evidence("C1 ok - index.ts:4-13\nC2 ok - index.ts:4-5", ["C1 every a", "C2 every b"], repo), ["C2"])
+
+
+class DoneLineTest(unittest.TestCase):
+    def test_stub_marker_and_literal_done_lines(self):  # LI-041, LI-042
+        from alice import done_line_problems
+        with tempfile.TemporaryDirectory() as d:
+            repo = Path(d); f = repo / "a.ts"
+            card = {"allowedPaths": ["a.ts"], "done": ["export type A = z.infer<typeof a>;", 'import line: import { x } from "../c"; never']}
+            f.write_text('/** ESBOÇO: troque */\nimport { x } from "../c";\nexport const a = 1;\n')
+            probs = done_line_problems(card, repo)
+            self.assertEqual(len(probs), 2)
+            self.assertIn("ESBOÇO", probs[0]); self.assertIn("export type A", probs[1])
+            f.write_text('import { x } from "../c";\nexport const a = 1;\nexport type A = z.infer<typeof a>;\n')
+            self.assertEqual(done_line_problems(card, repo), [])
+
+    def test_run_check_proves_only_items_about_a_check(self):  # LI-043
+        from alice import weak_evidence
+        with tempfile.TemporaryDirectory() as d:
+            summary = "C1 ok - run_check 1 -> 100%\nC2 ok - run_check 0 -> 94%"
+            self.assertEqual(weak_evidence(summary, ["C1 no regex outside common.ts", "C2 mutation score >= 90%"], Path(d)), ["C1"])
 
 
 if __name__ == "__main__":

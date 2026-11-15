@@ -196,6 +196,19 @@ EVIDENCE_REF = re.compile(r"([\w./@-]+\.\w+):(\d+)")
 
 UNIVERSAL_MIN_FILES = 3
 
+
+def done_line_problems(card: dict, repo: Path) -> list[str]:
+    """What tests can't see: the stub marker must go (LI-041) and literal code lines of `done` must be in the file (LI-042)."""
+    flat = lambda t: re.sub(r"\s+", " ", t)
+    texts = {f: flat((repo / f).read_text(errors="replace")) for f in card.get("allowedPaths", []) or []
+             if "*" not in f and (repo / f).is_file()}
+    out = [f"{f}: ainda tem a frase ESBOÇO do esboço; apague-a (o arquivo está pronto)" for f, t in texts.items() if "ESBOÇO" in t]
+    for d in card.get("done", []) or []:
+        for line in re.findall(r"((?:export (?:type|const|function|\*)|import (?:\{|type|\*))[^;]*;)", str(d)):
+            if texts and not any(flat(line) in t for t in texts.values()):
+                out.append(f"falta a linha pedida no done, exatamente assim: {line}")
+    return out
+
 PRE_REVIEW_ANSWER = ("Resposta automática (pré-revisão): sim. Você não corrige nem escreve nada; todo desvio vira "
                      "'falta' ou 'parcial' com arquivo:linha ou o check que mostra. Termine a lista e chame finish agora.")
 
@@ -219,7 +232,9 @@ def weak_evidence(summary: str, items: list[str], repo: Path) -> list[str]:
             continue
         refs = [(f, int(n)) for f, n in EVIDENCE_REF.findall(line)]
         real = {f for f, n in refs if (p := resolve_ref(repo, f)) and 0 < n <= len(p.read_text(errors="replace").splitlines())}
-        searched = re.search(r"\b(search_code|run_check)\b", line)
+        # LI-043: run_check proves only items about a check (a green check-avoid says nothing about regex)
+        about_check = re.search(r"run_check|test|coverage|cobertura|mutation|muta|lint|typecheck|eslint|commitlint", str(item), re.I)
+        searched = re.search(r"\bsearch_code\b", line) or (about_check and re.search(r"\brun_check\b", line))
         # LI-033: "every X" proven by one file is a sample, not a proof
         universal = re.search(r"\b(every|all|each|todos?|todas?|cada)\b", str(item), re.I)
         cited_lines = sum(int(b) - int(a) + 1 if b else 1  # LI-040: "4-13" covers 10 lines
@@ -588,6 +603,8 @@ Fluxo: ler → escrever → run_check → corrigir → finish(summary de até 3 
                 for label, rx in FORBIDDEN_ADDED:
                     if rx.search(line):
                         problems.append(f"{f}: {label}: {line.strip()[:120]}")
+        if self.kind == "implement":
+            problems += done_line_problems(self.card, self.guard.repo)
         for i, c in enumerate(self.card["checks"]):
             if self.kind == "pre-review":  # LI-036: in a review a red check is a finding (evidence), not a gate
                 continue
