@@ -66,6 +66,15 @@ export function parseParts(text: string): Civil | null {
   return { year: parseInt(y, 10), month: parseInt(m, 10), day: parseInt(d, 10) };
 }
 
+/** Partes de uma IsoDate já validada (sem ramo: o formato é garantido pelo tipo). */
+export function civilOf(date: IsoDate): Civil {
+  return {
+    year: parseInt(date.slice(0, 4), 10),
+    month: parseInt(date.slice(5, 7), 10),
+    day: parseInt(date.slice(8, 10), 10),
+  };
+}
+
 /** Partes → IsoDate, sem validar (use só com partes já válidas). */
 export function formatDate({ year, month, day }: Civil): IsoDate {
   const text = `${String(year)}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
@@ -77,20 +86,37 @@ export function formatDate({ year, month, day }: Civil): IsoDate {
 
 /** Valida e marca "AAAA-MM-DD" (data real: 2027-02-29 é inválida; anos 1900..2999). Erro: DateError. */
 export function isoDate(_text: string): IsoDate {
-  throw new Error("not implemented");
+  const parts = parseParts(_text);
+  if (!parts) throw new DateError();
+
+  const { year, month, day } = parts;
+  if (year < 1900 || year > 2999 || month < 1 || month > 12 || day < 1 || day > daysInMonth(year, month)) {
+    throw new DateError();
+  }
+
+  return formatDate(parts);
 }
 
 /** Soma dias corridos (pode ser negativo): fromDayNumber(toDayNumber(...) + days). */
 export function addDays(_date: IsoDate, _days: number): IsoDate {
-  throw new Error("not implemented");
+  return formatDate(fromDayNumber(toDayNumber(civilOf(_date)) + _days));
 }
 
 /** Soma meses (>= 0, senão DateError); dia inexistente vira o último dia do mês (31/01 + 1 = 28/02). */
 export function addMonths(_date: IsoDate, _months: number): IsoDate {
-  throw new Error("not implemented");
+  if (_months < 0) throw new DateError();
+  const { year, month, day } = civilOf(_date);
+  const newMonth = month + _months;
+  const newYear = newMonth > 12 ? year + div(newMonth - 1, 12) : year;
+  const finalMonth = ((newMonth - 1) % 12) + 1;
+
+  const maxDay = daysInMonth(newYear, finalMonth);
+  const finalDay = day > maxDay ? maxDay : day;
+
+  return formatDate({ year: newYear, month: finalMonth, day: finalDay });
 }
 
 /** Dias corridos de `from` até `to` (negativo se `to` for antes). */
 export function daysBetween(_from: IsoDate, _to: IsoDate): number {
-  throw new Error("not implemented");
+  return toDayNumber(civilOf(_to)) - toDayNumber(civilOf(_from));
 }
