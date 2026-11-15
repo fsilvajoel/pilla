@@ -6,7 +6,7 @@
   "description": "API e módulos de domínio (RFC-003 §4.1); banco conforme a RFC-005",
   "scripts": {
     "typecheck": "tsc -p tsconfig.json",
-    "lint": "eslint .",
+    "lint": "eslint src",
     "test": "vitest run --coverage",
     "db:generate": "drizzle-kit generate --config drizzle-kit/core.config.ts",
     "db:regen": "node scripts/db-regen.mjs"
