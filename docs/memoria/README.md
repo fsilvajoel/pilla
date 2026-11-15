@@ -6,6 +6,8 @@ Conhecimento curto que não cabe numa ADR e que evita redescobrir coisas a cada 
 |---|---|
 | [licoes.md](licoes.md) | armadilhas e aprendizados (de execuções da Alice, revisões, CI) |
 | [decisoes-menores.md](decisoes-menores.md) | escolhas pequenas que não merecem ADR |
+| [lint.md](lint.md) | cola do lint: regras do ESLint por escopo, com exemplo errado e certo (vai no pedido da Alice; conferida contra o ESLint) |
+| [libs/](libs/) | cola por biblioteca: "Use" e "Evite" da versão instalada |
 | [modulos/](modulos/) | ficha por módulo (≤ 300 palavras): propósito, API pública, invariantes, mapa de arquivos |
 
 Regras:

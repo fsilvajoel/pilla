@@ -30,7 +30,7 @@ Implementação da E0: configs na raiz, `packages/config/`, `scripts/` e `.githu
 | Proibido | Por quê | Quando |
 |---|---|---|
 | `any`, `as` (exceto em testes), `!` (non-null) | burla os tipos | E0 |
-| `@ts-ignore`, `@ts-nocheck`, `eslint-disable` | burla as travas (só com aprovação do Claude e justificativa) | E0 |
+| `@ts-ignore`, `@ts-nocheck`, `eslint-disable` | burla as travas; comentário de desligar regra não tem efeito (`noInlineConfig`) | E0 |
 | `parseFloat`, `Number()`, `Math.*`, literal decimal em `packages/finance` e domínios | dinheiro em ponto flutuante ([ADR-0004](docs/adr/0004-dinheiro-em-centavos.md)) | E1 |
 | `new Date()`, `Date.now()` em `domain/` | relógio deve ser injetado | E0 |
 | `console.*` | usar o logger | E0 |
@@ -99,6 +99,11 @@ O domínio verifica e **lança erro** se violar: soma das alocações = valor do
 | Acesso pelo Windows | só via harness; trava técnica: chave SSH própria com `scripts/alice-gate.sh` (pendente) |
 | Verificação final | o próprio ambiente roda a verificação completa ([AGENTS.md §8](../../AGENTS.md)) antes de reportar sucesso |
 | Checagem do diff | rejeita se: tocou fora de `allowedPaths`; linha adicionada casa com `forbiddenAdded` da política (`any`, `@ts-ignore`, `eslint-disable`, `.only/.skip`, `TODO` sem ID, `console.`); adicionou dependência (CI, E0) |
+| Pré-voo do cartão | antes de chamar o modelo: comando de cada check existe, arquivos de `readFirst`/`protectedTests` existem e, em tarefa de escrita, algum check está vermelho. Senão a execução termina como `card_error` (erro de quem escreveu o cartão) |
+| Formatação | o Prettier do repositório roda nos arquivos tocados antes dos checks |
+| Lint no pedido | as seções de [docs/memoria/lint.md](../memoria/lint.md) que valem para os arquivos do cartão; a cola é conferida contra o ESLint por `scripts/check-lint-sheet.mjs` |
+| Pré-revisão | uma linha por item do checklist, com evidência que existe; item que cita `run_check N` não aceita "ok" com esse check vermelho |
+| Esquemas | `scripts/check-schemas.mjs`: exports no `index.ts`, regex só em `common.ts`, campo com sufixo (`Cents`, `Bps`, `Id`, `Date`, `At`, `cpf`) usa a primitiva; `scripts/check-avoid.mjs`: hábitos da versão antiga da biblioteca (os dois no `pnpm verify`) |
 | Relatório compacto | status, arquivos, diff, tentativas, tokens da Alice, segundos, avisos, `lessons` (até 3) e pergunta pendente |
 | Registro | cada execução em `runs/<tarefa>/` (JSONL) e uma linha em `runs/metrics.jsonl` (`alice.py metrics`), fora do repositório |
 

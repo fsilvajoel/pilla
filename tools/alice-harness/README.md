@@ -3,26 +3,42 @@
 Ambiente de trabalho da Alice (modelo local no Ollama): executa as ferramentas que ela pede, com limites (leitura do repositório, escrita restrita, testes, busca em documentação oficial). Configuração em `.env` (ver `.env.example`).
 
 ## Comandos
-- `alice.py run <task.yaml> --repo <path>`: Inicia uma tarefa.
-- `alice.py resume <run_dir> --answer "<text>"`: Continua uma tarefa após uma interação com o Claude.
-- `alice.py chat "<prompt>" [--file <path>]`: Pergunta direta ao modelo, sem uso de ferramentas.
-- `alice.py rule <ID>... [--repo <path>]`: Exibe definições de regras (ex: RN-C03, T-13) a partir da documentação.
-- `alice.py metrics`: Exibe um resumo das execuções registradas em `runs/metrics.jsonl`.
+- `alice.py cards <plano.yaml>... --repo <path>`: valida os cartões (forma e as regras de escrita de [cartao-de-tarefa.md](../../docs/agents/cartao-de-tarefa.md)). Rodar antes de qualquer fila.
+- `alice.py run <cartão.yaml> --repo <path>`: executa um cartão. Faz o pré-voo antes de chamar o modelo.
+- `alice.py plan-run <plano.yaml> <ID>... --repo <path>`: fila de cartões de um plano, com retrospectiva e tokens no fim.
+- `alice.py resume <run_dir> --answer "<texto>"`: continua uma execução que parou com pergunta. Recusa se houver arquivo alterado fora do cartão.
+- `alice.py status`: diz se há execução em andamento (ninguém edita o repositório enquanto houver).
+- `alice.py rule <ID>... [--repo <path>]`: mostra a definição de uma regra (RN-C03, T-13) ou seção de documento.
+- `alice.py metrics` / `alice.py evolution`: resumo de `runs/metrics.jsonl`; evolução por versão do harness.
+- `alice.py claude-usage --since <data>`: tokens reais do Claude, lidos do transcript.
+- `alice.py chat "<pergunta>" [--file <path>]`: pergunta direta ao modelo, sem ferramentas (só resumo e rascunho).
 
-## Ferramentas (Tools)
-As ferramentas disponíveis para a Alice incluem:
-- `edit_file`: Edita arquivos no repositório.
-- `view_diff`: Visualiza as mudanças feitas.
-- `read_rule`: Lê definições de regras específicas.
+## Estados de uma execução
+| Status | Significa | De quem é |
+|---|---|---|
+| `done` | verificação aprovada (escopo, portões, todos os checks) | — |
+| `needs_input` | o modelo perguntou (`ask_claude`); continuar com `resume` | — |
+| `failed` | acabou o orçamento (tentativas, chamadas, minutos) ou travou em laço | classificar: cartão, harness ou modelo |
+| `card_error` | o pré-voo reprovou o cartão; o modelo nem foi chamado | de quem escreveu o cartão |
 
-## Campos do Card (Task Card)
-Os cards de tarefa utilizam os seguintes campos:
-- `kind`: Tipo da tarefa (ex: implement, test-author, docs).
-- `rules`: IDs das regras (RN-C03, T-13…); o harness injeta só essas definições no pedido.
-- `refactor`: `true`/`false`; em `implement` o padrão é `true` (rodada de limpeza + nova verificação após tudo verde).
-- `think`: raciocínio estendido do modelo; padrão `false` (ligar só em lógica difícil).
-- `maxOutputTokens`: Limite de tokens de saída.
-- `lessons`: Lições aprendidas registradas no campo `finish`.
+## Pré-voo (LI-056)
+Antes da primeira chamada ao modelo: o comando de cada check existe; os arquivos de `readFirst` e `protectedTests` existem; e, em tarefa de escrita, pelo menos um check está vermelho (se todos já passam, nenhum check distingue pronto de não pronto). Custa segundos e para no primeiro check vermelho.
+
+## O pedido
+`Run.system_prompt` monta o pedido em seções fixas (TAREFA, ARQUIVOS, PRONTO QUANDO, REGRAS DE CÓDIGO, FERRAMENTAS, FLUXO). Entram sozinhos: as definições de `rules`, a cola do lint ([docs/memoria/lint.md](../../docs/memoria/lint.md), só as seções dos arquivos do cartão), as notas do pacote e as colas de biblioteca.
+
+## Ferramentas do modelo
+`list_files`, `read_file`, `search_code`, `read_rule`, `write_file` (até 150 linhas por chamada), `edit_file`, `replace_function`, `view_diff`, `run_check`, `web_search`, `fetch_page`, `ask_claude`, `finish`.
+
+## Verificação no `finish`
+1. Prettier nos arquivos tocados (LI-052).
+2. Escopo: nada alterado fora de `allowedPaths`; marcadores proibidos da política.
+3. Em `implement`: frase `ESBOÇO` restante, linhas de código literais do `done`, duplicação.
+4. Todos os checks do cartão (em `pre-review`, check vermelho é achado, não trava).
+5. Em `pre-review`: uma linha por item do checklist, evidência que existe, e "ok" recusado quando o check citado no item (`run_check N`) está vermelho (LI-053).
+6. Aprovado em `implement`: uma rodada de limpeza e nova verificação (`refactor: false` desliga).
+
+Campos do cartão: ver [cartao-de-tarefa.md](../../docs/agents/cartao-de-tarefa.md).
 
 ## Travas extras (`gates.py`)
 São ideias do [harness-toolkit](https://github.com/tech-leads-club/harness-toolkit), reescritas aqui; nenhum código foi copiado (a licença é Elastic 2.0).

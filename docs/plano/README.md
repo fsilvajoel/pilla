@@ -1,6 +1,6 @@
 # Plano de entrega
 
-Cartões no formato de [docs/agents/cartao-de-tarefa.md](../agents/cartao-de-tarefa.md), um arquivo por entrega. Validação: `python3 tools/alice-harness/alice.py cards docs/plano/E0.yaml docs/plano/E1.yaml --repo .`
+Cartões no formato de [docs/agents/cartao-de-tarefa.md](../agents/cartao-de-tarefa.md), um arquivo por entrega. Quem escreve cartão segue as **regras para quem escreve o cartão** dessa página. Validação (obrigatória antes de qualquer fila): `python3 tools/alice-harness/alice.py cards docs/plano/E0.yaml docs/plano/E1.yaml docs/plano/E2.yaml --repo .`
 
 | Entrega | Objetivo | Pronto quando |
 |---|---|---|
@@ -90,8 +90,17 @@ Mesmo formato da E2a. Entram só os corpos que a RFC-004 §3 define campo a camp
 | E2-T13 | claude ✅ | módulo-modelo: `cpfSchema` (RN-P01), `problemSchema` (§6, code → status), `simulate-loan.ts` (pedido e resposta, §5) e `api.test.ts` em tabela |
 | E2-T14..T22 | alice | um corpo por cartão: login, acesso ao portal, sessão do portal, ativar, baixar, quitação, prévia de alocação, estorno, URL de upload |
 | E2-T23 | alice (`pre-review`) | checklist C1..C7 com evidência |
+| E2-T24 | alice ✅ (perfil `qwen35`) | refactor: `allocationsTotal` compartilhada pelos dois eventos de pagamento (42 s, sem reprovação) |
 
 Decisões do Joel (2026-11-15), já nos esquemas:
 - Lançamento manual de tesouraria (`treasury/account-entry.ts`): `CAPITAL_IN`/`CAPITAL_OUT` sempre positivos, o sinal vem do tipo; `ADJUSTMENT` com sinal próprio (nunca zero) e `justification` obrigatória só nele.
 - Anexos: PDF e imagens (JPEG, PNG, WebP, HEIC/HEIF do iPhone); máximo de 10 MiB (escolha do Claude, a confirmar).
 - Limites de texto confirmados: usuário 100, senha 200, nome de arquivo 255.
+
+## Estado dos cartões (2026-11-15)
+
+Todos os 55 cartões de E0, E1 e E2 (até o E2-T24) já foram executados; **não há cartão pendente**. Os planos ficam
+como registro e como molde. Em 2026-11-15 as regras de escrita viraram validação (`alice.py cards`): os cartões
+antigos da Alice acusaram 26 problemas (20 dicas de técnica dentro do `done`, 3 arquivos citados sem caminho, 2 checks
+sem mensagem, 1 orçamento curto), todos corrigidos; a dica de técnica passou para o campo `hints`. O próximo lote (E2b)
+nasce já sob essas regras e começa por um cartão só.

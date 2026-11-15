@@ -21,7 +21,7 @@ Documentação em pt-BR; código em inglês ([ADR-0012](docs/adr/0012-idioma-cod
 | Quem | Faz | Não faz |
 |---|---|---|
 | **Joel** | decide produto e arquitetura; aprova docs e PRs; faz merge | — |
-| **Claude** (tech lead) | recorta tarefas; escreve **assinaturas, testes e travas**; arquitetura, segurança, integração entre módulos; responde dúvidas da Alice; revisa; comita | ficar no meio do ciclo de tentativa e erro da Alice |
+| **Claude** (tech lead) | recorta tarefas em cartões claros e conferíveis; escreve **assinaturas, testes e travas**; arquitetura, segurança, integração entre módulos; responde dúvidas da Alice; revisa; comita | ficar no meio do ciclo de tentativa e erro da Alice |
 | **Alice** (local) | implementa até os testes passarem; código repetitivo; rascunhos de docs/PR; resumos; pesquisa em docs oficiais | alterar testes, configs, docs aprovados, dependências; segurança/autenticação; comitar |
 
 ### Economia de tokens do Claude (regra de operação)
@@ -58,6 +58,7 @@ Testes vêm **antes** do código e são escritos por quem **não** implementa. Q
 | `pre-review` | revisa o diff em sessão nova contra cartão e glossário; só relata | nada |
 | `docs` | rascunha ficha de módulo, corpo de PR, lições | `docs/memoria/**` do cartão |
 | `cards` | rascunha cartões a partir das tabelas das RFCs | `docs/plano/**` |
+| `research` | pesquisa em documentação oficial, só com bom motivo ([cartão](docs/agents/cartao-de-tarefa.md)) | um resumo em `docs/pesquisa/` |
 
 **Tarefa da Alice é pequena** (lições LI-011/012/013, conferidas pelo `alice.py cards`):
 - no máximo **2 arquivos** em `allowedPaths` e **30 chamadas** de ferramenta; uma função por cartão;
@@ -67,7 +68,7 @@ Testes vêm **antes** do código e são escritos por quem **não** implementa. Q
 
 **Enquanto a Alice roda, ninguém edita o repositório** (LI-009): antes de editar, `alice.py status`. Fila de cartões: `alice.py plan-run docs/plano/E1.yaml <IDs>` (pula dependentes de falhas).
 
-Formato do cartão: [docs/agents/cartao-de-tarefa.md](docs/agents/cartao-de-tarefa.md).
+**Cartão mal escrito é erro de quem escreveu, não de quem executou.** Formato e as regras para quem planeja (o que vai no `done`, nos `checks` e no `hints`): [docs/agents/cartao-de-tarefa.md](docs/agents/cartao-de-tarefa.md). Antes da fila, `alice.py cards <plano> --repo .` sem problemas; o `run` ainda faz um pré-voo e devolve `card_error` sem gastar o modelo.
 
 ## 5. Contexto e memória
 
@@ -104,7 +105,7 @@ Regra de negócio nunca é pesquisada na web: dúvida de negócio vai para `ask_
 ## 8. Definição de pronto
 
 - [ ] Testes do cartão passam; nenhum teste alterado por quem implementou.
-- [ ] `typecheck`, `lint`, fronteiras (dependency-cruiser), cobertura e (em `finance`) mutação dentro dos mínimos.
+- [ ] `typecheck`, `lint`, fronteiras (dependency-cruiser), cobertura e (em `finance`) mutação dentro dos mínimos. O código já nasce seguindo o lint: as regras, com exemplo errado e certo, estão em [docs/memoria/lint.md](docs/memoria/lint.md) e vão no pedido da Alice.
 - [ ] Sem `any`, `@ts-ignore`, `eslint-disable`, `.only/.skip`, `console.`, TODO sem ID.
 - [ ] Nenhum arquivo fora de `allowedPaths`; nenhuma dependência nova.
 - [ ] Nomes conforme glossário; textos pt-BR no arquivo de mensagens.
