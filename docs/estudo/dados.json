@@ -594,6 +594,139 @@
      "LI-032"
     ],
     "mudanca": "check ignora APIs só de tipo; exige 3+ itens em Evite"
+   },
+   {
+    "cartao": "E2-T11",
+    "kind": "pre-review",
+    "harness": "1c73a67",
+    "status": "done",
+    "segundos": 25.3,
+    "tentativas": 1,
+    "chamadas": 29,
+    "erros_ferramenta": 0,
+    "achado": "marcou tudo ok citando só loan-activated (amostra, não prova)",
+    "licoes": [
+     "LI-033"
+    ],
+    "mudanca": "—"
+   },
+   {
+    "cartao": "E2-T11",
+    "kind": "pre-review",
+    "harness": "bd5e02a",
+    "status": "needs_input",
+    "segundos": 11.9,
+    "tentativas": 0,
+    "chamadas": 17,
+    "erros_ferramenta": 0,
+    "achado": "cola não injetada: pré-revisão não tem allowedPaths",
+    "licoes": [
+     "LI-034"
+    ],
+    "mudanca": "—"
+   },
+   {
+    "cartao": "E2-T11",
+    "kind": "pre-review",
+    "harness": "80f2409",
+    "status": "failed",
+    "segundos": 47.1,
+    "tentativas": 3,
+    "chamadas": 36,
+    "erros_ferramenta": 0,
+    "achado": "C6 falso positivo (um arquivo, várias linhas); C8 não visto pelo modelo",
+    "licoes": [
+     "LI-035"
+    ],
+    "mudanca": "—"
+   },
+   {
+    "cartao": "E2-T11",
+    "kind": "pre-review",
+    "harness": "aa703b2",
+    "status": "needs_input",
+    "segundos": 72.8,
+    "tentativas": 0,
+    "chamadas": 19,
+    "erros_ferramenta": 1,
+    "achado": "achou o desvio do C8, mas perguntou se podia marcar (check vermelho travava o finish)",
+    "licoes": [
+     "LI-036"
+    ],
+    "mudanca": "—"
+   },
+   {
+    "cartao": "E2-T11",
+    "kind": "pre-review",
+    "harness": "2b23600",
+    "status": "failed",
+    "segundos": 101.2,
+    "tentativas": 3,
+    "chamadas": 23,
+    "erros_ferramenta": 1,
+    "achado": "C6 com caminho curto não contou como prova",
+    "licoes": [
+     "LI-037"
+    ],
+    "mudanca": "—"
+   },
+   {
+    "cartao": "E2-T11",
+    "kind": "pre-review",
+    "harness": "532890b",
+    "status": "needs_input",
+    "segundos": 11.2,
+    "tentativas": 0,
+    "chamadas": 17,
+    "erros_ferramenta": 0,
+    "achado": "usou read_rule para docs/glossario.md e o erro mandou perguntar",
+    "licoes": [
+     "LI-038"
+    ],
+    "mudanca": "—"
+   },
+   {
+    "cartao": "E2-T11",
+    "kind": "pre-review",
+    "harness": "b89b6c4",
+    "status": "needs_input",
+    "segundos": 17.0,
+    "tentativas": 0,
+    "chamadas": 20,
+    "erros_ferramenta": 1,
+    "achado": "achou o C8 e pediu permissão de novo",
+    "licoes": [
+     "LI-039"
+    ],
+    "mudanca": "—"
+   },
+   {
+    "cartao": "E2-T11",
+    "kind": "pre-review",
+    "harness": "67aee57",
+    "status": "failed",
+    "segundos": 25.4,
+    "tentativas": 3,
+    "chamadas": 26,
+    "erros_ferramenta": 0,
+    "achado": "C8 certo; C6 'index.ts:4-13' contou como 2 linhas",
+    "licoes": [
+     "LI-040"
+    ],
+    "mudanca": "—"
+   },
+   {
+    "cartao": "E2-T11",
+    "kind": "pre-review",
+    "harness": "afc7f81",
+    "status": "done",
+    "segundos": 36.3,
+    "tentativas": 2,
+    "chamadas": 26,
+    "erros_ferramenta": 1,
+    "achado": "pré-revisão completa: C1–C7 ok com os 10 arquivos; C8 falta em installment-paid.ts:9 (corrigido pelo Claude)",
+    "licoes": [],
+    "mudanca": "—"
    }
   ]
  }
