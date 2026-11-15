@@ -8,7 +8,7 @@ Sistema de gestão de empréstimos (financeira), modular. Produto de estudo de a
 ## Regras do projeto
 - Repositório **público**: nada de IP, senha, token ou detalhe da infraestrutura em arquivo versionado.
 - Commits pequenos; `main` sempre funcionando.
-- Idioma (ADR-0012): código, commits e títulos de PR em **inglês**; docs, corpo de PR e textos do sistema em **pt-BR**. Nomes do domínio: `docs/glossario.md`.
+- Idioma (ADR-0012): código, commits e títulos de PR em **inglês**; docs, comentários de código, corpo de PR e textos do sistema em **pt-BR**. Nomes do domínio: `docs/glossario.md`.
 - Trabalho combinado com a Alice: `NOTAS-ALICE.md`.
 
 ## Configuração e segredos (`.env`)

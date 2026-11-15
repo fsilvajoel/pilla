@@ -1,7 +1,7 @@
 # AGENTS.md — Guia para agentes construtores do pilla
 
 Vale para **todo agente** que escreve código aqui: Claude (tech lead), Alice (modelo local) e qualquer outro.
-Documentação em pt-BR; código em inglês ([ADR-0012](docs/adr/0012-idioma-codigo-ingles-docs-portugues.md)).
+Documentação e comentários de código em pt-BR; código em inglês ([ADR-0012](docs/adr/0012-idioma-codigo-ingles-docs-portugues.md)).
 
 > Princípio: **documento orienta, máquina obriga.** Toda regra importante tem uma trava automática (teste, tipo, lint, CI ou o ambiente da Alice), detalhada em [docs/agents/travas.md](docs/agents/travas.md) com a coluna de quando ela fica ativa.
 

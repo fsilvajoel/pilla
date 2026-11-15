@@ -109,7 +109,7 @@ Montado por `Run.system_prompt` a partir do cartão, em seções fixas:
 # TAREFA <id>: <title>          tipo, regras injetadas, referências
 # ARQUIVOS                      onde escreve, o que é protegido, o que ler primeiro
 # PRONTO QUANDO                 uma linha do done por tópico; depois hints; depois os checks numerados
-# REGRAS DE CÓDIGO              inglês, não inventar API, cola do lint, notas do pacote, colas de biblioteca
+# REGRAS DE CÓDIGO              código em inglês e comentário em pt-BR, não inventar API, cola do lint, notas do pacote, colas de biblioteca
 # FERRAMENTAS                   qual ferramenta para qual edição
 # FLUXO                         a ordem dos passos, por tipo de tarefa
 ```

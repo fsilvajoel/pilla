@@ -10,14 +10,15 @@
 As regras de negócio estão escritas em português (contrato, parcela, quitação). Sem uma regra, cada agente escolheria um idioma para os nomes no código e o resultado seria uma mistura (`Contrato.dueDate`, `LoanParcela`).
 
 ## Decisão
-- **Inglês** em tudo que é código e termo técnico: identificadores, arquivos e pastas, tabelas e colunas, schemas do banco, rotas da API, nomes de eventos, valores de enum, comentários no código, nomes de testes, **mensagens de commit e títulos de PR**.
-- **Português (pt-BR)** em: documentação (`docs/`, README, CLAUDE.md), **corpo (descrição) dos PRs** e **todos os textos do sistema exibidos ao usuário** (telas, mensagens de erro, e-mails, WhatsApp). Não há outro idioma de interface no MVP.
+- **Inglês** em tudo que é código e termo técnico: identificadores, arquivos e pastas, tabelas e colunas, schemas do banco, rotas da API, nomes de eventos, valores de enum, nomes de testes, **mensagens de commit e títulos de PR**.
+- **Português (pt-BR)** em: documentação (`docs/`, README, CLAUDE.md), **comentários no código** (inclusive docstrings e JSDoc), **corpo (descrição) dos PRs** e **todos os textos do sistema exibidos ao usuário** (telas, mensagens de erro, e-mails, WhatsApp). Não há outro idioma de interface no MVP.
 - A tradução de cada termo do negócio é **única** e está no [glossário](../glossario.md). Termo novo: entra no glossário antes de entrar no código.
 - Textos exibidos ao usuário ficam num arquivo de mensagens (pt-BR), não espalhados no código.
 
 ## Consequências
 - Código consistente e legível por qualquer ferramenta ou pessoa; documentação acessível ao Joel.
 - Os documentos usam termos em português; o agente consulta o glossário para saber o nome no código.
+- Comentário explica o porquê para quem valida o produto; por isso fica no idioma da documentação. Comentários antigos em inglês não são migrados em massa: passam para pt-BR quando o trecho for alterado.
 - Siglas brasileiras sem tradução natural ficam como estão: `cpf`, `pix`, `boleto`.
 
 ## Alternativas consideradas
@@ -26,3 +27,4 @@ As regras de negócio estão escritas em português (contrato, parcela, quitaç�
 
 ## Histórico
 - 2026-11-14: ajustada no mesmo dia, antes de qualquer código, por decisão do Joel (commits e títulos de PR em inglês; corpo do PR em pt-BR).
+- 2026-11-15: comentários de código passam a ser em pt-BR, por decisão do Joel. O código (identificadores, testes, commits) segue em inglês.

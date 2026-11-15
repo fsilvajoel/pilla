@@ -22,7 +22,7 @@ Fluxo: **PRD** define a necessidade → **RFC** propõe a solução → as decis
 3. **Cite os IDs** nos commits e PRs (ex.: `RN-C05`, `ADR-0003`).
 4. Encontrou conflito ou lacuna? **Não decida sozinho**: registre em uma RFC (nova ou existente) e pergunte.
 5. Uma ADR aceita **não é editada**; se a decisão mudar, cria-se uma nova ADR que a **substitui** (`Substituída por ADR-XXXX`).
-6. **Nomes no código em inglês**, conforme o [glossário](glossario.md); documentação em pt-BR ([ADR-0012](adr/0012-idioma-codigo-ingles-docs-portugues.md)).
+6. **Nomes no código em inglês**, conforme o [glossário](glossario.md); documentação e comentários em pt-BR ([ADR-0012](adr/0012-idioma-codigo-ingles-docs-portugues.md)).
 7. Respeite as fronteiras de domínio ([RFC-001](rfc/RFC-001-dominios-e-integracao.md)): um módulo nunca grava dados de outro.
 
 ## Índice
