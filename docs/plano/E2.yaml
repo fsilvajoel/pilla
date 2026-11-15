@@ -239,7 +239,8 @@ cards:
   - pnpm --filter @pilla/schemas lint
   done:
   - all PaymentReversed tests in events.test.ts pass (vitest -t filter)
-  - 'payload fields: paymentId, loanId, accountId (uuid v7), amountCents (> 0), allocations (reuse allocationSchema, min 1, must sum to amountCents), reason'
+  - 'payload fields: paymentId, loanId, accountId (uuid v7), amountCents (> 0), allocations (min 1, must sum to amountCents), reason'
+  - 'import { allocationSchema } from "./payment-confirmed" (never redeclare it: index.ts re-exports both files)'
   - replace only the z.never() payload; z.strictObject like payment-confirmed.ts
   - reuse the primitives of ../common (idSchema, centsSchema, isoDateSchema, reasonSchema); never write a new regex
   - one edit_file call; the file stays under 25 lines
