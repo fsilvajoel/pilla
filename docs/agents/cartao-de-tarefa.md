@@ -81,7 +81,7 @@ modelo gastar qualquer coisa); **—** = só a leitura de quem escreve.
 | # | Regra | Por quê | Máquina |
 |---|---|---|---|
 | 17 | Sempre com `checklist` fechado, chaves únicas, um item por verificação. | revisão aberta devolve "sem achados" (LI-013) | V |
-| 18 | Item **mecânico** (toda linha, todo arquivo, nenhum uso de X) vira **check**, e o item cita o check: `…; run_check 2 (rule S1) proves it`. O harness recusa "ok" com esse check vermelho. | o modelo não acha o que é mecânico lendo código; e "ok" com prova que não sustenta passava (LI-035, LI-050, LI-053) | V |
+| 18 | Item **mecânico** (toda linha, todo arquivo, nenhum uso de X) vira **check**, e o item cita o check: `…; run_check 2 (rule S1) proves it`. Check com várias regras: cite a regra do item, porque o harness confere o veredito só contra ela ("ok" com a regra acusada e "falta" sem nada acusado são recusados). | o modelo não acha o que é mecânico lendo código; "ok" com prova que não sustenta passava; sem a regra, o vermelho de um item derrubava os outros (LI-035, LI-050, LI-053, LI-059) | V |
 | 19 | Fica para o modelo só o que exige leitura: nomes contra o glossário, sentido contra a RFC. | é onde ele rende | — |
 
 ### Processo de quem planeja

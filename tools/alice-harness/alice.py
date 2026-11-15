@@ -315,13 +315,37 @@ def bound_checks(items: list[str]) -> dict[str, int]:
     return out
 
 
-def red_check_oks(summary: str, items: list[str], exit_codes: dict[int, int]) -> list[str]:
-    """LI-053: 'ok' on an item whose own check is red is never accepted (evidence must support the verdict)."""
+def bound_rules(items: list[str]) -> dict[str, str]:
+    """Item que cita a regra do check ('run_check 2 (rule S4)'): chave -> regra (LI-059)."""
+    out = {}
+    for item in items:
+        m = re.search(r"\brun_check\s+\d+\s*\(rule\s+(\w+)\)", str(item))
+        if m:
+            out[str(item).split()[0]] = m.group(1)
+    return out
+
+
+def red_check_oks(summary: str, items: list[str], results: dict[int, tuple[int, str]]) -> list[str]:
+    """LI-053/LI-059: o veredito do item precisa bater com o check dele.
+    Com regra citada, conta só a saída daquela regra: o check vermelho por outra regra não derruba o item.
+    'ok' com a regra acusada e 'falta' sem nada acusado são recusados; 'parcial' e 'n/a' ficam livres."""
+    rules = bound_rules(items)
     out = []
     for key, idx in bound_checks(items).items():
         line = next((l.strip() for l in summary.splitlines() if l.strip().startswith(key + " ")), "")
-        if re.match(rf"{re.escape(key)}\s+ok\b", line, re.I) and exit_codes.get(idx, 0) != 0:
-            out.append(f"{key} (run_check {idx} está vermelho)")
+        m = re.match(rf"{re.escape(key)}\s*[:\-]?\s*(ok|falta)\b", line, re.I)
+        if not m or idx not in results:
+            continue
+        code, output = results[idx]
+        rule = rules.get(key)
+        flagged = code != 0 and (rule is None or re.search(rf"(?<!\w){re.escape(rule)}(?!\w)", output) is not None)
+        verdict = m.group(1).lower()
+        if verdict == "ok" and flagged:
+            where = f"a regra {rule} do run_check {idx} acusa problema" if rule else f"run_check {idx} está vermelho"
+            out.append(f"{key} ({where}: marque 'falta' e cite a primeira linha dela, arquivo:linha)")
+        elif verdict == "falta" and not flagged:
+            where = f"o run_check {idx} não acusa a regra {rule}" if rule else f"o run_check {idx} está verde"
+            out.append(f"{key} ({where}: o item está 'ok'; o vermelho de outra regra é de outro item)")
     return out
 
 
@@ -871,11 +895,10 @@ class Run:
                                          "Item com 'every/todo/cada' pede a busca que cobre todos os arquivos (search_code) ou um arquivo:linha por arquivo; um exemplo só não prova.")
                         bound = sorted({i for i in bound_checks(self.card["checklist"]).values() if i < len(self.card["checks"])})
                         red = [] if gaps else red_check_oks(str(args.get("summary", "")), self.card["checklist"],
-                                                            {i: self.check(self.card["checks"][i])[0] for i in bound})
+                                                            {i: self.check(self.card["checks"][i])[:2] for i in bound})
                         if red:
                             ok = False
-                            problems += ("\n" if problems else "") + ("'ok' sem prova em: " + ", ".join(red) +
-                                         ". O check do próprio item acusa problema: marque 'falta' e cite a primeira linha da saída do check (arquivo:linha).")
+                            problems += ("\n" if problems else "") + ("veredito contra o check em: " + "; ".join(red) + ".")
                         if gaps:
                             ok = False
                             problems += ("\n" if problems else "") + ("summary sem linha para: " + ", ".join(gaps) +

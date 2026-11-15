@@ -24,7 +24,7 @@ CATEGORIES: list[tuple[str, re.Pattern[str]]] = [
     ("proibido", re.compile(r": (suppression|any|console|focused/skipped test): ")),
     ("esboço", re.compile(r"ESBOÇO|linha do 'Pronto quando'")),
     ("duplicação", re.compile(r"código duplicado")),
-    ("checklist", re.compile(r"summary sem linha para|'ok' sem prova")),
+    ("checklist", re.compile(r"summary sem linha para|'ok' sem prova|veredito contra o check")),
     ("typecheck", re.compile(r"check \d+ falhou.*(tsc|typecheck|py_compile)|error TS\d+")),
     ("lint", re.compile(r"check \d+ falhou.*(lint|eslint|check-avoid)")),
     ("mutação", re.compile(r"check \d+ falhou.*(mutation|stryker)")),
@@ -56,7 +56,7 @@ def split_problems(problems: str) -> list[str]:
     """One problem per entry: a new entry starts at a line that is not an indented/continuation line of a check."""
     out: list[str] = []
     for line in problems.splitlines():
-        starts = re.match(r"(check \d+ falhou|arquivo alterado|summary sem|'ok' sem|nenhum arquivo|código duplicado|[^\s:]+\.[a-z]{1,4}: )", line)
+        starts = re.match(r"(check \d+ falhou|arquivo alterado|summary sem|'ok' sem|veredito contra|nenhum arquivo|código duplicado|[^\s:]+\.[a-z]{1,4}: )", line)
         if starts or not out:
             out.append(line)
         else:
