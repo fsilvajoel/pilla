@@ -464,6 +464,22 @@
      "LI-028"
     ],
     "mudanca": "edit_file reconhece edição já aplicada; caminhos relativos ao pacote resolvidos pelos caminhos do cartão"
+   },
+   {
+    "cartao": "E2-T04",
+    "kind": "implement",
+    "harness": "1dbf955",
+    "status": "done",
+    "segundos": 25,
+    "tentativas": 2,
+    "chamadas": 16,
+    "erros_ferramenta": 0,
+    "checks_em_cache": 6,
+    "tokens_entrada": 63306,
+    "tokens_saida": 1421,
+    "achado": "correto, 0 erros de ferramenta depois da LI-028",
+    "licoes": [],
+    "mudanca": "—"
    }
   ]
  }
