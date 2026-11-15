@@ -749,3 +749,36 @@ cards:
   - C5 every api schema is exported from src/index.ts
   - C6 field names match RFC-004 §3 and docs/glossario.md exactly
   - C7 every zod API used follows the zod sheet (docs/memoria/libs/zod.md); run_check 1 lists what the sheet says to avoid
+- id: E2-T24
+  title: Share the allocations total between PaymentConfirmed and PaymentReversed
+  kind: implement
+  assignee: alice
+  rules: []
+  refs:
+  - RFC-004 §7
+  dependsOn:
+  - E2-T01
+  allowedPaths:
+  - packages/schemas/src/events/payment-confirmed.ts
+  - packages/schemas/src/events/payment-reversed.ts
+  protectedTests:
+  - packages/schemas/src/events/events.test.ts
+  checks:
+  - pnpm --filter @pilla/schemas exec vitest run src/events/events.test.ts
+  - pnpm --filter @pilla/schemas typecheck
+  - pnpm --filter @pilla/schemas lint
+  - node -e "const s=require('fs').readFileSync('packages/schemas/src/events/payment-reversed.ts','utf8');if(s.includes('.reduce('))process.exit(1)"
+  done:
+  - all events.test.ts tests pass, including both 'allocations must sum to amountCents' cases
+  - 'payment-confirmed.ts exports: export function allocationsTotal(allocations: readonly Allocation[]): number (the reduce that is in the refine today), with export type Allocation = z.infer<typeof allocationSchema>;'
+  - both refines become (p) => allocationsTotal(p.allocations) === p.amountCents; message and path stay the same
+  - 'payment-reversed.ts imports it: import { allocationSchema, allocationsTotal } from "./payment-confirmed"; no .reduce( left in payment-reversed.ts'
+  - no other change; field lists and doc comments stay as they are
+  budget:
+    attempts: 4
+    toolCalls: 20
+    minutes: 6
+  readFirst:
+  - packages/schemas/src/events/payment-confirmed.ts
+  - packages/schemas/src/events/payment-reversed.ts
+  sizeNote: refactor pequeno; tira a soma copiada (achada pelo gate de duplicação, LI-046)
