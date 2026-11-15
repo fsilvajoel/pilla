@@ -102,7 +102,7 @@
     }
   ],
   "divisao_v1": {
-    "claude_estimado": 45000,
+    "claude_estimado": "substituído por claude_por_fase (fase C: 57.527 de saída real)",
     "alice_entrada": 1860902,
     "alice_saida": 98120
   },
@@ -228,5 +228,101 @@
       "rounding": 91.67,
       "split": 90.0
     }
+  },
+  "claude_por_fase": {
+    "fonte": "transcript do Claude Code (uso real por resposta, sem duplicatas)",
+    "peso": "ponderado = entrada + 2x escrita de cache (1h) + 0,1x leitura de cache + 5x saída (aproximação de preço relativo)",
+    "fases": [
+      {
+        "fase": "A Planejamento (PRD/RFC/ADR, harness v1)",
+        "input_tokens": 198,
+        "cache_creation_input_tokens": 351501,
+        "cache_read_input_tokens": 14817714,
+        "output_tokens": 192824,
+        "turns": 80,
+        "ponderado": 3149091,
+        "contexto_medio": 185221
+      },
+      {
+        "fase": "B Auditoria",
+        "input_tokens": 6,
+        "cache_creation_input_tokens": 4367,
+        "cache_read_input_tokens": 602670,
+        "output_tokens": 13392,
+        "turns": 2,
+        "ponderado": 135967,
+        "contexto_medio": 301335
+      },
+      {
+        "fase": "C V1 da auditoria (Alice: H-01..05)",
+        "input_tokens": 100,
+        "cache_creation_input_tokens": 123211,
+        "cache_read_input_tokens": 5013222,
+        "output_tokens": 57527,
+        "turns": 44,
+        "ponderado": 1035479,
+        "contexto_medio": 113937
+      },
+      {
+        "fase": "D Push, subtree, maturidade",
+        "input_tokens": 32,
+        "cache_creation_input_tokens": 6665,
+        "cache_read_input_tokens": 1862422,
+        "output_tokens": 8568,
+        "turns": 12,
+        "ponderado": 242444,
+        "contexto_medio": 155202
+      },
+      {
+        "fase": "E Estudo/artigo (Alice: gráficos)",
+        "input_tokens": 66,
+        "cache_creation_input_tokens": 60587,
+        "cache_read_input_tokens": 5569966,
+        "output_tokens": 31433,
+        "turns": 29,
+        "ponderado": 835402,
+        "contexto_medio": 192068
+      },
+      {
+        "fase": "F Cartões E0/E1 (Alice: C-01, H-06)",
+        "input_tokens": 38,
+        "cache_creation_input_tokens": 40681,
+        "cache_read_input_tokens": 4128058,
+        "output_tokens": 24252,
+        "turns": 17,
+        "ponderado": 615466,
+        "contexto_medio": 242827
+      },
+      {
+        "fase": "G E0 esqueleto (Claude)",
+        "input_tokens": 68,
+        "cache_creation_input_tokens": 37018,
+        "cache_read_input_tokens": 9100486,
+        "output_tokens": 31318,
+        "turns": 32,
+        "ponderado": 1140743,
+        "contexto_medio": 284390
+      },
+      {
+        "fase": "H E1 com Alice (4 filas)",
+        "input_tokens": 170,
+        "cache_creation_input_tokens": 104955,
+        "cache_read_input_tokens": 28378234,
+        "output_tokens": 86318,
+        "turns": 78,
+        "ponderado": 3479493,
+        "contexto_medio": 363824
+      },
+      {
+        "fase": "I Feedback",
+        "input_tokens": 12,
+        "cache_creation_input_tokens": 2767,
+        "cache_read_input_tokens": 1665353,
+        "output_tokens": 4025,
+        "turns": 4,
+        "ponderado": 192206,
+        "contexto_medio": 416338
+      }
+    ]
   }
 }
