@@ -544,6 +544,21 @@
      "LI-030"
     ],
     "mudanca": "—"
+   },
+   {
+    "cartao": "E2-T09",
+    "kind": "implement",
+    "harness": "cf10d32",
+    "status": "done",
+    "segundos": 39,
+    "tentativas": 2,
+    "chamadas": 14,
+    "erros_ferramenta": 0,
+    "tokens_entrada": 57802,
+    "tokens_saida": 802,
+    "achado": "correto, 0 erros; daysLate com z.number().int().min(0) em vez de z.int().nonnegative() (estilo)",
+    "licoes": [],
+    "mudanca": "—"
    }
   ]
  }
