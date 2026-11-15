@@ -1,4 +1,7 @@
+import { daysBetween } from "./date";
 import type { IsoDate } from "./date";
+import { cents } from "./money";
+import { roundToStep } from "./rounding";
 import type { Bps, Cents } from "./money";
 
 export interface LateChargesInput {
@@ -30,6 +33,35 @@ export interface LateCharges {
  * lateInterest = meio-para-cima(openAmount × lateInterestMonthlyRate × days / (10000 × 30));
  * total = roundToStep(fine + lateInterest, roundingStep).
  */
-export function calculateLateCharges(_input: LateChargesInput): LateCharges {
-  throw new Error("not implemented");
+export function calculateLateCharges(input: LateChargesInput): LateCharges {
+  const { openAmount, dueDate, referenceDate, finePercent, lateInterestMonthlyRate, graceDays, roundingStep } = input;
+
+  const diff = daysBetween(dueDate, referenceDate);
+
+  if (diff <= graceDays || openAmount === 0n) {
+    return {
+      fine: cents(0n),
+      lateInterest: cents(0n),
+      total: cents(0n),
+    };
+  }
+
+  // fine = meio-para-cima(openAmount × finePercent / 10000);
+  const fineRaw = (openAmount * finePercent + 5000n) / 10000n;
+  const fine = cents(fineRaw);
+
+  // lateInterest = meio-para-cima(openAmount × lateInterestMonthlyRate × days / (10000 × 30));
+  const numerator = openAmount * lateInterestMonthlyRate * BigInt(diff);
+  const lateInterestRaw = (numerator + 150000n) / 300000n;
+  const lateInterest = cents(lateInterestRaw);
+
+  const sum = fine + lateInterest;
+
+  const total = roundToStep(cents(sum), roundingStep); // RN-C03: uma fonte só para o arredondamento
+
+  return {
+    fine,
+    lateInterest,
+    total,
+  };
 }

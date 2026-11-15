@@ -1,3 +1,4 @@
+import { daysBetween, addDays, addMonths } from "./date";
 import type { IsoDate } from "./date";
 
 export interface Frequency {
@@ -23,5 +24,26 @@ export class DueDateError extends Error {
  * Erro se interval < 1, count < 1 ou firstDueDate <= disbursementDate. Use as funções de ./date.
  */
 export function generateDueDates(_input: DueDatesInput): IsoDate[] {
-  throw new Error("not implemented");
+  const { firstDueDate, frequency, count, disbursementDate } = _input;
+
+  if (frequency.interval < 1 || count < 1) {
+    throw new DueDateError();
+  }
+
+  if (daysBetween(disbursementDate, firstDueDate) <= 0) {
+    throw new DueDateError();
+  }
+
+  const dates: IsoDate[] = [];
+
+  for (let i = 0; i < count; i++) {
+    const dueDate =
+      frequency.unit === "DAY"
+        ? addDays(firstDueDate, i * frequency.interval)
+        : addMonths(firstDueDate, i * frequency.interval);
+
+    dates.push(dueDate);
+  }
+
+  return dates;
 }

@@ -528,7 +528,10 @@ Fluxo: ler → escrever → run_check → corrigir → finish(summary de até 3 
                     except PermissionError as e:
                         result = f"BLOQUEADO: {e}"
                     except ValueError as e:
-                        result = str(e) if str(e).startswith("ERRO") else f"ERRO: {e}"
+                        if "idênticas" in str(e):  # LI-019: no-op edit during cleanup round
+                            result = "Nada a mudar (old = new). Se não há melhoria, chame finish agora."
+                        else:
+                            result = str(e) if str(e).startswith("ERRO") else f"ERRO: {e}"
                     except Exception as e:  # noqa: BLE001 - report any tool failure back to the model
                         result = f"ERRO: {type(e).__name__}: {e}"
                 self.log("tool", {"name": name, "args": {k: (v if len(str(v)) < 200 else str(v)[:200] + "…") for k, v in args.items()}, "result": str(result)[:500]})
