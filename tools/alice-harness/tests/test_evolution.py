@@ -124,5 +124,35 @@ class PathNotesTest(unittest.TestCase):
         self.assertEqual(path_notes(["docs/x.md"]), "")
 
 
+class ToolsLI028Test(unittest.TestCase):
+    def make(self, repo):
+        from alice import Run, Tools
+        card = {"id": "X", "title": "x", "allowedPaths": ["pkg/src/a.ts"], "protectedTests": ["pkg/src/a.test.ts"], "checks": [], "rules": []}
+        d = repo / "run"
+        d.mkdir()
+        return Tools(Run(card, repo, d))
+
+    def test_package_relative_paths_resolve_to_card_paths(self):
+        with tempfile.TemporaryDirectory() as d:
+            repo = Path(d)
+            (repo / "pkg" / "src").mkdir(parents=True)
+            (repo / "pkg" / "src" / "a.ts").write_text("const a = 1;\n")
+            (repo / "pkg" / "src" / "a.test.ts").write_text("test\n")
+            tools = self.make(repo)
+            self.assertIn("test", tools.read_file("src/a.test.ts"))
+            self.assertEqual(tools.resolve("nope.ts"), "nope.ts")
+
+    def test_repeating_an_applied_edit_is_not_an_error(self):
+        with tempfile.TemporaryDirectory() as d:
+            repo = Path(d)
+            (repo / "pkg" / "src").mkdir(parents=True)
+            (repo / "pkg" / "src" / "a.ts").write_text("const a = 1;\n")
+            tools = self.make(repo)
+            self.assertTrue(tools.edit_file("pkg/src/a.ts", "const a = 1;", "const a = 2;").startswith("ok"))
+            again = tools.edit_file("src/a.ts", "const a = 1;", "const a = 2;")
+            self.assertIn("já contém", again)
+            self.assertEqual((repo / "pkg" / "src" / "a.ts").read_text(), "const a = 2;\n")
+
+
 if __name__ == "__main__":
     unittest.main()

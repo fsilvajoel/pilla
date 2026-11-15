@@ -430,6 +430,40 @@
      "LI-027"
     ],
     "mudanca": "notas de linguagem por pacote (PATH_NOTES)"
+   },
+   {
+    "cartao": "E2-T02",
+    "kind": "implement",
+    "harness": "fd2c774",
+    "status": "done",
+    "segundos": 24,
+    "tentativas": 2,
+    "chamadas": 16,
+    "erros_ferramenta": 0,
+    "checks_em_cache": 7,
+    "tokens_entrada": 89375,
+    "tokens_saida": 1006,
+    "achado": "com a nota por pacote: payload limpo, só primitivas",
+    "licoes": [],
+    "mudanca": "—"
+   },
+   {
+    "cartao": "E2-T03",
+    "kind": "implement",
+    "harness": "fd2c774",
+    "status": "done",
+    "segundos": 23,
+    "tentativas": 2,
+    "chamadas": 18,
+    "erros_ferramenta": 3,
+    "checks_em_cache": 9,
+    "tokens_entrada": 125565,
+    "tokens_saida": 1235,
+    "achado": "correto; 2 erros = repetiu edição já aplicada; 1 = caminho relativo ao pacote (src/...)",
+    "licoes": [
+     "LI-028"
+    ],
+    "mudanca": "edit_file reconhece edição já aplicada; caminhos relativos ao pacote resolvidos pelos caminhos do cartão"
    }
   ]
  }

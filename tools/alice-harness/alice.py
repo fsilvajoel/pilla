@@ -261,8 +261,17 @@ class Tools:
                     return "\n".join(files) + "\n…(limite de 300)"
         return "\n".join(sorted(files)) or "(vazio)"
 
+    def resolve(self, path: str) -> str:
+        """Package-relative path ('src/x.ts') -> the card path that ends with it, if exactly one (LI-028)."""
+        if (self.repo / path).exists():
+            return path
+        c = self.run.card
+        known = {str(p) for k in ("allowedPaths", "protectedTests", "readFirst") for p in c.get(k, []) or []}
+        hits = sorted(p for p in known if p.endswith("/" + path.lstrip("./")))
+        return hits[0] if len(hits) == 1 else path
+
     def read_file(self, path: str, start: int | None = None, end: int | None = None) -> str:
-        r = self.g.check_read(path)
+        r = self.g.check_read(self.resolve(path))
         lines = (self.repo / r).read_text(errors="replace").splitlines()
         s = max(1, int(start or 1)); e = min(len(lines), int(end or len(lines)))
         return truncate("\n".join(f"{i}\t{lines[i-1]}" for i in range(s, e + 1)))
@@ -282,7 +291,7 @@ class Tools:
         return "\n".join(hits) or "(nenhuma ocorrência)"
 
     def write_file(self, path: str, content: str) -> str:
-        r = self.g.check_write(path)
+        r = self.g.check_write(self.resolve(path))
         n = content.count("\n") + 1
         if n > MAX_WRITE_CALL_LINES:
             raise PermissionError(f"{n} linhas numa chamada (máx. {MAX_WRITE_CALL_LINES}): escreva a base com write_file e acrescente o resto com edit_file")
@@ -295,11 +304,14 @@ class Tools:
         return f"ok: {r} ({n} linhas)"
 
     def edit_file(self, path: str, old: str, new: str, replace_all: bool = False) -> str:
-        r = self.g.check_write(path)
+        r = self.g.check_write(self.resolve(path))
         f = self.repo / r
         if not f.exists():
             raise FileNotFoundError(f"{r} não existe; use write_file para criar")
-        text = apply_edit_tolerant(f.read_text(), old, new, bool(replace_all))
+        current = f.read_text()
+        if old not in current and new.strip() and new.strip() in current:
+            return f"ok: {r} já contém este trecho (edição aplicada antes); não repita, siga para run_check"  # LI-028
+        text = apply_edit_tolerant(current, old, new, bool(replace_all))
         n = text.count("\n") + 1
         if n > MAX_WRITE_LINES:
             raise PermissionError(f"arquivo ficaria com {n} linhas (limite {MAX_WRITE_LINES}); divida a responsabilidade")
@@ -308,7 +320,7 @@ class Tools:
         return f"ok: {r} ({n} linhas)"
 
     def replace_function(self, path: str, name: str, code: str) -> str:
-        r = self.g.check_write(path)
+        r = self.g.check_write(self.resolve(path))
         f = self.repo / r
         if not f.exists():
             raise FileNotFoundError(f"{r} não existe")
