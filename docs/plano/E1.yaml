@@ -669,10 +669,11 @@ cards:
   - docs/memoria/modulos/finance.md
   protectedTests: []
   checks:
-  - test -s docs/memoria/modulos/finance.md
+  - node scripts/check-module-sheet.mjs docs/memoria/modulos/finance.md packages/finance/src 300
   done:
   - <= 300 words following _modelo.md
-  - lists public functions and the rule IDs they implement
+  - lists every exported name of src/index.ts and, per file, the rule IDs its comments cite (the check lists what is missing)
+  - invariants come from the /** */ comments and RFC-002 (sums close, integer money, rounding to step, no discount on payoff)
   budget:
     attempts: 3
     toolCalls: 20
