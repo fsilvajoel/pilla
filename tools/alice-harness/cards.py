@@ -161,7 +161,7 @@ def validate_plan(plan: dict, known_rules: set[str], external_ids: set[str]) -> 
 
 KNOWN_FIELDS = {"id", "title", "kind", "assignee", "rules", "refs", "dependsOn", "allowedPaths", "protectedTests", "checks",
                 "done", "budget", "readFirst", "sizeNote", "checklist", "libs", "think", "refactor", "question", "why",
-                "num_predict", "maxOutputTokens", "hints"}
+                "num_predict", "maxOutputTokens", "hints", "generatedPaths"}
 KNOWN_BUDGET = {"attempts", "toolCalls", "minutes"}
 SHELL_TOKENS = {"|", "||", "&&", ";", ">", ">>", "<", "!", "2>&1", "&"}
 # same expression the done-line gate of the harness uses (alice.done_line_problems, LI-042)
@@ -192,6 +192,7 @@ def quality_problems(card: dict, exists=None, producible: set[str] = frozenset()
     allowed = [str(p) for p in card.get("allowedPaths") or []]
     protected = [str(p) for p in card.get("protectedTests") or []]
     read_first = [str(p) for p in card.get("readFirst") or []]
+    generated = [str(p) for p in card.get("generatedPaths") or []]
     checks = [str(c) for c in card.get("checks") or []]
     done = [str(d) for d in card.get("done") or []]
     out = []
@@ -247,13 +248,18 @@ def quality_problems(card: dict, exists=None, producible: set[str] = frozenset()
                     add(f"check {i} filtra o pacote {name}, que não existe", "LI-055")
         if exists is not None:
             for path in PATH_TOKEN.findall(c):
-                if not exists(path) and not _matches(path, producible | set(allowed)):
+                if not exists(path) and not _matches(path, producible | set(allowed) | set(generated)):
                     add(f"check {i} cita {path}, que não existe e nenhum cartão cria", "LI-055")
     ts = any(re.search(r"\.tsx?$", p) for p in allowed)
     if kind in ("implement", "test-author") and ts:
         for word in ("typecheck", "lint"):
             if not any(re.search(rf"\b{word}\b", c) for c in checks):
                 add(f"cartão de código TypeScript sem check de {word}", "LI-054")
+    if generated and not checks:
+        add("generatedPaths sem check que gere os arquivos", "LI-060")
+    for g in generated:
+        if g in allowed or g in protected:
+            add(f"{g} está em generatedPaths e em allowedPaths/protectedTests: escolha um", "LI-060")
     if assignee == "alice" and kind == "implement" and checks and not any(re.search(r"\b(test|vitest|unittest)\b", c) for c in checks):
         add("implement sem check de teste (TDD: o teste protegido decide o pronto)", "LI-025")
 

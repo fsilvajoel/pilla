@@ -21,6 +21,8 @@ allowedPaths:              # onde pode escrever (Alice: arquivos listados, até 
   - packages/schemas/src/api/payments/allocation-preview.ts
 protectedTests:            # o teste que decide o pronto; ela nunca altera
   - packages/schemas/src/api/api.test.ts
+generatedPaths:            # opcional: arquivos que um check gera (ex.: migração do drizzle-kit); ela não escreve neles (LI-060)
+  - apps/api/migrations/core/*
 readFirst:                 # tudo que ela precisa ler; arquivo citado no done tem de estar aqui
   - packages/schemas/src/api/lending/simulate-loan.ts
   - packages/schemas/src/common.ts

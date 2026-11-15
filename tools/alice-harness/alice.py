@@ -148,9 +148,10 @@ def match_any(rel: str, patterns: list[str]) -> bool:
     return any(fnmatch.fnmatch(rel, p) or fnmatch.fnmatch(name, p) for p in patterns)
 
 class Guard:
-    def __init__(self, repo: Path, allowed: list[str], protected_extra: list[str]):
+    def __init__(self, repo: Path, allowed: list[str], protected_extra: list[str], generated: list[str] | None = None):
         self.repo = repo.resolve()
         self.allowed = allowed
+        self.generated = generated or []  # LI-060: escritos só por um check (ex.: migração do drizzle-kit)
         self.always_protected = protected_extra  # protectedTests do cartão: bloqueados sempre
         self.protected = PROTECTED_WRITE
 
@@ -170,6 +171,8 @@ class Guard:
         r = self.check_read(p)
         if r in self.always_protected or match_any(r, self.always_protected):
             raise PermissionError(f"teste protegido: {r}")
+        if any(fnmatch.fnmatch(r, g) for g in self.generated):
+            raise PermissionError(f"arquivo gerado: {r}; não escreva à mão, rode o run_check que o gera")
         if r in self.allowed or any(fnmatch.fnmatch(r, a) for a in self.allowed):
             if match_any(r, self.protected) and r not in self.allowed:
                 raise PermissionError(f"arquivo protegido: {r}")
@@ -648,7 +651,7 @@ class Run:
     def __init__(self, card: dict, repo: Path, run_dir: Path):
         self.card = card
         self.dir = run_dir
-        self.guard = Guard(repo, card["allowedPaths"], card.get("protectedTests", []))
+        self.guard = Guard(repo, card["allowedPaths"], card.get("protectedTests", []), card.get("generatedPaths", []))
         self.touched: set[str] = set(card.get("_touched", []))
         self.messages: list[dict] = card.get("_messages", [])
         self.stats = card.get("_stats", {"prompt_tokens": 0, "output_tokens": 0, "calls": 0, "attempts": 0, "tool_calls": 0})
@@ -703,7 +706,8 @@ class Run:
             f"Referências (read_rule lê cada uma): {', '.join(map(str, c.get('refs', []))) or '(nenhuma)'}.\n"
             f"Regras de negócio desta tarefa (texto oficial; use read_rule para outras):\n{rules}",
             f"# ARQUIVOS\nPode escrever SOMENTE em: {', '.join(c['allowedPaths']) or '(nada: tarefa só de leitura)'}.\n{WRITE_NOTES.get(self.kind, WRITE_NOTES['implement'])}\n"
-            f"Leia primeiro (read_file):\n{bullets(c.get('readFirst') or ['(só os arquivos acima e os citados abaixo)'])}",
+            + (f"Gerados por check (nunca escreva à mão; o check os refaz): {', '.join(c['generatedPaths'])}.\n" if c.get("generatedPaths") else "")
+            + f"Leia primeiro (read_file):\n{bullets(c.get('readFirst') or ['(só os arquivos acima e os citados abaixo)'])}",
             f"# PRONTO QUANDO (no finish o ambiente confere cada linha e roda todos os checks)\n{bullets(c.get('done', []))}",
             hints,
             checklist,
@@ -759,7 +763,7 @@ class Run:
         for f in changed:
             if f in base_dirty:
                 continue
-            if not (f in self.guard.allowed or any(fnmatch.fnmatch(f, a) for a in self.guard.allowed)):
+            if not (f in self.guard.allowed or any(fnmatch.fnmatch(f, a) for a in self.guard.allowed + self.guard.generated)):
                 problems.append(f"arquivo alterado fora de allowedPaths: {f}")
         for f in sorted(self.touched):
             p = self.guard.repo / f
