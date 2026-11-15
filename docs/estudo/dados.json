@@ -362,6 +362,38 @@
      "LI-024"
     ],
     "mudanca": "read_rule com documento/seção; nota de docs com fontes; métricas com harnessRev/toolErrors/cachedChecks; comando evolution"
+   },
+   {
+    "cartao": "E1-T20",
+    "kind": "docs",
+    "harness": "dcb6804",
+    "status": "done",
+    "segundos": 10,
+    "tentativas": 1,
+    "chamadas": 9,
+    "erros_ferramenta": 0,
+    "tokens_entrada": 33556,
+    "tokens_saida": 748,
+    "achado": "read_rule('RFC-002') resolveu a dúvida (sem pergunta); mas ficha rasa: 2 de 13 IDs, sem tipos — passou porque o check era só 'test -s'",
+    "licoes": [
+     "LI-025"
+    ],
+    "mudanca": "scripts/check-module-sheet.mjs no cartão (IDs do código + nomes exportados + limite de palavras)"
+   },
+   {
+    "cartao": "E1-T20",
+    "kind": "docs",
+    "harness": "dcb6804",
+    "status": "done",
+    "segundos": 27,
+    "tentativas": 1,
+    "chamadas": 20,
+    "erros_ferramenta": 0,
+    "tokens_entrada": 155837,
+    "tokens_saida": 1908,
+    "achado": "ficha completa de primeira com a trava nova (13 IDs, 44 nomes, 257 palavras); curadoria do Claude: 2 termos",
+    "licoes": [],
+    "mudanca": "—"
    }
   ]
  }
