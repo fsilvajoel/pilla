@@ -113,6 +113,16 @@ class WeakEvidenceTest(unittest.TestCase):
             ])
             self.assertEqual(weak_evidence(summary, items, repo), ["C2", "C3"])
 
+    def test_every_item_needs_a_search_or_several_files(self):  # LI-033
+        from alice import weak_evidence
+        with tempfile.TemporaryDirectory() as d:
+            repo = Path(d)
+            for n in "abc":
+                (repo / f"{n}.ts").write_text("x\n")
+            items = ["C1 every payload is strict", "C2 every id uses idSchema", "C3 every schema is exported"]
+            summary = "\n".join(["C1 ok - a.ts:1", "C2 ok - a.ts:1, b.ts:1, c.ts:1", "C3 ok - search_code 'export' -> 10"])
+            self.assertEqual(weak_evidence(summary, items, repo), ["C1"])
+
 
 class PathNotesTest(unittest.TestCase):
     def test_notes_follow_the_package_of_the_card(self):

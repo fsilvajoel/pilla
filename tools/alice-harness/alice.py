@@ -194,6 +194,9 @@ def checklist_gaps(summary: str, items: list[str]) -> list[str]:
 
 EVIDENCE_REF = re.compile(r"([\w./@-]+\.\w+):(\d+)")
 
+UNIVERSAL_MIN_FILES = 3
+
+
 def weak_evidence(summary: str, items: list[str], repo: Path) -> list[str]:
     """'ok' must be proven (LI-026): an existing file:line, or the search_code/run_check that shows it."""
     weak = []
@@ -203,9 +206,13 @@ def weak_evidence(summary: str, items: list[str], repo: Path) -> list[str]:
         if not re.match(rf"{re.escape(key)}\s+ok\b", line, re.I):
             continue
         refs = [(f, int(n)) for f, n in EVIDENCE_REF.findall(line)]
-        real = any((repo / f).is_file() and 0 < n <= len((repo / f).read_text(errors="replace").splitlines()) for f, n in refs)
-        if not (real or re.search(r"\b(search_code|run_check)\b", line)):
-            weak.append(key)
+        real = {f for f, n in refs if (repo / f).is_file() and 0 < n <= len((repo / f).read_text(errors="replace").splitlines())}
+        searched = re.search(r"\b(search_code|run_check)\b", line)
+        # LI-033: "every X" proven by one file is a sample, not a proof
+        universal = re.search(r"\b(every|all|each|todos?|todas?|cada)\b", str(item), re.I)
+        if searched or (real and not universal) or len(real) >= UNIVERSAL_MIN_FILES:
+            continue
+        weak.append(key)
     return weak
 
 def missing_args_message(name: str, args: dict) -> str | None:
@@ -635,7 +642,8 @@ Fluxo: ler → escrever → run_check → corrigir → finish(summary de até 3 
                         if weak:
                             ok = False
                             problems += ("\n" if problems else "") + ("'ok' sem prova em: " + ", ".join(weak) +
-                                         ". Cite arquivo:linha que exista, ou a busca que prova (ex.: \"search_code 'Math\\.' -> 0 resultados\") ou o check (\"run_check 1 -> 94,4%\").")
+                                         ". Cite arquivo:linha que exista, ou a busca que prova (ex.: \"search_code 'Math\\.' -> 0 resultados\") ou o check (\"run_check 1 -> 94,4%\"). "
+                                         "Item com 'every/todo/cada' pede a busca que cobre todos os arquivos (search_code) ou um arquivo:linha por arquivo; um exemplo só não prova.")
                         if gaps:
                             ok = False
                             problems += ("\n" if problems else "") + ("summary sem linha para: " + ", ".join(gaps) +
