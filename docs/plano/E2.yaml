@@ -339,6 +339,7 @@ cards:
   protectedTests: []
   checks:
   - pnpm --filter @pilla/schemas test
+  - node scripts/check-avoid.mjs docs/memoria/libs/zod.md packages/schemas/src
   done:
   - 'one line per checklist item: ''<key> ok|falta|parcial|n/a - evidence (file:line or command)'''
   budget:
@@ -353,7 +354,7 @@ cards:
   - C5 no regex or z.string() for ids, dates or money outside common.ts
   - C6 every schema is exported from src/index.ts
   - C7 field names match docs/glossario.md and RFC-004 §7 exactly
-  - C8 every zod API used exists and follows the zod sheet (docs/memoria/libs/zod.md; zod.dev when it is not there)
+  - C8 every zod API used exists and follows the zod sheet (docs/memoria/libs/zod.md); run_check 1 lists what the sheet says to avoid
 - id: E2-T12
   title: Draft the zod 4 cheat sheet from the official docs
   kind: docs

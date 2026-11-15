@@ -120,7 +120,10 @@ class WeakEvidenceTest(unittest.TestCase):
             for n in "abc":
                 (repo / f"{n}.ts").write_text("x\n")
             items = ["C1 every payload is strict", "C2 every id uses idSchema", "C3 every schema is exported"]
-            summary = "\n".join(["C1 ok - a.ts:1", "C2 ok - a.ts:1, b.ts:1, c.ts:1", "C3 ok - search_code 'export' -> 10"])
+            (repo / "index.ts").write_text("a\nb\nc\n")
+            items.append("C4 every schema is exported from index.ts")
+            summary = "\n".join(["C1 ok - a.ts:1", "C2 ok - a.ts:1, b.ts:1, c.ts:1", "C3 ok - search_code 'export' -> 10",
+                                 "C4 ok - index.ts:1,2,3"])
             self.assertEqual(weak_evidence(summary, items, repo), ["C1"])
 
 

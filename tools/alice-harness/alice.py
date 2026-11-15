@@ -210,7 +210,8 @@ def weak_evidence(summary: str, items: list[str], repo: Path) -> list[str]:
         searched = re.search(r"\b(search_code|run_check)\b", line)
         # LI-033: "every X" proven by one file is a sample, not a proof
         universal = re.search(r"\b(every|all|each|todos?|todas?|cada)\b", str(item), re.I)
-        if searched or (real and not universal) or len(real) >= UNIVERSAL_MIN_FILES:
+        cited_lines = sum(len(re.findall(r"\d+", m)) for m in re.findall(r"\.\w+:([\d,\s-]+)", line))
+        if searched or (real and not universal) or len(real) >= UNIVERSAL_MIN_FILES or (real and cited_lines >= UNIVERSAL_MIN_FILES):
             continue
         weak.append(key)
     return weak
