@@ -1,4 +1,9 @@
 import { z } from "zod";
+import { cpfSchema } from "../../common";
 
-/** POST /portal/session (RFC-004). ESBOÇO: a Alice troca o z.never() pelo corpo, como em lending/simulate-loan.ts. */
-export const portalSessionRequest = z.never();
+/** POST /portal/session (RFC-004). */
+export const portalSessionRequest = z.strictObject({
+  cpf: cpfSchema,
+});
+
+export type PortalSessionRequest = z.infer<typeof portalSessionRequest>;

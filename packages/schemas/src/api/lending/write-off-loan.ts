@@ -1,4 +1,9 @@
 import { z } from "zod";
+import { reasonSchema } from "../../common";
 
-/** POST /loans/{id}/write-off (RFC-004). ESBOÇO: a Alice troca o z.never() pelo corpo, como em lending/simulate-loan.ts. */
-export const writeOffLoanRequest = z.never();
+/** POST /loans/{id}/write-off (RFC-004). */
+export const writeOffLoanRequest = z.strictObject({
+  reason: reasonSchema,
+});
+
+export type WriteOffLoanRequest = z.infer<typeof writeOffLoanRequest>;

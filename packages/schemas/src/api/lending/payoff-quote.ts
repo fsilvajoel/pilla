@@ -1,4 +1,9 @@
 import { z } from "zod";
+import { isoDateSchema } from "../../common";
 
-/** GET /loans/{id}/payoff-quote?date= (RFC-004). ESBOÇO: a Alice troca o z.never() pelo corpo, como em lending/simulate-loan.ts. */
-export const payoffQuoteQuery = z.never();
+/** GET /loans/{id}/payoff-quote?date= (RFC-004). */
+export const payoffQuoteQuery = z.strictObject({
+  date: isoDateSchema,
+});
+
+export type PayoffQuoteQuery = z.infer<typeof payoffQuoteQuery>;

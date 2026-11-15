@@ -1,4 +1,8 @@
 import { z } from "zod";
 
-/** PUT /portal-access/{personId} (RFC-004). ESBOÇO: a Alice troca o z.never() pelo corpo, como em lending/simulate-loan.ts. */
-export const portalAccessRequest = z.never();
+/** PUT /portal-access/{personId} (RFC-004). */
+export const portalAccessRequest = z.strictObject({
+  enabled: z.boolean(),
+});
+
+export type PortalAccessRequest = z.infer<typeof portalAccessRequest>;

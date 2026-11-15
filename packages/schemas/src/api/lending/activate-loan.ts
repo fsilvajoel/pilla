@@ -1,4 +1,9 @@
 import { z } from "zod";
+import { idSchema, isoDateSchema } from "../../common";
 
-/** POST /loans/{id}/activate (RFC-004). ESBOÇO: a Alice troca o z.never() pelo corpo, como em lending/simulate-loan.ts. */
-export const activateLoanRequest = z.never();
+/** POST /loans/{id}/activate (RFC-004). */
+export const activateLoanRequest = z.strictObject({
+  disbursedAt: isoDateSchema,
+  accountId: idSchema,
+});
+export type ActivateLoanRequest = z.infer<typeof activateLoanRequest>;
