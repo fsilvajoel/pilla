@@ -29,6 +29,7 @@ import shlex
 import subprocess
 import sys
 import time
+import urllib.error
 import urllib.parse
 import urllib.request
 from pathlib import Path
@@ -76,6 +77,28 @@ def load_profile(name: str) -> dict:
 
 def rate(tokens: int, ns: int) -> float:
     return round(tokens / (ns / 1e9), 1) if ns else 0.0
+
+
+def post_chat(payload: dict, timeout: int, on_error=None, tries: int = 3, wait: float = 2.0) -> dict:
+    """POST /api/chat. A 5xx is retried (the same request): Ollama answers 500 when the model's raw output
+    does not parse as a tool call (seen with gpt-oss), and the next sample usually does — LI-049.
+    on_error(try, code, body) sees each failure; after `tries` failures the error is raised."""
+    for n in range(1, tries + 1):
+        req = urllib.request.Request(f"{OLLAMA_URL}/api/chat", data=json.dumps(payload).encode(),
+                                     headers={"Content-Type": "application/json"})
+        try:
+            with urllib.request.urlopen(req, timeout=timeout) as resp:
+                return json.load(resp)
+        except urllib.error.HTTPError as e:
+            if e.code < 500:
+                raise
+            body = e.read().decode(errors="replace")[:500]
+            if on_error:
+                on_error(n, e.code, body)
+            if n == tries:
+                raise RuntimeError(f"ollama {e.code} após {tries} tentativas: {body}") from e
+            time.sleep(wait * n)
+    raise AssertionError("unreachable")
 
 
 def chat_options(profile: dict, card: dict) -> tuple[dict, object]:
@@ -583,10 +606,10 @@ Fluxo: ler → escrever → run_check → corrigir → finish(summary de até 3 
         opts, think = chat_options(prof, self.card)
         payload = {"model": prof.get("model", MODEL), "stream": False, "messages": self.messages, "tools": tools_payload(),
                    "think": think, "options": opts}
-        req = urllib.request.Request(f"{OLLAMA_URL}/api/chat", data=json.dumps(payload).encode(),
-                                     headers={"Content-Type": "application/json"})
-        with urllib.request.urlopen(req, timeout=int(prof.get("timeout", 600))) as resp:
-            data = json.load(resp)
+        def server_error(n: int, code: int, body: str) -> None:
+            self.stats["server_errors"] = self.stats.get("server_errors", 0) + 1
+            self.log("server-error", {"try": n, "code": code, "body": body})
+        data = post_chat(payload, int(prof.get("timeout", 600)), server_error)
         self.stats["prompt_tokens"] += data.get("prompt_eval_count", 0)
         self.stats["output_tokens"] += data.get("eval_count", 0)
         self.stats["eval_ns"] = self.stats.get("eval_ns", 0) + data.get("eval_duration", 0)
@@ -678,7 +701,7 @@ Fluxo: ler → escrever → run_check → corrigir → finish(summary de até 3 
             "profile": PROFILE_NAME, "model": load_profile(PROFILE_NAME).get("model", MODEL),
             "outTokPerSec": rate(self.stats["output_tokens"], self.stats.get("eval_ns", 0)),
             "promptTokPerSec": rate(self.stats["prompt_tokens"], self.stats.get("prompt_ns", 0)),
-            "toolErrors": self.tool_errors(), "cachedChecks": self.stats.get("cached_checks", 0), "harnessRev": harness_rev(),
+            "toolErrors": self.tool_errors(), "serverErrors": self.stats.get("server_errors", 0), "cachedChecks": self.stats.get("cached_checks", 0), "harnessRev": harness_rev(),
             "failureCategories": self.stats.get("failure_categories", []), "stalls": self.stats.get("stalls", 0),
             "at": time.strftime("%Y-%m-%dT%H:%M:%S")})
         return code
@@ -925,9 +948,7 @@ def cmd_chat(prompt: str, files: list[str]) -> int:
     opts, think = chat_options(prof, {})
     payload = {"model": prof.get("model", MODEL), "stream": False, "think": think, "options": opts,
                "messages": [{"role": "user", "content": content}]}
-    req = urllib.request.Request(f"{OLLAMA_URL}/api/chat", data=json.dumps(payload).encode(), headers={"Content-Type": "application/json"})
-    with urllib.request.urlopen(req, timeout=int(prof.get("timeout", 600))) as resp:
-        data = json.load(resp)
+    data = post_chat(payload, int(prof.get("timeout", 600)))
     print(data["message"]["content"])
     print(f"\n[tokens alice: prompt={data.get('prompt_eval_count', 0)} saída={data.get('eval_count', 0)}]", file=sys.stderr)
     return 0
