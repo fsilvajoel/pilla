@@ -768,9 +768,10 @@ cards:
   - pnpm --filter @pilla/schemas typecheck
   - pnpm --filter @pilla/schemas lint
   - node -e "const s=require('fs').readFileSync('packages/schemas/src/events/payment-reversed.ts','utf8');if(s.includes('.reduce('))process.exit(1)"
+  - node -e "const s=require('fs').readFileSync('packages/schemas/src/events/payment-confirmed.ts','utf8');if(s.split('.reduce(').length!==2)process.exit(1)"
   done:
   - all events.test.ts tests pass, including both 'allocations must sum to amountCents' cases
-  - 'payment-confirmed.ts exports: export function allocationsTotal(allocations: readonly Allocation[]): number (the reduce that is in the refine today), with export type Allocation = z.infer<typeof allocationSchema>;'
+  - 'payment-confirmed.ts exports the helper allocationsTotal(allocations: readonly Allocation[]): number holding the reduce, and: export type Allocation = z.infer<typeof allocationSchema>;'
   - both refines become (p) => allocationsTotal(p.allocations) === p.amountCents; message and path stay the same
   - 'payment-reversed.ts imports it: import { allocationSchema, allocationsTotal } from "./payment-confirmed"; no .reduce( left in payment-reversed.ts'
   - no other change; field lists and doc comments stay as they are

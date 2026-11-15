@@ -564,7 +564,8 @@ class Run:
             f.write(json.dumps({"t": time.time(), "kind": kind, **data}, ensure_ascii=False) + "\n")
 
     def save(self, status: str, extra: dict | None = None) -> None:
-        state = {**{k: v for k, v in self.card.items() if not k.startswith("_")}, "_messages": self.messages,
+        keep = ("_repo", "_baseDirty")  # resume needs them; the rest of "_" is runtime state rebuilt below
+        state = {**{k: v for k, v in self.card.items() if not k.startswith("_") or k in keep}, "_messages": self.messages,
                  "_touched": sorted(self.touched), "_stats": self.stats, "_status": status, **(extra or {})}
         (self.dir / "state.json").write_text(json.dumps(state, ensure_ascii=False, indent=1))
 
