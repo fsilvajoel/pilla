@@ -1,5 +1,18 @@
 import { sql } from "drizzle-orm";
-import { check, index, inet, integer, jsonb, pgSchema, primaryKey, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import {
+  bigint,
+  char,
+  check,
+  index,
+  inet,
+  integer,
+  jsonb,
+  pgSchema,
+  primaryKey,
+  text,
+  timestamp,
+  uuid,
+} from "drizzle-orm/pg-core";
 
 // Schema `core` (RFC-005 §2): infraestrutura compartilhada entre os módulos.
 export const core = pgSchema("core");
@@ -62,3 +75,26 @@ export const auditLog = core.table(
 );
 
 export type AuditLogRow = typeof auditLog.$inferSelect;
+
+// Anexos (RFC-005 §2): metadados dos arquivos enviados; o conteúdo fica no armazenamento.
+export const attachments = core.table(
+  "attachments",
+  {
+    id: uuid("id").primaryKey(),
+    kind: text("kind").notNull(),
+    fileName: text("file_name").notNull(),
+    contentType: text("content_type").notNull(),
+    sizeBytes: bigint("size_bytes", { mode: "number" }).notNull(),
+    sha256: char("sha256", { length: 64 }).notNull(),
+    storageKey: text("storage_key").notNull().unique(),
+    uploadedBy: uuid("uploaded_by").notNull(),
+    uploadedAt: instant("uploaded_at").notNull(),
+  },
+  (t) => [
+    check("attachments_kind_check", sql`${t.kind} IN ('RECEIPT', 'SIGNED_CONTRACT', 'IMPORT_FILE', 'OTHER')`),
+    check("attachments_size_bytes_check", sql`${t.sizeBytes} >= 0`),
+    check("attachments_sha256_check", sql`${t.sha256} ~ '^[0-9a-f]{64}$'`),
+  ],
+);
+
+export type AttachmentRow = typeof attachments.$inferSelect;
