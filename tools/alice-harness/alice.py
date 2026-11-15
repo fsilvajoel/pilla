@@ -520,7 +520,7 @@ class Run:
         b = card.get("budget", {})
         self.max_attempts = int(b.get("attempts", 5))
         self.max_tools = int(b.get("toolCalls", 25))
-        self.max_seconds = 60 * int(b.get("minutes", 8))  # LI-016: a stuck card must not block the queue
+        self.max_seconds = 60 * int(b.get("minutes", 8)) * float(load_profile(PROFILE_NAME).get("timeScale", 1))  # LI-016; slow model = scaled
         self.kind = card.get("kind", "implement")
         self.refactor = bool(card.get("refactor", self.kind == "implement"))
         self.t0 = time.time()
