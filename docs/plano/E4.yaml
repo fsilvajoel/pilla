@@ -57,7 +57,7 @@ cards:
       - keep the /** */ comment above fakeCpf unchanged
       - no import from ./common (the check digits are computed in fake-cpf.ts)
     hints:
-      - "check digit n (9 or 10): sum of digit i times (n + 1 - i) for i from 0 to n - 1, then (sum * 10) % 11 % 10"
+      - the check digits follow the same rule as cpfCheckDigit in packages/schemas/src/common.ts (RN-P01), so write that rule again inside fake-cpf.ts
       - one write_file of the whole file, then run_check 0, 1 and 2
     budget:
       attempts: 4
@@ -66,6 +66,7 @@ cards:
     readFirst:
       - packages/schemas/src/fake-cpf.ts
       - packages/schemas/src/fake-cpf.test.ts
+      - packages/schemas/src/common.ts
     sizeNote: uma função
   - id: E4-T03
     title: Write tests for redact
