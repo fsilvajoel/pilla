@@ -512,6 +512,21 @@
     "achado": "correto de primeira, só a ordem dos imports diferente",
     "licoes": [],
     "mudanca": "—"
+   },
+   {
+    "cartao": "E2-T07",
+    "kind": "implement",
+    "harness": "1dbf955",
+    "status": "done",
+    "segundos": 20,
+    "tentativas": 2,
+    "chamadas": 10,
+    "erros_ferramenta": 0,
+    "tokens_entrada": 32179,
+    "tokens_saida": 555,
+    "achado": "correto de primeira, 0 erros",
+    "licoes": [],
+    "mudanca": "—"
    }
   ]
  }
