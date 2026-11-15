@@ -45,6 +45,12 @@ const problems = [];
 if (broken.length) problems.push(`APIs que não existem na versão instalada:\n  ${broken.join("\n  ")}`);
 if (!sheet.includes(`https://${domain}`)) problems.push(`cite a documentação oficial (https://${domain}/...)`);
 if (seen.size < 5) problems.push(`só ${String(seen.size)} exemplos de API; mostre o uso certo com código`);
+const avoid = /## Evite[^\n]*\n([\s\S]*?)(?=\n## |$)/.exec(sheet)?.[1] ?? "";
+const avoidItems = avoid.split("\n").filter((l) => /^\s*[-*]\s/.test(l)).length;
+if (avoidItems < 3)
+  problems.push(
+    `"## Evite" com ${String(avoidItems)} itens; liste ao menos 3 hábitos do zod 3 → chamada certa (LI-032)`,
+  );
 if (words > limit) problems.push(`cola com ${String(words)} palavras (limite ${String(limit)})`);
 
 if (problems.length) {

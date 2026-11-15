@@ -574,6 +574,26 @@
     "achado": "correto de primeira, 0 erros, 15 s",
     "licoes": [],
     "mudanca": "—"
+   },
+   {
+    "cartao": "E2-T12",
+    "kind": "docs",
+    "harness": "1c73a67",
+    "status": "done",
+    "segundos": 16,
+    "tentativas": 1,
+    "chamadas": 10,
+    "erros_ferramenta": 1,
+    "web": {
+     "web_search": 2,
+     "fetch_page": 3
+    },
+    "achado": "1ª: needs_input por falso positivo do check (z.infer é tipo). 2ª: passou, mas rasa e com 1 conselho que contradiz o repo (nonempty no lugar de min(1)); Claude fez a curadoria",
+    "licoes": [
+     "LI-031",
+     "LI-032"
+    ],
+    "mudanca": "check ignora APIs só de tipo; exige 3+ itens em Evite"
    }
   ]
  }
