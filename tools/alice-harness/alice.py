@@ -196,6 +196,9 @@ EVIDENCE_REF = re.compile(r"([\w./@-]+\.\w+):(\d+)")
 
 UNIVERSAL_MIN_FILES = 3
 
+PRE_REVIEW_ANSWER = ("Resposta automática (pré-revisão): sim. Você não corrige nem escreve nada; todo desvio vira "
+                     "'falta' ou 'parcial' com arquivo:linha ou o check que mostra. Termine a lista e chame finish agora.")
+
 
 def resolve_ref(repo: Path, f: str) -> Path | None:
     """A cited path, or a short suffix of it ('src/index.ts') when exactly one tracked file ends that way (LI-037)."""
@@ -650,6 +653,11 @@ Fluxo: ler → escrever → run_check → corrigir → finish(summary de até 3 
                 if name == "ask_claude":
                     q = str(args.get("question", ""))
                     self.log("ask_claude", {"question": q})
+                    if self.kind == "pre-review" and not self.stats.get("auto_answered"):
+                        # LI-039: in a review, "may I mark this as falta?" is always yes; don't stop the run for it
+                        self.stats["auto_answered"] = 1
+                        self.messages.append({"role": "tool", "tool_name": name, "content": PRE_REVIEW_ANSWER})
+                        continue
                     return self.end("needs_input", 3, extra={"question": q})
                 if name == "finish":
                     self.stats["attempts"] += 1
