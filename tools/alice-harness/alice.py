@@ -423,6 +423,8 @@ LIB_SHEET_CHARS = 2500
 def lib_sheets(repo: Path, card: dict) -> str:
     """Colas de biblioteca revisadas pelo Claude (docs/memoria/libs/<lib>.md): as dependências do pacote do cartão + card.libs."""
     libs = list(card.get("libs", []))
+    # LI-034: a pre-review has no allowedPaths; a sheet cited anywhere in the card also counts
+    libs += re.findall(r"docs/memoria/libs/([\w.-]+)\.md", json.dumps(card, ensure_ascii=False))
     for a in card.get("allowedPaths", []) + card.get("readFirst", []):
         parts = Path(str(a)).parts
         if len(parts) >= 2 and parts[0] == "packages":

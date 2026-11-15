@@ -182,6 +182,8 @@ class ToolsLI028Test(unittest.TestCase):
             self.assertIn("z.int()", out)
             self.assertNotIn("hooks", out)
             self.assertIn("hooks", alice.lib_sheets(r, {"allowedPaths": [], "libs": ["react"]}))
+            cited = {"allowedPaths": [], "checklist": ["C8 follows the sheet (docs/memoria/libs/react.md)"]}
+            self.assertIn("hooks", alice.lib_sheets(r, cited))
 
 
 if __name__ == "__main__":
