@@ -249,6 +249,17 @@ class DoneLineTest(unittest.TestCase):
             f.write_text('import { x } from "../c";\nexport const a = 1;\nexport type A = z.infer<typeof a>;\n')
             self.assertEqual(done_line_problems(card, repo), [])
 
+    def test_done_property_literals_must_be_in_the_file(self):  # LI-064
+        from alice import done_line_problems
+        with tempfile.TemporaryDirectory() as d:
+            repo = Path(d); f = repo / "s.ts"
+            card = {"allowedPaths": ["s.ts"], "done": ['every column has .notNull(); fileName: text("file_name"); sizeBytes: bigint("size_bytes", { mode: "number" })']}
+            f.write_text('  file_name: text("file_name").notNull(),\n  sizeBytes: bigint("size_bytes", {\n mode: "number" }).notNull(),\n')
+            probs = done_line_problems(card, repo)
+            self.assertEqual(len(probs), 1); self.assertIn('fileName: text("file_name")', probs[0])
+            f.write_text('  fileName: text("file_name").notNull(),\n  sizeBytes: bigint("size_bytes", { mode: "number" }).notNull(),\n')
+            self.assertEqual(done_line_problems(card, repo), [])
+
     def test_run_check_proves_only_items_about_a_check(self):  # LI-043
         from alice import weak_evidence
         with tempfile.TemporaryDirectory() as d:

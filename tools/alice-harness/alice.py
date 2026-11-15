@@ -261,7 +261,7 @@ def format_touched(repo: Path, files: list[str]) -> list[str]:
 
 
 def done_line_problems(card: dict, repo: Path) -> list[str]:
-    """What tests can't see: the stub marker must go (LI-041) and literal code lines of `done` must be in the file (LI-042)."""
+    """What tests can't see: the stub marker must go (LI-041) and literal code lines and `name: call("...")` properties of `done` must be in the file (LI-042, LI-064)."""
     flat = lambda t: re.sub(r"\s+", " ", t)
     texts = {f: flat((repo / f).read_text(errors="replace")) for f in card.get("allowedPaths", []) or []
              if "*" not in f and (repo / f).is_file()}
@@ -270,6 +270,10 @@ def done_line_problems(card: dict, repo: Path) -> list[str]:
         for line in re.findall(r"((?:export (?:type|const|function|\*)|import (?:\{|type|\*))[^;]*;)", str(d)):
             if texts and not any(flat(line) in t for t in texts.values()):
                 out.append(f"falta a linha pedida no done, exatamente assim: {line}")
+        # LI-064: propriedade literal `nome: chamada("...")` (ex.: coluna do Drizzle) também é exigida como está
+        for prop in re.findall(r"(?<![\w.])([a-z][A-Za-z0-9]*: [a-z]\w*\(\"[^\"]*\"[^;)]*\))", str(d)):
+            if texts and not any(flat(prop) in t for t in texts.values()):
+                out.append(f"falta a propriedade pedida no done, com este nome exato: {prop}")
     return out
 
 PRE_REVIEW_ANSWER = ("Resposta automática (pré-revisão): sim. Você não corrige nem escreve nada; todo desvio vira "
