@@ -559,6 +559,21 @@
     "achado": "correto, 0 erros; daysLate com z.number().int().min(0) em vez de z.int().nonnegative() (estilo)",
     "licoes": [],
     "mudanca": "—"
+   },
+   {
+    "cartao": "E2-T10",
+    "kind": "implement",
+    "harness": "cf10d32",
+    "status": "done",
+    "segundos": 15,
+    "tentativas": 2,
+    "chamadas": 12,
+    "erros_ferramenta": 0,
+    "tokens_entrada": 44542,
+    "tokens_saida": 793,
+    "achado": "correto de primeira, 0 erros, 15 s",
+    "licoes": [],
+    "mudanca": "—"
    }
   ]
  }
