@@ -33,6 +33,8 @@ def write_retro(results: list[dict], runs: Path, out: Path) -> str:
         repeated.update(dict(top))
         rec = {**r, "toolErrors": total}
         flags = health_flags(rec) if r.get("status") in ("done", "failed") else []
+        if r.get("status") == "card_error":  # the card writer's error, not the model's (LI-056)
+            flags = [" · ".join(str(r.get("message", "")).splitlines())[:200]]
         lines.append(f"| {r['task']} | {r.get('status')} | {r.get('seconds', '-')} | {r.get('attempts', '-')} | {r.get('toolCalls', '-')} | {total} | {'; '.join(flags) or 'ok'} |")
     if repeated:
         lines += ["", "## Erros de ferramenta mais repetidos", ""] + [f"- {n}× {msg}" for msg, n in repeated.most_common(5)]

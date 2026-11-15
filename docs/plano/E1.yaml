@@ -51,8 +51,9 @@ cards:
   done:
   - isoDate and daysBetween tests pass (vitest -t filter)
   - use parseParts, daysInMonth, toDayNumber, formatDate; do not rewrite helpers
-  - implement with replace_function, one function per call; each 3 to 8 lines
   - invalid input throws DateError
+  hints:
+  - implement with replace_function, one function per call; each 3 to 8 lines
   budget:
     attempts: 5
     toolCalls: 30
@@ -82,8 +83,9 @@ cards:
   done:
   - all tests in date.test.ts pass with 100% coverage of date.ts
   - use toDayNumber, fromDayNumber, daysInMonth, formatDate; do not rewrite helpers
-  - implement with replace_function, one function per call; each 3 to 8 lines
   - negative months throw DateError
+  hints:
+  - implement with replace_function, one function per call; each 3 to 8 lines
   budget:
     attempts: 5
     toolCalls: 30
@@ -625,7 +627,6 @@ cards:
     attempts: 5
     toolCalls: 30
   readFirst:
-  - packages/finance/src/properties.ts
   - packages/finance/src/money.ts
   - packages/finance/src/rounding.test.ts
 - id: E1-T19
@@ -671,10 +672,12 @@ cards:
   checks:
   - node scripts/check-module-sheet.mjs docs/memoria/modulos/finance.md packages/finance/src 300
   done:
-  - <= 300 words following _modelo.md
+  - <= 300 words following docs/memoria/modulos/_modelo.md
   - lists every exported name of src/index.ts and, per file, the rule IDs its comments cite (the check lists what is missing)
   - invariants come from the /** */ comments and RFC-002 (sums close, integer money, rounding to step, no discount on payoff)
   budget:
     attempts: 3
     toolCalls: 20
     minutes: 8
+  readFirst:
+  - docs/memoria/modulos/_modelo.md

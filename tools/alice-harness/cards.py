@@ -154,3 +154,129 @@ def validate_plan(plan: dict, known_rules: set[str], external_ids: set[str]) -> 
                 problems.append(f"{cid}: ciclo de dependências")
 
     return problems
+
+
+# ---------------------------------------------------------------- card quality (errors of whoever writes the card)
+# Each rule below came from a run that failed, paused or was redone because of the card, not of the model.
+
+KNOWN_FIELDS = {"id", "title", "kind", "assignee", "rules", "refs", "dependsOn", "allowedPaths", "protectedTests", "checks",
+                "done", "budget", "readFirst", "sizeNote", "checklist", "libs", "think", "refactor", "question", "why",
+                "num_predict", "maxOutputTokens", "hints"}
+KNOWN_BUDGET = {"attempts", "toolCalls", "minutes"}
+SHELL_TOKENS = {"|", "||", "&&", ";", ">", ">>", "<", "!", "2>&1", "&"}
+# same expression the done-line gate of the harness uses (alice.done_line_problems, LI-042)
+DONE_LITERAL = re.compile(r"((?:export (?:type|const|function|\*)|import (?:\{|type|\*))[^;]*;)")
+PROSE = re.compile(r"(?:\b[a-z]{2,}\b[ ,]+){4,}")
+RULE_ID = re.compile(r"\b(RN-[A-Z]\d{2}|CA-\d{2}|T-\d{2})\b")
+PATH_TOKEN = re.compile(r"(?<![\w./@-])((?:packages|apps|docs|scripts|tools)/[\w./@-]+\.\w+)")
+EDIT_TOOL = re.compile(r"\b(edit_file|write_file|replace_function)\b")
+BARE_FILE = re.compile(r"(?<![\w./-])([\w-]+(?:\.test)?\.(?:ts|tsx|mjs|md|ya?ml|json))\b(?!/)")
+MAX_DONE_CHARS = 220
+
+
+def _matches(path: str, patterns) -> bool:
+    import fnmatch
+    return any(path == p or fnmatch.fnmatch(path, p) for p in patterns)
+
+
+def min_tool_calls(card: dict) -> int:
+    """Reads and edits (~8) plus each check run about three times: model, after the fix, cleanup round (E2-T24: 5 checks, 23 calls)."""
+    return 8 + 3 * len(card.get("checks") or [])
+
+
+def quality_problems(card: dict, exists=None, producible: set[str] = frozenset(), packages: set[str] | None = None) -> list[str]:
+    """Problems of the card text itself. `exists(path) -> bool` and `packages` come from the repository when available."""
+    import shlex
+    cid = card.get("id", "?")
+    kind, assignee = card.get("kind"), card.get("assignee")
+    allowed = [str(p) for p in card.get("allowedPaths") or []]
+    protected = [str(p) for p in card.get("protectedTests") or []]
+    read_first = [str(p) for p in card.get("readFirst") or []]
+    checks = [str(c) for c in card.get("checks") or []]
+    done = [str(d) for d in card.get("done") or []]
+    out = []
+
+    def add(msg: str, lesson: str) -> None:
+        out.append(f"{cid}: {msg} ({lesson})")
+
+    for k in card:
+        if k not in KNOWN_FIELDS:
+            add(f"campo desconhecido '{k}': o harness ignora em silêncio (erro de digitação?)", "LI-055")
+    for k in card.get("budget") or {}:
+        if k not in KNOWN_BUDGET:
+            add(f"budget.{k} desconhecido (use attempts, toolCalls, minutes)", "LI-055")
+
+    # --- done: what the model reads as the goal
+    for d in done:
+        if len(d) > MAX_DONE_CHARS:
+            add(f"linha do done com {len(d)} caracteres (máx. {MAX_DONE_CHARS}): uma instrução por linha", "LI-055")
+        for lit in DONE_LITERAL.findall(d):
+            if lit.startswith("export function"):
+                add(f"'export function' no done vira linha literal exigida no arquivo; descreva a assinatura em prosa: {lit[:60]}…", "LI-051")
+            elif PROSE.search(re.sub(r"[\"'`].*?[\"'`]", "", lit)):
+                add(f"código e texto misturados no done; o portão exige a linha inteira até o ';': {lit[:70]}…", "LI-051")
+        if assignee != "alice":
+            continue  # the lines below are about what the local model can see and verify
+        if EDIT_TOOL.search(d):
+            add(f"técnica de edição no done ('{EDIT_TOOL.search(d).group(0)}'): o done é o resultado conferível; a dica vai em hints", "LI-055")
+        for name in BARE_FILE.findall(d):
+            if not any(p.endswith("/" + name) or p == name for p in allowed + protected + read_first):
+                add(f"o done cita {name}, que não está em allowedPaths, protectedTests nem readFirst (dê o caminho)", "LI-024")
+        for path in PATH_TOKEN.findall(d):
+            if not _matches(path, allowed + protected + read_first):
+                add(f"o done cita {path}, que não está em allowedPaths, protectedTests nem readFirst", "LI-030")
+    cited = set(RULE_ID.findall(" ".join(done + [str(card.get("title", ""))])))
+    missing = sorted(cited - set(card.get("rules") or []))
+    if missing and assignee == "alice":
+        add(f"regra citada no texto e fora de rules (a definição não é injetada): {', '.join(missing)}", "LI-004")
+
+    # --- checks: what decides done
+    for i, c in enumerate(checks):
+        try:
+            argv = shlex.split(c)
+        except ValueError:
+            add(f"check {i} não pode ser lido (aspas?): {c[:60]}", "LI-055")
+            continue
+        if SHELL_TOKENS & set(argv):
+            add(f"check {i} usa sintaxe de shell ({', '.join(sorted(SHELL_TOKENS & set(argv)))}); o harness roda sem shell: crie um script", "LI-055")
+        if argv[:2] == ["node", "-e"]:
+            add(f"check {i} é 'node -e' sem mensagem de erro; use um script que diga o que falta (ex.: scripts/check-count.mjs)", "LI-055")
+        if packages is not None:
+            for name in re.findall(r"--filter\s+(\S+)", c):
+                if name not in packages:
+                    add(f"check {i} filtra o pacote {name}, que não existe", "LI-055")
+        if exists is not None:
+            for path in PATH_TOKEN.findall(c):
+                if not exists(path) and not _matches(path, producible | set(allowed)):
+                    add(f"check {i} cita {path}, que não existe e nenhum cartão cria", "LI-055")
+    ts = any(re.search(r"\.tsx?$", p) for p in allowed)
+    if kind in ("implement", "test-author") and ts:
+        for word in ("typecheck", "lint"):
+            if not any(re.search(rf"\b{word}\b", c) for c in checks):
+                add(f"cartão de código TypeScript sem check de {word}", "LI-054")
+    if assignee == "alice" and kind == "implement" and checks and not any(re.search(r"\b(test|vitest|unittest)\b", c) for c in checks):
+        add("implement sem check de teste (TDD: o teste protegido decide o pronto)", "LI-025")
+
+    # --- size and budget
+    if assignee == "alice" and kind in ("implement", "test-author") and any("*" in p for p in allowed):
+        add("allowedPaths com curinga em cartão da Alice: liste os arquivos (até 2)", "LI-011")
+    calls = (card.get("budget") or {}).get("toolCalls")
+    if assignee == "alice" and kind == "implement" and calls and calls < min_tool_calls(card):
+        add(f"budget.toolCalls {calls} < {min_tool_calls(card)} (8 + 3 por check): {len(checks)} checks não cabem", "LI-055")
+
+    # --- files the card points at
+    if exists is not None:
+        for label, paths in (("readFirst", read_first), ("protectedTests", protected)):
+            for path in paths:
+                if "*" not in path and not exists(path) and not _matches(path, producible):
+                    add(f"{label} cita {path}, que não existe e nenhum cartão cria", "LI-055")
+
+    # --- checklist bound to checks
+    keys = [str(i).split()[0] for i in card.get("checklist") or []]
+    if len(keys) != len(set(keys)):
+        add("checklist com chave repetida", "LI-013")
+    for item in card.get("checklist") or []:
+        for n in re.findall(r"\brun_check\s+(\d+)", str(item)):
+            if int(n) >= len(checks):
+                add(f"item {str(item).split()[0]} cita run_check {n}, que não existe (há {len(checks)} checks)", "LI-053")
+    return out

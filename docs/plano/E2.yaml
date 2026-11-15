@@ -50,6 +50,7 @@ cards:
   - 'payload fields: loanId, personId, accountId (uuid v7), principalCents (>= 0), disbursedAt (date); optional originLoanId (uuid v7) and originType (RENEWAL | RENEGOTIATION | IMPORT, RFC-005 §4)'
   - replace only the z.never() payload; z.strictObject like payment-confirmed.ts
   - reuse the primitives of ../common (idSchema, centsSchema, isoDateSchema, reasonSchema); never write a new regex
+  hints:
   - one edit_file call; the file stays under 25 lines
   budget:
     attempts: 4
@@ -82,6 +83,7 @@ cards:
   - 'payload fields: loanId, personId (uuid v7), paidOffAt (business date, not instant)'
   - replace only the z.never() payload; z.strictObject like payment-confirmed.ts
   - reuse the primitives of ../common (idSchema, centsSchema, isoDateSchema, reasonSchema); never write a new regex
+  hints:
   - one edit_file call; the file stays under 25 lines
   budget:
     attempts: 4
@@ -114,6 +116,7 @@ cards:
   - 'payload fields: loanId (uuid v7), reason (reasonSchema)'
   - replace only the z.never() payload; z.strictObject like payment-confirmed.ts
   - reuse the primitives of ../common (idSchema, centsSchema, isoDateSchema, reasonSchema); never write a new regex
+  hints:
   - one edit_file call; the file stays under 25 lines
   budget:
     attempts: 4
@@ -146,6 +149,7 @@ cards:
   - 'payload fields: loanId, successorLoanId (uuid v7)'
   - replace only the z.never() payload; z.strictObject like payment-confirmed.ts
   - reuse the primitives of ../common (idSchema, centsSchema, isoDateSchema, reasonSchema); never write a new regex
+  hints:
   - one edit_file call; the file stays under 25 lines
   budget:
     attempts: 4
@@ -178,6 +182,7 @@ cards:
   - 'payload fields: loanId, successorLoanId (uuid v7), capitalizedCents (>= 0)'
   - replace only the z.never() payload; z.strictObject like payment-confirmed.ts
   - reuse the primitives of ../common (idSchema, centsSchema, isoDateSchema, reasonSchema); never write a new regex
+  hints:
   - one edit_file call; the file stays under 25 lines
   budget:
     attempts: 4
@@ -210,6 +215,7 @@ cards:
   - 'payload fields: loanId (uuid v7), outstandingPrincipalCents (>= 0), reason (reasonSchema)'
   - replace only the z.never() payload; z.strictObject like payment-confirmed.ts
   - reuse the primitives of ../common (idSchema, centsSchema, isoDateSchema, reasonSchema); never write a new regex
+  hints:
   - one edit_file call; the file stays under 25 lines
   budget:
     attempts: 4
@@ -240,9 +246,10 @@ cards:
   done:
   - all PaymentReversed tests in events.test.ts pass (vitest -t filter)
   - 'payload fields: paymentId, loanId, accountId (uuid v7), amountCents (> 0), allocations (min 1, must sum to amountCents), reason'
-  - 'import { allocationSchema } from "./payment-confirmed" (never redeclare it: index.ts re-exports both files)'
+  - 'import { allocationSchema } from "./payment-confirmed" (never redeclare it: both files are re-exported together)'
   - replace only the z.never() payload; z.strictObject like payment-confirmed.ts
   - reuse the primitives of ../common (idSchema, centsSchema, isoDateSchema, reasonSchema); never write a new regex
+  hints:
   - one edit_file call; the file stays under 25 lines
   budget:
     attempts: 4
@@ -275,6 +282,7 @@ cards:
   - 'payload fields: installmentId, loanId (uuid v7), paidAt (date), daysLate (integer >= 0)'
   - replace only the z.never() payload; z.strictObject like payment-confirmed.ts
   - reuse the primitives of ../common (idSchema, centsSchema, isoDateSchema, reasonSchema); never write a new regex
+  hints:
   - one edit_file call; the file stays under 25 lines
   budget:
     attempts: 4
@@ -307,6 +315,7 @@ cards:
   - 'payload fields: installmentId, loanId, personId (uuid v7), dueDate (date), outstandingCents (>= 0)'
   - replace only the z.never() payload; z.strictObject like payment-confirmed.ts
   - reuse the primitives of ../common (idSchema, centsSchema, isoDateSchema, reasonSchema); never write a new regex
+  hints:
   - one edit_file call; the file stays under 25 lines
   budget:
     attempts: 4
@@ -434,6 +443,7 @@ cards:
   - 'fields, exactly: username: z.string().trim().min(1).max(100); password: z.string().min(1).max(200) (no trim: spaces belong to the password)'
   - replace only the z.never(); z.strictObject like lending/simulate-loan.ts; keep the doc comment with the route
   - export type AdminLoginRequest = z.infer<typeof adminLoginRequest>;
+  hints:
   - one write_file or edit_file call; the file stays under 15 lines
   budget:
     attempts: 4
@@ -467,6 +477,7 @@ cards:
   - 'fields, exactly: enabled: z.boolean()'
   - replace only the z.never(); z.strictObject like lending/simulate-loan.ts; keep the doc comment with the route
   - export type PortalAccessRequest = z.infer<typeof portalAccessRequest>;
+  hints:
   - one write_file or edit_file call; the file stays under 15 lines
   budget:
     attempts: 4
@@ -501,6 +512,7 @@ cards:
   - replace only the z.never(); z.strictObject like lending/simulate-loan.ts; keep the doc comment with the route
   - export type PortalSessionRequest = z.infer<typeof portalSessionRequest>;
   - 'import line: import { cpfSchema } from "../../common"; never write a new regex'
+  hints:
   - one write_file or edit_file call; the file stays under 15 lines
   budget:
     attempts: 4
@@ -535,6 +547,7 @@ cards:
   - replace only the z.never(); z.strictObject like lending/simulate-loan.ts; keep the doc comment with the route
   - export type ActivateLoanRequest = z.infer<typeof activateLoanRequest>;
   - 'import line: import { idSchema, isoDateSchema } from "../../common"; never write a new regex'
+  hints:
   - one write_file or edit_file call; the file stays under 15 lines
   budget:
     attempts: 4
@@ -569,6 +582,7 @@ cards:
   - replace only the z.never(); z.strictObject like lending/simulate-loan.ts; keep the doc comment with the route
   - export type WriteOffLoanRequest = z.infer<typeof writeOffLoanRequest>;
   - 'import line: import { reasonSchema } from "../../common"; never write a new regex'
+  hints:
   - one write_file or edit_file call; the file stays under 15 lines
   budget:
     attempts: 4
@@ -603,6 +617,7 @@ cards:
   - replace only the z.never(); z.strictObject like lending/simulate-loan.ts; keep the doc comment with the route
   - export type PayoffQuoteQuery = z.infer<typeof payoffQuoteQuery>;
   - 'import line: import { isoDateSchema } from "../../common"; never write a new regex'
+  hints:
   - one write_file or edit_file call; the file stays under 15 lines
   budget:
     attempts: 4
@@ -637,6 +652,7 @@ cards:
   - replace only the z.never(); z.strictObject like lending/simulate-loan.ts; keep the doc comment with the route
   - export type AllocationPreviewRequest = z.infer<typeof allocationPreviewRequest>;
   - 'import line: import { idSchema, isoDateSchema, positiveCentsSchema } from "../../common"; never write a new regex'
+  hints:
   - one write_file or edit_file call; the file stays under 15 lines
   budget:
     attempts: 4
@@ -671,6 +687,7 @@ cards:
   - replace only the z.never(); z.strictObject like lending/simulate-loan.ts; keep the doc comment with the route
   - export type ReversePaymentRequest = z.infer<typeof reversePaymentRequest>;
   - 'import line: import { reasonSchema } from "../../common"; never write a new regex'
+  hints:
   - one write_file or edit_file call; the file stays under 15 lines
   budget:
     attempts: 4
@@ -703,6 +720,7 @@ cards:
   - 'fields, exactly: fileName: z.string().trim().min(1).max(255); contentType: z.string().trim().min(1).max(100); sizeBytes: z.int().positive()'
   - replace only the z.never(); z.strictObject like lending/simulate-loan.ts; keep the doc comment with the route
   - export type AttachmentUploadUrlRequest = z.infer<typeof attachmentUploadUrlRequest>;
+  hints:
   - one write_file or edit_file call; the file stays under 15 lines
   budget:
     attempts: 4
@@ -769,8 +787,8 @@ cards:
   - pnpm --filter @pilla/schemas exec vitest run src/events/events.test.ts
   - pnpm --filter @pilla/schemas typecheck
   - pnpm --filter @pilla/schemas lint
-  - node -e "const s=require('fs').readFileSync('packages/schemas/src/events/payment-reversed.ts','utf8');if(s.includes('.reduce('))process.exit(1)"
-  - node -e "const s=require('fs').readFileSync('packages/schemas/src/events/payment-confirmed.ts','utf8');if(s.split('.reduce(').length!==2)process.exit(1)"
+  - node scripts/check-count.mjs packages/schemas/src/events/payment-reversed.ts ".reduce(" 0
+  - node scripts/check-count.mjs packages/schemas/src/events/payment-confirmed.ts ".reduce(" 1
   done:
   - all events.test.ts tests pass, including both 'allocations must sum to amountCents' cases
   - 'payment-confirmed.ts exports the helper allocationsTotal(allocations: readonly Allocation[]): number holding the reduce, and: export type Allocation = z.infer<typeof allocationSchema>;'
@@ -779,7 +797,7 @@ cards:
   - no other change; field lists and doc comments stay as they are
   budget:
     attempts: 4
-    toolCalls: 20
+    toolCalls: 24
     minutes: 6
   readFirst:
   - packages/schemas/src/events/payment-confirmed.ts
