@@ -39,7 +39,7 @@ NEXT_STEPS = {
     "duplicação": "importe a função/constante que já existe no arquivo citado em vez de copiar o trecho.",
     "checklist": "refaça o summary: uma linha por item com arquivo:linha real (read_file) ou a busca/check que prova.",
     "typecheck": "read_file no arquivo:linha do primeiro erro; corrija só aquela linha; run_check do typecheck.",
-    "lint": "read_file no arquivo:linha do primeiro erro; corrija a regra citada; run_check do lint.",
+    "lint": "read_file no arquivo:linha do primeiro erro; ache o nome da regra na seção LINT do pedido e aplique o exemplo 'certo'; run_check do lint.",
     "mutação": "leia os mutantes sobreviventes; peça ao Claude (ask_claude) o caso de teste que falta — você não edita testes.",
     "teste": "leia o nome do teste que falhou e o esperado × recebido; corrija o código (não o teste); run_check.",
 }
