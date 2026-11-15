@@ -189,5 +189,18 @@ class ToolsLI028Test(unittest.TestCase):
             self.assertIn("hooks", alice.lib_sheets(r, cited))
 
 
+class PreReviewGateTest(unittest.TestCase):
+    def test_red_check_is_evidence_in_pre_review_but_a_gate_in_implement(self):  # LI-036
+        import subprocess, alice
+        with tempfile.TemporaryDirectory() as d:
+            repo = Path(d)
+            subprocess.run(["git", "init", "-q", d], check=True)
+            base = {"id": "E9-T01", "title": "t", "allowedPaths": [], "checks": ["false"], "done": ["x"]}
+            review = alice.Run({**base, "kind": "pre-review"}, repo, repo)
+            self.assertEqual(review.verify(), (True, ""))
+            implement = alice.Run({**base, "kind": "implement"}, repo, repo)
+            self.assertFalse(implement.verify()[0])
+
+
 if __name__ == "__main__":
     unittest.main()

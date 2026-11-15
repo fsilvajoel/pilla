@@ -447,7 +447,8 @@ def path_notes(allowed: list[str]) -> str:
 CHECKLIST_NOTE = ("Revise contra o checklist abaixo. NÃO escreva arquivos. 'sem achados' NÃO é resposta válida: o summary do finish é "
                   "exatamente este modelo preenchido, trocando '?' por ok|falta|parcial|n/a e a evidência: arquivo:linha que exista, "
                   "ou a busca/check que prova (\"search_code 'Math\\.' -> 0 resultados\", \"run_check 1 -> 94,4%\"). "
-                  "Cada check custa tempo: rode cada um no máximo uma vez.")
+                  "Cada check custa tempo: rode cada um no máximo uma vez. Achado é o objetivo da revisão: check vermelho ou "
+                  "código fora da regra vira 'falta'/'parcial' com a evidência; você não corrige nada nem pergunta se pode marcar.")
 REFACTOR_PROMPT = ("Verificação APROVADA. Agora UMA rodada de limpeza, sem mudar comportamento: use view_diff; remova duplicação e código morto "
                    "que você criou; nomes claros (glossário); funções curtas. Rode run_check(-1). Se não houver o que melhorar, chame finish de novo direto.")
 
@@ -571,6 +572,8 @@ Fluxo: ler → escrever → run_check → corrigir → finish(summary de até 3 
                     if rx.search(line):
                         problems.append(f"{f}: {label}: {line.strip()[:120]}")
         for i, c in enumerate(self.card["checks"]):
+            if self.kind == "pre-review":  # LI-036: in a review a red check is a finding (evidence), not a gate
+                continue
             code, txt, _ = self.check(c)
             if code != 0:
                 problems.append(f"check {i} falhou (exit {code}): {c}\n{truncate(txt, 2500)}")
