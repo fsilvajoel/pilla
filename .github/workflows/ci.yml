@@ -22,6 +22,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: python3 -m pip install --quiet pyyaml
       - run: pnpm verify
+      - run: pnpm mutation
       - run: pnpm audit --audit-level high
       - name: gitleaks
         env:

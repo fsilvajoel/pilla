@@ -183,5 +183,50 @@
       "saida": 5387,
       "segundos": 54
     }
+  },
+  "e1_filas": [
+    {
+      "fila": 1,
+      "cartoes": 6,
+      "ok": 0,
+      "nota": "parada pelo Claude: E1-T21 travado 25 min (4 funções + armadilha no esboço)"
+    },
+    {
+      "fila": 2,
+      "cartoes": 6,
+      "ok": 3,
+      "erro_ferramenta_nos_que_falharam": "≈2/3 das chamadas",
+      "nota": "pequenos ok em 38–68 s; T21/T12 falharam por edição"
+    },
+    {
+      "fila": 3,
+      "cartoes": 5,
+      "ok": 2,
+      "erro_ferramenta": "1–2 por cartão",
+      "nota": "replace_function + edit tolerante; T22 falhou só por cobertura (núcleo do Claude com ramo morto)"
+    },
+    {
+      "fila": 4,
+      "cartoes": 2,
+      "ok": 2,
+      "segundos": [
+        36,
+        92
+      ]
+    }
+  ],
+  "mutacao_finance": {
+    "inicial": 89.01,
+    "final": 94.23,
+    "meta": 90,
+    "por_arquivo_final": {
+      "date": 95.56,
+      "due-dates": 96.88,
+      "interest": 95.83,
+      "late-charges": 95.0,
+      "money": 90.74,
+      "rounding": 91.67,
+      "split": 90.0
+    }
   }
 }

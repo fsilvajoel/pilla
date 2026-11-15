@@ -71,3 +71,32 @@ describe("daysBetween", () => {
     expect(daysBetween(d(from), d(to))).toBe(expected);
   });
 });
+
+describe("calendar edge cases (mutation review)", () => {
+  it.each(["2027-06-31", "2027-09-31", "2027-11-31", "2027-01-00", " 2027-01-05", "2027-01-05x", "x2027-01-05"])(
+    "rejects %s",
+    (text) => {
+      expect(() => isoDate(text)).toThrow(DateError);
+    },
+  );
+
+  it.each(["2027-06-30", "2027-09-30", "2027-11-30", "2027-12-31"])("accepts %s", (text) => {
+    expect(isoDate(text)).toBe(text);
+  });
+
+  it("century rules: 2100 is not leap, 2400 is leap", () => {
+    expect(addDays(isoDate("2100-02-28"), 1)).toBe("2100-03-01");
+    expect(daysBetween(isoDate("2099-12-31"), isoDate("2101-01-01"))).toBe(366);
+    expect(daysBetween(isoDate("2399-12-31"), isoDate("2401-01-01"))).toBe(367);
+    expect(addDays(isoDate("2400-02-28"), 1)).toBe("2400-02-29");
+  });
+
+  it("adding many months crosses years correctly", () => {
+    expect(addMonths(isoDate("2027-01-15"), 22)).toBe("2028-11-15");
+    expect(addMonths(isoDate("2027-12-15"), 1)).toBe("2028-01-15");
+  });
+
+  it("errors carry a stable code", () => {
+    expect(new DateError("x").code).toBe("INVALID_DATE");
+  });
+});
