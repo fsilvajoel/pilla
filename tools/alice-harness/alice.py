@@ -80,7 +80,7 @@ def rate(tokens: int, ns: int) -> float:
 
 def chat_options(profile: dict, card: dict) -> tuple[dict, object]:
     """Ollama options + think value. The card may still force think/maxOutputTokens."""
-    opts = {k: profile[k] for k in ("temperature", "top_p", "top_k", "min_p", "presence_penalty", "repeat_penalty") if k in profile}
+    opts = {k: profile[k] for k in ("temperature", "top_p", "top_k", "min_p", "presence_penalty", "repeat_penalty", "num_gpu") if k in profile}
     opts["num_ctx"] = int(profile.get("num_ctx", 32768))
     opts["num_predict"] = int(card.get("maxOutputTokens", profile.get("num_predict", 8192)))
     think = card["think"] if "think" in card else profile.get("think", False)

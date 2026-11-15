@@ -21,3 +21,14 @@ profiles:
     top_p: 0.95
     min_p: 0
     think: false
+  qwen38:  # qwen3.8:27b-q8_0 (densa, 65 camadas, 31,5 GB carregada: a maior parte fica na RAM do PC)
+    model: qwen3.8:27b-q8_0
+    num_ctx: 32768
+    num_gpu: 22      # automático derruba o llama-server (CUDA, 0xc0000409); 22 cabe na VRAM real, 30 dá a mesma velocidade
+    timeout: 3600    # ~1 tok/s de saída, ~180 tok/s de prompt
+    think: false     # com raciocínio ligado, cada cartão levaria horas
+    temperature: 0.7  # recomendação Qwen para modo sem raciocínio (a do Modelfile, 1.0, é para raciocínio)
+    top_p: 0.8
+    top_k: 20
+    min_p: 0
+    presence_penalty: 1.5
