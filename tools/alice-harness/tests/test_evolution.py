@@ -228,5 +228,13 @@ class ReadRulePathTest(unittest.TestCase):
             self.assertIn("Empréstimo", out)
 
 
+class LineRangeEvidenceTest(unittest.TestCase):
+    def test_a_range_counts_every_line_it_covers(self):  # LI-040
+        from alice import weak_evidence
+        with tempfile.TemporaryDirectory() as d:
+            repo = Path(d); (repo / "index.ts").write_text("x\n" * 13)
+            self.assertEqual(weak_evidence("C1 ok - index.ts:4-13\nC2 ok - index.ts:4-5", ["C1 every a", "C2 every b"], repo), ["C2"])
+
+
 if __name__ == "__main__":
     unittest.main()
