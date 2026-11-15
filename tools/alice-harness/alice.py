@@ -7,6 +7,7 @@ Usage:
   alice.py chat "<prompt>" [--file <path>]...    one-shot question, no tools
   alice.py rule <ID>... [--repo <path>]          print rule definitions (RN-C03, T-13…) from docs
   alice.py metrics                               summary of runs/metrics.jsonl
+  alice.py evolution                             metrics grouped by harness version (is Alice improving?)
   alice.py cards <plan.yaml>... [--repo <path>]  validate delivery plans (docs/plano/E*.yaml)
   alice.py plan-run <plan.yaml> <ID>... [--repo]  run Alice cards in order (skips dependents of failures)
   alice.py status                                is Alice running? (lock: runs/ACTIVE.json)
@@ -20,6 +21,7 @@ from __future__ import annotations
 import argparse
 import fnmatch
 import html
+import hashlib
 import json
 import os
 import re
@@ -38,8 +40,8 @@ from cards import validate_plan
 from edits import apply_edit_tolerant, replace_function
 from policy import load_policy
 from claude_usage import latest_transcript, load as load_usage, weighted, window
-from retro import write_retro
-from rules import find_rule, rules_text
+from retro import tool_error_summary, write_retro
+from rules import find_doc, find_rule, rules_text
 
 HERE = Path(__file__).resolve().parent
 RUNS = HERE / "runs"
@@ -138,6 +140,33 @@ def run_cmd(cmd: str, cwd: Path, timeout: int = 600) -> tuple[int, str]:
     except FileNotFoundError as e:
         return 127, str(e)
 
+def tree_fingerprint(repo: Path) -> str:
+    """Hash of the working tree vs HEAD (tracked diff + untracked contents). Same hash = same check result (LI-022)."""
+    _, diff = run_cmd("git diff HEAD --no-color", repo)
+    _, untracked = run_cmd("git ls-files --others --exclude-standard", repo)
+    h = hashlib.sha256(diff.encode())
+    for f in sorted(untracked.split()):
+        if GENERATED.search(f):
+            continue
+        h.update(f.encode())
+        try:
+            h.update((repo / f).read_bytes())
+        except OSError:
+            pass
+    return h.hexdigest()
+
+def harness_rev() -> str:
+    """Short hash of the last commit that touched the harness (+ '*' if it has uncommitted changes)."""
+    _, rev = run_cmd("git log -1 --format=%h -- .", HERE)
+    _, dirty = run_cmd("git status --porcelain -- .", HERE)
+    dirty = [l for l in dirty.splitlines() if l.strip() and not re.search(r"runs/|__pycache__", l)]
+    return rev.strip() + ("*" if dirty else "")
+
+def harness_history() -> list[tuple[str, str]]:
+    """[(local commit time, short hash)] of harness commits, oldest first: dates old metrics without harnessRev."""
+    _, out = run_cmd("git log --reverse --date=format-local:%Y-%m-%dT%H:%M:%S --format=%cd|%h -- .", HERE)
+    return [tuple(l.split("|", 1)) for l in out.splitlines() if "|" in l]
+
 def host_allowed(host: str) -> bool:
     host = host.lower()
     return any(host == d or host.endswith("." + d) for d in OFFICIAL_DOMAINS)
@@ -180,7 +209,7 @@ TOOLS_SPEC = [
     ("edit_file", "Troca um trecho exato (old) por outro (new) num arquivo. Prefira a write_file para mudanças pequenas.", {"path": "string", "old": "string", "new": "string", "replace_all": "boolean"}),
     ("replace_function", "Substitui uma função inteira pelo nome (da linha 'export function nome' até a '}' final). Melhor jeito de implementar um esboço 'throw new Error(\"not implemented\")'. code = a função completa.", {"path": "string", "name": "string", "code": "string"}),
     ("view_diff", "Mostra o diff das suas mudanças até agora.", {}),
-    ("read_rule", "Lê a definição de uma regra pelo ID (ex.: RN-C03, T-13, CA-01) nos docs do repositório.", {"rule_id": "string"}),
+    ("read_rule", "Lê a definição de uma regra pelo ID (ex.: RN-C03, T-13, CA-01), o sumário de um documento (RFC-002, ADR-0004, PRD-001) ou uma seção (RFC-002 §3.4).", {"rule_id": "string"}),
     ("run_check", "Roda um dos checks do cartão pelo índice (0..n-1) ou todos (-1).", {"index": "integer"}),
     ("web_search", "Busca na web (Brave) restrita à documentação oficial.", {"query": "string"}),
     ("fetch_page", "Lê o texto de uma página de documentação oficial (https).", {"url": "string"}),
@@ -284,15 +313,18 @@ class Tools:
         return truncate("\n".join(out))
 
     def read_rule(self, rule_id: str) -> str:
-        return find_rule(self.repo, rule_id.strip()) or f"regra {rule_id} não encontrada; confira o ID ou use ask_claude"
+        rid = rule_id.strip()
+        return (find_rule(self.repo, rid) or find_doc(self.repo, rid)
+                or f"regra {rule_id} não encontrada; IDs aceitos: RN-C03, T-13, CA-01, RFC-002, RFC-002 §3.4, ADR-0004. Ou ask_claude")
 
     def run_check(self, index: int = -1) -> str:
         checks = self.run.card["checks"]
         idx = range(len(checks)) if int(index) < 0 else [int(index)]
         out = []
         for i in idx:
-            code, txt = run_cmd(checks[i], self.repo)
-            out.append(f"$ {checks[i]}\nexit={code}\n{truncate(txt, 3000)}")
+            code, txt, cached = self.run.check(checks[i])
+            note = " (cache: nada mudou desde a última execução; não rode de novo)" if cached else ""
+            out.append(f"$ {checks[i]}{note}\nexit={code}\n{truncate(txt, 3000)}")
         return "\n\n".join(out)
 
     def web_search(self, query: str) -> str:
@@ -325,9 +357,14 @@ KIND_NOTES = {
     "implement": "Implemente o código para os testes protegidos passarem.",
     "test-author": "Escreva testes que FALHAM para as regras listadas (um caso por exemplo do documento, citando o ID no nome do teste). NÃO implemente o código de produção. O Claude revisa antes do commit.",
     "pre-review": "Revise o diff do branch contra o cartão, as regras e o glossário. NÃO escreva arquivos. No finish, summary = lista 'arquivo:linha — problema — regra' ou 'sem achados'.",
-    "docs": "Rascunhe a documentação pedida em pt-BR, curta e factual, só com o que está no código e nos docs. O Claude faz a curadoria.",
+    "docs": ("Rascunhe a documentação pedida em pt-BR, curta e factual, só com o que está no código e nos docs. O Claude faz a curadoria. "
+             "Fontes: os comentários /** */ das funções exportadas (citam os IDs das regras), read_rule do documento citado em refs "
+             "(sumário de RFC/ADR/PRD ou uma seção, ex.: 'RFC-002 §3.4') e docs/memoria/licoes.md. Pergunte ao Claude só o que não estiver nessas fontes."),
     "cards": "Rascunhe cartões de tarefa YAML no formato de docs/agents/cartao-de-tarefa.md, um por função/endpoint, com rules por ID.",
 }
+CHECKLIST_NOTE = ("Revise contra o checklist abaixo. NÃO escreva arquivos. 'sem achados' NÃO é resposta válida: o summary do finish é "
+                  "exatamente este modelo preenchido, trocando '?' por ok|falta|parcial|n/a e a evidência (arquivo:linha específica ou comando). "
+                  "Cada check custa tempo: rode cada um no máximo uma vez.")
 REFACTOR_PROMPT = ("Verificação APROVADA. Agora UMA rodada de limpeza, sem mudar comportamento: use view_diff; remova duplicação e código morto "
                    "que você criou; nomes claros (glossário); funções curtas. Rode run_check(-1). Se não houver o que melhorar, chame finish de novo direto.")
 
@@ -348,6 +385,17 @@ class Run:
         self.kind = card.get("kind", "implement")
         self.refactor = bool(card.get("refactor", self.kind == "implement"))
         self.t0 = time.time()
+        self.check_cache: dict[tuple[str, str], tuple[int, str]] = {}
+
+    def check(self, cmd: str) -> tuple[int, str, bool]:
+        """Runs a card check, reusing the result while the tree is unchanged (LI-022: mutation ran 5x in E1-T19)."""
+        key = (cmd, tree_fingerprint(self.guard.repo))
+        if key in self.check_cache:
+            self.stats["cached_checks"] = self.stats.get("cached_checks", 0) + 1
+            return (*self.check_cache[key], True)
+        code, txt = run_cmd(cmd, self.guard.repo)
+        self.check_cache[key] = (code, txt)
+        return code, txt, False
 
     def log(self, kind: str, data: dict) -> None:
         with (self.dir / "log.jsonl").open("a") as f:
@@ -363,6 +411,8 @@ class Run:
         refs = "\n".join(f"- {r}" for r in c.get("readFirst", [])) or "- (nada além das regras abaixo e dos arquivos citados)"
         rules = rules_text(self.guard.repo, c["rules"])[:MAX_RULES_CHARS] if c.get("rules") else "(nenhuma)"
         kind_note = KIND_NOTES[self.kind]
+        if c.get("checklist"):
+            kind_note = CHECKLIST_NOTE + "\n" + "\n".join(f"{str(i).split()[0]} ? - ?" for i in c["checklist"])
         return f"""Você é a Alice, desenvolvedora do projeto. Tarefa {c['id']}: {c['title']}.
 Tipo de tarefa: {self.kind}. {kind_note}
 Referências: {', '.join(map(str, c.get('refs', [])))}.
@@ -435,7 +485,7 @@ Fluxo: ler → escrever → run_check → corrigir → finish(summary de até 3 
                     if rx.search(line):
                         problems.append(f"{f}: {label}: {line.strip()[:120]}")
         for i, c in enumerate(self.card["checks"]):
-            code, txt = run_cmd(c, self.guard.repo)
+            code, txt, _ = self.check(c)
             if code != 0:
                 problems.append(f"check {i} falhou (exit {code}): {c}\n{truncate(txt, 2500)}")
         return (not problems), "\n".join(problems)
@@ -449,8 +499,14 @@ Fluxo: ler → escrever → run_check → corrigir → finish(summary de até 3 
         metrics.append(RUNS / "metrics.jsonl", {"task": self.card["id"], "kind": self.kind, "status": status,
             "attempts": self.stats["attempts"], "toolCalls": self.stats["tool_calls"], "seconds": self.stats["seconds"],
             "promptTokens": self.stats["prompt_tokens"], "outputTokens": self.stats["output_tokens"], "think": bool(self.card.get("think", False)),
+            "toolErrors": self.tool_errors(), "cachedChecks": self.stats.get("cached_checks", 0), "harnessRev": harness_rev(),
             "at": time.strftime("%Y-%m-%dT%H:%M:%S")})
         return code
+
+    def tool_errors(self) -> int:
+        log = self.dir / "log.jsonl"
+        events = [json.loads(l) for l in log.read_text().splitlines()] if log.exists() else []
+        return tool_error_summary(events)[0]
 
     def report(self, status: str, msg: str = "") -> dict:
         _, stat = run_cmd("git diff --stat", self.guard.repo)
@@ -700,6 +756,7 @@ def main() -> int:
     c = sub.add_parser("chat"); c.add_argument("prompt"); c.add_argument("--file", action="append", default=[])
     d = sub.add_parser("rule"); d.add_argument("ids", nargs="+"); d.add_argument("--repo", type=Path, default=Path("."))
     sub.add_parser("metrics")
+    sub.add_parser("evolution")
     sub.add_parser("status")
     u = sub.add_parser("claude-usage"); u.add_argument("--since", default=""); u.add_argument("--until", default="~")
     g = sub.add_parser("plan-run"); g.add_argument("plan", type=Path); g.add_argument("ids", nargs="+"); g.add_argument("--repo", type=Path, default=Path("."))
@@ -716,6 +773,9 @@ def main() -> int:
         return cmd_plan_run(ns.plan, ns.ids, ns.repo.resolve())
     if ns.cmd == "cards":
         return cmd_cards(ns.plans, ns.repo.resolve())
+    if ns.cmd == "evolution":
+        print(metrics.evolution_table(metrics.load(RUNS / "metrics.jsonl"), harness_history()))
+        return 0
     if ns.cmd == "metrics":
         print(json.dumps(metrics.summary(metrics.load(RUNS / "metrics.jsonl")), ensure_ascii=False, indent=1))
         return 0

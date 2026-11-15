@@ -99,3 +99,35 @@ def rules_text(root: Path, ids: List[str]) -> str:
         else:
             results.append(f"(não encontrada: {rid})")
     return "\n".join(results)
+
+
+DOC_REF = re.compile(r"^((?:RFC|ADR|PRD)-\d+)(?:\s*§\s*([\d.]+))?$")
+
+
+def find_doc(root: Path, ref: str) -> Optional[str]:
+    """
+    'RFC-002' -> outline (headings with line numbers); 'RFC-002 §3.4' -> that section's text (max 60 lines).
+    LI-024: E1-T20 asked Claude because read_rule only knew rule IDs, not documents.
+    """
+    m = DOC_REF.match(ref.strip())
+    if not m:
+        return None
+    doc_id, section = m.group(1), m.group(2)
+    num = doc_id.split("-")[1].lstrip("0")
+    matches = sorted(p for p in root.glob("docs/**/*.md")
+                     if re.match(rf"^{doc_id.split('-')[0]}-0*{num}\b", p.name, re.I) or re.match(rf"^0*{num}-", p.name) and doc_id.startswith("ADR") and "adr" in p.parts)
+    if not matches:
+        return None
+    path = matches[0]
+    rel = str(path.relative_to(root))
+    lines = path.read_text(encoding="utf-8").splitlines()
+    if not section:
+        outline = [f"{i + 1}: {l}" for i, l in enumerate(lines) if l.startswith("#")]
+        return f"{rel} (sumário; use read_rule('{doc_id} §N') para uma seção ou read_file)\n" + "\n".join(outline[:60])
+    start = next((i for i, l in enumerate(lines) if re.match(rf"^#+\s+{re.escape(section)}[.\s]", l)), None)
+    if start is None:
+        return None
+    level = len(lines[start]) - len(lines[start].lstrip("#"))
+    end = next((j for j in range(start + 1, len(lines))
+                if lines[j].startswith("#") and len(lines[j]) - len(lines[j].lstrip("#")) <= level), len(lines))
+    return f"{rel}:{start + 1}\n" + "\n".join(lines[start:min(end, start + 60)])

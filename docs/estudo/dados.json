@@ -1,328 +1,368 @@
 {
-  "_sobre": "Métricas medidas no estudo (tokens da Alice medidos pelo Ollama; tokens do Claude estimados). Data: 2026-11-14.",
-  "toy": [
-    {
-      "rotulo": "v1 · 1ª rodada (falhou)",
-      "entrada": 86339,
-      "saida": 32846,
-      "tentativas": 4,
-      "status": "failed",
-      "nota": "falso positivo: __pycache__ contado como alteração"
-    },
-    {
-      "rotulo": "v1 · 2ª rodada",
-      "entrada": 12859,
-      "saida": 34991,
-      "tentativas": 1,
-      "status": "done",
-      "nota": "raciocínio estendido ligado"
-    },
-    {
-      "rotulo": "v2 · harness novo",
-      "entrada": 30540,
-      "saida": 2327,
-      "tentativas": 2,
-      "status": "done",
-      "segundos": 20.5,
-      "nota": "think=false, regra injetada, rodada de refatoração"
-    }
-  ],
-  "think": [
-    {
-      "modo": "think ligado",
-      "saida": 301,
-      "segundos": 61
-    },
-    {
-      "modo": "think desligado",
-      "saida": 14,
-      "segundos": 9
-    }
-  ],
-  "tarefas": [
-    {
-      "id": "H-01",
-      "o_que": "busca de regra por ID",
-      "kind": "implement",
-      "status": "done",
-      "tentativas": 3,
-      "ferramentas": 23,
-      "entrada": 762508,
-      "saida": 49112,
-      "segundos": 536,
-      "revisao": "Claude endureceu o formato do ID"
-    },
-    {
-      "id": "H-02",
-      "o_que": "política como dado",
-      "kind": "implement",
-      "status": "failed",
-      "tentativas": 4,
-      "ferramentas": 35,
-      "entrada": 968597,
-      "saida": 43434,
-      "segundos": 474,
-      "revisao": "falso positivo do harness; 1 regex corrigida"
-    },
-    {
-      "id": "H-03",
-      "o_que": "edição por trecho",
-      "kind": "implement",
-      "status": "done",
-      "tentativas": 1,
-      "ferramentas": 10,
-      "entrada": 29449,
-      "saida": 1585,
-      "segundos": 22,
-      "revisao": "aceito sem mudança"
-    },
-    {
-      "id": "H-04",
-      "o_que": "métricas",
-      "kind": "implement",
-      "status": "done",
-      "tentativas": 1,
-      "ferramentas": 5,
-      "entrada": 11222,
-      "saida": 884,
-      "segundos": 9,
-      "revisao": "aceito sem mudança"
-    },
-    {
-      "id": "H-05",
-      "o_que": "README do harness",
-      "kind": "docs",
-      "status": "done",
-      "tentativas": 1,
-      "ferramentas": 12,
-      "entrada": 58586,
-      "saida": 778,
-      "segundos": 12,
-      "revisao": "3 linhas corrigidas"
-    }
-  ],
-  "divisao_v1": {
-    "claude_estimado": "substituído por claude_por_fase (fase C: 57.527 de saída real)",
-    "alice_entrada": 1860902,
-    "alice_saida": 98120
+ "_sobre": "Métricas medidas no estudo (tokens da Alice medidos pelo Ollama; tokens do Claude estimados). Data: 2026-11-14.",
+ "toy": [
+  {
+   "rotulo": "v1 · 1ª rodada (falhou)",
+   "entrada": 86339,
+   "saida": 32846,
+   "tentativas": 4,
+   "status": "failed",
+   "nota": "falso positivo: __pycache__ contado como alteração"
   },
-  "documentacao": {
-    "palavras_total": 16734,
-    "agents_md_antes": 2422,
-    "agents_md_depois": 1154,
-    "ids_de_regra_indexados": 129,
-    "testes_do_harness": 27
+  {
+   "rotulo": "v1 · 2ª rodada",
+   "entrada": 12859,
+   "saida": 34991,
+   "tentativas": 1,
+   "status": "done",
+   "nota": "raciocínio estendido ligado"
   },
-  "porteiro_ssh": {
-    "comandos_testados": 8,
-    "permitidos": 3,
-    "negados": 5
-  },
-  "tarefas_estudo": [
-    {
-      "id": "E-01",
-      "o_que": "script dos gráficos",
-      "status": "done",
-      "tentativas": 1,
-      "ferramentas": 13,
-      "entrada": 80171,
-      "saida": 5358,
-      "segundos": 74
-    },
-    {
-      "id": "E-02",
-      "o_que": "ajustes dos gráficos (1ª)",
-      "status": "failed",
-      "tentativas": 4,
-      "ferramentas": 33,
-      "entrada": 778059,
-      "saida": 26827,
-      "segundos": 372,
-      "nota": "Claude editou a mesma pasta + chamada de ferramenta malformada"
-    },
-    {
-      "id": "E-02",
-      "o_que": "ajustes dos gráficos (2ª, harness corrigido)",
-      "status": "done",
-      "tentativas": 1,
-      "ferramentas": 6,
-      "entrada": 40671,
-      "saida": 5393,
-      "segundos": 45
-    },
-    {
-      "id": "artigo",
-      "o_que": "rascunho do artigo (chat)",
-      "status": "done",
-      "entrada": 2866,
-      "saida": 2113,
-      "segundos": 22,
-      "nota": "4 erros factuais; reescrito pelo Claude"
-    }
-  ],
-  "cartoes": {
-    "um_arquivo_por_ferramenta": {
-      "minutos": 41,
-      "chamadas": 86,
-      "entrada": 2588215,
-      "saida": 140418,
-      "resultado": "E0 gravado mas fora do plano; E1 nunca gravado (JSON malformado)"
-    },
-    "por_partes_modo_texto": {
-      "segundos": 29,
-      "pedidos": 9,
-      "entrada": 12189,
-      "saida": 3397,
-      "resultado": "17 cartões estruturalmente válidos; 6 com critérios inventados corrigidos pelo Claude"
-    },
-    "validador_H-06": {
-      "status": "done",
-      "tentativas": 2,
-      "ferramentas": 21,
-      "entrada": 194790,
-      "saida": 5387,
-      "segundos": 54
-    }
-  },
-  "e1_filas": [
-    {
-      "fila": 1,
-      "cartoes": 6,
-      "ok": 0,
-      "nota": "parada pelo Claude: E1-T21 travado 25 min (4 funções + armadilha no esboço)"
-    },
-    {
-      "fila": 2,
-      "cartoes": 6,
-      "ok": 3,
-      "erro_ferramenta_nos_que_falharam": "≈2/3 das chamadas",
-      "nota": "pequenos ok em 38–68 s; T21/T12 falharam por edição"
-    },
-    {
-      "fila": 3,
-      "cartoes": 5,
-      "ok": 2,
-      "erro_ferramenta": "1–2 por cartão",
-      "nota": "replace_function + edit tolerante; T22 falhou só por cobertura (núcleo do Claude com ramo morto)"
-    },
-    {
-      "fila": 4,
-      "cartoes": 2,
-      "ok": 2,
-      "segundos": [
-        36,
-        92
-      ]
-    }
-  ],
-  "mutacao_finance": {
-    "inicial": 89.01,
-    "final": 94.23,
-    "meta": 90,
-    "por_arquivo_final": {
-      "date": 95.56,
-      "due-dates": 96.88,
-      "interest": 95.83,
-      "late-charges": 95.0,
-      "money": 90.74,
-      "rounding": 91.67,
-      "split": 90.0
-    }
-  },
-  "claude_por_fase": {
-    "fonte": "transcript do Claude Code (uso real por resposta, sem duplicatas)",
-    "peso": "ponderado = entrada + 2x escrita de cache (1h) + 0,1x leitura de cache + 5x saída (aproximação de preço relativo)",
-    "fases": [
-      {
-        "fase": "A Planejamento (PRD/RFC/ADR, harness v1)",
-        "input_tokens": 198,
-        "cache_creation_input_tokens": 351501,
-        "cache_read_input_tokens": 14817714,
-        "output_tokens": 192824,
-        "turns": 80,
-        "ponderado": 3149091,
-        "contexto_medio": 185221
-      },
-      {
-        "fase": "B Auditoria",
-        "input_tokens": 6,
-        "cache_creation_input_tokens": 4367,
-        "cache_read_input_tokens": 602670,
-        "output_tokens": 13392,
-        "turns": 2,
-        "ponderado": 135967,
-        "contexto_medio": 301335
-      },
-      {
-        "fase": "C V1 da auditoria (Alice: H-01..05)",
-        "input_tokens": 100,
-        "cache_creation_input_tokens": 123211,
-        "cache_read_input_tokens": 5013222,
-        "output_tokens": 57527,
-        "turns": 44,
-        "ponderado": 1035479,
-        "contexto_medio": 113937
-      },
-      {
-        "fase": "D Push, subtree, maturidade",
-        "input_tokens": 32,
-        "cache_creation_input_tokens": 6665,
-        "cache_read_input_tokens": 1862422,
-        "output_tokens": 8568,
-        "turns": 12,
-        "ponderado": 242444,
-        "contexto_medio": 155202
-      },
-      {
-        "fase": "E Estudo/artigo (Alice: gráficos)",
-        "input_tokens": 66,
-        "cache_creation_input_tokens": 60587,
-        "cache_read_input_tokens": 5569966,
-        "output_tokens": 31433,
-        "turns": 29,
-        "ponderado": 835402,
-        "contexto_medio": 192068
-      },
-      {
-        "fase": "F Cartões E0/E1 (Alice: C-01, H-06)",
-        "input_tokens": 38,
-        "cache_creation_input_tokens": 40681,
-        "cache_read_input_tokens": 4128058,
-        "output_tokens": 24252,
-        "turns": 17,
-        "ponderado": 615466,
-        "contexto_medio": 242827
-      },
-      {
-        "fase": "G E0 esqueleto (Claude)",
-        "input_tokens": 68,
-        "cache_creation_input_tokens": 37018,
-        "cache_read_input_tokens": 9100486,
-        "output_tokens": 31318,
-        "turns": 32,
-        "ponderado": 1140743,
-        "contexto_medio": 284390
-      },
-      {
-        "fase": "H E1 com Alice (4 filas)",
-        "input_tokens": 170,
-        "cache_creation_input_tokens": 104955,
-        "cache_read_input_tokens": 28378234,
-        "output_tokens": 86318,
-        "turns": 78,
-        "ponderado": 3479493,
-        "contexto_medio": 363824
-      },
-      {
-        "fase": "I Feedback",
-        "input_tokens": 12,
-        "cache_creation_input_tokens": 2767,
-        "cache_read_input_tokens": 1665353,
-        "output_tokens": 4025,
-        "turns": 4,
-        "ponderado": 192206,
-        "contexto_medio": 416338
-      }
-    ]
+  {
+   "rotulo": "v2 · harness novo",
+   "entrada": 30540,
+   "saida": 2327,
+   "tentativas": 2,
+   "status": "done",
+   "segundos": 20.5,
+   "nota": "think=false, regra injetada, rodada de refatoração"
   }
+ ],
+ "think": [
+  {
+   "modo": "think ligado",
+   "saida": 301,
+   "segundos": 61
+  },
+  {
+   "modo": "think desligado",
+   "saida": 14,
+   "segundos": 9
+  }
+ ],
+ "tarefas": [
+  {
+   "id": "H-01",
+   "o_que": "busca de regra por ID",
+   "kind": "implement",
+   "status": "done",
+   "tentativas": 3,
+   "ferramentas": 23,
+   "entrada": 762508,
+   "saida": 49112,
+   "segundos": 536,
+   "revisao": "Claude endureceu o formato do ID"
+  },
+  {
+   "id": "H-02",
+   "o_que": "política como dado",
+   "kind": "implement",
+   "status": "failed",
+   "tentativas": 4,
+   "ferramentas": 35,
+   "entrada": 968597,
+   "saida": 43434,
+   "segundos": 474,
+   "revisao": "falso positivo do harness; 1 regex corrigida"
+  },
+  {
+   "id": "H-03",
+   "o_que": "edição por trecho",
+   "kind": "implement",
+   "status": "done",
+   "tentativas": 1,
+   "ferramentas": 10,
+   "entrada": 29449,
+   "saida": 1585,
+   "segundos": 22,
+   "revisao": "aceito sem mudança"
+  },
+  {
+   "id": "H-04",
+   "o_que": "métricas",
+   "kind": "implement",
+   "status": "done",
+   "tentativas": 1,
+   "ferramentas": 5,
+   "entrada": 11222,
+   "saida": 884,
+   "segundos": 9,
+   "revisao": "aceito sem mudança"
+  },
+  {
+   "id": "H-05",
+   "o_que": "README do harness",
+   "kind": "docs",
+   "status": "done",
+   "tentativas": 1,
+   "ferramentas": 12,
+   "entrada": 58586,
+   "saida": 778,
+   "segundos": 12,
+   "revisao": "3 linhas corrigidas"
+  }
+ ],
+ "divisao_v1": {
+  "claude_estimado": "substituído por claude_por_fase (fase C: 57.527 de saída real)",
+  "alice_entrada": 1860902,
+  "alice_saida": 98120
+ },
+ "documentacao": {
+  "palavras_total": 16734,
+  "agents_md_antes": 2422,
+  "agents_md_depois": 1154,
+  "ids_de_regra_indexados": 129,
+  "testes_do_harness": 27
+ },
+ "porteiro_ssh": {
+  "comandos_testados": 8,
+  "permitidos": 3,
+  "negados": 5
+ },
+ "tarefas_estudo": [
+  {
+   "id": "E-01",
+   "o_que": "script dos gráficos",
+   "status": "done",
+   "tentativas": 1,
+   "ferramentas": 13,
+   "entrada": 80171,
+   "saida": 5358,
+   "segundos": 74
+  },
+  {
+   "id": "E-02",
+   "o_que": "ajustes dos gráficos (1ª)",
+   "status": "failed",
+   "tentativas": 4,
+   "ferramentas": 33,
+   "entrada": 778059,
+   "saida": 26827,
+   "segundos": 372,
+   "nota": "Claude editou a mesma pasta + chamada de ferramenta malformada"
+  },
+  {
+   "id": "E-02",
+   "o_que": "ajustes dos gráficos (2ª, harness corrigido)",
+   "status": "done",
+   "tentativas": 1,
+   "ferramentas": 6,
+   "entrada": 40671,
+   "saida": 5393,
+   "segundos": 45
+  },
+  {
+   "id": "artigo",
+   "o_que": "rascunho do artigo (chat)",
+   "status": "done",
+   "entrada": 2866,
+   "saida": 2113,
+   "segundos": 22,
+   "nota": "4 erros factuais; reescrito pelo Claude"
+  }
+ ],
+ "cartoes": {
+  "um_arquivo_por_ferramenta": {
+   "minutos": 41,
+   "chamadas": 86,
+   "entrada": 2588215,
+   "saida": 140418,
+   "resultado": "E0 gravado mas fora do plano; E1 nunca gravado (JSON malformado)"
+  },
+  "por_partes_modo_texto": {
+   "segundos": 29,
+   "pedidos": 9,
+   "entrada": 12189,
+   "saida": 3397,
+   "resultado": "17 cartões estruturalmente válidos; 6 com critérios inventados corrigidos pelo Claude"
+  },
+  "validador_H-06": {
+   "status": "done",
+   "tentativas": 2,
+   "ferramentas": 21,
+   "entrada": 194790,
+   "saida": 5387,
+   "segundos": 54
+  }
+ },
+ "e1_filas": [
+  {
+   "fila": 1,
+   "cartoes": 6,
+   "ok": 0,
+   "nota": "parada pelo Claude: E1-T21 travado 25 min (4 funções + armadilha no esboço)"
+  },
+  {
+   "fila": 2,
+   "cartoes": 6,
+   "ok": 3,
+   "erro_ferramenta_nos_que_falharam": "≈2/3 das chamadas",
+   "nota": "pequenos ok em 38–68 s; T21/T12 falharam por edição"
+  },
+  {
+   "fila": 3,
+   "cartoes": 5,
+   "ok": 2,
+   "erro_ferramenta": "1–2 por cartão",
+   "nota": "replace_function + edit tolerante; T22 falhou só por cobertura (núcleo do Claude com ramo morto)"
+  },
+  {
+   "fila": 4,
+   "cartoes": 2,
+   "ok": 2,
+   "segundos": [
+    36,
+    92
+   ]
+  }
+ ],
+ "mutacao_finance": {
+  "inicial": 89.01,
+  "final": 94.23,
+  "meta": 90,
+  "por_arquivo_final": {
+   "date": 95.56,
+   "due-dates": 96.88,
+   "interest": 95.83,
+   "late-charges": 95.0,
+   "money": 90.74,
+   "rounding": 91.67,
+   "split": 90.0
+  }
+ },
+ "claude_por_fase": {
+  "fonte": "transcript do Claude Code (uso real por resposta, sem duplicatas)",
+  "peso": "ponderado = entrada + 2x escrita de cache (1h) + 0,1x leitura de cache + 5x saída (aproximação de preço relativo)",
+  "fases": [
+   {
+    "fase": "A Planejamento (PRD/RFC/ADR, harness v1)",
+    "input_tokens": 198,
+    "cache_creation_input_tokens": 351501,
+    "cache_read_input_tokens": 14817714,
+    "output_tokens": 192824,
+    "turns": 80,
+    "ponderado": 3149091,
+    "contexto_medio": 185221
+   },
+   {
+    "fase": "B Auditoria",
+    "input_tokens": 6,
+    "cache_creation_input_tokens": 4367,
+    "cache_read_input_tokens": 602670,
+    "output_tokens": 13392,
+    "turns": 2,
+    "ponderado": 135967,
+    "contexto_medio": 301335
+   },
+   {
+    "fase": "C V1 da auditoria (Alice: H-01..05)",
+    "input_tokens": 100,
+    "cache_creation_input_tokens": 123211,
+    "cache_read_input_tokens": 5013222,
+    "output_tokens": 57527,
+    "turns": 44,
+    "ponderado": 1035479,
+    "contexto_medio": 113937
+   },
+   {
+    "fase": "D Push, subtree, maturidade",
+    "input_tokens": 32,
+    "cache_creation_input_tokens": 6665,
+    "cache_read_input_tokens": 1862422,
+    "output_tokens": 8568,
+    "turns": 12,
+    "ponderado": 242444,
+    "contexto_medio": 155202
+   },
+   {
+    "fase": "E Estudo/artigo (Alice: gráficos)",
+    "input_tokens": 66,
+    "cache_creation_input_tokens": 60587,
+    "cache_read_input_tokens": 5569966,
+    "output_tokens": 31433,
+    "turns": 29,
+    "ponderado": 835402,
+    "contexto_medio": 192068
+   },
+   {
+    "fase": "F Cartões E0/E1 (Alice: C-01, H-06)",
+    "input_tokens": 38,
+    "cache_creation_input_tokens": 40681,
+    "cache_read_input_tokens": 4128058,
+    "output_tokens": 24252,
+    "turns": 17,
+    "ponderado": 615466,
+    "contexto_medio": 242827
+   },
+   {
+    "fase": "G E0 esqueleto (Claude)",
+    "input_tokens": 68,
+    "cache_creation_input_tokens": 37018,
+    "cache_read_input_tokens": 9100486,
+    "output_tokens": 31318,
+    "turns": 32,
+    "ponderado": 1140743,
+    "contexto_medio": 284390
+   },
+   {
+    "fase": "H E1 com Alice (4 filas)",
+    "input_tokens": 170,
+    "cache_creation_input_tokens": 104955,
+    "cache_read_input_tokens": 28378234,
+    "output_tokens": 86318,
+    "turns": 78,
+    "ponderado": 3479493,
+    "contexto_medio": 363824
+   },
+   {
+    "fase": "I Feedback",
+    "input_tokens": 12,
+    "cache_creation_input_tokens": 2767,
+    "cache_read_input_tokens": 1665353,
+    "output_tokens": 4025,
+    "turns": 4,
+    "ponderado": 192206,
+    "contexto_medio": 416338
+   }
+  ]
+ },
+ "evolucao": {
+  "_sobre": "Ciclo por cartão (pedido do Joel, 2026-11-14): executar → analisar → melhorar o harness → próximo. Fonte: runs/metrics.jsonl e `alice.py evolution`.",
+  "execucoes": [
+   {
+    "cartao": "E1-T19",
+    "kind": "pre-review",
+    "harness": "8fdcba2",
+    "status": "done",
+    "segundos": 284,
+    "tentativas": 3,
+    "chamadas": 35,
+    "erros_ferramenta": 0,
+    "tokens_entrada": 476149,
+    "tokens_saida": 991,
+    "achado": "mutação rodada 5× com a árvore intacta (~200 s); 1º finish 'sem achados' (nota do harness contraditória); evidência fraca, item conferido verdadeiro",
+    "licoes": [
+     "LI-022",
+     "LI-023"
+    ],
+    "mudanca": "cache de checks por estado da árvore; modelo de checklist pré-preenchido"
+   },
+   {
+    "cartao": "E1-T20",
+    "kind": "docs",
+    "harness": "8fdcba2",
+    "status": "needs_input",
+    "segundos": 6,
+    "tentativas": 0,
+    "chamadas": 7,
+    "erros_ferramenta": 0,
+    "tokens_entrada": 24411,
+    "tokens_saida": 254,
+    "achado": "read_rule não achava documentos (RFC-002); cartão docs sem indicação das fontes",
+    "licoes": [
+     "LI-024"
+    ],
+    "mudanca": "read_rule com documento/seção; nota de docs com fontes; métricas com harnessRev/toolErrors/cachedChecks; comando evolution"
+   }
+  ]
+ }
 }
