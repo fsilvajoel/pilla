@@ -1,4 +1,4 @@
-# Gerado por script do Claude a partir da RFC-004 §7. Módulo-modelo: E2-T01 (Claude). Ver docs/plano/README.md.
+# Gerado por script do Claude a partir da RFC-004. Módulos-modelo: E2-T01 (eventos) e E2-T13 (API, Claude). Ver docs/plano/README.md.
 delivery: E2
 title: Event contracts in packages/schemas (RFC-004 §7) from a model module
 cards:
@@ -381,3 +381,371 @@ cards:
     attempts: 3
     toolCalls: 20
     minutes: 8
+- id: E2-T13
+  title: 'API model module: problem+json, cpfSchema, simulate-loan request/response plus table tests for the request bodies'
+  kind: implement
+  assignee: claude
+  rules:
+  - RN-P01
+  refs:
+  - RFC-004 §2
+  - RFC-004 §3
+  - RFC-004 §5
+  - RFC-004 §6
+  - RFC-005 §1
+  dependsOn:
+  - E2-T11
+  allowedPaths:
+  - packages/schemas/**
+  protectedTests: []
+  checks:
+  - pnpm --filter @pilla/schemas exec vitest run src/api/api.test.ts -t simulateLoan
+  - pnpm --filter @pilla/schemas typecheck
+  - pnpm --filter @pilla/schemas lint
+  done:
+  - cpfSchema in common.ts (11 digits, valid check digits)
+  - problemSchema with code → status (RFC-004 §6)
+  - 'lending/simulate-loan.ts as the model: strictObject request, refine, response with schedule'
+  - table-driven api.test.ts; one z.never() stub per remaining body
+  budget:
+    attempts: 5
+    toolCalls: 30
+- id: E2-T14
+  title: Implement the adminLoginRequest body schema (POST /auth/admin/login)
+  kind: implement
+  assignee: alice
+  rules: []
+  refs:
+  - RFC-004 §3
+  - RN-A05
+  dependsOn:
+  - E2-T13
+  allowedPaths:
+  - packages/schemas/src/api/access/admin-login.ts
+  protectedTests:
+  - packages/schemas/src/api/api.test.ts
+  checks:
+  - pnpm --filter @pilla/schemas exec vitest run src/api/api.test.ts -t adminLoginRequest
+  - pnpm --filter @pilla/schemas typecheck
+  - pnpm --filter @pilla/schemas lint
+  done:
+  - all adminLoginRequest tests in api.test.ts pass (vitest -t filter)
+  - 'fields, exactly: username: z.string().trim().min(1).max(100); password: z.string().min(1).max(200) (no trim: spaces belong to the password)'
+  - replace only the z.never(); z.strictObject like lending/simulate-loan.ts; keep the doc comment with the route
+  - export type AdminLoginRequest = z.infer<typeof adminLoginRequest>;
+  - one write_file or edit_file call; the file stays under 15 lines
+  budget:
+    attempts: 4
+    toolCalls: 20
+    minutes: 6
+  readFirst:
+  - packages/schemas/src/api/lending/simulate-loan.ts
+  - packages/schemas/src/common.ts
+  - packages/schemas/src/api/access/admin-login.ts
+  sizeNote: um corpo por cartão; o modelo é lending/simulate-loan.ts
+- id: E2-T15
+  title: Implement the portalAccessRequest body schema (PUT /portal-access/{personId})
+  kind: implement
+  assignee: alice
+  rules: []
+  refs:
+  - RFC-004 §3
+  - RF-60
+  dependsOn:
+  - E2-T13
+  allowedPaths:
+  - packages/schemas/src/api/access/portal-access.ts
+  protectedTests:
+  - packages/schemas/src/api/api.test.ts
+  checks:
+  - pnpm --filter @pilla/schemas exec vitest run src/api/api.test.ts -t portalAccessRequest
+  - pnpm --filter @pilla/schemas typecheck
+  - pnpm --filter @pilla/schemas lint
+  done:
+  - all portalAccessRequest tests in api.test.ts pass (vitest -t filter)
+  - 'fields, exactly: enabled: z.boolean()'
+  - replace only the z.never(); z.strictObject like lending/simulate-loan.ts; keep the doc comment with the route
+  - export type PortalAccessRequest = z.infer<typeof portalAccessRequest>;
+  - one write_file or edit_file call; the file stays under 15 lines
+  budget:
+    attempts: 4
+    toolCalls: 20
+    minutes: 6
+  readFirst:
+  - packages/schemas/src/api/lending/simulate-loan.ts
+  - packages/schemas/src/common.ts
+  - packages/schemas/src/api/access/portal-access.ts
+  sizeNote: um corpo por cartão; o modelo é lending/simulate-loan.ts
+- id: E2-T16
+  title: Implement the portalSessionRequest body schema (POST /portal/session)
+  kind: implement
+  assignee: alice
+  rules: []
+  refs:
+  - RFC-004 §3
+  - RF-61
+  dependsOn:
+  - E2-T13
+  allowedPaths:
+  - packages/schemas/src/api/access/portal-session.ts
+  protectedTests:
+  - packages/schemas/src/api/api.test.ts
+  checks:
+  - pnpm --filter @pilla/schemas exec vitest run src/api/api.test.ts -t portalSessionRequest
+  - pnpm --filter @pilla/schemas typecheck
+  - pnpm --filter @pilla/schemas lint
+  done:
+  - all portalSessionRequest tests in api.test.ts pass (vitest -t filter)
+  - 'fields, exactly: cpf: cpfSchema'
+  - replace only the z.never(); z.strictObject like lending/simulate-loan.ts; keep the doc comment with the route
+  - export type PortalSessionRequest = z.infer<typeof portalSessionRequest>;
+  - 'import line: import { cpfSchema } from "../../common"; never write a new regex'
+  - one write_file or edit_file call; the file stays under 15 lines
+  budget:
+    attempts: 4
+    toolCalls: 20
+    minutes: 6
+  readFirst:
+  - packages/schemas/src/api/lending/simulate-loan.ts
+  - packages/schemas/src/common.ts
+  - packages/schemas/src/api/access/portal-session.ts
+  sizeNote: um corpo por cartão; o modelo é lending/simulate-loan.ts
+- id: E2-T17
+  title: Implement the activateLoanRequest body schema (POST /loans/{id}/activate)
+  kind: implement
+  assignee: alice
+  rules: []
+  refs:
+  - RFC-004 §3
+  - RF-12
+  dependsOn:
+  - E2-T13
+  allowedPaths:
+  - packages/schemas/src/api/lending/activate-loan.ts
+  protectedTests:
+  - packages/schemas/src/api/api.test.ts
+  checks:
+  - pnpm --filter @pilla/schemas exec vitest run src/api/api.test.ts -t activateLoanRequest
+  - pnpm --filter @pilla/schemas typecheck
+  - pnpm --filter @pilla/schemas lint
+  done:
+  - all activateLoanRequest tests in api.test.ts pass (vitest -t filter)
+  - 'fields, exactly: disbursedAt: isoDateSchema; accountId: idSchema'
+  - replace only the z.never(); z.strictObject like lending/simulate-loan.ts; keep the doc comment with the route
+  - export type ActivateLoanRequest = z.infer<typeof activateLoanRequest>;
+  - 'import line: import { idSchema, isoDateSchema } from "../../common"; never write a new regex'
+  - one write_file or edit_file call; the file stays under 15 lines
+  budget:
+    attempts: 4
+    toolCalls: 20
+    minutes: 6
+  readFirst:
+  - packages/schemas/src/api/lending/simulate-loan.ts
+  - packages/schemas/src/common.ts
+  - packages/schemas/src/api/lending/activate-loan.ts
+  sizeNote: um corpo por cartão; o modelo é lending/simulate-loan.ts
+- id: E2-T18
+  title: Implement the writeOffLoanRequest body schema (POST /loans/{id}/write-off)
+  kind: implement
+  assignee: alice
+  rules: []
+  refs:
+  - RFC-004 §3
+  - RF-16
+  dependsOn:
+  - E2-T13
+  allowedPaths:
+  - packages/schemas/src/api/lending/write-off-loan.ts
+  protectedTests:
+  - packages/schemas/src/api/api.test.ts
+  checks:
+  - pnpm --filter @pilla/schemas exec vitest run src/api/api.test.ts -t writeOffLoanRequest
+  - pnpm --filter @pilla/schemas typecheck
+  - pnpm --filter @pilla/schemas lint
+  done:
+  - all writeOffLoanRequest tests in api.test.ts pass (vitest -t filter)
+  - 'fields, exactly: reason: reasonSchema'
+  - replace only the z.never(); z.strictObject like lending/simulate-loan.ts; keep the doc comment with the route
+  - export type WriteOffLoanRequest = z.infer<typeof writeOffLoanRequest>;
+  - 'import line: import { reasonSchema } from "../../common"; never write a new regex'
+  - one write_file or edit_file call; the file stays under 15 lines
+  budget:
+    attempts: 4
+    toolCalls: 20
+    minutes: 6
+  readFirst:
+  - packages/schemas/src/api/lending/simulate-loan.ts
+  - packages/schemas/src/common.ts
+  - packages/schemas/src/api/lending/write-off-loan.ts
+  sizeNote: um corpo por cartão; o modelo é lending/simulate-loan.ts
+- id: E2-T19
+  title: Implement the payoffQuoteQuery body schema (GET /loans/{id}/payoff-quote?date=)
+  kind: implement
+  assignee: alice
+  rules: []
+  refs:
+  - RFC-004 §3
+  - RF-15
+  dependsOn:
+  - E2-T13
+  allowedPaths:
+  - packages/schemas/src/api/lending/payoff-quote.ts
+  protectedTests:
+  - packages/schemas/src/api/api.test.ts
+  checks:
+  - pnpm --filter @pilla/schemas exec vitest run src/api/api.test.ts -t payoffQuoteQuery
+  - pnpm --filter @pilla/schemas typecheck
+  - pnpm --filter @pilla/schemas lint
+  done:
+  - all payoffQuoteQuery tests in api.test.ts pass (vitest -t filter)
+  - 'fields, exactly: date: isoDateSchema'
+  - replace only the z.never(); z.strictObject like lending/simulate-loan.ts; keep the doc comment with the route
+  - export type PayoffQuoteQuery = z.infer<typeof payoffQuoteQuery>;
+  - 'import line: import { isoDateSchema } from "../../common"; never write a new regex'
+  - one write_file or edit_file call; the file stays under 15 lines
+  budget:
+    attempts: 4
+    toolCalls: 20
+    minutes: 6
+  readFirst:
+  - packages/schemas/src/api/lending/simulate-loan.ts
+  - packages/schemas/src/common.ts
+  - packages/schemas/src/api/lending/payoff-quote.ts
+  sizeNote: um corpo por cartão; o modelo é lending/simulate-loan.ts
+- id: E2-T20
+  title: Implement the allocationPreviewRequest body schema (POST /payments/allocation-preview)
+  kind: implement
+  assignee: alice
+  rules: []
+  refs:
+  - RFC-004 §3
+  - RF-23
+  dependsOn:
+  - E2-T13
+  allowedPaths:
+  - packages/schemas/src/api/payments/allocation-preview.ts
+  protectedTests:
+  - packages/schemas/src/api/api.test.ts
+  checks:
+  - pnpm --filter @pilla/schemas exec vitest run src/api/api.test.ts -t allocationPreviewRequest
+  - pnpm --filter @pilla/schemas typecheck
+  - pnpm --filter @pilla/schemas lint
+  done:
+  - all allocationPreviewRequest tests in api.test.ts pass (vitest -t filter)
+  - 'fields, exactly: loanId: idSchema; amountCents: positiveCentsSchema; paidAt: isoDateSchema'
+  - replace only the z.never(); z.strictObject like lending/simulate-loan.ts; keep the doc comment with the route
+  - export type AllocationPreviewRequest = z.infer<typeof allocationPreviewRequest>;
+  - 'import line: import { idSchema, isoDateSchema, positiveCentsSchema } from "../../common"; never write a new regex'
+  - one write_file or edit_file call; the file stays under 15 lines
+  budget:
+    attempts: 4
+    toolCalls: 20
+    minutes: 6
+  readFirst:
+  - packages/schemas/src/api/lending/simulate-loan.ts
+  - packages/schemas/src/common.ts
+  - packages/schemas/src/api/payments/allocation-preview.ts
+  sizeNote: um corpo por cartão; o modelo é lending/simulate-loan.ts
+- id: E2-T21
+  title: Implement the reversePaymentRequest body schema (POST /payments/{id}/reverse)
+  kind: implement
+  assignee: alice
+  rules: []
+  refs:
+  - RFC-004 §3
+  - RF-22
+  dependsOn:
+  - E2-T13
+  allowedPaths:
+  - packages/schemas/src/api/payments/reverse-payment.ts
+  protectedTests:
+  - packages/schemas/src/api/api.test.ts
+  checks:
+  - pnpm --filter @pilla/schemas exec vitest run src/api/api.test.ts -t reversePaymentRequest
+  - pnpm --filter @pilla/schemas typecheck
+  - pnpm --filter @pilla/schemas lint
+  done:
+  - all reversePaymentRequest tests in api.test.ts pass (vitest -t filter)
+  - 'fields, exactly: reason: reasonSchema'
+  - replace only the z.never(); z.strictObject like lending/simulate-loan.ts; keep the doc comment with the route
+  - export type ReversePaymentRequest = z.infer<typeof reversePaymentRequest>;
+  - 'import line: import { reasonSchema } from "../../common"; never write a new regex'
+  - one write_file or edit_file call; the file stays under 15 lines
+  budget:
+    attempts: 4
+    toolCalls: 20
+    minutes: 6
+  readFirst:
+  - packages/schemas/src/api/lending/simulate-loan.ts
+  - packages/schemas/src/common.ts
+  - packages/schemas/src/api/payments/reverse-payment.ts
+  sizeNote: um corpo por cartão; o modelo é lending/simulate-loan.ts
+- id: E2-T22
+  title: Implement the attachmentUploadUrlRequest body schema (POST /attachments/upload-url)
+  kind: implement
+  assignee: alice
+  rules: []
+  refs:
+  - RFC-004 §3
+  dependsOn:
+  - E2-T13
+  allowedPaths:
+  - packages/schemas/src/api/core/attachment-upload-url.ts
+  protectedTests:
+  - packages/schemas/src/api/api.test.ts
+  checks:
+  - pnpm --filter @pilla/schemas exec vitest run src/api/api.test.ts -t attachmentUploadUrlRequest
+  - pnpm --filter @pilla/schemas typecheck
+  - pnpm --filter @pilla/schemas lint
+  done:
+  - all attachmentUploadUrlRequest tests in api.test.ts pass (vitest -t filter)
+  - 'fields, exactly: fileName: z.string().trim().min(1).max(255); contentType: z.string().trim().min(1).max(100); sizeBytes: z.int().positive()'
+  - replace only the z.never(); z.strictObject like lending/simulate-loan.ts; keep the doc comment with the route
+  - export type AttachmentUploadUrlRequest = z.infer<typeof attachmentUploadUrlRequest>;
+  - one write_file or edit_file call; the file stays under 15 lines
+  budget:
+    attempts: 4
+    toolCalls: 20
+    minutes: 6
+  readFirst:
+  - packages/schemas/src/api/lending/simulate-loan.ts
+  - packages/schemas/src/common.ts
+  - packages/schemas/src/api/core/attachment-upload-url.ts
+  sizeNote: um corpo por cartão; o modelo é lending/simulate-loan.ts
+- id: E2-T23
+  title: Pre-review the API body schemas against RFC-004 §3–§6
+  kind: pre-review
+  assignee: alice
+  rules: []
+  refs:
+  - RFC-004 §3
+  - RFC-004 §6
+  dependsOn:
+  - E2-T14
+  - E2-T15
+  - E2-T16
+  - E2-T17
+  - E2-T18
+  - E2-T19
+  - E2-T20
+  - E2-T21
+  - E2-T22
+  allowedPaths: []
+  protectedTests: []
+  checks:
+  - pnpm --filter @pilla/schemas test
+  - node scripts/check-avoid.mjs docs/memoria/libs/zod.md packages/schemas/src
+  done:
+  - 'one line per checklist item: ''<key> ok|falta|parcial|n/a - evidence (file:line or command)'''
+  budget:
+    attempts: 3
+    toolCalls: 30
+    minutes: 8
+  checklist:
+  - C1 every body schema file under packages/schemas/src/api has a test case in api.test.ts named after its export
+  - C2 every request body is z.strictObject (calculated fields never come in, ADR-0005)
+  - C3 money fields end in Cents and use centsSchema or positiveCentsSchema; dates use isoDateSchema; ids use idSchema
+  - C4 no regex outside common.ts and no z.string() for ids, dates, money or CPF
+  - C5 every api schema is exported from src/index.ts
+  - C6 field names match RFC-004 §3 and docs/glossario.md exactly
+  - C7 every zod API used follows the zod sheet (docs/memoria/libs/zod.md); run_check 1 lists what the sheet says to avoid

@@ -17,3 +17,18 @@ export const isoDateSchema = z.iso.date();
 export const instantSchema = z.iso.datetime({ offset: true });
 /** Texto livre obrigatório (motivos de estorno, reabertura, baixa). */
 export const reasonSchema = z.string().trim().min(1).max(500);
+
+/** CPF só com dígitos (RFC-005 `persons.cpf`), com os dois dígitos verificadores válidos (RN-P01). */
+export const cpfSchema = z
+  .string()
+  .regex(/^\d{11}$/)
+  .refine((cpf) => !/^(\d)\1{10}$/.test(cpf) && cpfCheckDigit(cpf, 9) && cpfCheckDigit(cpf, 10), {
+    message: "invalid CPF check digits",
+  });
+
+/** Dígito `n` (9 ou 10) do CPF: soma ponderada dos anteriores, ×10 mod 11, e 10 vira 0. */
+function cpfCheckDigit(cpf: string, n: number): boolean {
+  let sum = 0;
+  for (let i = 0; i < n; i++) sum += (cpf.charCodeAt(i) - 48) * (n + 1 - i);
+  return ((sum * 10) % 11) % 10 === cpf.charCodeAt(n) - 48;
+}

@@ -1,4 +1,4 @@
-// Esquemas Zod da API e dos eventos (RFC-004). Os de API entram junto com os módulos (E2b+).
+// Esquemas Zod da API e dos eventos (RFC-004).
 export * from "./common";
 export { eventV1 } from "./events/envelope";
 export * from "./events/payment-confirmed";
@@ -11,3 +11,14 @@ export * from "./events/loan-written-off";
 export * from "./events/payment-reversed";
 export * from "./events/installment-paid";
 export * from "./events/installment-overdue";
+export * from "./api/problem";
+export * from "./api/lending/simulate-loan";
+export * from "./api/access/admin-login";
+export * from "./api/access/portal-access";
+export * from "./api/access/portal-session";
+export * from "./api/lending/activate-loan";
+export * from "./api/lending/write-off-loan";
+export * from "./api/lending/payoff-quote";
+export * from "./api/payments/allocation-preview";
+export * from "./api/payments/reverse-payment";
+export * from "./api/core/attachment-upload-url";
