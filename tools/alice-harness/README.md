@@ -24,6 +24,14 @@ Os cards de tarefa utilizam os seguintes campos:
 - `maxOutputTokens`: Limite de tokens de saída.
 - `lessons`: Lições aprendidas registradas no campo `finish`.
 
+## Travas extras (`gates.py`)
+São ideias do [harness-toolkit](https://github.com/tech-leads-club/harness-toolkit), reescritas aqui; nenhum código foi copiado (a licença é Elastic 2.0).
+- **Lacunas numeradas** (LI-044): o finish reprovado volta como uma lista; cada lacuna tem uma categoria e um próximo passo, e o aviso sobe de tom quando a mesma falha se repete. As categorias vão para `metrics.jsonl` (`failureCategories`).
+- **Laço repetido** (LI-045): a mesma chamada 3 vezes seguidas recebe um aviso; na 5ª a execução falha.
+- **Duplicação** (LI-046): no implement, 6+ linhas não triviais copiadas de outro arquivo reprovam o finish.
+- **Segredos mascarados** (LI-047): a saída de checks e da web passa por `redact()` antes de chegar ao modelo e ao log.
+- **Diff vazio** (LI-048): tarefa que pede escrita e não alterou nada não fica pronta.
+
 ## Política (Policy)
 As restrições de segurança e limites são definidos em `policy.default.yaml`. Esta política pode ser sobrescrita por um arquivo localizado em `<repo>/.agents/policy.yaml`.
 

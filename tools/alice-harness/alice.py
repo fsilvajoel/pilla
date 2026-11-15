@@ -35,6 +35,7 @@ from pathlib import Path
 
 import yaml
 
+import gates
 import metrics
 from cards import validate_plan
 from edits import apply_edit_tolerant, replace_function
@@ -603,15 +604,42 @@ Fluxo: ler → escrever → run_check → corrigir → finish(summary de até 3 
                 for label, rx in FORBIDDEN_ADDED:
                     if rx.search(line):
                         problems.append(f"{f}: {label}: {line.strip()[:120]}")
+        own = [f for f in changed if f not in base_dirty]
+        if self.kind in ("implement", "test-author", "docs", "research", "cards") and not own:
+            problems.append("nenhum arquivo alterado: a tarefa pede escrita (LI-048)")
         if self.kind == "implement":
             problems += done_line_problems(self.card, self.guard.repo)
+            problems += self.duplication_problems()
         for i, c in enumerate(self.card["checks"]):
             if self.kind == "pre-review":  # LI-036: in a review a red check is a finding (evidence), not a gate
                 continue
             code, txt, _ = self.check(c)
             if code != 0:
-                problems.append(f"check {i} falhou (exit {code}): {c}\n{truncate(txt, 2500)}")
+                problems.append(f"check {i} falhou (exit {code}): {c}\n{self.redact(truncate(txt, 2500))}")
         return (not problems), "\n".join(problems)
+
+    def duplication_problems(self) -> list[str]:
+        """LI-046: added code that already exists in another source file (reuse it instead of copying)."""
+        _, ls = run_cmd("git ls-files", self.guard.repo)
+        tracked = ls.splitlines()
+        out = []
+        for f in sorted(self.touched):
+            p = self.guard.repo / f
+            if not p.is_file() or re.search(r"\.test\.|/tests?/|test_", f):
+                continue
+            _, diff = run_cmd(f"git diff --no-color -U0 -- {shlex.quote(f)}", self.guard.repo)
+            added = [l[1:] for l in diff.splitlines() if l.startswith("+") and not l.startswith("+++")] or p.read_text(errors="replace").splitlines()
+            others = gates.other_sources(self.guard.repo, tracked, {f}, Path(f).suffix)
+            for hit in gates.duplicated_runs(added, others):
+                out.append(f"código duplicado em {f}: o trecho já existe em {hit}")
+        return out
+
+    def redact(self, text: str) -> str:
+        """LI-047: secret-shaped spans never reach the model or the log."""
+        text, n = gates.redact(text)
+        if n:
+            self.stats["redacted"] = self.stats.get("redacted", 0) + n
+        return text
 
     def end(self, status: str, code: int, msg: str = "", extra: dict | None = None) -> int:
         self.stats["seconds"] = round(self.stats.get("seconds", 0) + time.time() - self.t0, 1)
@@ -623,6 +651,7 @@ Fluxo: ler → escrever → run_check → corrigir → finish(summary de até 3 
             "attempts": self.stats["attempts"], "toolCalls": self.stats["tool_calls"], "seconds": self.stats["seconds"],
             "promptTokens": self.stats["prompt_tokens"], "outputTokens": self.stats["output_tokens"], "think": bool(self.card.get("think", False)),
             "toolErrors": self.tool_errors(), "cachedChecks": self.stats.get("cached_checks", 0), "harnessRev": harness_rev(),
+            "failureCategories": self.stats.get("failure_categories", []), "stalls": self.stats.get("stalls", 0),
             "at": time.strftime("%Y-%m-%dT%H:%M:%S")})
         return code
 
@@ -647,6 +676,7 @@ Fluxo: ler → escrever → run_check → corrigir → finish(summary de até 3 
 
     def loop(self) -> int:
         tools = Tools(self)
+        stall = gates.StallDetector()
         tool_calls_this_attempt = 0
         while True:
             if self.stats.get("seconds", 0) + time.time() - self.t0 > self.max_seconds:
@@ -704,11 +734,17 @@ Fluxo: ler → escrever → run_check → corrigir → finish(summary de até 3 
                     elif self.stats["attempts"] >= self.max_attempts:
                         return self.end("failed", 2, "limite de tentativas; último problema:\n" + truncate(problems, 1500))
                     else:
-                        result = "VERIFICAÇÃO REPROVADA. Corrija e chame finish de novo:\n" + problems
+                        history = self.stats.setdefault("failure_categories", [])
+                        result, cats = gates.gap_feedback(problems, history)  # LI-044
+                        history.append(cats)
                     tool_calls_this_attempt = 0
                 else:
                     if "path" in args:
                         args["path"] = clean_path(args["path"])
+                    repeats = stall.see(name, args)  # LI-045
+                    if repeats >= stall.stop_at:
+                        self.stats["stalls"] = self.stats.get("stalls", 0) + 1
+                        return self.end("failed", 2, f"travou: {name} repetido {repeats} vezes com os mesmos argumentos")
                     missing = missing_args_message(name, args) if name in REQUIRED else None
                     try:
                         if missing:
@@ -726,6 +762,11 @@ Fluxo: ler → escrever → run_check → corrigir → finish(summary de até 3 
                             result = str(e) if str(e).startswith("ERRO") else f"ERRO: {e}"
                     except Exception as e:  # noqa: BLE001 - report any tool failure back to the model
                         result = f"ERRO: {type(e).__name__}: {e}"
+                    if name in ("run_check", "web_search", "fetch_page"):
+                        result = self.redact(str(result))
+                    if repeats >= stall.warn_at:
+                        self.stats["stalls"] = self.stats.get("stalls", 0) + 1
+                        result = f"{result}\n\nAVISO: {stall.message()}"
                 self.log("tool", {"name": name, "args": {k: (v if len(str(v)) < 200 or name == "finish" else str(v)[:200] + "…") for k, v in args.items()}, "result": str(result)[:500]})
                 self.messages.append({"role": "tool", "tool_name": name, "content": truncate(str(result))})
             self.save("running")
