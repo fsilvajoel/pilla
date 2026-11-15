@@ -33,3 +33,63 @@ class EditsTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+from edits import apply_edit_tolerant, closest_snippet, replace_function
+
+TS = '''import type { Cents } from "./money";
+
+/** doc */
+export function roundToStep(_value: Cents, _step: Cents): Cents {
+  throw new Error("not implemented");
+}
+
+export function other(): number {
+  if (true) {
+    return 1;
+  }
+  return 2;
+}
+'''
+
+
+class ReplaceFunctionTest(unittest.TestCase):
+    def test_replaces_whole_exported_function_by_name(self):
+        new = "export function roundToStep(value: Cents, step: Cents): Cents {\n  return value;\n}"
+        out = replace_function(TS, "roundToStep", new)
+        self.assertIn("return value;", out)
+        self.assertNotIn("not implemented", out)
+        self.assertIn("/** doc */", out)
+        self.assertIn("export function other(): number {\n  if (true) {", out)
+
+    def test_handles_nested_braces(self):
+        out = replace_function(TS, "other", "export function other(): number {\n  return 3;\n}")
+        self.assertIn("return 3;", out)
+        self.assertNotIn("return 2;", out)
+        self.assertIn("not implemented", out)
+
+    def test_unknown_function_raises(self):
+        with self.assertRaisesRegex(ValueError, "não encontrada"):
+            replace_function(TS, "nope", "x")
+
+    def test_code_must_declare_the_same_function(self):
+        with self.assertRaisesRegex(ValueError, "roundToStep"):
+            replace_function(TS, "roundToStep", "export function wrong() {}")
+
+
+class TolerantEditTest(unittest.TestCase):
+    def test_exact_match_still_works(self):
+        self.assertEqual(apply_edit_tolerant("a\nb\n", "b", "c"), "a\nc\n")
+
+    def test_ignores_line_number_prefixes_and_indentation(self):
+        old = "5\texport function roundToStep(_value: Cents, _step: Cents): Cents {\n6\t    throw new Error(\"not implemented\");"
+        out = apply_edit_tolerant(TS, old, "export function roundToStep(v: Cents, s: Cents): Cents {\n  return v;")
+        self.assertIn("  return v;\n}", out)
+        self.assertNotIn("not implemented", out)
+
+    def test_not_found_message_shows_closest_snippet(self):
+        with self.assertRaisesRegex(ValueError, "parecido"):
+            apply_edit_tolerant(TS, "throw new Error(\"not implementd\");", "x")
+
+    def test_closest_snippet(self):
+        self.assertIn("not implemented", closest_snippet(TS, "throw new Eror(\"not implemented\")"))

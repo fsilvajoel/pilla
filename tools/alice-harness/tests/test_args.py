@@ -9,6 +9,8 @@ class ArgsTest(unittest.TestCase):
         self.assertEqual(clean_path("docs/estudo/graficos.py`)\n"), "docs/estudo/graficos.py")
         self.assertEqual(clean_path(" `src/a.ts` "), "src/a.ts")
         self.assertEqual(clean_path('"src/a.ts",'), "src/a.ts")
+        self.assertEqual(clean_path("packages/x.test.ts`,replace_all:false,old:<|x"), "packages/x.test.ts")
+        self.assertEqual(clean_path('src/a.ts", "content": "x'), "src/a.ts")
 
     def test_clean_path_keeps_normal_paths(self):
         self.assertEqual(clean_path("packages/finance/src/round(1).ts"), "packages/finance/src/round(1).ts")

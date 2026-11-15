@@ -31,7 +31,7 @@ cards:
     attempts: 5
     toolCalls: 30
 - id: E1-T21
-  title: Implement isoDate, addDays, addMonths and daysBetween using the calendar core
+  title: Implement isoDate and daysBetween using the calendar core
   kind: implement
   assignee: alice
   rules:
@@ -45,14 +45,14 @@ cards:
   protectedTests:
   - packages/finance/src/date.test.ts
   checks:
-  - pnpm --filter @pilla/finance exec vitest run src/date.test.ts --coverage --coverage.include=src/date.ts
+  - pnpm --filter @pilla/finance exec vitest run src/date.test.ts -t "isoDate|daysBetween"
   - pnpm --filter @pilla/finance typecheck
   - pnpm --filter @pilla/finance lint
   done:
-  - all tests in date.test.ts pass with 100% coverage of date.ts
-  - use the ready helpers parseParts, daysInMonth, toDayNumber, fromDayNumber, formatDate; do not rewrite them
-  - each public function has 3 to 8 lines; only edit_file on the four 'throw new Error' bodies
-  - invalid input throws DateError (not Error)
+  - isoDate and daysBetween tests pass (vitest -t filter)
+  - use parseParts, daysInMonth, toDayNumber, formatDate; do not rewrite helpers
+  - implement with replace_function, one function per call; each 3 to 8 lines
+  - invalid input throws DateError
   budget:
     attempts: 5
     toolCalls: 30
@@ -60,6 +60,38 @@ cards:
   readFirst:
   - packages/finance/src/date.test.ts
   - packages/finance/src/date.ts
+  sizeNote: 2 das 4 funções do arquivo; addDays/addMonths no E1-T22
+- id: E1-T22
+  title: Implement addDays and addMonths using the calendar core
+  kind: implement
+  assignee: alice
+  rules:
+  - RN-C04
+  refs:
+  - RFC-002 §3.3
+  dependsOn:
+  - E1-T21
+  allowedPaths:
+  - packages/finance/src/date.ts
+  protectedTests:
+  - packages/finance/src/date.test.ts
+  checks:
+  - pnpm --filter @pilla/finance exec vitest run src/date.test.ts --coverage --coverage.include=src/date.ts
+  - pnpm --filter @pilla/finance typecheck
+  - pnpm --filter @pilla/finance lint
+  done:
+  - all tests in date.test.ts pass with 100% coverage of date.ts
+  - use toDayNumber, fromDayNumber, daysInMonth, formatDate; do not rewrite helpers
+  - implement with replace_function, one function per call; each 3 to 8 lines
+  - negative months throw DateError
+  budget:
+    attempts: 5
+    toolCalls: 30
+    minutes: 8
+  readFirst:
+  - packages/finance/src/date.test.ts
+  - packages/finance/src/date.ts
+  sizeNote: 2 funções restantes depois do E1-T21
 - id: E1-T02
   title: Write tests for roundToStep
   kind: test-author
@@ -289,7 +321,7 @@ cards:
   - RFC-002 §3.3
   dependsOn:
   - E1-T08
-  - E1-T21
+  - E1-T22
   allowedPaths:
   - packages/finance/src/due-dates.ts
   protectedTests:
@@ -428,7 +460,7 @@ cards:
   dependsOn:
   - E1-T03
   - E1-T12
-  - E1-T21
+  - E1-T22
   allowedPaths:
   - packages/finance/src/late-charges.ts
   protectedTests:
