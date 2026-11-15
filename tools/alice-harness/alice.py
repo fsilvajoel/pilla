@@ -1134,6 +1134,18 @@ def cmd_chat(prompt: str, files: list[str]) -> int:
     print(f"\n[tokens alice: prompt={data.get('prompt_eval_count', 0)} saída={data.get('eval_count', 0)}]", file=sys.stderr)
     return 0
 
+def cmd_prompt(plan: Path, cid: str, repo: Path) -> int:
+    """Print the exact request Alice gets for a plan card, so Claude reads it as she will before sending it."""
+    apply_policy(repo)
+    card = next((c for c in (yaml.safe_load(plan.read_text()) or {}).get("cards", []) if c.get("id") == cid), None)
+    if not card:
+        sys.exit(f"cartão {cid} não está em {plan}")
+    card.setdefault("allowedPaths", [] if card.get("kind") == "pre-review" else None)
+    card["_repo"] = str(repo)
+    r = Run(card, repo, RUNS)
+    print("=== system ===\n" + r.system_prompt() + f"\n\n=== user ===\nComece a tarefa {cid}.")
+    return 0
+
 def cmd_cards(plans: list[Path], repo: Path) -> int:
     """Validate delivery plans; ids from every docs/plano/*.yaml count as known dependencies."""
     from rules import index_rules
@@ -1172,6 +1184,7 @@ def main() -> int:
     sub.add_parser("status")
     u = sub.add_parser("claude-usage"); u.add_argument("--since", default=""); u.add_argument("--until", default="~")
     g = sub.add_parser("plan-run"); g.add_argument("plan", type=Path); g.add_argument("ids", nargs="+"); g.add_argument("--repo", type=Path, default=Path("."))
+    q = sub.add_parser("prompt"); q.add_argument("plan", type=Path); q.add_argument("id"); q.add_argument("--repo", type=Path, default=Path("."))
     e = sub.add_parser("cards"); e.add_argument("plans", nargs="+", type=Path); e.add_argument("--repo", type=Path, default=Path("."))
     ns = ap.parse_args()
     if ns.cmd == "rule":
@@ -1183,6 +1196,8 @@ def main() -> int:
         return cmd_status()
     if ns.cmd == "plan-run":
         return cmd_plan_run(ns.plan, ns.ids, ns.repo.resolve())
+    if ns.cmd == "prompt":
+        return cmd_prompt(ns.plan, ns.id, ns.repo.resolve())
     if ns.cmd == "cards":
         return cmd_cards(ns.plans, ns.repo.resolve())
     if ns.cmd == "evolution":
