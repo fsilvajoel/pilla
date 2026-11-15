@@ -82,6 +82,24 @@ class CardQualityTest(unittest.TestCase):
     def test_text_rules_apply_only_to_the_local_model(self):
         self.assertEqual(problems(assignee="claude", done=["follow travas.md; one edit_file call"]), [])
 
+    def test_hint_never_carries_the_solution(self):  # e4-guardrails C, the E4-T02 card as first written
+        self.assertFlag("hint com fórmula", hints=["check digit n: sum of digit i times (n + 1 - i), then (sum * 10) % 11 % 10"])
+        self.assertFlag("hint com fórmula", hints=['partial index: uniqueIndex("x").on(t.cpf)'])
+        self.assertEqual(problems(hints=["a plain object is one whose prototype is Object.prototype or null (Object.getPrototypeOf)",
+                                         "use it.each for the list of sensitive keys"]), [])
+
+    def test_whole_write_file_must_fit_the_output(self):  # e4-guardrails C: limit derived from the card
+        lines = lambda n: (lambda path: n)
+        whole = ["one write_file of the whole file, then run_check 0, 1 and 2"]
+        found = quality_problems(card(hints=whole), exists=lambda p: True, packages={"@pilla/schemas"}, line_count=lines(400))
+        self.assertTrue(any("~400 linhas; cabem 341" in p for p in found), found)
+        self.assertEqual(quality_problems(card(hints=whole), exists=lambda p: True, packages={"@pilla/schemas"}, line_count=lines(120)), [])
+        small = quality_problems(card(hints=whole, maxOutputTokens=2048), exists=lambda p: True, packages={"@pilla/schemas"}, line_count=lines(120))
+        self.assertTrue(any("cabem 85" in p for p in small), small)
+        self.assertFlag("sem tamanho previsto", hints=whole)
+        self.assertEqual(problems(hints=whole, sizeNote="uma função; ~60 linhas"), [])
+        self.assertFlag("~500 linhas", hints=whole, sizeNote="500 linhas")
+
 
 if __name__ == "__main__":
     unittest.main()

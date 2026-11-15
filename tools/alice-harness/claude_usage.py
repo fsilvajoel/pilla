@@ -37,6 +37,52 @@ def weighted(w: dict) -> int:
     return round(w["input_tokens"] + 2 * w["cache_creation_input_tokens"] + 0.1 * w["cache_read_input_tokens"] + 5 * w["output_tokens"])
 
 
+COST_WEIGHTS = {"input_tokens": 1, "cache_creation_input_tokens": 1.25, "cache_read_input_tokens": 0.1, "output_tokens": 5}
+
+
+def cost(w: dict) -> int:
+    """e4-guardrails D: the only Claude number for retro and report (input 1, cache write 1.25, cache read 0.1, output 5)."""
+    return round(sum(k * w[f] for f, k in COST_WEIGHTS.items()))
+
+
+def load_all(repo: Path, root: Path | None = None) -> list[tuple[str, dict]]:
+    """Usage of every transcript whose session ran in the repo or in a folder above it (all sessions, compacted ones too)."""
+    repo = Path(repo).resolve()
+    seen: dict[str, tuple[str, dict]] = {}
+    for f in sorted((root or Path.home() / ".claude" / "projects").glob("*/*.jsonl")):
+        for line in f.read_text(errors="replace").splitlines():
+            try:
+                e = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            msg = e.get("message") or {}
+            cwd = e.get("cwd")
+            if e.get("type") != "assistant" or not msg.get("usage") or not msg.get("id") or not cwd:
+                continue
+            c = Path(cwd)
+            if c == repo or c in repo.parents or repo in c.parents:
+                seen[msg["id"]] = (e["timestamp"], msg["usage"])
+    return sorted(seen.values())
+
+
+def card_since(repo: Path, ids: list[str]) -> str | None:
+    """Start of the preparation: commit time of the parent of the first commit that put any of the cards in docs/plano (UTC)."""
+    import subprocess
+    import time
+    starts = []
+    for cid in ids:
+        out = subprocess.run(["git", "-C", str(repo), "log", "--reverse", "--format=%H", "-S", f"id: {cid}", "--", "docs/plano"],
+                             capture_output=True, text=True).stdout.split()
+        if not out:
+            return None
+        parent = subprocess.run(["git", "-C", str(repo), "log", "-1", "--format=%ct", f"{out[0]}^"],
+                                capture_output=True, text=True).stdout.strip()
+        if not parent:
+            parent = subprocess.run(["git", "-C", str(repo), "log", "-1", "--format=%ct", out[0]], capture_output=True, text=True).stdout.strip()
+        starts.append(int(parent))
+    return time.strftime("%Y-%m-%dT%H:%M:%S", time.gmtime(min(starts)))
+
+
 def latest_transcript(cwd: Path | None = None) -> Path | None:
     """Newest Claude Code transcript (override with CLAUDE_TRANSCRIPT)."""
     import os

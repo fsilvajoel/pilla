@@ -172,6 +172,19 @@ PATH_TOKEN = re.compile(r"(?<![\w./@-])((?:packages|apps|docs|scripts|tools)/[\w
 EDIT_TOOL = re.compile(r"\b(edit_file|write_file|replace_function)\b")
 BARE_FILE = re.compile(r"(?<![\w./-])([\w-]+(?:\.test)?\.(?:ts|tsx|mjs|md|ya?ml|json))\b(?!/)")
 MAX_DONE_CHARS = 220
+# e4-guardrails C: the hint is a hint, never the solution (E4-T02 carried the check-digit formula)
+HINT_FORMULA = re.compile(r"%|\bsum of\b|\btimes\b|=>|\breturn\b|\bfor \(|\bwhile \(|\w\(|`|;")
+WHOLE_WRITE = re.compile(r"\bone write_file\b")
+DEFAULT_NUM_PREDICT = 8192  # same default as alice.chat_options
+TOKENS_PER_LINE = 12        # TypeScript, rough
+OUTPUT_SHARE = 0.5          # the rest of the answer goes to thinking and the tool-call JSON
+SIZE_NOTE_LINES = re.compile(r"(\d+)\s*(?:linhas|lines)\b")
+
+
+def write_file_limit(card: dict, num_predict: int = DEFAULT_NUM_PREDICT) -> int:
+    """Lines that fit in one write_file answer, derived from the card's output budget."""
+    tokens = int(card.get("maxOutputTokens", card.get("num_predict", num_predict)))
+    return int(tokens * OUTPUT_SHARE / TOKENS_PER_LINE)
 
 
 def _matches(path: str, patterns) -> bool:
@@ -184,8 +197,10 @@ def min_tool_calls(card: dict) -> int:
     return 8 + 3 * len(card.get("checks") or [])
 
 
-def quality_problems(card: dict, exists=None, producible: set[str] = frozenset(), packages: set[str] | None = None) -> list[str]:
-    """Problems of the card text itself. `exists(path) -> bool` and `packages` come from the repository when available."""
+def quality_problems(card: dict, exists=None, producible: set[str] = frozenset(), packages: set[str] | None = None,
+                     line_count=None, num_predict: int = DEFAULT_NUM_PREDICT) -> list[str]:
+    """Problems of the card text itself. `exists(path) -> bool`, `line_count(path) -> int | None` and `packages`
+    come from the repository when available."""
     import shlex
     cid = card.get("id", "?")
     kind, assignee = card.get("kind"), card.get("assignee")
@@ -262,6 +277,23 @@ def quality_problems(card: dict, exists=None, producible: set[str] = frozenset()
             add(f"{g} está em generatedPaths e em allowedPaths/protectedTests: escolha um", "LI-060")
     if assignee == "alice" and kind == "implement" and checks and not any(re.search(r"\b(test|vitest|unittest)\b", c) for c in checks):
         add("implement sem check de teste (TDD: o teste protegido decide o pronto)", "LI-025")
+
+    # --- hints (e4-guardrails C)
+    hints = [str(h) for h in card.get("hints") or []]
+    for h in hints:
+        m = HINT_FORMULA.search(h)
+        if m:
+            add(f"hint com fórmula, algoritmo ou código ('{m.group(0)}'): diga onde está a regra (RFC, arquivo), não a solução: {h[:60]}…", "E4-C")
+    if any(WHOLE_WRITE.search(h) for h in hints):
+        limit = write_file_limit(card, num_predict)
+        noted = [int(n) for n in SIZE_NOTE_LINES.findall(str(card.get("sizeNote", "")))]
+        for path in allowed:
+            current = line_count(path) if line_count else None
+            size = max([n for n in [current, *noted] if n is not None], default=None)
+            if size is None:
+                add(f"hint pede um write_file de {path} sem tamanho previsto: ponha 'N linhas' no sizeNote (limite {limit})", "E4-C")
+            elif size > limit:
+                add(f"hint pede um write_file de {path} com ~{size} linhas; cabem {limit} na saída ({int(limit * TOKENS_PER_LINE / OUTPUT_SHARE)} tokens): divida em edits", "E4-C")
 
     # --- size and budget
     if assignee == "alice" and kind in ("implement", "test-author") and any("*" in p for p in allowed):

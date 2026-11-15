@@ -11,7 +11,8 @@ Usage:
   alice.py cards <plan.yaml>... [--repo <path>]  validate delivery plans (docs/plano/E*.yaml)
   alice.py plan-run <plan.yaml> <ID>... [--repo]  run Alice cards in order (skips dependents of failures)
   alice.py status                                is Alice running? (lock: runs/ACTIVE.json)
-  alice.py claude-usage [--since ISO] [--until ISO]  real Claude tokens from the session transcript
+  alice.py cost <ID>... [--repo] [--since ISO]   Claude cost of the cards, preparation included (the only number for retro/report)
+  alice.py claude-usage [--since ISO] [--until ISO]  real Claude tokens from the latest transcript only
 
 Exit codes: 0 done, 2 failed (budget/verification), 3 needs input (ask_claude), 1 usage/config error.
 Only the Python standard library + PyYAML. See docs/agents/travas.md (Ambiente da Alice) in the pilla repo for the rules enforced here.
@@ -41,7 +42,7 @@ import metrics
 from cards import quality_problems, validate_plan
 from edits import apply_edit_tolerant, replace_function
 from policy import load_policy
-from claude_usage import latest_transcript, load as load_usage, weighted, window
+from claude_usage import card_since, cost, latest_transcript, load as load_usage, load_all, window
 from retro import tool_error_summary, write_retro
 from rules import find_doc, find_rule, rules_text
 
@@ -1050,31 +1051,39 @@ def cmd_status() -> int:
     print(f"{'OCUPADO' if alive else 'trava órfã (processo morto)'}: {info}")
     return 1 if alive else 0
 
-def usage_note(since: str, until: str, results: list[dict]) -> str:
-    """Claude vs Alice tokens in the queue window (study data, reported proactively)."""
+def card_cost(repo: Path, ids: list[str], since: str = "", until: str = "~") -> dict:
+    """e4-guardrails D: Claude cost of the cards, preparation included (from before the commit that added them), every session."""
+    since = since or card_since(repo, ids) or ""
+    w = window(load_all(repo), since, until)
+    return {**w, "cost": cost(w), "since": since or "(início: cartão sem commit)", "until": until}
+
+
+def usage_note(repo: Path, ids: list[str], results: list[dict]) -> str:
+    """Claude vs Alice tokens of these cards (study data, reported proactively). Claude: only the D number."""
     alice_in = sum((r.get("aliceTokens") or {}).get("prompt", 0) for r in results)
     alice_out = sum((r.get("aliceTokens") or {}).get("output", 0) for r in results)
-    t = latest_transcript()
-    if not t:
-        return f"\n## Tokens\n- Alice: {alice_in} entrada / {alice_out} saída\n- Claude: transcript não encontrado\n"
-    w = window(load_usage(t), since, until)
-    return (f"\n## Tokens nesta fila\n- Alice (GPU local): {alice_in} entrada / {alice_out} saída\n"
-            f"- Claude: {w['turns']} turnos, {w['output_tokens']} saída, {w['cache_read_input_tokens']} leitura de cache, "
-            f"ponderado ≈ {weighted(w)} (unid. de entrada)\n")
+    c = card_cost(repo, ids)
+    return (f"\n## Tokens nestes cartões\n- Alice (GPU local): {alice_in} entrada / {alice_out} saída\n"
+            f"- Claude desde {c['since']} (preparo incluído, todas as sessões): {c['turns']} turnos, "
+            f"custo ≈ {c['cost']} (alice.py cost {' '.join(ids)})\n")
+
+def cmd_cost(ids: list[str], repo: Path, since: str, until: str) -> int:
+    c = card_cost(repo, ids, since, until)
+    print(json.dumps(c, indent=1))
+    return 0
 
 def cmd_claude_usage(since: str, until: str) -> int:
     t = latest_transcript()
     if not t:
         print("transcript do Claude Code não encontrado"); return 1
     w = window(load_usage(t), since, until)
-    print(json.dumps({**w, "weighted": weighted(w), "transcript": t.name}, indent=1))
+    print(json.dumps({**w, "cost": cost(w), "transcript": t.name}, indent=1))
     return 0
 
 def cmd_plan_run(plan: Path, ids: list[str], repo: Path) -> int:
     """Run cards from a delivery plan in the given order; skip cards whose dependencies failed in this batch."""
     cards = {c["id"]: c for c in (yaml.safe_load(plan.read_text()) or {}).get("cards", [])}
     failed, results = set(), []
-    started = time.strftime("%Y-%m-%dT%H:%M:%S", time.gmtime())
     for cid in ids:
         card = cards.get(cid)
         if not card:
@@ -1099,7 +1108,7 @@ def cmd_plan_run(plan: Path, ids: list[str], repo: Path) -> int:
     out = RUNS / f"plan-{stamp}.json"
     out.write_text(json.dumps(results, ensure_ascii=False, indent=1))
     retro = write_retro(results, RUNS, RUNS / f"retro-{stamp}.md")
-    retro += usage_note(started, time.strftime("%Y-%m-%dT%H:%M:%S", time.gmtime()), results)
+    retro += usage_note(repo, ids, results)
     (RUNS / f"retro-{stamp}.md").write_text(retro)
     print(retro)
     print(json.dumps({"summary": str(out), "retro": str(RUNS / f"retro-{stamp}.md"), "done": sum(r.get("status") == "done" for r in results), "total": len(results)}, ensure_ascii=False))
@@ -1160,7 +1169,9 @@ def cmd_cards(plans: list[Path], repo: Path) -> int:
         plan = yaml.safe_load(f.read_text()) or {}
         problems = validate_plan(plan, known, all_ids)
         for c in plan.get("cards", []):
-            problems += quality_problems(c, lambda path: (repo / path).exists(), producible, packages)
+            problems += quality_problems(c, lambda path: (repo / path).exists(), producible, packages,
+                                         line_count=lambda path: len((repo / path).read_text().splitlines()) if (repo / path).is_file() else None,
+                                         num_predict=int(load_profile(PROFILE_NAME).get("num_predict", 8192)))
         for c in plan.get("cards", []):  # LI-016: one function per card (counted in the stub files)
             if c.get("assignee") == "alice" and c.get("kind") == "implement" and not c.get("sizeNote"):
                 stubs = sum((repo / p).read_text().count('throw new Error("not implemented")') for p in c.get("allowedPaths", []) if (repo / p).is_file())
@@ -1182,6 +1193,8 @@ def main() -> int:
     sub.add_parser("metrics")
     sub.add_parser("evolution")
     sub.add_parser("status")
+    k = sub.add_parser("cost"); k.add_argument("ids", nargs="+"); k.add_argument("--repo", type=Path, default=Path("."))
+    k.add_argument("--since", default=""); k.add_argument("--until", default="~")
     u = sub.add_parser("claude-usage"); u.add_argument("--since", default=""); u.add_argument("--until", default="~")
     g = sub.add_parser("plan-run"); g.add_argument("plan", type=Path); g.add_argument("ids", nargs="+"); g.add_argument("--repo", type=Path, default=Path("."))
     q = sub.add_parser("prompt"); q.add_argument("plan", type=Path); q.add_argument("id"); q.add_argument("--repo", type=Path, default=Path("."))
@@ -1190,6 +1203,8 @@ def main() -> int:
     if ns.cmd == "rule":
         print(rules_text(ns.repo.resolve(), ns.ids))
         return 0
+    if ns.cmd == "cost":
+        return cmd_cost(ns.ids, ns.repo, ns.since, ns.until)
     if ns.cmd == "claude-usage":
         return cmd_claude_usage(ns.since, ns.until)
     if ns.cmd == "status":
