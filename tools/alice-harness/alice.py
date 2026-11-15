@@ -243,6 +243,20 @@ EVIDENCE_REF = re.compile(r"([\w./@-]+\.\w+):(\d+)")
 UNIVERSAL_MIN_FILES = 3
 
 
+FORMATTABLE = re.compile(r"\.(ts|tsx|js|mjs|cjs|json|md|ya?ml|css)$")
+
+
+def format_touched(repo: Path, files: list[str]) -> list[str]:
+    """LI-052: formatting is mechanical, so the harness runs the repo's prettier on what the model wrote."""
+    prettier = repo / "node_modules" / ".bin" / "prettier"
+    todo = [f for f in files if FORMATTABLE.search(f) and (repo / f).is_file()]
+    if not prettier.exists() or not todo:
+        return []
+    before = {f: (repo / f).read_text(errors="replace") for f in todo}
+    run_cmd(" ".join([shlex.quote(str(prettier)), "--write", *map(shlex.quote, todo)]), repo, timeout=120)
+    return [f for f in todo if (repo / f).read_text(errors="replace") != before[f]]
+
+
 def done_line_problems(card: dict, repo: Path) -> list[str]:
     """What tests can't see: the stub marker must go (LI-041) and literal code lines of `done` must be in the file (LI-042)."""
     flat = lambda t: re.sub(r"\s+", " ", t)
@@ -630,6 +644,9 @@ Fluxo: ler → escrever → run_check → corrigir → finish(summary de até 3 
 
     def verify(self) -> tuple[bool, str]:
         problems = []
+        formatted = format_touched(self.guard.repo, sorted(self.touched))
+        if formatted:
+            self.log("formatted", {"files": formatted})
         code, out = run_cmd("git status --porcelain --untracked-files=all", self.guard.repo)
         changed = [l[3:].strip() for l in out.splitlines() if l.strip()]
         changed = [f for f in changed if not GENERATED.search(f)]
