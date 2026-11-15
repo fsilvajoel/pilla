@@ -114,5 +114,15 @@ class WeakEvidenceTest(unittest.TestCase):
             self.assertEqual(weak_evidence(summary, items, repo), ["C2", "C3"])
 
 
+class PathNotesTest(unittest.TestCase):
+    def test_notes_follow_the_package_of_the_card(self):
+        from alice import path_notes
+        self.assertIn("bigint", path_notes(["packages/finance/src/split.ts"]))
+        schemas = path_notes(["packages/schemas/src/events/x.ts"])
+        self.assertIn("nunca bigint", schemas)
+        self.assertNotIn("literais 100n", schemas)
+        self.assertEqual(path_notes(["docs/x.md"]), "")
+
+
 if __name__ == "__main__":
     unittest.main()

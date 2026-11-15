@@ -412,6 +412,24 @@
      "LI-026"
     ],
     "mudanca": "verificação recusa 'ok' sem arquivo:linha existente, search_code ou run_check"
+   },
+   {
+    "cartao": "E2-T02",
+    "kind": "implement",
+    "harness": "7594894",
+    "status": "done (descartado)",
+    "segundos": 20,
+    "tentativas": 2,
+    "chamadas": 15,
+    "erros_ferramenta": 1,
+    "checks_em_cache": 6,
+    "tokens_entrada": 73452,
+    "tokens_saida": 1191,
+    "achado": "testes verdes, mas refine redundante comparando com bigint (0n): a nota global 'dinheiro é bigint' do motor vazou para os esquemas JSON",
+    "licoes": [
+     "LI-027"
+    ],
+    "mudanca": "notas de linguagem por pacote (PATH_NOTES)"
    }
   ]
  }
