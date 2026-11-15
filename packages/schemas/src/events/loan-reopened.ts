@@ -1,8 +1,11 @@
 import { z } from "zod";
+import { idSchema, reasonSchema } from "../common";
 import { eventV1 } from "./envelope";
 
-// Esboço do Claude: troque SÓ o z.never() abaixo pelo payload da RFC-004 §7 (siga payment-confirmed.ts).
-export const loanReopenedPayload = z.never();
+export const loanReopenedPayload = z.strictObject({
+  loanId: idSchema,
+  reason: reasonSchema,
+});
 
 /** RFC-004 §7: produtor lending; consumidores treasury. */
 export const loanReopenedV1 = eventV1("LoanReopened", loanReopenedPayload);
