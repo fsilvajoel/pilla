@@ -762,12 +762,12 @@ cards:
     toolCalls: 30
     minutes: 8
   checklist:
-  - C1 every body schema file under packages/schemas/src/api has a test case in api.test.ts named after its export
-  - C2 every request body is z.strictObject (calculated fields never come in, ADR-0005)
+  - C1 every body schema under packages/schemas/src/api has a test case in api.test.ts; run_check 2 (rule S4) proves it
+  - C2 every request body is z.strictObject (ADR-0005); run_check 2 (rule S5) proves it
   - C3 money, rate, date, id and CPF fields use the primitives of common.ts; run_check 2 (rule S3) proves it
   - C4 no regex outside common.ts; run_check 2 (rule S2) proves it
   - C5 every api schema is exported from src/index.ts; run_check 2 (rule S1) proves it
-  - C6 field names match RFC-004 §3 and docs/glossario.md exactly
+  - 'C6 field names match RFC-004 §3 and docs/glossario.md; evidence: one file:line per schema file of src/api, each with the RFC-004 §3 field it matches, or falta with the field that differs'
   - C7 every zod API used follows the zod sheet (docs/memoria/libs/zod.md); run_check 1 lists what the sheet says to avoid
 - id: E2-T24
   title: Share the allocations total between PaymentConfirmed and PaymentReversed

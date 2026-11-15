@@ -19,10 +19,11 @@ const GOOD = {
   "common.ts": "export const cpfSchema = z.string().regex(/^\\d{11}$/);\nexport const centsSchema = z.int();\n",
   "events/envelope.ts": "export const eventV1 = 1;\n",
   "api/pay.ts":
-    "export const pay = z.strictObject({\n  loanId: idSchema,\n  amountCents: positiveCentsSchema,\n" +
+    "export const payRequest = z.strictObject({\n  loanId: idSchema,\n  amountCents: positiveCentsSchema,\n" +
     "  paidAt: isoDateSchema,\n  successorLoanId: idSchema.optional(),\n  rateBps: bpsSchema,\n  cpf: cpfSchema,\n" +
     '  note: z.string().trim().min(1),\n}).refine((p) => p.amountCents > 0, { path: ["amountCents"] });\n',
   "api/pay.test.ts": "const body = { amountCents: 100, loanId: z.string() };\n",
+  "api/api.test.ts": 'const cases = [{ name: "payRequest" }];\n',
 };
 
 test("clean tree has no problems (tests and common.ts are out of scope)", () => {
@@ -70,4 +71,25 @@ test("comment lines are ignored", () => {
   const dir = src({ ...GOOD, "api/pay.ts": "/** amountCents: z.int() and /a/.test(x) */\n// loanId: z.string(),\n" });
   assert.deepEqual(checkSchemas(dir).problems, []);
   rmSync(dir, { recursive: true });
+});
+
+test("S4: body schema without a case in api.test.ts", () => {
+  const dir = src({ ...GOOD, "api/pay.ts": GOOD["api/pay.ts"] + "export const refundQuery = z.strictObject({});\n" });
+  const { problems } = checkSchemas(dir);
+  assert.equal(problems.length, 1);
+  assert.match(problems[0], /pay\.ts:\d+ S4 refundQuery .*name: "refundQuery"/);
+  rmSync(dir, { recursive: true });
+});
+
+test("S5: loose objects in api and events", () => {
+  for (const line of [
+    "const a = z.object({});",
+    "const b = z.looseObject({});",
+    "const c = x.passthrough();",
+    "const d = x.loose();",
+  ]) {
+    const dir = src({ ...GOOD, "events/envelope.ts": GOOD["events/envelope.ts"] + line + "\n" });
+    assert.deepEqual(rules(dir), ["S5"], line);
+    rmSync(dir, { recursive: true });
+  }
 });
