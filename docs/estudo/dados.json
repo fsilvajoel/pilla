@@ -727,6 +727,165 @@
     "achado": "pré-revisão completa: C1–C7 ok com os 10 arquivos; C8 falta em installment-paid.ts:9 (corrigido pelo Claude)",
     "licoes": [],
     "mudanca": "—"
+   },
+   {
+    "cartao": "E2-T14",
+    "kind": "implement",
+    "harness": "afc7f81",
+    "status": "done",
+    "segundos": 46,
+    "tentativas": 2,
+    "chamadas": 13,
+    "erros_ferramenta": 0,
+    "tokens_entrada": 59920,
+    "tokens_saida": 826,
+    "achado": "ok, 1ª passada (lote)",
+    "licoes": [],
+    "mudanca": "—"
+   },
+   {
+    "cartao": "E2-T15",
+    "kind": "implement",
+    "harness": "afc7f81",
+    "status": "done",
+    "segundos": 12,
+    "tentativas": 2,
+    "chamadas": 11,
+    "erros_ferramenta": 0,
+    "tokens_entrada": 46094,
+    "tokens_saida": 407,
+    "achado": "manteve a frase ESBOÇO e faltou o export type (teste não vê)",
+    "licoes": [
+     "LI-041",
+     "LI-042"
+    ],
+    "mudanca": "—"
+   },
+   {
+    "cartao": "E2-T16",
+    "kind": "implement",
+    "harness": "afc7f81",
+    "status": "done",
+    "segundos": 14,
+    "tentativas": 2,
+    "chamadas": 11,
+    "erros_ferramenta": 0,
+    "tokens_entrada": 46889,
+    "tokens_saida": 448,
+    "achado": "ok, 1ª passada (lote)",
+    "licoes": [],
+    "mudanca": "—"
+   },
+   {
+    "cartao": "E2-T17",
+    "kind": "implement",
+    "harness": "afc7f81",
+    "status": "done",
+    "segundos": 13,
+    "tentativas": 2,
+    "chamadas": 11,
+    "erros_ferramenta": 0,
+    "tokens_entrada": 47448,
+    "tokens_saida": 509,
+    "achado": "ok, 1ª passada (lote)",
+    "licoes": [],
+    "mudanca": "—"
+   },
+   {
+    "cartao": "E2-T18",
+    "kind": "implement",
+    "harness": "afc7f81",
+    "status": "done",
+    "segundos": 14,
+    "tentativas": 2,
+    "chamadas": 11,
+    "erros_ferramenta": 0,
+    "tokens_entrada": 47357,
+    "tokens_saida": 472,
+    "achado": "ok, 1ª passada (lote)",
+    "licoes": [],
+    "mudanca": "—"
+   },
+   {
+    "cartao": "E2-T19",
+    "kind": "implement",
+    "harness": "afc7f81",
+    "status": "done",
+    "segundos": 14,
+    "tentativas": 2,
+    "chamadas": 11,
+    "erros_ferramenta": 0,
+    "tokens_entrada": 47783,
+    "tokens_saida": 527,
+    "achado": "manteve a frase ESBOÇO",
+    "licoes": [
+     "LI-041"
+    ],
+    "mudanca": "—"
+   },
+   {
+    "cartao": "E2-T20",
+    "kind": "implement",
+    "harness": "afc7f81",
+    "status": "done",
+    "segundos": 13,
+    "tentativas": 2,
+    "chamadas": 11,
+    "erros_ferramenta": 0,
+    "tokens_entrada": 47774,
+    "tokens_saida": 500,
+    "achado": "ok, 1ª passada (lote)",
+    "licoes": [],
+    "mudanca": "—"
+   },
+   {
+    "cartao": "E2-T21",
+    "kind": "implement",
+    "harness": "afc7f81",
+    "status": "done",
+    "segundos": 12,
+    "tentativas": 2,
+    "chamadas": 10,
+    "erros_ferramenta": 0,
+    "tokens_entrada": 41540,
+    "tokens_saida": 461,
+    "achado": "ok, 1ª passada (lote)",
+    "licoes": [],
+    "mudanca": "—"
+   },
+   {
+    "cartao": "E2-T22",
+    "kind": "implement",
+    "harness": "afc7f81",
+    "status": "done",
+    "segundos": 16,
+    "tentativas": 2,
+    "chamadas": 11,
+    "erros_ferramenta": 0,
+    "tokens_entrada": 44218,
+    "tokens_saida": 646,
+    "achado": "manteve a frase ESBOÇO",
+    "licoes": [
+     "LI-041"
+    ],
+    "mudanca": "—"
+   },
+   {
+    "cartao": "E2-T23",
+    "kind": "pre-review",
+    "harness": "afc7f81",
+    "status": "done",
+    "segundos": 28,
+    "tentativas": 1,
+    "chamadas": 24,
+    "erros_ferramenta": 0,
+    "tokens_entrada": 219072,
+    "tokens_saida": 1864,
+    "achado": "done, mas não viu ESBOÇO nem o export type (fora do checklist); C4/C6 com prova fraca",
+    "licoes": [
+     "LI-043"
+    ],
+    "mudanca": "—"
    }
   ]
  }

@@ -42,3 +42,6 @@
 | LI-038 | 2026-11-15 | E2-T11 6ª: usou read_rule com `docs/glossario.md` e o erro mandava perguntar. read_rule com caminho de arquivo agora lê o arquivo. | E2-T11 |
 | LI-039 | 2026-11-15 | E2-T11 7ª: pediu permissão para marcar 'falta' mesmo com a regra no prompt (o gemma pede confirmação). Na pré-revisão, a 1ª pergunta recebe resposta automática ("sim, marque e chame finish"). | E2-T11 |
 | LI-040 | 2026-11-15 | E2-T11 8ª: o intervalo `index.ts:4-13` contava como 2 linhas. Intervalo agora conta todas as linhas que cobre. 9ª execução: done em 36 s, com o achado certo. | E2-T11 |
+| LI-041 | 2026-11-15 | Lote E2-T14..T22 (9 cartões, todos done na 1ª passada, 10–13 chamadas cada): 3 arquivos mantiveram a frase "ESBOÇO" porque o cartão mandava manter o comentário que a continha. Arquivo pronto com ESBOÇO agora reprova o finish. | E2-T15/T19/T22 |
+| LI-042 | 2026-11-15 | E2-T15: faltou o `export type` pedido no done, e o teste não vê tipo. Linha de código literal no done (`export type …;`, `import {…};`) agora é conferida no arquivo. | E2-T15 |
+| LI-043 | 2026-11-15 | E2-T23: pré-revisão done em 28 s, mas provou "sem regex fora do common" com o check-avoid verde (prova sem relação). `run_check` agora só prova item que fala de check (teste, cobertura, mutação, lint). O que não está no checklist ela não vê: os achados de LI-041/042 foram do Claude. | E2-T23 |
