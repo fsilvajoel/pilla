@@ -1,0 +1,134 @@
+delivery: E4
+title: Small pure helpers from travas.md §4.7 (fake CPF for tests, log redaction); Alice writes tests and code
+cards:
+  - id: E4-T01
+    title: Write tests for fakeCpf
+    kind: test-author
+    assignee: alice
+    rules: [RN-P01]
+    refs: [RFC-005 §3]
+    dependsOn: []
+    allowedPaths:
+      - packages/schemas/src/fake-cpf.test.ts
+    protectedTests: []
+    checks:
+      - node scripts/expect-red.mjs packages/schemas src/fake-cpf.test.ts
+      - pnpm --filter @pilla/schemas typecheck
+      - pnpm --filter @pilla/schemas lint
+    done:
+      - every test fails now (the stub throws) and would pass with a correct implementation (run_check 0)
+      - 'import { fakeCpf } from "./fake-cpf";'
+      - 'import { cpfSchema } from "./common";'
+      - fakeCpf(1) returns "00000000191" and fakeCpf(123456789) returns "12345678909"
+      - for every seed from 0 to 999 that does not throw, cpfSchema.safeParse(fakeCpf(seed)).success is true (RN-P01)
+      - the same seed twice returns the same CPF; seeds 1 and 2 return different CPFs
+      - throws RangeError for -1, 1000000000, 1.5 and NaN
+      - throws RangeError for 0 and 111111111 (the 9 digits are all equal)
+      - never edit packages/schemas/src/fake-cpf.ts
+    hints:
+      - one write_file of the whole test file, then run_check 0, 1 and 2
+      - use it.each for the lists of seeds that throw
+    budget:
+      attempts: 4
+      toolCalls: 25
+      minutes: 8
+    readFirst:
+      - packages/schemas/src/fake-cpf.ts
+      - packages/schemas/src/common.ts
+    sizeNote: uma função; o teste é o par do E4-T02
+  - id: E4-T02
+    title: Implement fakeCpf
+    kind: implement
+    assignee: alice
+    rules: [RN-P01]
+    refs: [RFC-005 §3]
+    dependsOn: [E4-T01]
+    allowedPaths:
+      - packages/schemas/src/fake-cpf.ts
+    protectedTests:
+      - packages/schemas/src/fake-cpf.test.ts
+    checks:
+      - pnpm --filter @pilla/schemas exec vitest run src/fake-cpf.test.ts --coverage --coverage.include=src/fake-cpf.ts
+      - pnpm --filter @pilla/schemas typecheck
+      - pnpm --filter @pilla/schemas lint
+    done:
+      - all tests in packages/schemas/src/fake-cpf.test.ts pass with 100% line and branch coverage of fake-cpf.ts (run_check 0)
+      - 'export function fakeCpf(seed: number): string {'
+      - keep the /** */ comment above fakeCpf unchanged
+      - no import from ./common (the check digits are computed in fake-cpf.ts)
+    hints:
+      - "check digit n (9 or 10): sum of digit i times (n + 1 - i) for i from 0 to n - 1, then (sum * 10) % 11 % 10"
+      - one write_file of the whole file, then run_check 0, 1 and 2
+    budget:
+      attempts: 4
+      toolCalls: 25
+      minutes: 8
+    readFirst:
+      - packages/schemas/src/fake-cpf.ts
+      - packages/schemas/src/fake-cpf.test.ts
+    sizeNote: uma função
+  - id: E4-T03
+    title: Write tests for redact
+    kind: test-author
+    assignee: alice
+    rules: []
+    refs: [RFC-003 §4.1]
+    dependsOn: []
+    allowedPaths:
+      - apps/api/src/log/redact.test.ts
+    protectedTests: []
+    checks:
+      - node scripts/expect-red.mjs apps/api src/log/redact.test.ts
+      - pnpm --filter @pilla/api typecheck
+      - pnpm --filter @pilla/api lint
+    done:
+      - every test fails now (the stub throws) and would pass with a correct implementation (run_check 0)
+      - 'import { REDACTED, redact } from "./redact";'
+      - each of the keys cpf, phone, email, password and token has its value replaced by REDACTED
+      - keys that end with a sensitive name are redacted too, ignoring case (accessToken, ownerCpf, userEmail, PASSWORD)
+      - other keys keep their value (name, amountCents, id)
+      - nested objects and objects inside arrays are redacted at any depth
+      - the input object is not changed (compare it with a copy made before the call)
+      - a Date, an Error, a string, a number and null are returned as they came (toBe)
+      - never edit apps/api/src/log/redact.ts
+    hints:
+      - one write_file of the whole test file, then run_check 0, 1 and 2
+      - use it.each for the list of sensitive keys
+    budget:
+      attempts: 4
+      toolCalls: 25
+      minutes: 8
+    readFirst:
+      - apps/api/src/log/redact.ts
+    sizeNote: uma função; o teste é o par do E4-T04
+  - id: E4-T04
+    title: Implement redact
+    kind: implement
+    assignee: alice
+    rules: []
+    refs: [RFC-003 §4.1]
+    dependsOn: [E4-T03]
+    allowedPaths:
+      - apps/api/src/log/redact.ts
+    protectedTests:
+      - apps/api/src/log/redact.test.ts
+    checks:
+      - pnpm --filter @pilla/api exec vitest run src/log/redact.test.ts --coverage --coverage.include=src/log/redact.ts
+      - pnpm --filter @pilla/api typecheck
+      - pnpm --filter @pilla/api lint
+    done:
+      - all tests in apps/api/src/log/redact.test.ts pass with 100% line and branch coverage of redact.ts (run_check 0)
+      - 'export function redact(value: unknown): unknown {'
+      - 'export const REDACTED = "[REDACTED]";'
+      - keep the /** */ comments unchanged
+    hints:
+      - "a plain object is one whose prototype is Object.prototype or null (Object.getPrototypeOf)"
+      - one write_file of the whole file, then run_check 0, 1 and 2
+    budget:
+      attempts: 4
+      toolCalls: 25
+      minutes: 8
+    readFirst:
+      - apps/api/src/log/redact.ts
+      - apps/api/src/log/redact.test.ts
+    sizeNote: uma função

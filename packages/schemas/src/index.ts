@@ -1,5 +1,6 @@
 // Esquemas Zod da API e dos eventos (RFC-004).
 export * from "./common";
+export * from "./fake-cpf";
 export { eventV1 } from "./events/envelope";
 export * from "./events/payment-confirmed";
 export * from "./events/loan-activated";
