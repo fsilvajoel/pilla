@@ -26,8 +26,10 @@ const chain = new RegExp(String.raw`\b${prefix}(?:\.[A-Za-z_$][\w$]*(?:${args})?
 
 const broken = [];
 const seen = new Set();
-for (const expr of sheet.match(chain) ?? []) {
-  if (seen.has(expr)) continue;
+for (const match of sheet.matchAll(chain)) {
+  const expr = match[0];
+  // `z.infer<...>` e afins são só tipo (somem em tempo de execução): o tsc confere esses, não este script (LI-031)
+  if (sheet[match.index + expr.length] === "<" || seen.has(expr)) continue;
   seen.add(expr);
   try {
     const value = new Function(prefix, `return ${expr};`)(root);
