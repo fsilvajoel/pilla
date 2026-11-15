@@ -54,6 +54,15 @@
 - Mesmos cartões gerados por partes em modo texto (um par por pedido) e montados por script: 29 s, ~15 mil tokens; estrutura válida, mas 6 de 17 com critérios de pronto inventados, corrigidos pelo Claude.
 - Lição: o modelo local rende em pedidos pequenos e fechados; sessões longas e saídas grandes degradam.
 
+## Bancada de modelos (2026-11-15; ver bancada-modelos.md e bancada/analise.md)
+- Mesmo harness, 4 modelos locais 100% na GPU de 12 GB com contexto de 32k: gemma 12B (base), Qwen 3.5 9B, Qwen 3.8 27B em ~2 bits, gpt-oss 20B. Cada um fez 3 repetições de 3 cartões de implementação e de 1 pré-revisão com 4 defeitos plantados.
+- Implementação: dos 36 cartões, 34 foram dados como prontos, e os 34 estavam limpos na conferência do Claude. Os 2 que faltam são do gemma, que estourou o tempo, e o harness os marcou como falhos. Aprovados sem reprovação: Qwen 3.8 9/9, Qwen 3.5 8/9, gemma 2/9, gpt-oss 2/9.
+- Velocidade de geração ≠ velocidade de entrega: o gemma gera 137 tok/s contra 51 do Qwen 3.8, mas leva 75 s por cartão contra 29.
+- Pré-revisão: defeitos achados no arquivo certo (média, de 4): Qwen 3.5 2,3; gemma 1,7; Qwen 3.8 1; gpt-oss 0. O defeito coberto por check foi o mais achado (6 de 12).
+- O portão de evidência recusou "ok" sem prova em 4 das 5 pré-revisões que falharam. Mas ele confere se a prova existe, não se sustenta o veredito, e 3 tipos de prova falsa passaram (LI-050).
+- O gpt-oss às vezes gera uma chamada de ferramenta que o Ollama não consegue ler (HTTP 500). Na 1ª rodada isso derrubou 3 de 4 cartões. Depois da correção do harness (repetir a requisição em caso de 5xx, LI-049), 2 erros foram absorvidos sem perda.
+- Calibragem: Qwen 3.8 em 8 bits (30 GB) não cabe na GPU; dividido entre GPU e CPU, roda a ~1 tok/s. Na versão de ~2 bits (9,6 GB) roda a 52 tok/s. O gpt-oss (14 GB) é o único que transborda da VRAM: 26 tok/s.
+
 ## Ainda NÃO testado (conclusões pendentes)
 - Geração de código TypeScript do produto (E1: motor financeiro; depois API, banco, frontend).
 - Modo test-author (Alice escrevendo testes), pre-review, fila de tarefas, CI com todas as travas (lint, tipos, fronteiras, mutação).

@@ -49,3 +49,4 @@ O script `scripts/alice-gate.sh` atua como um comando forçado para a chave SSH 
 O prompt de sistema é sempre o do harness, por isso o perfil usa o modelo-base, não um wrapper com SYSTEM.
 `num_ctx` mínimo: 32768 (o harness compacta em ~90 mil caracteres, ~28 mil tokens, mais a saída).
 As métricas registram `profile`, `model`, `outTokPerSec` e `promptTokPerSec`.
+Calibragem (GPU de 12 GB, 32k): `gemma` ~135 tok/s; `qwen35` (6,5 GB) ~90; `qwen38` (2 bits, 9,6 GB) ~51; `gptoss` transborda a VRAM, ~30. Comparação com o harness: [docs/estudo/bancada-modelos.md](../../docs/estudo/bancada-modelos.md).
