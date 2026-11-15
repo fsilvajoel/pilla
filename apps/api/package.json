@@ -1,0 +1,24 @@
+{
+  "name": "@pilla/api",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "description": "API e módulos de domínio (RFC-003 §4.1); banco conforme a RFC-005",
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "lint": "eslint .",
+    "test": "vitest run --coverage",
+    "db:generate": "drizzle-kit generate --config drizzle-kit/core.config.ts",
+    "db:regen": "git checkout -- migrations && git clean -fdq migrations && drizzle-kit generate --config drizzle-kit/core.config.ts"
+  },
+  "dependencies": {
+    "drizzle-orm": "^0.45.4"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "0.5.14",
+    "@pilla/config": "workspace:*",
+    "@vitest/coverage-v8": "^5.1.0",
+    "drizzle-kit": "^0.31.11",
+    "vitest": "^5.1.0"
+  }
+}

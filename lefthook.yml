@@ -4,7 +4,7 @@ pre-commit:
   commands:
     format:
       glob: "*.{ts,tsx,mjs,cjs,json}"
-      exclude: ["pnpm-lock.yaml", "tools/**", "docs/**"]
+      exclude: ["pnpm-lock.yaml", "tools/**", "docs/**", "**/migrations/**/meta/**"]
       run: pnpm exec prettier --check {staged_files}
     lint:
       glob: "*.{ts,tsx}"

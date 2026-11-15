@@ -1,0 +1,4 @@
+{
+  "extends": "@pilla/config/tsconfig.base.json",
+  "include": ["src", "drizzle-kit"]
+}

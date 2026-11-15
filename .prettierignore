@@ -3,3 +3,5 @@ docs/
 pnpm-lock.yaml
 **/coverage/
 **/reports/
+# gerado pelo drizzle-kit
+**/migrations/**/meta/

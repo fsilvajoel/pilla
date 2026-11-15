@@ -115,5 +115,5 @@ Qualquer outra exige aprovação (Claude propõe, Joel aprova) e atualização d
 - **Runtime API/worker**: `@nestjs/*`, `drizzle-orm`, `pg`, `zod`, `nestjs-zod`, `pino`, `nestjs-pino`, `argon2`, `pg-boss`, `@aws-sdk/client-s3`, `@aws-sdk/s3-request-presigner`, `@nestjs/throttler`, `uuidv7`
 - **Runtime web**: `next`, `react`, `react-dom`, `tailwindcss`, `react-hook-form`, `@hookform/resolvers`, `@tanstack/react-query`, `zustand`, componentes shadcn/ui (código no repo) e suas dependências (`@radix-ui/*`, `class-variance-authority`, `clsx`, `tailwind-merge`, `lucide-react`)
 - **`packages/finance`**: nenhuma
-- **Dev**: `typescript`, `vitest`, `@vitest/coverage-v8`, `fast-check`, `@stryker-mutator/*`, `testcontainers`, `@testcontainers/postgresql`, `@playwright/test`, `eslint`, `typescript-eslint`, `dependency-cruiser`, `prettier`, `drizzle-kit`, `turbo`, `lefthook`, `@commitlint/*`, `tsx`
+- **Dev**: `typescript`, `vitest`, `@vitest/coverage-v8`, `fast-check`, `@stryker-mutator/*`, `testcontainers`, `@testcontainers/postgresql`, `@playwright/test`, `eslint`, `typescript-eslint`, `dependency-cruiser`, `prettier`, `drizzle-kit`, `@electric-sql/pglite` (PostgreSQL em processo para testes de banco, sem Docker), `turbo`, `lefthook`, `@commitlint/*`, `tsx`
 
