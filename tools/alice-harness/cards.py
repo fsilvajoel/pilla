@@ -91,6 +91,13 @@ def validate_plan(plan: dict, known_rules: set[str], external_ids: set[str]) -> 
         if kind == "pre-review" and not card.get("checklist"):
             problems.append(f"{cid}: pre-review exige checklist (uma linha por item no resultado)")
 
+        # LI-030: "reuse X" in done must come with the import line, or Alice redeclares X
+        lines = [str(x) for x in (done or [])] + [str(x) for x in card.get("context", []) or []]
+        for line in lines:
+            for name in re.findall(r"\breuse\s+([a-z]+[A-Z]\w*)", line):
+                if not any(re.search(rf"\bimport\b.*\b{name}\b", other) for other in lines):
+                    problems.append(f"{cid}: 'reuse {name}' sem a linha de import (LI-030)")
+
         # Budget
         budget = card.get("budget", {})
         attempts = budget.get("attempts", 0)

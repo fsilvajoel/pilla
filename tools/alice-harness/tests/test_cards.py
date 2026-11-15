@@ -87,6 +87,12 @@ class CardsTest(unittest.TestCase):
         self.assertTrue(any("checklist" in p for p in self.check([c])))
         self.assertEqual(self.check([card(kind="pre-review", allowedPaths=[], protectedTests=[], checklist=["C1 lint"])]), [])
 
+    def test_reuse_needs_its_import_line(self):  # LI-030
+        bad = self.check([card(done=["allocations (reuse allocationSchema, min 1)"])])
+        self.assertTrue(any("LI-030" in x for x in bad))
+        ok = card(done=["reuse allocationSchema", 'import { allocationSchema } from "./payment-confirmed"'])
+        self.assertEqual(self.check([ok]), [])
+
 
 if __name__ == "__main__":
     unittest.main()

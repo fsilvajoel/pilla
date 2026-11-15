@@ -242,6 +242,16 @@ def tools_payload() -> list[dict]:
             "type": "object", "properties": {k: {"type": t} for k, t in props.items()}, "required": REQUIRED[name]}}})
     return out
 
+
+SHOW_AFTER_EDIT_LINES = 40
+
+
+def current_view(text: str) -> str:
+    """LI-029: after a write/edit of a short file, show it, so the next edit starts from the real text."""
+    if text.count("\n") + 1 > SHOW_AFTER_EDIT_LINES:
+        return ""
+    return "\nconteúdo atual (use este texto como `old` na próxima edição):\n" + text
+
 class Tools:
     def __init__(self, run: "Run"):
         self.run = run
@@ -301,7 +311,7 @@ class Tools:
         f.parent.mkdir(parents=True, exist_ok=True)
         f.write_text(content if content.endswith("\n") else content + "\n")
         self.run.touched.add(r)
-        return f"ok: {r} ({n} linhas)"
+        return f"ok: {r} ({n} linhas)" + current_view(content)
 
     def edit_file(self, path: str, old: str, new: str, replace_all: bool = False) -> str:
         r = self.g.check_write(self.resolve(path))
@@ -317,7 +327,7 @@ class Tools:
             raise PermissionError(f"arquivo ficaria com {n} linhas (limite {MAX_WRITE_LINES}); divida a responsabilidade")
         f.write_text(text)
         self.run.touched.add(r)
-        return f"ok: {r} ({n} linhas)"
+        return f"ok: {r} ({n} linhas)" + current_view(text)
 
     def replace_function(self, path: str, name: str, code: str) -> str:
         r = self.g.check_write(self.resolve(path))

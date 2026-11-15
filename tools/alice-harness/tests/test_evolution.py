@@ -153,6 +153,11 @@ class ToolsLI028Test(unittest.TestCase):
             self.assertIn("já contém", again)
             self.assertEqual((repo / "pkg" / "src" / "a.ts").read_text(), "const a = 2;\n")
 
+    def test_short_file_is_shown_after_edit(self):  # LI-029
+        import alice
+        self.assertIn("conteúdo atual", alice.current_view("a\nb\n"))
+        self.assertEqual(alice.current_view("x\n" * 60), "")
+
 
 if __name__ == "__main__":
     unittest.main()
