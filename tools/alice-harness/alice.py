@@ -305,6 +305,26 @@ def weak_evidence(summary: str, items: list[str], repo: Path) -> list[str]:
         weak.append(key)
     return weak
 
+def bound_checks(items: list[str]) -> dict[str, int]:
+    """Checklist items that name their check ('... run_check 2 ...') are bound to it: key -> check index (LI-053)."""
+    out = {}
+    for item in items:
+        m = re.search(r"\brun_check\s+(\d+)", str(item))
+        if m:
+            out[str(item).split()[0]] = int(m.group(1))
+    return out
+
+
+def red_check_oks(summary: str, items: list[str], exit_codes: dict[int, int]) -> list[str]:
+    """LI-053: 'ok' on an item whose own check is red is never accepted (evidence must support the verdict)."""
+    out = []
+    for key, idx in bound_checks(items).items():
+        line = next((l.strip() for l in summary.splitlines() if l.strip().startswith(key + " ")), "")
+        if re.match(rf"{re.escape(key)}\s+ok\b", line, re.I) and exit_codes.get(idx, 0) != 0:
+            out.append(f"{key} (run_check {idx} está vermelho)")
+    return out
+
+
 def missing_args_message(name: str, args: dict) -> str | None:
     missing = [k for k in REQUIRED.get(name, []) if k not in args]
     if not missing:
@@ -788,6 +808,13 @@ Fluxo: ler → escrever → run_check → corrigir → finish(summary de até 3 
                             problems += ("\n" if problems else "") + ("'ok' sem prova em: " + ", ".join(weak) +
                                          ". Cite arquivo:linha que exista, ou a busca que prova (ex.: \"search_code 'Math\\.' -> 0 resultados\") ou o check (\"run_check 1 -> 94,4%\"). "
                                          "Item com 'every/todo/cada' pede a busca que cobre todos os arquivos (search_code) ou um arquivo:linha por arquivo; um exemplo só não prova.")
+                        bound = sorted({i for i in bound_checks(self.card["checklist"]).values() if i < len(self.card["checks"])})
+                        red = [] if gaps else red_check_oks(str(args.get("summary", "")), self.card["checklist"],
+                                                            {i: self.check(self.card["checks"][i])[0] for i in bound})
+                        if red:
+                            ok = False
+                            problems += ("\n" if problems else "") + ("'ok' sem prova em: " + ", ".join(red) +
+                                         ". O check do próprio item acusa problema: marque 'falta' e cite a primeira linha da saída do check (arquivo:linha).")
                         if gaps:
                             ok = False
                             problems += ("\n" if problems else "") + ("summary sem linha para: " + ", ".join(gaps) +

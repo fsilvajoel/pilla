@@ -16,7 +16,9 @@
     "depcruise": "depcruise apps packages --config .dependency-cruiser.cjs",
     "check:env": "node scripts/check-env-example.mjs",
     "check:deps": "node scripts/check-allowed-deps.mjs",
-    "verify": "pnpm check:deps && pnpm check:env && pnpm lint && pnpm typecheck && pnpm depcruise && pnpm test && pnpm test:harness",
+    "check:schemas": "node scripts/check-schemas.mjs packages/schemas/src && node scripts/check-avoid.mjs docs/memoria/libs/zod.md packages/schemas/src",
+    "test:scripts": "node --test scripts/check-schemas.test.mjs",
+    "verify": "pnpm check:deps && pnpm check:env && pnpm check:schemas && pnpm test:scripts && pnpm lint && pnpm typecheck && pnpm depcruise && pnpm test && pnpm test:harness",
     "prepare": "lefthook install",
     "test:harness": "python3 -m unittest discover -s tools/alice-harness/tests -t tools/alice-harness"
   },

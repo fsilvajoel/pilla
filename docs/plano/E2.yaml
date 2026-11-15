@@ -340,6 +340,7 @@ cards:
   checks:
   - pnpm --filter @pilla/schemas test
   - node scripts/check-avoid.mjs docs/memoria/libs/zod.md packages/schemas/src
+  - node scripts/check-schemas.mjs packages/schemas/src
   done:
   - 'one line per checklist item: ''<key> ok|falta|parcial|n/a - evidence (file:line or command)'''
   budget:
@@ -349,10 +350,10 @@ cards:
   checklist:
   - C1 every event of RFC-004 §7 has a schema file and a test block named with the event type
   - C2 every payload is z.strictObject (no personal data, no unknown fields)
-  - C3 money fields end in Cents and use centsSchema or positiveCentsSchema
+  - C3 money, rate and id fields use the primitives of common.ts; run_check 2 (rule S3) proves it
   - C4 business dates use isoDateSchema; only occurredAt is an instant
-  - C5 no regex or z.string() for ids, dates or money outside common.ts
-  - C6 every schema is exported from src/index.ts
+  - C5 no regex outside common.ts; run_check 2 (rule S2) proves it
+  - C6 every schema is exported from src/index.ts; run_check 2 (rule S1) proves it
   - C7 field names match docs/glossario.md and RFC-004 §7 exactly
   - C8 every zod API used exists and follows the zod sheet (docs/memoria/libs/zod.md); run_check 1 lists what the sheet says to avoid
 - id: E2-T12
@@ -735,6 +736,7 @@ cards:
   checks:
   - pnpm --filter @pilla/schemas test
   - node scripts/check-avoid.mjs docs/memoria/libs/zod.md packages/schemas/src
+  - node scripts/check-schemas.mjs packages/schemas/src
   done:
   - 'one line per checklist item: ''<key> ok|falta|parcial|n/a - evidence (file:line or command)'''
   budget:
@@ -744,9 +746,9 @@ cards:
   checklist:
   - C1 every body schema file under packages/schemas/src/api has a test case in api.test.ts named after its export
   - C2 every request body is z.strictObject (calculated fields never come in, ADR-0005)
-  - C3 money fields end in Cents and use centsSchema or positiveCentsSchema; dates use isoDateSchema; ids use idSchema
-  - C4 no regex outside common.ts and no z.string() for ids, dates, money or CPF
-  - C5 every api schema is exported from src/index.ts
+  - C3 money, rate, date, id and CPF fields use the primitives of common.ts; run_check 2 (rule S3) proves it
+  - C4 no regex outside common.ts; run_check 2 (rule S2) proves it
+  - C5 every api schema is exported from src/index.ts; run_check 2 (rule S1) proves it
   - C6 field names match RFC-004 §3 and docs/glossario.md exactly
   - C7 every zod API used follows the zod sheet (docs/memoria/libs/zod.md); run_check 1 lists what the sheet says to avoid
 - id: E2-T24

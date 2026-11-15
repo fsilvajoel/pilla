@@ -9,6 +9,8 @@ export const idSchema = z.uuidv7();
 export const centsSchema = z.int().nonnegative();
 /** Centavos, inteiro > 0 (valores que não podem ser zero, como um pagamento). */
 export const positiveCentsSchema = z.int().positive();
+/** Centavos com sinal próprio, nunca zero (ajuste de tesouraria, RFC-005). */
+export const signedCentsSchema = z.int().refine((cents) => cents !== 0, "valor não pode ser zero");
 /** Pontos-base, inteiro >= 0 (sufixo `Bps`; 6,33% = 633). */
 export const bpsSchema = z.int().nonnegative();
 /** Data de negócio "YYYY-MM-DD" válida no calendário. */

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { isoDateSchema, positiveCentsSchema, reasonSchema } from "../../common";
+import { isoDateSchema, positiveCentsSchema, reasonSchema, signedCentsSchema } from "../../common";
 
 /**
  * POST /accounts/{id}/entries (RFC-004, RF-30). Decisão do Joel (2026-11-15): aporte e retirada chegam
@@ -14,7 +14,7 @@ export const accountEntryRequest = z.discriminatedUnion("type", [
   }),
   z.strictObject({
     type: z.literal("ADJUSTMENT"),
-    amountCents: z.int().refine((cents) => cents !== 0, "ajuste não pode ser zero"),
+    amountCents: signedCentsSchema,
     entryDate: isoDateSchema,
     justification: reasonSchema,
   }),
