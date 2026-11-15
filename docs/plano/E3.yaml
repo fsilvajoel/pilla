@@ -53,3 +53,44 @@ cards:
       - apps/api/src/core/infra/schema.ts
       - apps/api/src/core/infra/audit-log.test.ts
     sizeNote: uma tabela por cartão; o modelo é outbox em core/infra/schema.ts
+  - id: E3-T02
+    title: core.attachments table (Drizzle schema + generated migration)
+    assignee: alice
+    kind: implement
+    rules: []
+    refs: [RFC-005 §2, RFC-005 §1]
+    dependsOn: [E3-T01]
+    allowedPaths:
+      - apps/api/src/core/infra/schema.ts
+    generatedPaths:
+      - apps/api/migrations/core/*
+    protectedTests:
+      - apps/api/src/core/infra/attachments.test.ts
+      - apps/api/src/db/conventions.test.ts
+    checks:
+      - pnpm --filter @pilla/api typecheck
+      - pnpm --filter @pilla/api db:regen attachments
+      - pnpm --filter @pilla/api exec vitest run src/core/infra/attachments.test.ts src/db/conventions.test.ts
+      - pnpm --filter @pilla/api lint
+    done:
+      - run_check 1 writes the migration (0002_attachments.sql and meta/); run it again after every change to schema.ts; never write the migration by hand
+      - all tests in attachments.test.ts and apps/api/src/db/conventions.test.ts pass (run_check 2)
+      - "every column has .notNull(); id: uuid(\"id\").primaryKey(); kind: text(\"kind\"); fileName: text(\"file_name\")"
+      - "contentType: text(\"content_type\"); sizeBytes: bigint(\"size_bytes\", { mode: \"number\" }); sha256: char(\"sha256\", { length: 64 })"
+      - "storageKey: text(\"storage_key\").notNull().unique(); uploadedBy: uuid(\"uploaded_by\"); uploadedAt: instant(\"uploaded_at\")"
+      - "check attachments_kind_check: kind IN ('RECEIPT', 'SIGNED_CONTRACT', 'IMPORT_FILE', 'OTHER')"
+      - "check attachments_size_bytes_check: size_bytes >= 0; check attachments_sha256_check: sha256 ~ '^[0-9a-f]{64}$'"
+      - add the table after auditLog in schema.ts; keep the other tables unchanged
+      - export type AttachmentRow = typeof attachments.$inferSelect;
+    hints:
+      - "import bigint and char from drizzle-orm/pg-core (check is already imported)"
+      - "each check is a call, like the one in auditLog: check(\"attachments_size_bytes_check\", sql`${t.sizeBytes} >= 0`)"
+      - one edit_file call appending the table at the end of schema.ts, then run_check 0 (typecheck), 1 (migration) and 2 (tests)
+    budget:
+      attempts: 4
+      toolCalls: 25
+      minutes: 8
+    readFirst:
+      - apps/api/src/core/infra/schema.ts
+      - apps/api/src/core/infra/attachments.test.ts
+    sizeNote: uma tabela por cartão; o modelo é auditLog em core/infra/schema.ts
