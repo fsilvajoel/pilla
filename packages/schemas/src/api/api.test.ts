@@ -12,6 +12,7 @@ import { writeOffLoanRequest } from "./lending/write-off-loan";
 import { allocationPreviewRequest } from "./payments/allocation-preview";
 import { reversePaymentRequest } from "./payments/reverse-payment";
 import { problemSchema } from "./problem";
+import { accountEntryRequest } from "./treasury/account-entry";
 
 // RFC-004 §3–§6. Ids fictícios em UUID v7; CPFs fictícios com dígitos válidos.
 const id = (n: number): string => `01936f8e-7b2c-7cde-8f00-${String(n).padStart(12, "0")}`;
@@ -128,7 +129,14 @@ const cases: BodyCase[] = [
     name: "attachmentUploadUrlRequest",
     schema: attachmentUploadUrlRequest,
     body: { fileName: "comprovante.pdf", contentType: "application/pdf", sizeBytes: 204800 },
-    invalid: { fileName: "", contentType: "", sizeBytes: 0 },
+    invalid: { fileName: "", contentType: "image/gif", sizeBytes: 10 * 1024 * 1024 + 1 },
+  },
+  {
+    name: "accountEntryRequest",
+    schema: accountEntryRequest,
+    body: { type: "CAPITAL_IN", amountCents: 1000000, entryDate: "2027-01-02" },
+    optional: { justification: "aporte inicial" },
+    invalid: { type: "DISBURSEMENT", amountCents: -100, entryDate: "02/01/2027", justification: "  " },
   },
 ];
 
@@ -184,6 +192,36 @@ describe("problemSchema rules", () => {
     const closed = { title: "Encerrado", status: 422, detail: "Contrato renovado.", code: "LOAN_CLOSED_FOR_PAYMENTS" };
     expect(problemSchema.safeParse({ ...closed, successorLoanId: id(7) }).success).toBe(true);
   });
+});
+
+describe("accountEntryRequest rules (RF-30)", () => {
+  const adjustment = { type: "ADJUSTMENT", entryDate: "2027-01-02", justification: "diferença no extrato" };
+
+  it("an adjustment may be negative but never zero", () => {
+    expect(accountEntryRequest.safeParse({ ...adjustment, amountCents: -2500 }).success).toBe(true);
+    expect(accountEntryRequest.safeParse({ ...adjustment, amountCents: 0 }).success).toBe(false);
+  });
+
+  it("an adjustment requires a justification (RFC-005)", () => {
+    const bare = { type: "ADJUSTMENT", entryDate: "2027-01-02", amountCents: 100 };
+    expect(accountEntryRequest.safeParse(bare).success).toBe(false);
+  });
+
+  it("a capital withdrawal is positive; the type gives the sign", () => {
+    const out = { type: "CAPITAL_OUT", entryDate: "2027-01-02" };
+    expect(accountEntryRequest.safeParse({ ...out, amountCents: 5000 }).success).toBe(true);
+    expect(accountEntryRequest.safeParse({ ...out, amountCents: -5000 }).success).toBe(false);
+  });
+});
+
+describe("attachment types (iPhone photos included)", () => {
+  it.each(["application/pdf", "image/jpeg", "image/png", "image/webp", "image/heic", "image/heif"])(
+    "accepts %s",
+    (contentType) => {
+      const body = { fileName: "foto.heic", contentType, sizeBytes: 3_000_000 };
+      expect(attachmentUploadUrlRequest.safeParse(body).success).toBe(true);
+    },
+  );
 });
 
 describe("cpfSchema (RN-P01)", () => {

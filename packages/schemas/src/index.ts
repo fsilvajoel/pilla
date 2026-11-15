@@ -22,3 +22,4 @@ export * from "./api/lending/payoff-quote";
 export * from "./api/payments/allocation-preview";
 export * from "./api/payments/reverse-payment";
 export * from "./api/core/attachment-upload-url";
+export * from "./api/treasury/account-entry";

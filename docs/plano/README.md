@@ -91,7 +91,7 @@ Mesmo formato da E2a. Entram só os corpos que a RFC-004 §3 define campo a camp
 | E2-T14..T22 | alice | um corpo por cartão: login, acesso ao portal, sessão do portal, ativar, baixar, quitação, prévia de alocação, estorno, URL de upload |
 | E2-T23 | alice (`pre-review`) | checklist C1..C7 com evidência |
 
-Questões para o Joel (fora deste lote porque a RFC não fecha):
-- Lançamento manual de tesouraria (`POST /accounts/{id}/entries`): o valor de `ADJUSTMENT` pode ser negativo? `CAPITAL_IN`/`CAPITAL_OUT` chegam sempre positivos, com o sinal dado pelo tipo? `justification` é obrigatória só em `ADJUSTMENT` (RFC-005)?
-- Anexos: tipos de arquivo aceitos e tamanho máximo.
-- Limites de texto escolhidos pelo Claude no lote (usuário 100, senha 200, nome de arquivo 255): confirmar.
+Decisões do Joel (2026-11-15), já nos esquemas:
+- Lançamento manual de tesouraria (`treasury/account-entry.ts`): `CAPITAL_IN`/`CAPITAL_OUT` sempre positivos, o sinal vem do tipo; `ADJUSTMENT` com sinal próprio (nunca zero) e `justification` obrigatória só nele.
+- Anexos: PDF e imagens (JPEG, PNG, WebP, HEIC/HEIF do iPhone); máximo de 10 MiB (escolha do Claude, a confirmar).
+- Limites de texto confirmados: usuário 100, senha 200, nome de arquivo 255.
