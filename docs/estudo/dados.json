@@ -527,6 +527,23 @@
     "achado": "correto de primeira, 0 erros",
     "licoes": [],
     "mudanca": "—"
+   },
+   {
+    "cartao": "E2-T08",
+    "kind": "implement",
+    "harness": "1dbf955",
+    "status": "done",
+    "segundos": 58,
+    "tentativas": 3,
+    "chamadas": 31,
+    "erros_ferramenta": 0,
+    "tokens_entrada": 265020,
+    "tokens_saida": 3467,
+    "achado": "1ª execução: needs_input (redeclarou allocationSchema e conflitou no index.ts); com o cartão corrigido, certo em 58 s, mas 31 chamadas",
+    "licoes": [
+     "LI-030"
+    ],
+    "mudanca": "—"
    }
   ]
  }
