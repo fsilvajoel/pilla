@@ -35,7 +35,7 @@ cards:
     done:
       - run_check 1 writes the migration (0001_audit_log.sql and meta/); run it again after every change to schema.ts; never write the migration by hand
       - all tests in audit-log.test.ts and apps/api/src/db/conventions.test.ts pass (run_check 2)
-      - "columns: id uuid PK; actor_type text; actor_id uuid null; action text; entity_type text; entity_id uuid; before jsonb null; after jsonb null; ip inet null; at timestamptz"
+      - "columns: id uuid PK; actor_type text; actor_id uuid (sem .notNull()); action text; entity_type text; entity_id uuid; before/after jsonb e ip inet (sem .notNull()); at timestamptz"
       - every column without "null" above is notNull()
       - actor_type is text with a CHECK constraint, not a PostgreSQL enum (RFC-005 §1)
       - index on (entity_type, entity_id, at)
