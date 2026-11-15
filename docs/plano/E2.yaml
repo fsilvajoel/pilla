@@ -1,0 +1,353 @@
+# Gerado por script do Claude a partir da RFC-004 §7. Módulo-modelo: E2-T01 (Claude). Ver docs/plano/README.md.
+delivery: E2
+title: Event contracts in packages/schemas (RFC-004 §7) from a model module
+cards:
+- id: E2-T01
+  title: 'Model module: wire primitives, event envelope and PaymentConfirmed v1 plus tests for all events'
+  kind: implement
+  assignee: claude
+  rules: []
+  refs:
+  - RFC-004 §2
+  - RFC-004 §7
+  - RFC-005 §1
+  dependsOn:
+  - E1-T20
+  allowedPaths:
+  - packages/schemas/**
+  protectedTests: []
+  checks:
+  - pnpm --filter @pilla/schemas exec vitest run src/events/events.test.ts -t PaymentConfirmed
+  - pnpm --filter @pilla/schemas typecheck
+  - pnpm --filter @pilla/schemas lint
+  done:
+  - common.ts with the wire primitives (uuid v7, cents, bps, date, instant, reason)
+  - eventV1 envelope (strict, version 1)
+  - 'payment-confirmed.ts as the model: strictObject payload, allocations sum to amountCents'
+  - table-driven events.test.ts for the 10 events of RFC-004 §7; one z.never() stub per remaining event
+  budget:
+    attempts: 5
+    toolCalls: 30
+- id: E2-T02
+  title: Implement the LoanActivated v1 event schema
+  kind: implement
+  assignee: alice
+  rules: []
+  refs:
+  - RFC-004 §7
+  dependsOn:
+  - E2-T01
+  allowedPaths:
+  - packages/schemas/src/events/loan-activated.ts
+  protectedTests:
+  - packages/schemas/src/events/events.test.ts
+  checks:
+  - pnpm --filter @pilla/schemas exec vitest run src/events/events.test.ts -t LoanActivated
+  - pnpm --filter @pilla/schemas typecheck
+  - pnpm --filter @pilla/schemas lint
+  done:
+  - all LoanActivated tests in events.test.ts pass (vitest -t filter)
+  - 'payload fields: loanId, personId, accountId (uuid v7), principalCents (>= 0), disbursedAt (date); optional originLoanId (uuid v7) and originType (RENEWAL | RENEGOTIATION | IMPORT, RFC-005 §4)'
+  - replace only the z.never() payload; z.strictObject like payment-confirmed.ts
+  - reuse the primitives of ../common (idSchema, centsSchema, isoDateSchema, reasonSchema); never write a new regex
+  - one edit_file call; the file stays under 25 lines
+  budget:
+    attempts: 4
+    toolCalls: 20
+    minutes: 6
+  readFirst:
+  - packages/schemas/src/events/payment-confirmed.ts
+  - packages/schemas/src/common.ts
+  - packages/schemas/src/events/loan-activated.ts
+  sizeNote: um evento por cartão; o modelo é payment-confirmed.ts
+- id: E2-T03
+  title: Implement the LoanPaidOff v1 event schema
+  kind: implement
+  assignee: alice
+  rules: []
+  refs:
+  - RFC-004 §7
+  dependsOn:
+  - E2-T01
+  allowedPaths:
+  - packages/schemas/src/events/loan-paid-off.ts
+  protectedTests:
+  - packages/schemas/src/events/events.test.ts
+  checks:
+  - pnpm --filter @pilla/schemas exec vitest run src/events/events.test.ts -t LoanPaidOff
+  - pnpm --filter @pilla/schemas typecheck
+  - pnpm --filter @pilla/schemas lint
+  done:
+  - all LoanPaidOff tests in events.test.ts pass (vitest -t filter)
+  - 'payload fields: loanId, personId (uuid v7), paidOffAt (business date, not instant)'
+  - replace only the z.never() payload; z.strictObject like payment-confirmed.ts
+  - reuse the primitives of ../common (idSchema, centsSchema, isoDateSchema, reasonSchema); never write a new regex
+  - one edit_file call; the file stays under 25 lines
+  budget:
+    attempts: 4
+    toolCalls: 20
+    minutes: 6
+  readFirst:
+  - packages/schemas/src/events/payment-confirmed.ts
+  - packages/schemas/src/common.ts
+  - packages/schemas/src/events/loan-paid-off.ts
+  sizeNote: um evento por cartão; o modelo é payment-confirmed.ts
+- id: E2-T04
+  title: Implement the LoanReopened v1 event schema
+  kind: implement
+  assignee: alice
+  rules: []
+  refs:
+  - RFC-004 §7
+  dependsOn:
+  - E2-T01
+  allowedPaths:
+  - packages/schemas/src/events/loan-reopened.ts
+  protectedTests:
+  - packages/schemas/src/events/events.test.ts
+  checks:
+  - pnpm --filter @pilla/schemas exec vitest run src/events/events.test.ts -t LoanReopened
+  - pnpm --filter @pilla/schemas typecheck
+  - pnpm --filter @pilla/schemas lint
+  done:
+  - all LoanReopened tests in events.test.ts pass (vitest -t filter)
+  - 'payload fields: loanId (uuid v7), reason (reasonSchema)'
+  - replace only the z.never() payload; z.strictObject like payment-confirmed.ts
+  - reuse the primitives of ../common (idSchema, centsSchema, isoDateSchema, reasonSchema); never write a new regex
+  - one edit_file call; the file stays under 25 lines
+  budget:
+    attempts: 4
+    toolCalls: 20
+    minutes: 6
+  readFirst:
+  - packages/schemas/src/events/payment-confirmed.ts
+  - packages/schemas/src/common.ts
+  - packages/schemas/src/events/loan-reopened.ts
+  sizeNote: um evento por cartão; o modelo é payment-confirmed.ts
+- id: E2-T05
+  title: Implement the LoanRenewed v1 event schema
+  kind: implement
+  assignee: alice
+  rules: []
+  refs:
+  - RFC-004 §7
+  dependsOn:
+  - E2-T01
+  allowedPaths:
+  - packages/schemas/src/events/loan-renewed.ts
+  protectedTests:
+  - packages/schemas/src/events/events.test.ts
+  checks:
+  - pnpm --filter @pilla/schemas exec vitest run src/events/events.test.ts -t LoanRenewed
+  - pnpm --filter @pilla/schemas typecheck
+  - pnpm --filter @pilla/schemas lint
+  done:
+  - all LoanRenewed tests in events.test.ts pass (vitest -t filter)
+  - 'payload fields: loanId, successorLoanId (uuid v7)'
+  - replace only the z.never() payload; z.strictObject like payment-confirmed.ts
+  - reuse the primitives of ../common (idSchema, centsSchema, isoDateSchema, reasonSchema); never write a new regex
+  - one edit_file call; the file stays under 25 lines
+  budget:
+    attempts: 4
+    toolCalls: 20
+    minutes: 6
+  readFirst:
+  - packages/schemas/src/events/payment-confirmed.ts
+  - packages/schemas/src/common.ts
+  - packages/schemas/src/events/loan-renewed.ts
+  sizeNote: um evento por cartão; o modelo é payment-confirmed.ts
+- id: E2-T06
+  title: Implement the LoanRenegotiated v1 event schema
+  kind: implement
+  assignee: alice
+  rules: []
+  refs:
+  - RFC-004 §7
+  dependsOn:
+  - E2-T01
+  allowedPaths:
+  - packages/schemas/src/events/loan-renegotiated.ts
+  protectedTests:
+  - packages/schemas/src/events/events.test.ts
+  checks:
+  - pnpm --filter @pilla/schemas exec vitest run src/events/events.test.ts -t LoanRenegotiated
+  - pnpm --filter @pilla/schemas typecheck
+  - pnpm --filter @pilla/schemas lint
+  done:
+  - all LoanRenegotiated tests in events.test.ts pass (vitest -t filter)
+  - 'payload fields: loanId, successorLoanId (uuid v7), capitalizedCents (>= 0)'
+  - replace only the z.never() payload; z.strictObject like payment-confirmed.ts
+  - reuse the primitives of ../common (idSchema, centsSchema, isoDateSchema, reasonSchema); never write a new regex
+  - one edit_file call; the file stays under 25 lines
+  budget:
+    attempts: 4
+    toolCalls: 20
+    minutes: 6
+  readFirst:
+  - packages/schemas/src/events/payment-confirmed.ts
+  - packages/schemas/src/common.ts
+  - packages/schemas/src/events/loan-renegotiated.ts
+  sizeNote: um evento por cartão; o modelo é payment-confirmed.ts
+- id: E2-T07
+  title: Implement the LoanWrittenOff v1 event schema
+  kind: implement
+  assignee: alice
+  rules: []
+  refs:
+  - RFC-004 §7
+  dependsOn:
+  - E2-T01
+  allowedPaths:
+  - packages/schemas/src/events/loan-written-off.ts
+  protectedTests:
+  - packages/schemas/src/events/events.test.ts
+  checks:
+  - pnpm --filter @pilla/schemas exec vitest run src/events/events.test.ts -t LoanWrittenOff
+  - pnpm --filter @pilla/schemas typecheck
+  - pnpm --filter @pilla/schemas lint
+  done:
+  - all LoanWrittenOff tests in events.test.ts pass (vitest -t filter)
+  - 'payload fields: loanId (uuid v7), outstandingPrincipalCents (>= 0), reason (reasonSchema)'
+  - replace only the z.never() payload; z.strictObject like payment-confirmed.ts
+  - reuse the primitives of ../common (idSchema, centsSchema, isoDateSchema, reasonSchema); never write a new regex
+  - one edit_file call; the file stays under 25 lines
+  budget:
+    attempts: 4
+    toolCalls: 20
+    minutes: 6
+  readFirst:
+  - packages/schemas/src/events/payment-confirmed.ts
+  - packages/schemas/src/common.ts
+  - packages/schemas/src/events/loan-written-off.ts
+  sizeNote: um evento por cartão; o modelo é payment-confirmed.ts
+- id: E2-T08
+  title: Implement the PaymentReversed v1 event schema
+  kind: implement
+  assignee: alice
+  rules: []
+  refs:
+  - RFC-004 §7
+  dependsOn:
+  - E2-T01
+  allowedPaths:
+  - packages/schemas/src/events/payment-reversed.ts
+  protectedTests:
+  - packages/schemas/src/events/events.test.ts
+  checks:
+  - pnpm --filter @pilla/schemas exec vitest run src/events/events.test.ts -t PaymentReversed
+  - pnpm --filter @pilla/schemas typecheck
+  - pnpm --filter @pilla/schemas lint
+  done:
+  - all PaymentReversed tests in events.test.ts pass (vitest -t filter)
+  - 'payload fields: paymentId, loanId, accountId (uuid v7), amountCents (> 0), allocations (reuse allocationSchema, min 1, must sum to amountCents), reason'
+  - replace only the z.never() payload; z.strictObject like payment-confirmed.ts
+  - reuse the primitives of ../common (idSchema, centsSchema, isoDateSchema, reasonSchema); never write a new regex
+  - one edit_file call; the file stays under 25 lines
+  budget:
+    attempts: 4
+    toolCalls: 20
+    minutes: 6
+  readFirst:
+  - packages/schemas/src/events/payment-confirmed.ts
+  - packages/schemas/src/common.ts
+  - packages/schemas/src/events/payment-reversed.ts
+  sizeNote: um evento por cartão; o modelo é payment-confirmed.ts
+- id: E2-T09
+  title: Implement the InstallmentPaid v1 event schema
+  kind: implement
+  assignee: alice
+  rules: []
+  refs:
+  - RFC-004 §7
+  dependsOn:
+  - E2-T01
+  allowedPaths:
+  - packages/schemas/src/events/installment-paid.ts
+  protectedTests:
+  - packages/schemas/src/events/events.test.ts
+  checks:
+  - pnpm --filter @pilla/schemas exec vitest run src/events/events.test.ts -t InstallmentPaid
+  - pnpm --filter @pilla/schemas typecheck
+  - pnpm --filter @pilla/schemas lint
+  done:
+  - all InstallmentPaid tests in events.test.ts pass (vitest -t filter)
+  - 'payload fields: installmentId, loanId (uuid v7), paidAt (date), daysLate (integer >= 0)'
+  - replace only the z.never() payload; z.strictObject like payment-confirmed.ts
+  - reuse the primitives of ../common (idSchema, centsSchema, isoDateSchema, reasonSchema); never write a new regex
+  - one edit_file call; the file stays under 25 lines
+  budget:
+    attempts: 4
+    toolCalls: 20
+    minutes: 6
+  readFirst:
+  - packages/schemas/src/events/payment-confirmed.ts
+  - packages/schemas/src/common.ts
+  - packages/schemas/src/events/installment-paid.ts
+  sizeNote: um evento por cartão; o modelo é payment-confirmed.ts
+- id: E2-T10
+  title: Implement the InstallmentOverdue v1 event schema
+  kind: implement
+  assignee: alice
+  rules: []
+  refs:
+  - RFC-004 §7
+  dependsOn:
+  - E2-T01
+  allowedPaths:
+  - packages/schemas/src/events/installment-overdue.ts
+  protectedTests:
+  - packages/schemas/src/events/events.test.ts
+  checks:
+  - pnpm --filter @pilla/schemas exec vitest run src/events/events.test.ts -t InstallmentOverdue
+  - pnpm --filter @pilla/schemas typecheck
+  - pnpm --filter @pilla/schemas lint
+  done:
+  - all InstallmentOverdue tests in events.test.ts pass (vitest -t filter)
+  - 'payload fields: installmentId, loanId, personId (uuid v7), dueDate (date), outstandingCents (>= 0)'
+  - replace only the z.never() payload; z.strictObject like payment-confirmed.ts
+  - reuse the primitives of ../common (idSchema, centsSchema, isoDateSchema, reasonSchema); never write a new regex
+  - one edit_file call; the file stays under 25 lines
+  budget:
+    attempts: 4
+    toolCalls: 20
+    minutes: 6
+  readFirst:
+  - packages/schemas/src/events/payment-confirmed.ts
+  - packages/schemas/src/common.ts
+  - packages/schemas/src/events/installment-overdue.ts
+  sizeNote: um evento por cartão; o modelo é payment-confirmed.ts
+- id: E2-T11
+  title: Pre-review the event schemas against RFC-004 §7
+  kind: pre-review
+  assignee: alice
+  rules: []
+  refs:
+  - RFC-004 §7
+  dependsOn:
+  - E2-T02
+  - E2-T03
+  - E2-T04
+  - E2-T05
+  - E2-T06
+  - E2-T07
+  - E2-T08
+  - E2-T09
+  - E2-T10
+  allowedPaths: []
+  protectedTests: []
+  checks:
+  - pnpm --filter @pilla/schemas test
+  done:
+  - 'one line per checklist item: ''<key> ok|falta|parcial|n/a - evidence (file:line or command)'''
+  budget:
+    attempts: 3
+    toolCalls: 30
+    minutes: 8
+  checklist:
+  - C1 every event of RFC-004 §7 has a schema file and a test block named with the event type
+  - C2 every payload is z.strictObject (no personal data, no unknown fields)
+  - C3 money fields end in Cents and use centsSchema or positiveCentsSchema
+  - C4 business dates use isoDateSchema; only occurredAt is an instant
+  - C5 no regex or z.string() for ids, dates or money outside common.ts
+  - C6 every schema is exported from src/index.ts
+  - C7 field names match docs/glossario.md and RFC-004 §7 exactly

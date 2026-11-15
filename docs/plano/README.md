@@ -6,7 +6,8 @@ Cartões no formato de [docs/agents/cartao-de-tarefa.md](../agents/cartao-de-tar
 |---|---|---|
 | **E0** Esqueleto | monorepo, toolchain e **todas as travas `E0`** de [travas.md](../agents/travas.md) funcionando no CI | CI verde num PR vazio e vermelho em PR com cada violação de exemplo |
 | **E1** Motor financeiro | `packages/finance` completo (RFC-002), TDD | todos os casos T-01..T-14 e CA-01..CA-08 do cálculo passando; cobertura 100%; mutação ≥ 90% |
-| E2+ | apps (api, worker, web), módulos | planejado depois da E1, com as métricas dela |
+| **E2a** Contratos de eventos | `packages/schemas`: os 10 eventos da RFC-004 §7 em Zod, a partir de um módulo-modelo | 10 blocos de `events.test.ts` verdes; cobertura 100%; pré-revisão com evidência |
+| E2b+ | apps (api, worker, web), módulos | depois da E2a, com as métricas dela |
 
 ## E0: esqueleto (quase tudo do Claude: configs são protegidas para a Alice)
 
@@ -60,3 +61,22 @@ Concluída: `pnpm verify` verde; cada trava testada com uma violação de exempl
 | env com Zod, logger com redação, gerador de CPF falso | movidas para E2 (dependem dos apps) |
 
 Pré-revisão da Alice (E0-T09): respondeu "sem achados" em 39 s, um falso negativo (LI-013). Revisão feita pelo Claude.
+
+## Status da E1 (2026-11-14)
+Concluída: 141 testes, cobertura 100%, mutação 94,4% (meta 90). `generateSchedule`, `allocatePayment` e `balance` escritos direto pelo Claude (LI-021); pré-revisão (E1-T19) e ficha do módulo (E1-T20) pela Alice.
+Questões para o Joel (não decididas no código):
+- Cronograma: se o arredondamento da parcela deixar juros negativos em alguma parcela (principal pequeno, taxa ~0), `generateSchedule` recusa com `ScheduleError` em vez de inventar regra.
+- Mora sobre pagamento parcial (RFC-002 §6): hoje os encargos são recalculados sobre o em aberto desde o vencimento; a multa já paga não é descontada.
+- `status_parcela` (RFC-002 §3.7) ficou para a E2b: depende de "vencida" contar ou não a carência.
+
+## E2a: contratos de eventos (`packages/schemas`, lote da Alice)
+
+Ciclo por cartão (pedido do Joel): executar → analisar sucesso/falha → melhorar o harness → próximo cartão. Evolução medida com `alice.py evolution` e registrada em `docs/estudo/dados.json` (`evolucao`).
+
+| Cartão | Quem | O quê |
+|---|---|---|
+| E2-T01 | claude ✅ | módulo-modelo: primitivas de fio (`common.ts`), envelope `eventV1`, `PaymentConfirmed` completo e `events.test.ts` em tabela para os 10 eventos |
+| E2-T02..T10 | alice | um evento por cartão (troca só o `z.never()` do esboço, seguindo `payment-confirmed.ts`) |
+| E2-T11 | alice (`pre-review`) | checklist C1..C7 com evidência verificável (LI-026) |
+
+Por que este lote: repetitivo, pequeno (um esboço de < 25 linhas por cartão), com modelo pronto ao lado e teste em tabela — o perfil em que a Alice rende (LI-018/019).
