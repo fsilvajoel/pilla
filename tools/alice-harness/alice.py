@@ -63,6 +63,28 @@ def load_env() -> dict[str, str]:
 ENV = load_env()
 OLLAMA_URL = ENV.get("OLLAMA_URL", "http://localhost:11434").rstrip("/")
 MODEL = ENV.get("OLLAMA_MODEL", "alice")
+PROFILE_NAME = os.environ.get("ALICE_PROFILE", ENV.get("ALICE_PROFILE", "gemma"))
+
+
+def load_profile(name: str) -> dict:
+    """Model profile from models.yaml (sampling, context, thinking). Unknown name = error, never a silent default."""
+    profiles = (yaml.safe_load((HERE / "models.yaml").read_text()) or {}).get("profiles", {})
+    if name not in profiles:
+        raise SystemExit(f"perfil de modelo desconhecido: {name} (models.yaml: {', '.join(profiles)})")
+    return {"name": name, **profiles[name]}
+
+
+def rate(tokens: int, ns: int) -> float:
+    return round(tokens / (ns / 1e9), 1) if ns else 0.0
+
+
+def chat_options(profile: dict, card: dict) -> tuple[dict, object]:
+    """Ollama options + think value. The card may still force think/maxOutputTokens."""
+    opts = {k: profile[k] for k in ("temperature", "top_p", "top_k", "min_p", "presence_penalty", "repeat_penalty") if k in profile}
+    opts["num_ctx"] = int(profile.get("num_ctx", 32768))
+    opts["num_predict"] = int(card.get("maxOutputTokens", profile.get("num_predict", 8192)))
+    think = card["think"] if "think" in card else profile.get("think", False)
+    return opts, think
 BRAVE_KEY = ENV.get("BRAVE_SEARCH_API_KEY", "")
 
 # Guardrails come from policy.default.yaml, overridden by <repo>/.agents/policy.yaml (single source).
@@ -557,15 +579,18 @@ TypeScript: sem any, as, !, console, Math, Number, parseFloat, new Date; export 
 Fluxo: ler → escrever → run_check → corrigir → finish(summary de até 3 linhas, lessons opcional)."""
 
     def chat(self) -> dict:
-        payload = {"model": MODEL, "stream": False, "messages": self.messages, "tools": tools_payload(),
-                   "think": bool(self.card.get("think", False)),
-                   "options": {"temperature": 0.2, "num_ctx": 32768, "num_predict": int(self.card.get("maxOutputTokens", 8192))}}
+        prof = load_profile(PROFILE_NAME)
+        opts, think = chat_options(prof, self.card)
+        payload = {"model": prof.get("model", MODEL), "stream": False, "messages": self.messages, "tools": tools_payload(),
+                   "think": think, "options": opts}
         req = urllib.request.Request(f"{OLLAMA_URL}/api/chat", data=json.dumps(payload).encode(),
                                      headers={"Content-Type": "application/json"})
-        with urllib.request.urlopen(req, timeout=600) as resp:
+        with urllib.request.urlopen(req, timeout=int(prof.get("timeout", 600))) as resp:
             data = json.load(resp)
         self.stats["prompt_tokens"] += data.get("prompt_eval_count", 0)
         self.stats["output_tokens"] += data.get("eval_count", 0)
+        self.stats["eval_ns"] = self.stats.get("eval_ns", 0) + data.get("eval_duration", 0)
+        self.stats["prompt_ns"] = self.stats.get("prompt_ns", 0) + data.get("prompt_eval_duration", 0)
         self.stats["calls"] += 1
         return data["message"]
 
@@ -649,7 +674,10 @@ Fluxo: ler → escrever → run_check → corrigir → finish(summary de até 3 
         print(json.dumps(rep, ensure_ascii=False, indent=1))
         metrics.append(RUNS / "metrics.jsonl", {"task": self.card["id"], "kind": self.kind, "status": status,
             "attempts": self.stats["attempts"], "toolCalls": self.stats["tool_calls"], "seconds": self.stats["seconds"],
-            "promptTokens": self.stats["prompt_tokens"], "outputTokens": self.stats["output_tokens"], "think": bool(self.card.get("think", False)),
+            "promptTokens": self.stats["prompt_tokens"], "outputTokens": self.stats["output_tokens"], "think": chat_options(load_profile(PROFILE_NAME), self.card)[1],
+            "profile": PROFILE_NAME, "model": load_profile(PROFILE_NAME).get("model", MODEL),
+            "outTokPerSec": rate(self.stats["output_tokens"], self.stats.get("eval_ns", 0)),
+            "promptTokPerSec": rate(self.stats["prompt_tokens"], self.stats.get("prompt_ns", 0)),
             "toolErrors": self.tool_errors(), "cachedChecks": self.stats.get("cached_checks", 0), "harnessRev": harness_rev(),
             "failureCategories": self.stats.get("failure_categories", []), "stalls": self.stats.get("stalls", 0),
             "at": time.strftime("%Y-%m-%dT%H:%M:%S")})
@@ -893,10 +921,12 @@ def cmd_resume(run_dir: Path, answer: str) -> int:
 
 def cmd_chat(prompt: str, files: list[str]) -> int:
     content = prompt + "".join(f"\n\n=== {f} ===\n{Path(f).read_text(errors='replace')}" for f in files)
-    payload = {"model": MODEL, "stream": False, "think": False, "options": {"temperature": 0.2, "num_ctx": 32768},
+    prof = load_profile(PROFILE_NAME)
+    opts, think = chat_options(prof, {})
+    payload = {"model": prof.get("model", MODEL), "stream": False, "think": think, "options": opts,
                "messages": [{"role": "user", "content": content}]}
     req = urllib.request.Request(f"{OLLAMA_URL}/api/chat", data=json.dumps(payload).encode(), headers={"Content-Type": "application/json"})
-    with urllib.request.urlopen(req, timeout=600) as resp:
+    with urllib.request.urlopen(req, timeout=int(prof.get("timeout", 600))) as resp:
         data = json.load(resp)
     print(data["message"]["content"])
     print(f"\n[tokens alice: prompt={data.get('prompt_eval_count', 0)} saída={data.get('eval_count', 0)}]", file=sys.stderr)

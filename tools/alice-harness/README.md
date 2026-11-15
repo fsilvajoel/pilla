@@ -43,3 +43,9 @@ O script `scripts/alice-gate.sh` atua como um comando forçado para a chave SSH 
 `command="~/code/pilla/tools/alice-harness/scripts/alice-gate.sh",no-port-forwarding,no-agent-forwarding,no-pty ssh-ed25519 <chave da Alice>`
 
 - `scripts/check-brave.sh` — testa a chave da API de busca do Brave.
+
+## Perfis de modelo (`models.yaml`)
+`ALICE_PROFILE=<perfil>` (env ou `.env`; padrão `gemma`) escolhe modelo, `num_ctx`, `think` e amostragem.
+O prompt de sistema é sempre o do harness, por isso o perfil usa o modelo-base, não um wrapper com SYSTEM.
+`num_ctx` mínimo: 32768 (o harness compacta em ~90 mil caracteres, ~28 mil tokens, mais a saída).
+As métricas registram `profile`, `model`, `outTokPerSec` e `promptTokPerSec`.

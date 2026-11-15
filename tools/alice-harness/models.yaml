@@ -1,0 +1,23 @@
+# Perfis de modelo do harness (ALICE_PROFILE=<nome>; padrão: gemma). Cada perfil leva os parâmetros que
+# o fabricante recomenda e um num_ctx medido para caber na GPU (ver docs/estudo/bancada-modelos.md).
+# O prompt de sistema é sempre o do harness: usar o modelo-base, não um wrapper com SYSTEM próprio.
+profiles:
+  gemma:  # linha de base: o que rodou até a E2b-1
+    model: alice
+    num_ctx: 32768
+    temperature: 0.2
+    think: false
+  gptoss:  # gpt-oss:20b (MXFP4). OpenAI: temperature 1.0, top_p 1.0; raciocínio low/medium/high no campo think
+    model: gpt-oss:20b
+    num_ctx: 32768   # 14,1 GB carregado, 9,6 GB na GPU; 26 tok/s de saída
+    temperature: 1.0
+    top_p: 1.0
+    think: low
+  mimo:  # mimo-v2.6:9b-q8_0 (Xiaomi, base Qwen3.5-9B híbrida: 8 de 32 camadas com atenção cheia)
+    model: mimo-v2.6:9b-q8_0
+    num_ctx: 32768   # 11,1 GB carregado, 9,7 GB na GPU; 28 tok/s (16k caberia inteiro, mas o harness pede ~28k)
+    temperature: 0.6  # parâmetros do Modelfile oficial
+    top_k: 20
+    top_p: 0.95
+    min_p: 0
+    think: false
