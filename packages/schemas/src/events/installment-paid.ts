@@ -6,7 +6,7 @@ export const installmentPaidPayload = z.strictObject({
   installmentId: idSchema,
   loanId: idSchema,
   paidAt: isoDateSchema,
-  daysLate: z.number().int().min(0),
+  daysLate: z.int().nonnegative(),
 });
 
 /** RFC-004 §7: produtor payments; consumidores — (futuro: risk). */
