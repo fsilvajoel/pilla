@@ -190,5 +190,22 @@ cards:
   checks:
   - pnpm verify
   done:
-  - list 'trava - status - evidence' for every E0 row in travas.md, or 'sem achados'
+  - 'one line per checklist item: ''<key> ok|falta|parcial|n/a - evidence (file:line or command)'''
   budget: *id001
+  checklist:
+  - C1 tsconfig flags of travas §2
+  - C2 ESLint bans of travas §3
+  - C3 dependency-cruiser rules of travas §4
+  - C4 gitleaks in pre-commit and CI
+  - C5 .env.example sync script
+  - C6 pnpm audit in CI
+  - C7 allowed-dependencies script
+  - C8 frozen lockfile in CI
+  - C9 commitlint
+  - C10 lefthook pre-commit and pre-push
+  - C11 CI runs every required step
+  - C12 main branch protected
+  - C13 CODEOWNERS
+  - C14 PR template
+  - C15 PR size warning
+  - C16 coverage gate 100% in finance

@@ -65,12 +65,23 @@ class CardsTest(unittest.TestCase):
 
     def test_empty_allowed_paths_only_for_pre_review(self):
         self.assertTrue(self.check([card(allowedPaths=[])]))
-        self.assertEqual(self.check([card(kind="pre-review", allowedPaths=[], protectedTests=[])]), [])
+        self.assertEqual(self.check([card(kind="pre-review", allowedPaths=[], protectedTests=[], checklist=["C1 x"])]), [])
 
     def test_budget_limits(self):
         self.assertTrue(self.check([card(budget={"attempts": 9, "toolCalls": 25})]))
         self.assertTrue(self.check([card(budget={"attempts": 3, "toolCalls": 99})]))
-        self.assertEqual(self.check([card(budget={"attempts": 5, "toolCalls": 40})]), [])
+        self.assertEqual(self.check([card(budget={"attempts": 5, "toolCalls": 30})]), [])
+        self.assertTrue(self.check([card(budget={"attempts": 5, "toolCalls": 31})]))
+
+    def test_alice_tasks_stay_small(self):
+        three = ["packages/finance/src/a.ts", "packages/finance/src/b.ts", "packages/finance/src/c.ts"]
+        self.assertTrue(any("pequen" in p for p in self.check([card(allowedPaths=three)])))
+        self.assertEqual(self.check([card(assignee="claude", allowedPaths=three, protectedTests=[])]), [])
+
+    def test_pre_review_requires_checklist(self):
+        c = card(kind="pre-review", allowedPaths=[], protectedTests=[])
+        self.assertTrue(any("checklist" in p for p in self.check([c])))
+        self.assertEqual(self.check([card(kind="pre-review", allowedPaths=[], protectedTests=[], checklist=["C1 lint"])]), [])
 
 
 if __name__ == "__main__":

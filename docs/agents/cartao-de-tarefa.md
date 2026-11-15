@@ -29,6 +29,7 @@ officialDocs: []           # links já conhecidos, se houver
 budget: { attempts: 5, toolCalls: 25 }
 refactor: true             # depois de tudo verde: uma rodada de limpeza + nova verificação
 think: false               # raciocínio estendido do modelo (true só em lógica difícil)
+checklist: []              # só em pre-review: itens '<chave> descrição'; resposta = uma linha por item com evidência
 ```
 
 
@@ -46,3 +47,12 @@ Se não souber como algo funciona: web_search/fetch_page em documentação ofici
 NUNCA invente API, opção ou comportamento. Ao terminar, chame finish com resumo de 3 linhas e até 3 lessons.
 ```
 
+
+## Limites (validados por `alice.py cards`)
+| Regra | Limite | Por quê |
+|---|---|---|
+| Arquivos por cartão da Alice (`implement`, `test-author`) | ≤ 2 | LI-011: saída grande quebra a chamada de ferramenta |
+| `budget.toolCalls` | ≤ 30 | sessão longa perde o fio (LI-012) |
+| `budget.attempts` | ≤ 6 | |
+| `implement` da Alice | exige `protectedTests` | TDD |
+| `pre-review` | exige `checklist` | LI-013 |

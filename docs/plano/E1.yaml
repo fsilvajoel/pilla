@@ -30,6 +30,35 @@ cards:
   budget:
     attempts: 5
     toolCalls: 30
+- id: E1-T21
+  title: Implement IsoDate arithmetic (isoDate, addDays, addMonths, daysBetween)
+  kind: implement
+  assignee: alice
+  rules:
+  - RN-C04
+  refs:
+  - RFC-002 §3.3
+  dependsOn:
+  - E1-T01
+  allowedPaths:
+  - packages/finance/src/date.ts
+  protectedTests:
+  - packages/finance/src/date.test.ts
+  checks:
+  - pnpm --filter @pilla/finance exec vitest run src/date.test.ts --coverage --coverage.include=src/date.ts
+  - pnpm --filter @pilla/finance typecheck
+  - pnpm --filter @pilla/finance lint
+  done:
+  - all tests in date.test.ts pass
+  - 'integer arithmetic only: no Date, Math or Number'
+  - 100% line and branch coverage of date.ts
+  - civil-date <-> day-number conversion (e.g. days-from-civil algorithm) with integer division via (a - a % b) / b
+  budget:
+    attempts: 5
+    toolCalls: 30
+  readFirst:
+  - packages/finance/src/date.test.ts
+  - packages/finance/src/date.ts
 - id: E1-T02
   title: Write tests for roundToStep
   kind: test-author
@@ -45,7 +74,8 @@ cards:
   - packages/finance/src/rounding.test.ts
   protectedTests: []
   checks:
-  - pnpm --filter @pilla/finance test -- rounding
+  - pnpm --filter @pilla/finance typecheck
+  - pnpm --filter @pilla/finance lint
   done:
   - one test per example of RN-C03, T-13, named with the rule ID
   - nearest multiple of step, tie rounds up (RN-C03)
@@ -54,6 +84,10 @@ cards:
   budget:
     attempts: 5
     toolCalls: 30
+  readFirst:
+  - packages/finance/src/rounding.ts
+  - packages/finance/src/money.ts
+  - packages/finance/src/rounding.test.ts
 - id: E1-T03
   title: Implement roundToStep
   kind: implement
@@ -70,7 +104,7 @@ cards:
   protectedTests:
   - packages/finance/src/rounding.test.ts
   checks:
-  - pnpm --filter @pilla/finance test -- rounding
+  - pnpm --filter @pilla/finance exec vitest run src/rounding.test.ts --coverage --coverage.include=src/rounding.ts
   - pnpm --filter @pilla/finance typecheck
   - pnpm --filter @pilla/finance lint
   done:
@@ -81,6 +115,10 @@ cards:
   budget:
     attempts: 5
     toolCalls: 30
+  readFirst:
+  - packages/finance/src/rounding.test.ts
+  - packages/finance/src/rounding.ts
+  - packages/finance/src/money.ts
 - id: E1-T04
   title: Write tests for splitEvenly
   kind: test-author
@@ -96,15 +134,23 @@ cards:
   - packages/finance/src/split.test.ts
   protectedTests: []
   checks:
-  - pnpm --filter @pilla/finance test -- split
+  - node scripts/expect-red.mjs packages/finance src/split.test.ts
+  - pnpm --filter @pilla/finance typecheck
+  - pnpm --filter @pilla/finance lint
   done:
   - one test per example of T-01, T-02, named with the rule ID
   - base = floor(total / n); the last part takes the remainder (T-01, T-02)
   - parts always sum to total; n < 1 is an error
   - no mocks (pure functions); tests fail before implementation
+  - test file imports the functions from the existing stub and the helpers from ./money (and ./date); never edit the stub
+  - every test fails now (stub throws) and would pass with a correct implementation
   budget:
     attempts: 5
     toolCalls: 30
+  readFirst:
+  - packages/finance/src/split.ts
+  - packages/finance/src/money.ts
+  - packages/finance/src/rounding.test.ts
 - id: E1-T05
   title: Implement splitEvenly
   kind: implement
@@ -121,7 +167,7 @@ cards:
   protectedTests:
   - packages/finance/src/split.test.ts
   checks:
-  - pnpm --filter @pilla/finance test -- split
+  - pnpm --filter @pilla/finance exec vitest run src/split.test.ts --coverage --coverage.include=src/split.ts
   - pnpm --filter @pilla/finance typecheck
   - pnpm --filter @pilla/finance lint
   done:
@@ -132,6 +178,10 @@ cards:
   budget:
     attempts: 5
     toolCalls: 30
+  readFirst:
+  - packages/finance/src/split.test.ts
+  - packages/finance/src/split.ts
+  - packages/finance/src/money.ts
 - id: E1-T06
   title: Write tests for simpleInterest
   kind: test-author
@@ -146,7 +196,8 @@ cards:
   - packages/finance/src/interest.test.ts
   protectedTests: []
   checks:
-  - pnpm --filter @pilla/finance test -- interest
+  - pnpm --filter @pilla/finance typecheck
+  - pnpm --filter @pilla/finance lint
   done:
   - one test per example of T-03, named with the rule ID
   - simpleInterest(principal Cents, rate Bps, periods) rounds half-up once (T-03)
@@ -155,6 +206,10 @@ cards:
   budget:
     attempts: 5
     toolCalls: 30
+  readFirst:
+  - packages/finance/src/interest.ts
+  - packages/finance/src/money.ts
+  - packages/finance/src/rounding.test.ts
 - id: E1-T07
   title: Implement simpleInterest
   kind: implement
@@ -170,7 +225,7 @@ cards:
   protectedTests:
   - packages/finance/src/interest.test.ts
   checks:
-  - pnpm --filter @pilla/finance test -- interest
+  - pnpm --filter @pilla/finance exec vitest run src/interest.test.ts --coverage --coverage.include=src/interest.ts
   - pnpm --filter @pilla/finance typecheck
   - pnpm --filter @pilla/finance lint
   done:
@@ -181,6 +236,10 @@ cards:
   budget:
     attempts: 5
     toolCalls: 30
+  readFirst:
+  - packages/finance/src/interest.test.ts
+  - packages/finance/src/interest.ts
+  - packages/finance/src/money.ts
 - id: E1-T08
   title: Write tests for generateDueDates
   kind: test-author
@@ -198,7 +257,8 @@ cards:
   - packages/finance/src/due-dates.test.ts
   protectedTests: []
   checks:
-  - pnpm --filter @pilla/finance test -- due-dates
+  - pnpm --filter @pilla/finance typecheck
+  - pnpm --filter @pilla/finance lint
   done:
   - one test per example of RN-C04, T-08, T-09, T-10, named with the rule ID
   - MONTH unit counts from the ORIGINAL first due date; missing day -> last day of month (T-09)
@@ -207,6 +267,10 @@ cards:
   budget:
     attempts: 5
     toolCalls: 30
+  readFirst:
+  - packages/finance/src/due-dates.ts
+  - packages/finance/src/money.ts
+  - packages/finance/src/rounding.test.ts
 - id: E1-T09
   title: Implement generateDueDates
   kind: implement
@@ -220,12 +284,13 @@ cards:
   - RFC-002 §3.3
   dependsOn:
   - E1-T08
+  - E1-T21
   allowedPaths:
   - packages/finance/src/due-dates.ts
   protectedTests:
   - packages/finance/src/due-dates.test.ts
   checks:
-  - pnpm --filter @pilla/finance test -- due-dates
+  - pnpm --filter @pilla/finance exec vitest run src/due-dates.test.ts --coverage --coverage.include=src/due-dates.ts
   - pnpm --filter @pilla/finance typecheck
   - pnpm --filter @pilla/finance lint
   done:
@@ -236,6 +301,11 @@ cards:
   budget:
     attempts: 5
     toolCalls: 30
+  readFirst:
+  - packages/finance/src/due-dates.test.ts
+  - packages/finance/src/due-dates.ts
+  - packages/finance/src/money.ts
+  - packages/finance/src/date.ts
 - id: E1-T10
   title: Write tests for generateSchedule
   kind: test-author
@@ -255,7 +325,8 @@ cards:
   - packages/finance/src/schedule.test.ts
   protectedTests: []
   checks:
-  - pnpm --filter @pilla/finance test -- schedule
+  - pnpm --filter @pilla/finance typecheck
+  - pnpm --filter @pilla/finance lint
   done:
   - one test per example of RN-C03, T-04, T-11, T-12, T-14, CA-01, named with the rule ID
   - INSTALLMENT and SINGLE_PAYMENT follow RFC-002 §3.4.1 (round interest, then installment, total = installment x n)
@@ -264,6 +335,10 @@ cards:
   budget:
     attempts: 5
     toolCalls: 30
+  readFirst:
+  - packages/finance/src/schedule.ts
+  - packages/finance/src/money.ts
+  - packages/finance/src/rounding.test.ts
 - id: E1-T11
   title: Implement generateSchedule
   kind: implement
@@ -284,7 +359,7 @@ cards:
   protectedTests:
   - packages/finance/src/schedule.test.ts
   checks:
-  - pnpm --filter @pilla/finance test -- schedule
+  - pnpm --filter @pilla/finance exec vitest run src/schedule.test.ts --coverage --coverage.include=src/schedule.ts
   - pnpm --filter @pilla/finance typecheck
   - pnpm --filter @pilla/finance lint
   done:
@@ -295,6 +370,10 @@ cards:
   budget:
     attempts: 5
     toolCalls: 30
+  readFirst:
+  - packages/finance/src/schedule.test.ts
+  - packages/finance/src/schedule.ts
+  - packages/finance/src/money.ts
 - id: E1-T12
   title: Write tests for calculateLateCharges
   kind: test-author
@@ -311,15 +390,23 @@ cards:
   - packages/finance/src/late-charges.test.ts
   protectedTests: []
   checks:
-  - pnpm --filter @pilla/finance test -- late-charges
+  - node scripts/expect-red.mjs packages/finance src/late-charges.test.ts
+  - pnpm --filter @pilla/finance typecheck
+  - pnpm --filter @pilla/finance lint
   done:
   - one test per example of RN-E01, RN-E02, T-07, named with the rule ID
   - zero when days <= grace period (T-07)
   - fine once on the open amount; late interest = monthly rate x days / 30
   - no mocks (pure functions); tests fail before implementation
+  - test file imports the functions from the existing stub and the helpers from ./money (and ./date); never edit the stub
+  - every test fails now (stub throws) and would pass with a correct implementation
   budget:
     attempts: 5
     toolCalls: 30
+  readFirst:
+  - packages/finance/src/late-charges.ts
+  - packages/finance/src/money.ts
+  - packages/finance/src/rounding.test.ts
 - id: E1-T13
   title: Implement calculateLateCharges
   kind: implement
@@ -331,13 +418,15 @@ cards:
   refs:
   - RFC-002 §3.5
   dependsOn:
+  - E1-T03
   - E1-T12
+  - E1-T21
   allowedPaths:
   - packages/finance/src/late-charges.ts
   protectedTests:
   - packages/finance/src/late-charges.test.ts
   checks:
-  - pnpm --filter @pilla/finance test -- late-charges
+  - pnpm --filter @pilla/finance exec vitest run src/late-charges.test.ts --coverage --coverage.include=src/late-charges.ts
   - pnpm --filter @pilla/finance typecheck
   - pnpm --filter @pilla/finance lint
   done:
@@ -348,6 +437,11 @@ cards:
   budget:
     attempts: 5
     toolCalls: 30
+  readFirst:
+  - packages/finance/src/late-charges.test.ts
+  - packages/finance/src/late-charges.ts
+  - packages/finance/src/money.ts
+  - packages/finance/src/date.ts
 - id: E1-T14
   title: Write tests for allocatePayment
   kind: test-author
@@ -363,7 +457,8 @@ cards:
   - packages/finance/src/allocation.test.ts
   protectedTests: []
   checks:
-  - pnpm --filter @pilla/finance test -- allocation
+  - pnpm --filter @pilla/finance typecheck
+  - pnpm --filter @pilla/finance lint
   done:
   - one test per example of T-05, T-06, named with the rule ID
   - oldest installment first; charges -> interest -> principal (RFC-002 §3.6)
@@ -372,6 +467,10 @@ cards:
   budget:
     attempts: 5
     toolCalls: 30
+  readFirst:
+  - packages/finance/src/allocation.ts
+  - packages/finance/src/money.ts
+  - packages/finance/src/rounding.test.ts
 - id: E1-T15
   title: Implement allocatePayment
   kind: implement
@@ -388,7 +487,7 @@ cards:
   protectedTests:
   - packages/finance/src/allocation.test.ts
   checks:
-  - pnpm --filter @pilla/finance test -- allocation
+  - pnpm --filter @pilla/finance exec vitest run src/allocation.test.ts --coverage --coverage.include=src/allocation.ts
   - pnpm --filter @pilla/finance typecheck
   - pnpm --filter @pilla/finance lint
   done:
@@ -399,6 +498,10 @@ cards:
   budget:
     attempts: 5
     toolCalls: 30
+  readFirst:
+  - packages/finance/src/allocation.test.ts
+  - packages/finance/src/allocation.ts
+  - packages/finance/src/money.ts
 - id: E1-T16
   title: Write tests for outstandingBalance, payoffAmount and loanStanding
   kind: test-author
@@ -413,7 +516,8 @@ cards:
   - packages/finance/src/balance.test.ts
   protectedTests: []
   checks:
-  - pnpm --filter @pilla/finance test -- balance
+  - pnpm --filter @pilla/finance typecheck
+  - pnpm --filter @pilla/finance lint
   done:
   - one test per example of RN-C08, named with the rule ID
   - outstandingBalance = open amounts + charges at ref
@@ -422,6 +526,10 @@ cards:
   budget:
     attempts: 5
     toolCalls: 30
+  readFirst:
+  - packages/finance/src/balance.ts
+  - packages/finance/src/money.ts
+  - packages/finance/src/rounding.test.ts
 - id: E1-T17
   title: Implement outstandingBalance, payoffAmount and loanStanding
   kind: implement
@@ -437,7 +545,7 @@ cards:
   protectedTests:
   - packages/finance/src/balance.test.ts
   checks:
-  - pnpm --filter @pilla/finance test -- balance
+  - pnpm --filter @pilla/finance exec vitest run src/balance.test.ts --coverage --coverage.include=src/balance.ts
   - pnpm --filter @pilla/finance typecheck
   - pnpm --filter @pilla/finance lint
   done:
@@ -448,6 +556,10 @@ cards:
   budget:
     attempts: 5
     toolCalls: 30
+  readFirst:
+  - packages/finance/src/balance.test.ts
+  - packages/finance/src/balance.ts
+  - packages/finance/src/money.ts
 - id: E1-T18
   title: Write property-based tests (sums always close, nothing negative)
   kind: test-author
@@ -461,13 +573,18 @@ cards:
   - packages/finance/src/properties.test.ts
   protectedTests: []
   checks:
-  - pnpm --filter @pilla/finance test -- properties
+  - pnpm --filter @pilla/finance typecheck
+  - pnpm --filter @pilla/finance lint
   done:
   - fast-check with fixed seed
   - installments sum to total; allocations sum to payment; no negative values
   budget:
     attempts: 5
     toolCalls: 30
+  readFirst:
+  - packages/finance/src/properties.ts
+  - packages/finance/src/money.ts
+  - packages/finance/src/rounding.test.ts
 - id: E1-T19
   title: Pre-review the finance package and run mutation testing
   kind: pre-review
@@ -483,11 +600,18 @@ cards:
   - pnpm --filter @pilla/finance test
   - pnpm --filter @pilla/finance mutation
   done:
-  - list of findings file:line - problem - rule, or 'sem achados'
-  - mutation score >= 90%
+  - 'one line per checklist item: ''<key> ok|falta|parcial|n/a - evidence (file:line or command)'''
   budget:
     attempts: 3
     toolCalls: 30
+  checklist:
+  - C1 every T-01..T-14 and CA-01 has a test named with its ID
+  - C2 coverage 100% lines and branches
+  - C3 mutation score >= 90%
+  - C4 no float, Math, Number or parseFloat in src
+  - C5 function names match docs/glossario.md
+  - C6 public functions exported from src/index.ts
+  - C7 no TODO without rule ID
 - id: E1-T20
   title: Draft the finance module sheet
   kind: docs

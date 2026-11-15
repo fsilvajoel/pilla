@@ -85,14 +85,20 @@ def validate_plan(plan: dict, known_rules: set[str], external_ids: set[str]) -> 
         if not allowed_paths and kind != "pre-review":
             problems.append(f"{cid}: allowedPaths vazio só em pre-review")
             
+        # Small tasks (LI-011): Alice edits at most 2 files; pre-review needs a closed checklist (LI-013)
+        if assignee == "alice" and kind in ("implement", "test-author") and len(allowed_paths) > 2:
+            problems.append(f"{cid}: tarefa da Alice deve ser pequena (até 2 arquivos em allowedPaths)")
+        if kind == "pre-review" and not card.get("checklist"):
+            problems.append(f"{cid}: pre-review exige checklist (uma linha por item no resultado)")
+
         # Budget
         budget = card.get("budget", {})
         attempts = budget.get("attempts", 0)
         tool_calls = budget.get("toolCalls", 0)
         if attempts > 6:
             problems.append(f"{cid}: budget.attempts > 6")
-        if tool_calls > 40:
-            problems.append(f"{cid}: budget.toolCalls > 40")
+        if tool_calls > 30:
+            problems.append(f"{cid}: budget.toolCalls > 30")
 
     # Cycle detection
     visited = set()

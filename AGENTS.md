@@ -59,6 +59,14 @@ Testes vêm **antes** do código e são escritos por quem **não** implementa. Q
 | `docs` | rascunha ficha de módulo, corpo de PR, lições | `docs/memoria/**` do cartão |
 | `cards` | rascunha cartões a partir das tabelas das RFCs | `docs/plano/**` |
 
+**Tarefa da Alice é pequena** (lições LI-011/012/013, conferidas pelo `alice.py cards`):
+- no máximo **2 arquivos** em `allowedPaths` e **30 chamadas** de ferramenta; uma função por cartão;
+- arquivo grande é escrito em partes; saída grande (vários cartões, documento longo) é gerada **por partes em modo texto** e montada por script;
+- critérios de pronto e o que exige fidelidade ao plano são escritos pelo Claude, ancorados no ID da regra;
+- `pre-review` sempre com `checklist` fechado: uma linha por item com evidência; "ok" sem prova exata é erro. Pré-revisão é filtro, não aprovação.
+
+**Enquanto a Alice roda, ninguém edita o repositório** (LI-009): antes de editar, `alice.py status`. Fila de cartões: `alice.py plan-run docs/plano/E1.yaml <IDs>` (pula dependentes de falhas).
+
 Formato do cartão: [docs/agents/cartao-de-tarefa.md](docs/agents/cartao-de-tarefa.md).
 
 ## 5. Contexto e memória
