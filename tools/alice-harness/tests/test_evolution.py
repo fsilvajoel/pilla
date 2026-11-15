@@ -217,5 +217,16 @@ class ShortPathEvidenceTest(unittest.TestCase):
             self.assertEqual(weak_evidence("C1 ok - only.ts:2\nC2 ok - src/index.ts:1", ["C1 x", "C2 y"], repo), ["C2"])
 
 
+class ReadRulePathTest(unittest.TestCase):
+    def test_read_rule_with_a_file_path_reads_the_file(self):  # LI-038
+        import subprocess, alice
+        with tempfile.TemporaryDirectory() as d:
+            repo = Path(d); (repo / "docs").mkdir(); (repo / "docs/glossario.md").write_text("Empréstimo\n")
+            subprocess.run(["git", "init", "-q", d], check=True)
+            run = alice.Run({"id": "E9-T01", "title": "t", "kind": "pre-review", "allowedPaths": [], "checks": [], "done": ["x"]}, repo, repo)
+            out = alice.Tools(run).read_rule("docs/glossario.md")
+            self.assertIn("Empréstimo", out)
+
+
 if __name__ == "__main__":
     unittest.main()

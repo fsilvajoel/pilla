@@ -369,8 +369,11 @@ class Tools:
 
     def read_rule(self, rule_id: str) -> str:
         rid = rule_id.strip()
+        if "/" in rid and (self.repo / rid).is_file():  # LI-038: a path is a file, not a rule id
+            return f"(é um arquivo; da próxima vez use read_file)\n" + self.read_file(rid)
         return (find_rule(self.repo, rid) or find_doc(self.repo, rid)
-                or f"regra {rule_id} não encontrada; IDs aceitos: RN-C03, T-13, CA-01, RFC-002, RFC-002 §3.4, ADR-0004. Ou ask_claude")
+                or f"regra {rule_id} não encontrada; IDs aceitos: RN-C03, T-13, CA-01, RFC-002, RFC-002 §3.4, ADR-0004. "
+                   "Caminho de arquivo (docs/x.md) → read_file. Ou ask_claude")
 
     def run_check(self, index: int = -1) -> str:
         checks = self.run.card["checks"]
