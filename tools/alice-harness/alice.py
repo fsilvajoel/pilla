@@ -924,7 +924,7 @@ class Run:
                         self.stats["auto_answered"] = 1
                         self.messages.append({"role": "tool", "tool_name": name, "content": PRE_REVIEW_ANSWER})
                         continue
-                    return self.end("needs_input", 3, extra={"question": q})
+                    return self.end("needs_input", 3, extra={"question": q, "runDir": str(self.dir)})
                 if name == "finish":
                     self.stats["attempts"] += 1
                     ok, problems = self.verify()
@@ -1194,7 +1194,7 @@ def cmd_plan_run(plan: Path, ids: list[str], repo: Path) -> int:
             rep = json.loads(p.stdout[p.stdout.index("{"):])
         except ValueError:
             rep = {"status": f"crash (exit {p.returncode})", "message": (p.stdout + p.stderr)[-400:]}
-        results.append({"task": cid, "exit": p.returncode, "seconds": round(time.time() - t), **{k: rep.get(k) for k in ("status", "attempts", "toolCalls", "aliceTokens", "message", "lessons")}})
+        results.append({"task": cid, "exit": p.returncode, "seconds": round(time.time() - t), **{k: rep.get(k) for k in ("status", "attempts", "toolCalls", "aliceTokens", "message", "lessons", "question", "runDir")}})
         if p.returncode != 0:
             failed.add(cid)
     stamp = time.strftime('%Y%m%d-%H%M%S')
