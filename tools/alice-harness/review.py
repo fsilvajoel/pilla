@@ -105,3 +105,18 @@ def signature_problems(cid: str, text: str, files: dict[str, str]) -> list[str]:
     if meta.get("card") != cid or meta.get("task") != "test" or files.get(str(meta.get("path"))) != meta.get("sha"):
         return [f"{cid}: a resposta bruta {rid} é de outro cartão ou de outra versão do teste: rode `bia.py test` de novo"]
     return []
+
+
+def rejection_notes(repo: Path, cid: str, limit: int = 8, width: int = 300) -> list[str]:
+    """Problemas da última revisão reprovada do cartão, sem repetição (linha, regra) e cortados: vão para a
+    próxima rodada da Alice, que senão refaz às cegas (16/11, E4-T03)."""
+    f = review_file(repo, cid)
+    if not f.is_file() or "## Problemas" not in (text := f.read_text()):
+        return []
+    seen, out = set(), []
+    for line in text.split("## Problemas", 1)[1].splitlines():
+        m = re.match(r"- linha (\S+) \(regra (\S+)\): (.*)", line)
+        if m and (m.group(1), m.group(2)) not in seen:
+            seen.add((m.group(1), m.group(2)))
+            out.append(line[:width])
+    return out[:limit]

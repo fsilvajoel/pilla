@@ -63,6 +63,24 @@
 - O gpt-oss às vezes gera uma chamada de ferramenta que o Ollama não consegue ler (HTTP 500). Na 1ª rodada isso derrubou 3 de 4 cartões. Depois da correção do harness (repetir a requisição em caso de 5xx, LI-049), 2 erros foram absorvidos sem perda.
 - Calibragem: Qwen 3.8 em 8 bits (30 GB) não cabe na GPU; dividido entre GPU e CPU, roda a ~1 tok/s. Na versão de ~2 bits (9,6 GB) roda a 52 tok/s. O gpt-oss (14 GB) é o único que transborda da VRAM: 26 tok/s.
 
+## Segundo agente revisor e economia de cota (2026-11-15, plano E4)
+- Papéis: a Alice (Qwen 3.5 9B, local) escreve teste e código; a "Bia" (modelo gratuito via OpenRouter) só revisa cartão e teste antes do commit. Quem escreve não assina a revisão (o harness recusa as assinaturas "claude" e "alice").
+- Restrição real do tier gratuito: 50 requisições por dia (não é o saldo em dólar). A GPU local não tem custo por chamada, então a regra virou "a GPU local primeiro".
+- Três portões antes de gastar requisição: (1) checks mecânicos vermelhos → a Bia nem é chamada; (2) pré-revisão local na GPU, por consenso (até 3 amostras; só conta problema apontado por 2 na mesma linha, porque uma amostra sozinha inventou que `it.each` não existe); (3) cota lida antes de cada chamada, com reserva de 5.
+- Reprovação vira arquivo (`docs/plano/revisao/<ID>.md`) e a próxima execução da Alice recebe esses problemas no prompt.
+- Experimento T01/T02 (fakeCpf), braço A (Alice escreve o teste) × braço B (Bia escreve o teste): os dois barraram 6 de 6 mutantes; B saiu mais barato e mais rápido, mas foi uma repetição só.
+- E4-T03 (testes de `redact`), em números:
+
+| Execução | Resultado | Tempo | Tentativas | Chamadas | Requisições OpenRouter |
+|---|---|---|---|---|---|
+| Revisão do cartão | pré-revisão local achou dica ambígua; corrigida; Bia aprovou | - | - | - | 1 |
+| 1ª entrega da Alice | checks verdes, mas 1 teste impossível e `JSON.parse` no lugar de `structuredClone`; barrada pela pré-revisão local | 150 s | 2 | 34 | 0 |
+| 2ª entrega (com as notas da reprovação) | corrigiu o teste impossível, mas usou `as any` (57 erros de lint) e manteve o `JSON.parse`; cartão falhou; barrada pelo portão de checks | 694 s | 4 | 30 | 0 |
+
+- Ganho medido: duas entregas ruins barradas sem gastar requisição; a cota do dia ficou em 39 de 50 durante toda a rodada.
+- Custo: a 2ª entrega gastou 2,83 milhões de tokens de entrada e 37,7 mil de saída da Alice (custo zero de API), e o tempo subiu 4,6×. O Claude gastou ≈ 0,33 milhão de tokens equivalentes nessa leva.
+- Limite observado: as notas da pré-revisão local vêm confusas, e duas delas contradiziam o critério de pronto (trocar o `toBe` de Date/Error). A suspeita, não verificada, é que notas ruins pioraram a 2ª entrega. A pré-revisão local serve de filtro barato; o portão final continua sendo a Bia.
+
 ## Ainda NÃO testado (conclusões pendentes)
 - Geração de código TypeScript do produto (E1: motor financeiro; depois API, banco, frontend).
 - Modo test-author (Alice escrevendo testes), pre-review, fila de tarefas, CI com todas as travas (lint, tipos, fronteiras, mutação).

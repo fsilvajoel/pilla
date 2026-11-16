@@ -96,13 +96,33 @@ class BiaTest(RepoCase):
         """GPU local é grátis, o OpenRouter tem 50/dia: se a Alice já reprova, a Bia não é chamada."""
         calls = []
         old, bia.chat = bia.chat, lambda *a, **k: calls.append(a)
-        bia.local_review = lambda prompt: [{"linha": 3, "regra": 2, "explicacao": "asserção vazia"}]
+        bia.local_review = lambda prompt: [{"linha": 3, "regra": 2, "explicacao": "asserção vazia"},
+                                           {"linha": 3, "regra": 2, "explicacao": "repetido"}]
         try:
             self.assertEqual(bia.review_test(self.repo, self.card(["true"]), "m", "bia"), 2)
             self.assertEqual(bia.review_card(self.repo, self.card(["true"]), "m", "bia"), 2)
         finally:
             bia.chat = old
         self.assertEqual(calls, [])
+        # a reprovação volta para a próxima rodada da Alice, sem repetição, e não vale como aprovação
+        self.assertEqual(review.rejection_notes(self.repo, AUTHOR["id"]), ["- linha 3 (regra 2): asserção vazia"])
+        self.assertTrue(review_problems(self.repo, AUTHOR, "worktree"))
+
+    def test_local_review_needs_two_samples_on_the_same_line(self):
+        """A Alice local alucina às vezes: problema de uma amostra só não reprova nem vira nota."""
+        bia.local_review = self._local
+        def run(samples):
+            it = iter(samples)
+            old, bia.local_sample = bia.local_sample, lambda prompt: next(it)
+            try:
+                return bia.local_review("p", samples=3)
+            finally:
+                bia.local_sample = old
+        p = lambda line, why="x": {"linha": line, "regra": 1, "explicacao": why}
+        self.assertEqual(run([[p(12, "real")], [p(2, "alucinação")], [p(12, "de novo"), p(30)]]), [p(12, "real")])
+        self.assertIsNone(run([[p(2)], [], []]))  # só uma amostra acusou
+        self.assertIsNone(run([[], [], "não chega aqui"]))  # duas aprovaram: para cedo
+        self.assertIsNone(run([None]))  # GPU fora do ar: segue para a Bia
 
     def test_quota_reserve_stops_before_the_request(self):
         sent = []

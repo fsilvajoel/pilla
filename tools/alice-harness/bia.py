@@ -162,8 +162,11 @@ Responda SÓ com JSON, em pt-BR:
 Aprovado só se não houver problema e todos os itens forem ok."""
 
 
-def local_review(prompt: str) -> list[dict] | None:
-    """A mesma revisão na GPU da Alice (sem custo). Lista de problemas se ela reprovar; None se aprovar ou falhar."""
+LOCAL_SAMPLES = int(os.environ.get("BIA_LOCAL_SAMPLES", "3"))
+
+
+def local_sample(prompt: str) -> list[dict] | None:
+    """Uma revisão na GPU da Alice: problemas se reprovar, [] se aprovar, None se falhar."""
     prof = load_profile(PROFILE_NAME)
     opts, think = chat_options(prof, {})
     payload = {"model": prof.get("model", ALICE_MODEL), "stream": False, "think": think, "options": opts,
@@ -172,16 +175,59 @@ def local_review(prompt: str) -> list[dict] | None:
         data = post_chat(payload, int(prof.get("timeout", 600)))
         verdict = parse_json(data["message"]["content"] or "")
     except (RuntimeError, ValueError, KeyError, OSError) as e:
-        print(f"pré-revisão local indisponível ({e}); segue para a Bia")
+        print(f"pré-revisão local indisponível ({e})")
         return None
-    print(f"pré-revisão local (alice {PROFILE_NAME}): {verdict.get('veredito')}; tokens alice: "
+    problems = (verdict.get("problemas") or []) if verdict.get("veredito") == "reprovado" else []
+    print(f"pré-revisão local (alice {PROFILE_NAME}): {'reprovado' if problems else 'aprovado'}; tokens alice: "
           f"entrada={data.get('prompt_eval_count', 0)} saída={data.get('eval_count', 0)}")
-    problems = verdict.get("problemas") or []
-    return problems if verdict.get("veredito") == "reprovado" and problems else None
+    return problems
+
+
+def local_review(prompt: str, samples: int | None = None) -> list[dict] | None:
+    """Pré-revisão grátis por consenso: a Alice local varia de rodada a rodada e às vezes alucina (16/11: "it.each
+    não existe"), então só vale o problema cuja linha aparece em pelo menos 2 amostras. Devolve esses problemas
+    (um por linha) ou None (aprovou, sem consenso ou indisponível: segue para a Bia)."""
+    samples = samples or LOCAL_SAMPLES
+    need = min(2, samples)
+    runs: list[list[dict]] = []
+    for _ in range(samples):
+        got = local_sample(prompt)
+        if got is None:
+            return None
+        runs.append(got)
+        votes: dict[str, int] = {}
+        for r in runs:
+            for line in {str(p.get("linha")) for p in r}:
+                votes[line] = votes.get(line, 0) + 1
+        agreed = [line for line, v in votes.items() if v >= need]
+        if agreed:
+            first: dict[str, dict] = {}
+            for r in runs:
+                for p in r:
+                    first.setdefault(str(p.get("linha")), p)
+            return [first[line] for line in agreed]
+        if sum(1 for r in runs if not r) >= need:  # aprovou em maioria: não gasta mais GPU
+            break
+    return None
+
+
+LAST_LOCAL: list[dict] = []
+
+
+def write_rejection(repo: Path, cid: str, path: str, sha: str, problems: list[dict]) -> None:
+    """Reprovação local também vira revisao/<ID>.md (sem assinatura válida): a próxima rodada da Alice a lê."""
+    lines = [f"# Revisão {cid}", "", f"revisor: alice-local {PROFILE_NAME} -", f"arquivo: {path} {sha}", "",
+             "veredito: reprovado (pré-revisão local)", "", "## Problemas"]
+    lines += [f"- linha {p.get('linha')} (regra {p.get('regra')}): {p.get('explicacao')}" for p in problems]
+    f = review_file(repo, cid)
+    f.parent.mkdir(parents=True, exist_ok=True)
+    f.write_text("\n".join(lines) + "\n")
+    print(f"reprovação gravada em {f.relative_to(repo)}")
 
 
 def pre_rejected(prompt: str, pre: bool) -> bool:
     problems = local_review(prompt) if pre else None
+    LAST_LOCAL[:] = problems or []
     for p in problems or []:
         print(f"  - linha {p.get('linha')} (regra {p.get('regra')}): {p.get('explicacao')}")
     if problems:
@@ -209,6 +255,7 @@ def review_test(repo: Path, card: dict, model: str, name: str, pre: bool = True)
               f"\n\n# TESTE {path} (com número de linha)\n{numbered}\n")
     sha = blob_sha(repo, path, "worktree")
     if pre_rejected(prompt, pre):
+        write_rejection(repo, card["id"], path, sha, LAST_LOCAL)
         return 2
     try:
         data = chat([{"role": "user", "content": prompt}], model, api_key(repo))

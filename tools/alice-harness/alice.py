@@ -46,7 +46,7 @@ from policy import load_policy
 from claude_usage import card_since, cost, latest_transcript, load as load_usage, load_all, window
 from retro import tool_error_summary, write_retro
 from rules import find_doc, find_rule, rules_text
-from review import review_problems
+from review import rejection_notes, review_problems
 
 HERE = Path(__file__).resolve().parent
 RUNS = HERE / "runs"
@@ -547,7 +547,7 @@ class Tools:
 
 KIND_NOTES = {
     "implement": "Implemente o código para os testes protegidos passarem.",
-    "test-author": "Escreva testes que FALHAM para as regras listadas (um caso por exemplo do documento, citando o ID no nome do teste). NÃO implemente o código de produção. O Claude revisa antes do commit.",
+    "test-author": "Escreva testes que FALHAM para as regras listadas (um caso por exemplo do documento, citando o ID no nome do teste). NÃO implemente o código de produção. A Bia revisa antes do commit.",
     "pre-review": "Revise o diff do branch contra o cartão, as regras e o glossário. No finish, summary = lista 'arquivo:linha — problema — regra'.",
     "docs": ("Rascunhe a documentação pedida em pt-BR, curta e factual, só com o que está no código e nos docs. O Claude faz a curadoria. "
              "Fontes: os comentários /** */ das funções exportadas (citam os IDs das regras), read_rule do documento citado em refs "
@@ -706,6 +706,9 @@ class Run:
                      "(vermelho = 'falta', citando a primeira linha da saída). Prova fora do repositório (ex.: configuração do GitHub) = "
                      "'n/a - fora do repositório'; incompleto = 'parcial' ou 'falta':\n" + bullets(c["checklist"])) if c.get("checklist") else ""
         hints = ("Como fazer (dicas; não são critério de pronto):\n" + bullets(c["hints"])) if c.get("hints") else ""
+        notes = rejection_notes(self.guard.repo, c["id"]) if self.kind == "test-author" else []
+        rejected = ("# REVISÃO ANTERIOR (a última entrega deste cartão foi reprovada; o número da linha é do arquivo antigo)\n"
+                    "Corrija o que for verdade; o PRONTO QUANDO continua valendo acima de qualquer item abaixo.\n" + "\n".join(notes)) if notes else ""
         sections = [
             f"Você é a Alice, desenvolvedora do projeto. Você trabalha chamando as ferramentas; o ambiente confere o resultado.",
             f"# TAREFA {c['id']}: {c['title']}\nTipo: {self.kind}. {kind_note}",
@@ -717,6 +720,7 @@ class Run:
             + f"Leia primeiro (read_file):\n{bullets(c.get('readFirst') or ['(só os arquivos acima e os citados abaixo)'])}",
             f"# PRONTO QUANDO (no finish o ambiente confere cada linha e roda todos os checks)\n{bullets(c.get('done', []))}",
             hints,
+            rejected,
             checklist,
             "Checks (run_check <índice>):\n" + "\n".join(f"{i}: {cmd}" for i, cmd in enumerate(c["checks"])),
             "# REGRAS DE CÓDIGO\nCódigo e nomes em inglês; comentários em pt-BR (ADR-0012), mesmo se o arquivo vizinho tiver comentário em inglês.\n"
