@@ -104,7 +104,23 @@ def signature_problems(cid: str, text: str, files: dict[str, str]) -> list[str]:
         return [f"{cid}: a assinatura aponta para {rid}, mas a resposta bruta não existe: rode `bia.py test` de novo"]
     if meta.get("card") != cid or meta.get("task") != "test" or files.get(str(meta.get("path"))) != meta.get("sha"):
         return [f"{cid}: a resposta bruta {rid} é de outro cartão ou de outra versão do teste: rode `bia.py test` de novo"]
+    if name.lower() == AUDIT_SIGNER:
+        return audit_problems(cid, meta)
     return signer_problems(cid, name, str(meta.get("writer") or "alice"))
+
+
+AUDIT_SIGNER = "auditoria-bia"
+
+
+def audit_problems(cid: str, meta: dict) -> list[str]:
+    """Feature (ADR-0014): a Bia escreveu e auditou o teste; a assinatura só vale apoiada em números mecânicos
+    gravados pelo orquestrador (expect-red na etapa 2, checks verdes na auditoria). A aprovação final é do Claude."""
+    mech = meta.get("mechanical") or {}
+    if not meta.get("feature"):
+        return [f"{cid}: {AUDIT_SIGNER} só assina pela auditoria de feature (`alice.py feature`)"]
+    if mech.get("expectRed") is not True or mech.get("checksGreen") is not True:
+        return [f"{cid}: a auditoria de {meta.get('feature')} não tem expect-red e checks verdes: o teste da Bia não vale sem números mecânicos"]
+    return []
 
 
 def signer_problems(cid: str, name: str, writer: str) -> list[str]:

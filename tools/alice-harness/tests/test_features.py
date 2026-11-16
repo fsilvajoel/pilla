@@ -64,3 +64,65 @@ class FeatureProblemsTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+import json
+import subprocess
+import tempfile
+from pathlib import Path
+from unittest import mock
+
+import review
+from alice import protected_test_problems
+
+
+class AuditSignatureTest(unittest.TestCase):
+    """A Bia escreve e audita o teste da feature: a assinatura só vale com números mecânicos (ADR-0014)."""
+
+    def problems(self, meta: dict) -> list[str]:
+        with tempfile.TemporaryDirectory() as d:
+            raw = Path(d)
+            (raw / "aud-1.json").write_text(json.dumps({"card": "E9-T01", "task": "test", "path": "a.test.ts", "sha": "f" * 40, **meta}))
+            text = f"revisor: auditoria-bia m aud-1\narquivo: a.test.ts {'f' * 40}\n"
+            with mock.patch.object(review, "RAW_DIR", raw):
+                return review.signature_problems("E9-T01", text, {"a.test.ts": "f" * 40})
+
+    def test_with_mechanical_numbers_it_is_valid(self):
+        self.assertEqual(self.problems({"feature": "E9-F01", "writer": "bia", "mechanical": {"expectRed": True, "checksGreen": True}}), [])
+
+    def test_without_feature_or_numbers_it_is_refused(self):
+        self.assertTrue(self.problems({"writer": "bia", "mechanical": {"expectRed": True, "checksGreen": True}}))
+        self.assertTrue(self.problems({"feature": "E9-F01", "writer": "bia", "mechanical": {"expectRed": False, "checksGreen": True}}))
+
+    def test_plain_bia_still_cannot_sign_her_own_test(self):
+        with tempfile.TemporaryDirectory() as d:
+            raw = Path(d)
+            (raw / "r.json").write_text(json.dumps({"card": "E9-T01", "task": "test", "path": "a.test.ts", "sha": "f" * 40, "writer": "bia"}))
+            with mock.patch.object(review, "RAW_DIR", raw):
+                got = review.signature_problems("E9-T01", "revisor: bia m r\n", {"a.test.ts": "f" * 40})
+        self.assertTrue(got)
+
+
+class FeatureTestsPreflightTest(unittest.TestCase):
+    """O implement da feature roda antes do commit do teste: vale só o sha gravado na etapa de testes."""
+
+    def setUp(self) -> None:
+        self.tmp = tempfile.TemporaryDirectory()
+        self.repo = Path(self.tmp.name)
+        subprocess.run(["git", "init", "-q"], cwd=self.repo, check=True)
+        (self.repo / "a.test.ts").write_text("it('x', () => {});\n")
+        self.sha = review.blob_sha(self.repo, "a.test.ts", "worktree")
+
+    def tearDown(self) -> None:
+        self.tmp.cleanup()
+
+    def test_uncommitted_test_is_refused_without_feature(self):
+        got = protected_test_problems({"protectedTests": ["a.test.ts"]}, self.repo)
+        self.assertIn("não está commitado", " ".join(got))
+
+    def test_feature_sha_is_accepted(self):
+        self.assertEqual(protected_test_problems({"protectedTests": ["a.test.ts"], "featureTests": {"a.test.ts": self.sha}}, self.repo), [])
+
+    def test_changed_after_tests_stage_is_refused(self):
+        got = protected_test_problems({"protectedTests": ["a.test.ts"], "featureTests": {"a.test.ts": "0" * 40}}, self.repo)
+        self.assertIn("mudou depois", " ".join(got))

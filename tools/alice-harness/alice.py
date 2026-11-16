@@ -46,7 +46,7 @@ from policy import load_policy
 from claude_usage import card_since, cost, latest_transcript, load as load_usage, load_all, session_files, window
 from retro import tool_error_summary, write_retro
 from rules import find_doc, find_rule, rules_text
-from review import rejection_notes, review_problems
+from review import blob_sha, rejection_notes, review_problems
 
 HERE = Path(__file__).resolve().parent
 RUNS = HERE / "runs"
@@ -1042,9 +1042,20 @@ def protected_test_problems(card: dict, repo: Path) -> list[str]:
     se veio de um cartão test-author, ter a revisão do Claude sobre essa versão (erro 11: E4-T02 rodou em cima
     de um teste impossível)."""
     out = []
+    feature_tests = {str(k): str(v) for k, v in (card.get("featureTests") or {}).items()}
     for f in [str(x) for x in card.get("protectedTests") or [] if "*" not in str(x)]:
         if not (repo / f).exists():
             continue  # já acusado acima
+        if f in feature_tests:  # ADR-0014: teste da etapa 2 da feature, ainda sem commit; vale só o sha gravado
+            if blob_sha(repo, f, "worktree") != feature_tests[f]:
+                out.append(f"protectedTests: {f} mudou depois da etapa de testes da feature (rode `alice.py feature --stage tests`)")
+                continue
+            script = repo / "scripts" / "check-test-quality.mjs"
+            if f.endswith(".test.ts") and script.exists():
+                q = subprocess.run(["node", str(script), f], cwd=repo, capture_output=True, text=True)
+                if q.returncode != 0:
+                    out.append(f"protectedTests: {f} reprovado no check de qualidade de teste:\n{q.stderr.strip()}")
+            continue
         tracked = subprocess.run(["git", "ls-files", "--error-unmatch", f], cwd=repo, capture_output=True).returncode == 0
         clean = subprocess.run(["git", "diff", "--quiet", "HEAD", "--", f], cwd=repo).returncode == 0
         if not tracked or not clean:
