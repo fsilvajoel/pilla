@@ -105,6 +105,35 @@ class StallDetector:
         return (f"Você repetiu a mesma chamada {self.count} vezes seguidas e o resultado não muda. "
                 "Pare de repetir: leia o resultado anterior, mude a abordagem ou use ask_claude.")
 
+class CallBudget:
+    """Limite de chamadas de ferramenta por tentativa. Ao atingir `limit`, avisa uma vez (nudge); se o modelo ignora o
+    aviso e passa de `grace` chamadas sem chamar finish, para (stop). Antes o aviso só zerava o contador: o limite do
+    cartão (20) virava piso de 20 em 20 (61 chamadas no E4-T05)."""
+
+    def __init__(self, limit: int, grace: int = 4):
+        self.limit, self.grace = limit, grace
+        self.calls = 0
+        self.nudged = False
+        self.after = 0
+
+    def tick(self) -> None:
+        self.calls += 1
+        if self.nudged:
+            self.after += 1
+
+    def status(self) -> str:
+        """'ok', 'nudge' (primeira vez no limite) ou 'stop' (ignorou o aviso)."""
+        if self.nudged:
+            return "stop" if self.after > self.grace else "ok"
+        if self.calls >= self.limit:
+            self.nudged = True
+            return "nudge"
+        return "ok"
+
+    def finished(self) -> None:
+        self.calls, self.after, self.nudged = 0, 0, False
+
+
 # ---------------------------------------------------------------- duplication
 
 TRIVIAL = re.compile(r"^[\s{}()\[\];,]*$|^\s*(//|#|\*|/\*\*|\*/|import |from |export \* from|\}\)?;?$)")

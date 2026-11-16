@@ -408,6 +408,14 @@ def current_view(text: str, max_lines: int) -> str:
         return ""
     return "\nconteúdo atual (use este texto como `old` na próxima edição):\n" + text
 
+NO_CHANGE = ("NADA MUDOU: {r} já está exatamente como esta edição deixaria (arquivo igual, nada foi gravado). Não repita a chamada: "
+             "o problema está em outro trecho. Rode run_check, leia a primeira linha do erro e mude outra coisa.")
+
+
+def no_change_message(path: str) -> str:
+    return NO_CHANGE.format(r=path)
+
+
 class Tools:
     def __init__(self, run: "Run"):
         self.run = run
@@ -502,8 +510,10 @@ class Tools:
             raise FileNotFoundError(f"{r} não existe; use write_file para criar")
         current = f.read_text()
         if old not in current and new.strip() and new.strip() in current:
-            return f"ok: {r} já contém este trecho (edição aplicada antes); não repita, siga para run_check"  # LI-028
+            return f"NADA MUDOU: {r} já contém este trecho (edição aplicada antes, nada foi gravado); não repita, siga para run_check e leia o erro"  # LI-028
         text = apply_edit_tolerant(current, old, new, bool(replace_all))
+        if text == current:
+            return no_change_message(r)
         n = text.count("\n") + 1
         self._file_limit(n)
         f.write_text(text)
@@ -515,7 +525,10 @@ class Tools:
         f = self.repo / r
         if not f.exists():
             raise FileNotFoundError(f"{r} não existe")
-        text = replace_function(f.read_text(), name.strip(), code)
+        current = f.read_text()
+        text = replace_function(current, name.strip(), code)
+        if text == current:
+            return no_change_message(r)
         f.write_text(text)
         self.run.touched.add(r)
         return f"ok: função {name} substituída em {r} ({text.count(chr(10)) + 1} linhas)"
@@ -894,7 +907,7 @@ class Run:
     def loop(self) -> int:
         tools = Tools(self)
         stall = gates.StallDetector()
-        tool_calls_this_attempt = 0
+        budget = gates.CallBudget(self.max_tools)
         while True:
             if self.stats.get("seconds", 0) + time.time() - self.t0 > self.max_seconds:
                 return self.end("failed", 2, f"limite de tempo ({self.max_seconds // 60} min): tarefa grande demais para um cartão; dividir")
@@ -905,7 +918,7 @@ class Run:
             self.log("assistant", {"content": msg.get("content", "")[:500], "tools": [c["function"]["name"] for c in calls]})
             if not calls:
                 self.messages.append({"role": "user", "content": "Use as ferramentas. Quando terminar, chame finish."})
-                tool_calls_this_attempt += 1
+                budget.tick()
             for c in calls:
                 name = c["function"]["name"]
                 args = c["function"].get("arguments") or {}
@@ -915,7 +928,7 @@ class Run:
                     except json.JSONDecodeError:
                         args = {}
                 self.stats["tool_calls"] += 1
-                tool_calls_this_attempt += 1
+                budget.tick()
                 if name == "ask_claude":
                     q = str(args.get("question", ""))
                     self.log("ask_claude", {"question": q})
@@ -960,7 +973,7 @@ class Run:
                         history = self.stats.setdefault("failure_categories", [])
                         result, cats = gates.gap_feedback(problems, history)  # LI-044
                         history.append(cats)
-                    tool_calls_this_attempt = 0
+                    budget.finished()
                 else:
                     if "path" in args:
                         args["path"] = clean_path(args["path"])
@@ -993,12 +1006,15 @@ class Run:
                 self.log("tool", {"name": name, "args": {k: (v if len(str(v)) < 200 or name == "finish" else str(v)[:200] + "…") for k, v in args.items()}, "result": str(result)[:500]})
                 self.messages.append({"role": "tool", "tool_name": name, "content": truncate(str(result), self.size.tool_output_chars)})
             self.save("running")
-            if tool_calls_this_attempt >= self.max_tools:
+            state = budget.status()
+            if state == "stop":
                 self.stats["attempts"] += 1
-                tool_calls_this_attempt = 0
+                return self.end("failed", 2, f"limite de chamadas de ferramenta ({self.max_tools}) ignorado: o aviso pediu run_check e finish")
+            if state == "nudge":
+                self.stats["attempts"] += 1
                 if self.stats["attempts"] >= self.max_attempts:
                     return self.end("failed", 2, "limite de chamadas de ferramenta")
-                self.messages.append({"role": "user", "content": "Limite de chamadas desta tentativa atingido. Rode run_check(-1) e chame finish."})
+                self.messages.append({"role": "user", "content": "Limite de chamadas desta tentativa atingido. Rode run_check(-1) e chame finish agora; sem finish nas próximas chamadas a tarefa é encerrada."})
 
 # ---------------------------------------------------------------- cli
 
