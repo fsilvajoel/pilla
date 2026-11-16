@@ -107,7 +107,7 @@ cards:
       - apps/api/src/log/redact.ts
     sizeNote: uma função; o teste tem ~150 linhas (medido nas entregas de 16/11) e é o par do E4-T04
   - id: E4-T04
-    title: Implement redact
+    title: Implement redact for flat objects
     kind: implement
     assignee: alice
     rules: []
@@ -118,28 +118,60 @@ cards:
     protectedTests:
       - apps/api/src/log/redact.test.ts
     checks:
-      - pnpm --filter @pilla/api exec vitest run src/log/redact.test.ts --coverage --coverage.include=src/log/redact.ts
+      - 'pnpm --filter @pilla/api exec vitest run src/log/redact.test.ts -t "C[1237]:"'
       - pnpm --filter @pilla/api typecheck
       - pnpm --filter @pilla/api lint
     done:
-      - all tests in apps/api/src/log/redact.test.ts pass with 100% line and branch coverage of redact.ts (run_check 0)
+      - the tests of scenarios C1, C2, C3 and C7 pass (run_check 0); C4, C5 and C6 are the next card
+      - a plain object gets a new object with the same keys, and the value of each sensitive key is REDACTED
+      - anything that is not a plain object is returned as it came
       - 'export function redact(value: unknown): unknown {'
       - 'export const REDACTED = "[REDACTED]";'
       - keep the /** */ comments unchanged
     hints:
       - "a plain object is one whose prototype is Object.prototype or null (Object.getPrototypeOf)"
-      - one write_file of the whole file, then run_check 0, 1 and 2
+      - the rule for a sensitive key is in the /** */ comment of redact, and a small helper for it keeps redact short
+      - one replace_function of redact (plus the helpers above it), then run_check 0, 1 and 2
     budget:
       attempts: 4
-      toolCalls: 25
+      toolCalls: 20
       minutes: 8
     readFirst:
       - apps/api/src/log/redact.ts
+    sizeNote: metade de uma função (sem recursão); dividido do E4-T04 original, que estourou 36 chamadas
+  - id: E4-T05
+    title: Make redact recurse into nested objects and arrays
+    kind: implement
+    assignee: alice
+    rules: []
+    refs: [RFC-003 §4.1]
+    dependsOn: [E4-T04]
+    allowedPaths:
+      - apps/api/src/log/redact.ts
+    protectedTests:
       - apps/api/src/log/redact.test.ts
-    sizeNote: uma função
+    checks:
+      - pnpm --filter @pilla/api exec vitest run src/log/redact.test.ts --coverage --coverage.include=src/log/redact.ts
+      - pnpm --filter @pilla/api typecheck
+      - pnpm --filter @pilla/api lint
+    done:
+      - all tests in apps/api/src/log/redact.test.ts pass with 100% line and branch coverage of redact.ts (run_check 0)
+      - an array gets a new array with redact applied to each item
+      - the value of a key that is not sensitive goes through redact too, so nested objects are redacted at any depth
+      - the input is never changed
+      - keep the helpers, REDACTED and the /** */ comments unchanged
+    hints:
+      - change only the body of redact with one replace_function, then run_check 0, 1 and 2
+    budget:
+      attempts: 4
+      toolCalls: 20
+      minutes: 8
+    readFirst:
+      - apps/api/src/log/redact.ts
+    sizeNote: só a recursão em cima do E4-T04
 # Feature (ADR-0014): testes e implementação do redact numa entrega só; plano em docs/plano/E4-F02/plano.md.
 features:
   - id: E4-F02
     title: Redact sensitive log fields
-    cards: [E4-T03, E4-T04]
+    cards: [E4-T03, E4-T04, E4-T05]
     biaBudget: 4

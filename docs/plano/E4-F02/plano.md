@@ -5,7 +5,8 @@ Plano da feature (etapa 1, ADR-0014). Cartões em `docs/plano/E4.yaml`; referên
 ## Escopo
 
 - E4-T03 (Bia): `apps/api/src/log/redact.test.ts`, os testes de `redact` e `REDACTED`.
-- E4-T04 (Alice): `apps/api/src/log/redact.ts`, a implementação, mantendo os comentários `/** */` do stub.
+- E4-T04 (Alice): `apps/api/src/log/redact.ts` sem recursão (C1, C2, C3, C7), mantendo os comentários `/** */` do stub.
+- E4-T05 (Alice): recursão em objetos e arrays (C4, C5, C6), com 100% de cobertura.
 - Fora: ligar o `redact` no logger (cartão próprio) e qualquer outro arquivo.
 
 ## Riscos
@@ -13,7 +14,7 @@ Plano da feature (etapa 1, ADR-0014). Cartões em `docs/plano/E4.yaml`; referên
 - Teste que refaz o algoritmo ou calcula o esperado: barrado por `check-test-quality.mjs` e pela auditoria.
 - Teste que passa contra o stub: barrado pelo `expect-red.mjs`.
 - Implementação que muta a entrada ou trata `Date`/`Error` como objeto simples: cenários C6 e C7.
-- Cobertura incompleta: o check do E4-T04 exige 100% de linhas e ramos da implementação.
+- Cobertura incompleta: o check do E4-T05 exige 100% de linhas e ramos da implementação.
 
 ## Dependências
 
