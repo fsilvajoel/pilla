@@ -32,10 +32,14 @@ limites_maximos:          # o agente escolhe até aqui
 custo:
   teto_creditos_review: 3000   # ao atingir, o runner força o fim da fase
   fator_aborto: 1.5            # acima de teto × fator, aborta com erro
-  max_reviews_dia: 3
+  max_reviews_dia: 3           # só para o `auto` (timer); `review` manual nunca é barrado
 
-auto:
+auto:                          # dispara com: feature concluída, retrospectiva nova (retro-*.md) ou caixa antiga
   horas_minimas_caixa: 20      # caixa de entrada sozinha só dispara Review se o último foi há >= N horas
+
+reparo:                        # verificação final reprovou: o Jorge recebe os problemas e conserta antes de reverter
+  rodadas: 2
+  passos: 20                   # passos extras por rodada (créditos até ~teto × fator_aborto)
 
 git:
   push: true                   # push depois do merge (não empurra commit alheio pendente)

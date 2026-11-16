@@ -121,6 +121,15 @@ class PathsTest(unittest.TestCase):
         self.assertEqual(self.p.readable("tools/alice-harness/.env.example"), (Path(self.tmp.name) / "tools/alice-harness/.env.example").resolve())
 
 
+class SuiteTest(unittest.TestCase):
+    def test_conta_falhas(self) -> None:
+        self.assertEqual(runner.suite_fails("Ran 9 tests\n\nFAILED (failures=2, errors=1)"), 3)
+        self.assertEqual(runner.suite_fails("Ran 9 tests\n\nOK"), 0)
+
+    def test_reparo_no_cfg(self) -> None:
+        self.assertGreaterEqual(int(runner.load_cfg()["reparo"]["rodadas"]), 1)
+
+
 class FeaturesTest(unittest.TestCase):
     def test_feature_concluida(self) -> None:
         with tempfile.TemporaryDirectory() as d:

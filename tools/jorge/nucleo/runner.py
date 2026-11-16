@@ -259,6 +259,12 @@ def run_suite(wt: Path, timeout: int) -> tuple[bool, int, str]:
     return ok, ran, out
 
 
+def suite_fails(out: str) -> int:
+    """Falhas + erros da linha 'FAILED (...)' do unittest (0 se não houver)."""
+    m = re.search(r"^FAILED \(([^)]*)\)", out, re.M)
+    return sum(int(x) for x in re.findall(r"(?:failures|errors)=(\d+)", m.group(1))) if m else 0
+
+
 # ---------- ferramentas ----------
 
 def tool_specs(phase: str) -> list[Json]:
@@ -439,6 +445,10 @@ def run_phase(cfg: Json, st: State) -> str:
     lim = cfg["limites"]
     teto = float(cfg["custo"]["teto_creditos_review"])
     budget = int(lim["passos_analise" if phase == "analise" else "passos_aplicacao"])
+    if phase == "aplicacao":
+        budget += int(st.d.get("extra_passos", 0))
+        if st.d.get("reparo_ativo"):  # reparo pode ir até perto do teto de aborto
+            teto = teto * float(cfg["custo"]["fator_aborto"]) * 0.9
     end_tool = "submit_report" if phase == "analise" else "finish"
     while st.d["steps"][phase] < budget + 2:
         spent = float(st.d["usage"]["creditos"])
@@ -543,10 +553,10 @@ def auto_scope(cfg: Json) -> tuple[str, list[str]]:
     caixa = CAIXA.read_text().strip() if CAIXA.exists() else ""
     last = last_review_start()
     due = bool(caixa) and (last is None or datetime.now().astimezone() - last >= timedelta(hours=float(a["horas_minimas_caixa"])))
-    if not new and not due:
-        raise Skip("nada_novo")
-    motivo = ("fim de feature: " + ", ".join(new)) if new else "caixa de entrada"
     retros = recent_retros(last)
+    if not new and not due and not retros:
+        raise Skip("nada_novo")
+    motivo = ("fim de feature: " + ", ".join(new)) if new else ("retrospectiva nova" if retros else "caixa de entrada")
     escopo = (
         f"Review automático ({motivo}).\n\n"
         + (f"## Features concluídas desde o último Review\n" + "\n".join(f"- {f}: docs/plano/{f}/" for f in new) + "\n\n" if new else "")
@@ -588,8 +598,6 @@ def module_map(wt: Path) -> str:
 def start(cfg: Json, escopo: str, retros: list[str], modelo: Optional[str]) -> State:
     if git(REPO, "status", "--porcelain", "--", HARNESS, "docs/agents", ".agents", "tools/jorge/agente", "tools/jorge/nucleo"):
         raise Skip("checkout_sujo")
-    if reviews_today() >= int(cfg["custo"]["max_reviews_dia"]):
-        raise Skip("limite_diario")
     version = next_version()
     base = git(REPO, "rev-parse", "HEAD")
     wt = WT_ROOT / version
@@ -619,11 +627,10 @@ def start(cfg: Json, escopo: str, retros: list[str], modelo: Optional[str]) -> S
     (st.logdir / "escopo.md").write_text(escopo)
     st.save()
     ok, ran, out = run_suite(wt, int(cfg["limites"]["timeout_testes_s"]))
-    st.d["baseline_ok"], st.d["baseline_ran"] = ok, ran
+    st.d["baseline_ok"], st.d["baseline_ran"], st.d["baseline_fails"] = ok, ran, (0 if ok else suite_fails(out))
     (st.logdir / "suite-referencia.txt").write_text(out)
-    if not ok:
-        st.save()
-        raise RuntimeError(f"suíte de referência vermelha ({ran} testes): aplicação automática bloqueada")
+    ref = (f"VERDE, {ran} testes" if ok else
+           f"VERMELHA, {ran} testes, {st.d['baseline_fails']} falhas/erros — consertar isso é prioridade deste Review")
     lim = cfg["limites"]
     retro_txt = "\n".join(f"- {r}" for r in retros) or "- (nenhuma indicada; liste tools/alice-harness/runs/ se precisar)"
     system = (agent_file(wt, "jorge.md") + "\n\n---\n# Modelo do relatório\n" + agent_file(wt, "relatorio-modelo.md")
@@ -634,7 +641,7 @@ def start(cfg: Json, escopo: str, retros: list[str], modelo: Optional[str]) -> S
             f"# Review — {version}\n"
             f"- Data: {st.d['inicio']}\n- Base git: {base} (branch {st.d['base_branch']}); worktree isolado em branch {branch}\n"
             f"- Modelo: {st.d['model']}\n"
-            f"- Suíte de referência: VERDE, {ran} testes (`python3 -m unittest discover -s tests` em {HARNESS})\n"
+            f"- Suíte de referência: {ref} (`python3 -m unittest discover -s tests` em {HARNESS})\n"
             f"- Limites: {lim['passos_analise']} passos na análise, {lim['passos_aplicacao']} na aplicação; "
             f"read_file até {lim['linhas_por_leitura']} linhas; teto de {cfg['custo']['teto_creditos_review']} créditos neste Review.\n\n"
             f"## Escopo recebido\n{escopo}\n\n## Retros indicadas\n{retro_txt}\n\n"
@@ -689,29 +696,66 @@ def commit(wt: Path, st: State, files: list[str], msg: str, trailers: str) -> No
         raise RuntimeError("commit recusado pelos hooks (ver commit-erro.txt)")
 
 
-def finalize(cfg: Json, st: State) -> str:
+def verify(cfg: Json, st: State) -> Json:
+    """Checagem final: invariantes por arquivo, arquivos do agente e suíte. Aceita suíte ainda vermelha se a
+    referência já era vermelha e o Jorge reduziu as falhas sem perder testes."""
     wt = st.wt
     paths = Paths(cfg, wt)
     changed = changed_paths(wt)
     problems: list[str] = []
+    codes: list[str] = []
+    bad: list[str] = []
     locks: list[str] = []
     for p in changed:
         old, new = content_at(wt, "HEAD", p), ((wt / p).read_text(errors="replace") if (wt / p).is_file() else "")
         prob = paths.write_problem(p, old, new)
         if prob:
             problems.append(prob)
+            codes.append("invariante")
+            bad.append(p)
         elif paths.is_lock(p, old, new):
             locks.append(p)
     for name in ("jorge.md", "relatorio-modelo.md"):
         f = wt / "tools/jorge/agente" / name
         if not f.is_file() or len(f.read_text(errors="replace")) < 200:
             problems.append(f"tools/jorge/agente/{name} sumiu ou ficou vazio")
+            codes.append("agente_vazio")
+            bad.append(f"tools/jorge/agente/{name}")
     ok, ran, out = run_suite(wt, int(cfg["limites"]["timeout_testes_s"]))
     (st.logdir / "suite-final.txt").write_text(out)
-    if not ok:
-        problems.append(f"suíte final vermelha ({ran} testes)")
-    if ran < int(st.d["baseline_ran"]):
-        problems.append(f"descoberta caiu: {ran} < {st.d['baseline_ran']} testes")
+    fails = 0 if ok else suite_fails(out)
+    base_ran, base_fails = int(st.d["baseline_ran"]), int(st.d.get("baseline_fails", 0))
+    melhorou = not st.d.get("baseline_ok", True) and ran >= base_ran and 0 < fails < base_fails
+    if not ok and not melhorou:
+        problems.append(f"suíte final vermelha ({ran} testes, {fails} falhas/erros; referência {base_ran} testes, {base_fails} falhas)")
+        codes.append("suite_vermelha")
+    if ran < base_ran:
+        problems.append(f"descoberta caiu: {ran} < {base_ran} testes")
+        codes.append("descoberta_caiu")
+    tail = "\n".join(out.splitlines()[-int(cfg["limites"]["linhas_saida_testes"]):])
+    return {"changed": changed, "problems": problems, "codes": codes, "bad": bad, "locks": locks,
+            "ok": ok or melhorou, "ran": ran, "fails": fails, "tail": tail}
+
+
+def revert_files(wt: Path, files: list[str]) -> None:
+    for p in files:
+        if content_at(wt, "HEAD", p) or sh(["git", "cat-file", "-e", f"HEAD:{p}"], wt).returncode == 0:
+            git(wt, "checkout", "HEAD", "--", p)
+        elif (wt / p).is_file():
+            (wt / p).unlink()
+
+
+def finalize(cfg: Json, st: State) -> str:
+    wt = st.wt
+    v = verify(cfg, st)
+    revertidos: list[str] = []
+    if v["changed"] and v["problems"] and v["bad"]:
+        revert_files(wt, v["bad"])  # tira só o que violou invariante e verifica o resto de novo
+        revertidos = list(v["bad"])
+        v = verify(cfg, st)
+    changed, problems, locks, ok, ran = v["changed"], v["problems"], v["locks"], v["ok"], v["ran"]
+    if problems:
+        st.d["motivo"] = ",".join(dict.fromkeys(v["codes"]))
     if changed:
         sh(["git", "add", "-A", "-N", "--", *changed], wt)
         (st.logdir / "diff.patch").write_text(git(wt, "diff", "HEAD"))
@@ -727,6 +771,8 @@ def finalize(cfg: Json, st: State) -> str:
         f"\n\n---\n## Verificação do runner\n- Status: **{status}**\n- Base: `{st.d['base']}`\n"
         f"- Suíte final: {'VERDE' if ok else 'VERMELHA'}, {ran} testes (referência {st.d['baseline_ran']})\n"
         f"- Arquivos alterados: {', '.join(changed) or 'nenhum'}\n"
+        f"- Rodadas de reparo usadas: {st.d.get('reparos', 0)}\n"
+        f"- Revertidos só estes (invariante): {', '.join(revertidos) or 'nenhum'}\n"
         f"- Travas (commit separado `Trava: sim`, auditoria do Joel): {', '.join(locks) or 'nenhuma'}\n"
         f"- Problemas: {'; '.join(problems) or 'nenhum'}\n"
         + ("\n## Perguntas ao Joel (não bloquearam o Review)\n" + "".join(
@@ -801,6 +847,24 @@ def drive(cfg: Json, st: State) -> str:
         "invariantes são bloqueio mecânico. Termine com finish.")})
     st.save()
     run_phase(cfg, st)
+    rep: Json = cfg.get("reparo") or {}
+    n = int(rep.get("rodadas", 0))
+    for i in range(n):  # o mecânico vê o que a verificação reprovou e conserta antes de qualquer reversão
+        v = verify(cfg, st)
+        if not v["changed"] or not v["problems"]:
+            break
+        st.d["reparos"] = i + 1
+        st.d["reparo_ativo"] = True
+        st.d["extra_passos"] = int(st.d.get("extra_passos", 0)) + int(rep.get("passos", 20))
+        st.d.pop("forcado_aplicacao", None)
+        st.d["messages"].append({"role": "user", "content": (
+            f"VERIFICAÇÃO FINAL DO RUNNER REPROVOU — rodada de reparo {i + 1}/{n}. Nada foi revertido ainda.\n"
+            "Problemas:\n" + "".join(f"- {p}\n" for p in v["problems"])
+            + f"\nFim da saída da suíte:\n{v['tail']}\n\n"
+            "Conserte a causa (ou desfaça só a mudança culpada, mantendo as outras), rode run_tests e chame finish. "
+            "Registre no relatório o que reprovou e o que você fez.")})
+        st.save()
+        run_phase(cfg, st)
     st.d["phase"] = "final"
     st.save()
     return finalize(cfg, st)
@@ -843,13 +907,16 @@ def main() -> int:
         cfg = load_cfg()
         if args.cmd == "auto":
             escopo, retros = auto_scope(cfg)
+            if reviews_today() >= int(cfg["custo"]["max_reviews_dia"]):
+                raise Skip("limite_diario")
             if alice_busy():
                 raise Skip("alice_ocupada")
             st = start(cfg, escopo, retros, None)
         else:
             escopo = Path(args.escopo).read_text() if Path(args.escopo).is_file() else args.escopo
             st = start(cfg, escopo, args.retro, args.modelo)
-        return emit(st, drive(cfg, st))
+        status = drive(cfg, st)
+        return emit(st, status, st.d.get("motivo", "") if status == "nao_aplicada" else "")
     except Skip as e:
         return emit(None, "nada_a_fazer", str(e))
     except Exception as e:  # noqa: BLE001 — qualquer falha vira status erro + log, nunca relato ao Claude
