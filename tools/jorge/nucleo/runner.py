@@ -7,6 +7,7 @@ Uso:
   jorge.py review --escopo <arquivo.md | "texto"> [--retro tools/alice-harness/runs/retro-X.md ...] [--modelo M]
   jorge.py auto              # gatilho (timer): feature concluída não revista, ou caixa com itens e >= N h do último Review
   jorge.py anotar "<texto>"  # caixa de entrada para o próximo Review (Claude ou Joel)
+  jorge.py conversar ["msg"] # conversa do Joel com o Jorge, só leitura (nucleo/conversa.py)
 
 Contrato de saída (Joel, 16/11/2026): o Jorge NÃO reporta ao Claude. A saída padrão é UMA linha
 `JORGE_STATUS=<status> versao=<harness-vN|-> [motivo=...] [push=...]` e o código de saída diz o mesmo:
@@ -919,12 +920,20 @@ def main() -> int:
     sub.add_parser("auto")
     an = sub.add_parser("anotar")
     an.add_argument("texto")
+    cv = sub.add_parser("conversar")
+    cv.add_argument("mensagem", nargs="?")
+    cv.add_argument("--nova", action="store_true")
+    cv.add_argument("--modelo")
     args = ap.parse_args()
     LOGS.mkdir(exist_ok=True)
     if args.cmd == "anotar":
         anotar(args.texto)
         print("JORGE_CAIXA=ok")
         return 0
+    if args.cmd == "conversar":
+        import conversa  # noqa: PLC0415 — só carrega quando usado
+
+        return conversa.main(args)
     lock = (LOGS / ".lock").open("w")
     try:
         fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)

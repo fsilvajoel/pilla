@@ -6,7 +6,8 @@ Nega ao Claude, com exit 2:
     systemd do Jorge;
 (b) Bash que cite esses caminhos junto de operação de escrita (redirecionamento, sed -i, tee, mv, cp, rm,
     git add/checkout/restore/apply/reset/revert/cherry-pick/am/stash, patch, truncate, open(...'w'));
-(c) Read/Grep/Glob/Bash que toque tools/jorge/logs/ ou o worktree .jorge-wt/: o Jorge só devolve status.
+(c) Read/Grep/Glob/Bash que toque tools/jorge/logs/ ou o worktree .jorge-wt/: o Jorge só devolve status;
+(d) Bash que rode `jorge.py conversar`: a conversa com o Jorge é canal do Joel.
 Rodar o próprio Jorge (`tools/jorge/jorge.py review|auto|anotar`) é permitido."""
 from __future__ import annotations
 
@@ -27,6 +28,7 @@ WRITER = re.compile(
     r"|open\([^)]*['\"][wa]|write_text|\bperl\s+-[a-z]*i)"
 )
 RUN_JORGE = re.compile(r"^\s*(?:cd\s+\S+\s*&&\s*)?(?:python3\s+)?\S*tools/jorge/jorge\.py\s+(?:review|auto|anotar)\b[^|;&><`$]*$")
+CONVERSA = re.compile(r"jorge\.py\b.*\bconversar\b|\bconversa\.py\b")
 
 
 def deny(msg: str) -> None:
@@ -55,6 +57,8 @@ def main() -> None:
         return
     if tool == "Bash":
         cmd = str(inp.get("command") or "")
+        if CONVERSA.search(cmd):
+            deny("a conversa com o Jorge é canal do Joel; o Claude usa jorge.py anotar.")
         if RUN_JORGE.match(cmd):
             return
         if LOGS.search(cmd):

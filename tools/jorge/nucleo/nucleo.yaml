@@ -34,6 +34,11 @@ custo:
   fator_aborto: 1.5            # acima de teto × fator, aborta com erro
   max_reviews_dia: 3           # só para o `auto` (timer); `review` manual nunca é barrado
 
+conversa:                      # jorge.py conversar (Joel ↔ Jorge, só leitura)
+  passos_por_mensagem: 15      # chamadas ao modelo por mensagem do Joel
+  teto_creditos_mensagem: 150
+  teto_creditos_conversa: 600  # ao atingir, abrir outra com --nova
+
 auto:                          # dispara com: feature concluída, retrospectiva nova (retro-*.md) ou caixa antiga
   horas_minimas_caixa: 20      # caixa de entrada sozinha só dispara Review se o último foi há >= N horas
 
