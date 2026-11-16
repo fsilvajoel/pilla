@@ -259,6 +259,15 @@ def run_suite(wt: Path, timeout: int) -> tuple[bool, int, str]:
     return ok, ran, out
 
 
+def run_suite_clean(paths: "Paths", wt: Path, timeout: int) -> tuple[bool, int, str, list[str]]:
+    """Roda a suíte e devolve também o que ela criou/alterou fora da área de escrita (já limpo)."""
+    before = set(changed_paths(wt))
+    ok, ran, out = run_suite(wt, timeout)
+    leaks = [p for p in changed_paths(wt) if p not in before and paths.write_problem(p, "", "")]
+    revert_files(wt, leaks)
+    return ok, ran, out, leaks
+
+
 def suite_fails(out: str) -> int:
     """Falhas + erros da linha 'FAILED (...)' do unittest (0 se não houver)."""
     m = re.search(r"^FAILED \(([^)]*)\)", out, re.M)
@@ -347,10 +356,13 @@ class Tools:
         return "\n".join(out[-cap:]) or "(sem saída)"
 
     def t_run_tests(self, a: Json) -> str:
-        ok, ran, out = run_suite(self.st.wt, int(self.lim["timeout_testes_s"]))
-        self.st.d["suites"].append({"fase": self.st.d["phase"], "ok": ok, "ran": ran, "em": now()})
+        ok, ran, out, leaks = run_suite_clean(self.paths, self.st.wt, int(self.lim["timeout_testes_s"]))
+        self.st.d["suites"].append({"fase": self.st.d["phase"], "ok": ok, "ran": ran, "vazou": leaks, "em": now()})
         tail = "\n".join(out.splitlines()[-int(self.lim["linhas_saida_testes"]):])
-        return f"{'VERDE' if ok else 'VERMELHO'} — {ran} testes (referência: {self.st.d['baseline_ran']})\n{tail}"
+        aviso = ("\nATENÇÃO — a suíte gravou fora da área permitida (o runner limpou; a verificação final reprova isso): "
+                 + ", ".join(leaks) + ". Teste e código sob teste têm de usar diretório temporário, nunca o repositório real."
+                 if leaks else "")
+        return f"{'VERDE' if ok else 'VERMELHO'} — {ran} testes (referência: {self.st.d['baseline_ran']})\n{tail}{aviso}"
 
     def _old(self, n: str) -> str:
         p = self.st.wt / n
@@ -721,8 +733,11 @@ def verify(cfg: Json, st: State) -> Json:
             problems.append(f"tools/jorge/agente/{name} sumiu ou ficou vazio")
             codes.append("agente_vazio")
             bad.append(f"tools/jorge/agente/{name}")
-    ok, ran, out = run_suite(wt, int(cfg["limites"]["timeout_testes_s"]))
+    ok, ran, out, leaks = run_suite_clean(paths, wt, int(cfg["limites"]["timeout_testes_s"]))
     (st.logdir / "suite-final.txt").write_text(out)
+    if leaks:
+        problems.append("a suíte grava fora da área permitida (teste deve usar diretório temporário): " + ", ".join(leaks))
+        codes.append("teste_vaza")
     fails = 0 if ok else suite_fails(out)
     base_ran, base_fails = int(st.d["baseline_ran"]), int(st.d.get("baseline_fails", 0))
     melhorou = not st.d.get("baseline_ok", True) and ran >= base_ran and 0 < fails < base_fails

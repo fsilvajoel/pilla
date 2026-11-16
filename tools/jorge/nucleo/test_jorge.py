@@ -126,6 +126,24 @@ class SuiteTest(unittest.TestCase):
         self.assertEqual(runner.suite_fails("Ran 9 tests\n\nFAILED (failures=2, errors=1)"), 3)
         self.assertEqual(runner.suite_fails("Ran 9 tests\n\nOK"), 0)
 
+    def test_vazamento_da_suite(self) -> None:
+        with tempfile.TemporaryDirectory() as d:
+            wt = Path(d)
+            subprocess.run(["git", "init", "-q", str(wt)], check=True)
+            (wt / ".gitignore").write_text("__pycache__/\n")
+            h = wt / runner.HARNESS / "tests"
+            h.mkdir(parents=True)
+            (h / "test_vaza.py").write_text(
+                "import unittest, pathlib\n"
+                "class T(unittest.TestCase):\n"
+                "    def test_x(self):\n"
+                "        p = pathlib.Path(__file__).resolve().parents[3] / 'docs/plano/X/vazou.txt'\n"
+                "        p.parent.mkdir(parents=True, exist_ok=True); p.write_text('x')\n")
+            ok, ran, _, leaks = runner.run_suite_clean(runner.Paths(runner.load_cfg(), wt), wt, 60)
+            self.assertTrue(ok)
+            self.assertEqual(leaks, ["docs/plano/X/vazou.txt"])
+            self.assertFalse((wt / "docs/plano/X/vazou.txt").exists())
+
     def test_reparo_no_cfg(self) -> None:
         self.assertGreaterEqual(int(runner.load_cfg()["reparo"]["rodadas"]), 1)
 
