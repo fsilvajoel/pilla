@@ -3,6 +3,7 @@ import shutil
 import subprocess
 import tempfile
 import unittest
+import urllib.request
 from pathlib import Path
 
 from alice import protected_test_problems, restore_allowed
@@ -68,6 +69,8 @@ class ReviewTest(RepoCase):
         self.assertIn("outra versão", " ".join(review_problems(self.repo, AUTHOR, "worktree")))
 
     def test_claude_cannot_sign_and_the_raw_answer_must_match(self):
+        self.write_review(name="alice")  # ela escreve o teste: não aprova o próprio
+        self.assertIn("não assina", review_problems(self.repo, AUTHOR, "worktree")[0])
         f = self.write_review(name="claude")
         self.assertIn("não assina", review_problems(self.repo, AUTHOR, "worktree")[0])
         f.write_text(f.read_text().replace("revisor: claude m r1\n", ""))
@@ -78,8 +81,42 @@ class ReviewTest(RepoCase):
 
 
 class BiaTest(RepoCase):
+    def setUp(self):
+        super().setUp()
+        self._local, bia.local_review = bia.local_review, lambda prompt: None  # sem rede nos testes
+
+    def tearDown(self):
+        bia.local_review = self._local
+        super().tearDown()
+
     def card(self, checks):
         return {**AUTHOR, "checks": checks, "readFirst": ["src/a.ts"]}
+
+    def test_local_rejection_spends_no_request(self):
+        """GPU local é grátis, o OpenRouter tem 50/dia: se a Alice já reprova, a Bia não é chamada."""
+        calls = []
+        old, bia.chat = bia.chat, lambda *a, **k: calls.append(a)
+        bia.local_review = lambda prompt: [{"linha": 3, "regra": 2, "explicacao": "asserção vazia"}]
+        try:
+            self.assertEqual(bia.review_test(self.repo, self.card(["true"]), "m", "bia"), 2)
+            self.assertEqual(bia.review_card(self.repo, self.card(["true"]), "m", "bia"), 2)
+        finally:
+            bia.chat = old
+        self.assertEqual(calls, [])
+
+    def test_quota_reserve_stops_before_the_request(self):
+        sent = []
+        olds = bia.quota, urllib.request.urlopen
+        bia.quota = lambda key: {"used": 46, "limit": 50, "remaining": 4}
+        urllib.request.urlopen = lambda *a, **k: sent.append(a)
+        try:
+            with self.assertRaises(bia.QuotaError):
+                bia.chat([{"role": "user", "content": "x"}], "m", "k")
+            bia.api_key = lambda repo: "k"
+            self.assertEqual(bia.review_test(self.repo, self.card(["true"]), "m", "bia"), 4)
+        finally:
+            bia.quota, urllib.request.urlopen = olds
+        self.assertEqual(sent, [])
 
     def test_red_check_skips_the_api(self):
         calls = []

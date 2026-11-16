@@ -12,7 +12,13 @@ lê só o contrato (readFirst, regras) e o que vai revisar; não vê o raciocín
 Regras dela: nunca calcula valor (na sonda errou dígito verificador); cobra fonte de literal, acusa contradição,
 asserção vazia, teste que refaz o algoritmo e comportamento do contrato sem teste. Os checks mecânicos do cartão
 rodam antes: com check vermelho a revisão nem é pedida. Resposta bruta em runs/bia/<id>.json (com o sha lido).
-Saída: 0 aprovado, 2 reprovado, 3 erro de API ou de resposta.
+Saída: 0 aprovado, 2 reprovado, 3 erro de API ou de resposta, 4 cota do OpenRouter na reserva.
+
+Economia (Joel, 16/11): o free tier dá 50 requisições por dia (free_model_daily_requests em /api/v1/key); a GPU
+local da Alice não tem custo. Então: a Alice escreve teste e código; antes de cada chamada à Bia, a Alice faz a
+mesma revisão localmente (--no-pre desliga) e, se ela já achar problema, a requisição não sai; a cota é lida antes
+de cada chamada e a Bia para com BIA_RESERVE (padrão 5) restantes; 429 de cota esgotada não é repetido.
+`bia.py write` é último recurso (gasta até 3 requisições).
 """
 from __future__ import annotations
 
@@ -28,13 +34,35 @@ from pathlib import Path
 
 import yaml
 
-from alice import format_touched, restore_allowed, run_cmd
+from alice import MODEL as ALICE_MODEL, PROFILE_NAME, chat_options, format_touched, load_profile, post_chat, restore_allowed, run_cmd
 from review import RAW_DIR, blob_sha, review_file
 from rules import rules_text
 
 URL = "https://openrouter.ai/api/v1/chat/completions"
 DEFAULT_MODEL = "nvidia/nemotron-3-ultra-550b-a55b:free"
 HERE = Path(__file__).resolve().parent
+KEY_URL = "https://openrouter.ai/api/v1/key"
+RESERVE = int(os.environ.get("BIA_RESERVE", "5"))
+SIGNERS_REFUSED = ("claude", "alice")  # quem escreve cartão ou teste não aprova (erro 11)
+
+
+class QuotaError(RuntimeError):
+    pass
+
+
+def quota(key: str) -> dict:
+    """{used, limit, remaining} das requisições free do dia; {} se a consulta falhar (não bloqueia)."""
+    try:
+        req = urllib.request.Request(KEY_URL, headers={"Authorization": f"Bearer {key}"})
+        with urllib.request.urlopen(req, timeout=30) as r:
+            return (json.load(r).get("data") or {}).get("free_model_daily_requests") or {}
+    except (urllib.error.URLError, TimeoutError, ValueError):
+        return {}
+
+
+def quota_line(key: str) -> str:
+    q = quota(key)
+    return f"cota OpenRouter: {q.get('remaining', '?')}/{q.get('limit', '?')} restantes hoje" if q else "cota OpenRouter: ?"
 
 
 def api_key(repo: Path) -> str:
@@ -48,7 +76,10 @@ def api_key(repo: Path) -> str:
     sys.exit("bia: falta OPEN_ROUTER_API_KEY (.env)")
 
 
-def chat(messages: list[dict], model: str, key: str, timeout: int = 900, tries: int = 4) -> dict:
+def chat(messages: list[dict], model: str, key: str, timeout: int = 900, tries: int = 3) -> dict:
+    q = quota(key)
+    if q and int(q.get("remaining", 0)) <= RESERVE:
+        raise QuotaError(f"cota OpenRouter na reserva ({q.get('remaining')}/{q.get('limit')} restantes, BIA_RESERVE={RESERVE})")
     body = json.dumps({"model": model, "messages": messages}).encode()
     for n in range(tries):
         req = urllib.request.Request(URL, body, {"Authorization": f"Bearer {key}", "Content-Type": "application/json"})
@@ -60,6 +91,8 @@ def chat(messages: list[dict], model: str, key: str, timeout: int = 900, tries: 
             err = data.get("error") or data
         except urllib.error.HTTPError as e:
             err = f"HTTP {e.code}: {e.read()[:300]!r}"
+            if e.code == 429 and int((quota(key) or {"remaining": 1}).get("remaining", 1)) <= 0:
+                raise QuotaError(f"cota diária do OpenRouter esgotada: {err}") from e
         except (urllib.error.URLError, TimeoutError) as e:
             err = str(e)
         if n + 1 < tries:
@@ -129,7 +162,34 @@ Responda SÓ com JSON, em pt-BR:
 Aprovado só se não houver problema e todos os itens forem ok."""
 
 
-def review_test(repo: Path, card: dict, model: str, name: str) -> int:
+def local_review(prompt: str) -> list[dict] | None:
+    """A mesma revisão na GPU da Alice (sem custo). Lista de problemas se ela reprovar; None se aprovar ou falhar."""
+    prof = load_profile(PROFILE_NAME)
+    opts, think = chat_options(prof, {})
+    payload = {"model": prof.get("model", ALICE_MODEL), "stream": False, "think": think, "options": opts,
+               "messages": [{"role": "user", "content": prompt}]}
+    try:
+        data = post_chat(payload, int(prof.get("timeout", 600)))
+        verdict = parse_json(data["message"]["content"] or "")
+    except (RuntimeError, ValueError, KeyError, OSError) as e:
+        print(f"pré-revisão local indisponível ({e}); segue para a Bia")
+        return None
+    print(f"pré-revisão local (alice {PROFILE_NAME}): {verdict.get('veredito')}; tokens alice: "
+          f"entrada={data.get('prompt_eval_count', 0)} saída={data.get('eval_count', 0)}")
+    problems = verdict.get("problemas") or []
+    return problems if verdict.get("veredito") == "reprovado" and problems else None
+
+
+def pre_rejected(prompt: str, pre: bool) -> bool:
+    problems = local_review(prompt) if pre else None
+    for p in problems or []:
+        print(f"  - linha {p.get('linha')} (regra {p.get('regra')}): {p.get('explicacao')}")
+    if problems:
+        print("a Alice reprovou localmente: nenhuma requisição ao OpenRouter. Corrija ou rode com --no-pre se discordar.")
+    return bool(problems)
+
+
+def review_test(repo: Path, card: dict, model: str, name: str, pre: bool = True) -> int:
     path = str((card.get("allowedPaths") or [None])[0])
     if not (repo / path).is_file():
         print(f"bia: {path} não existe")
@@ -148,9 +208,14 @@ def review_test(repo: Path, card: dict, model: str, name: str) -> int:
               "\n\nChecks mecânicos (já rodaram e passaram): " + "; ".join(c for c, _, _ in checks) +
               f"\n\n# TESTE {path} (com número de linha)\n{numbered}\n")
     sha = blob_sha(repo, path, "worktree")
+    if pre_rejected(prompt, pre):
+        return 2
     try:
         data = chat([{"role": "user", "content": prompt}], model, api_key(repo))
         verdict = parse_json(data["choices"][0]["message"]["content"] or "")
+    except QuotaError as e:
+        print(f"bia: {e}")
+        return 4
     except (RuntimeError, ValueError, KeyError) as e:
         print(f"bia: {e}")
         return 3
@@ -190,14 +255,19 @@ Responda SÓ com JSON, em pt-BR:
 {"veredito":"aprovado"|"reprovado","problemas":[{"linha":<n do pronto ou 0>,"regra":<1-5>,"explicacao":"..."}]}"""
 
 
-def review_card(repo: Path, card: dict, model: str, name: str) -> int:
+def review_card(repo: Path, card: dict, model: str, name: str, pre: bool = True) -> int:
     done = [str(d) for d in card.get("done") or []]
     shown = {k: card.get(k) for k in ("id", "title", "rules", "refs", "allowedPaths", "checks", "hints")}
     prompt = (f"{CARD_RULES}\n\n# CONTRATO\n{contract(repo, card)}\n\n# CARTÃO\n{yaml.safe_dump(shown, allow_unicode=True, sort_keys=False)}"
               "PRONTO QUANDO:\n" + "\n".join(f"{i + 1}. {d}" for i, d in enumerate(done)))
+    if pre_rejected(prompt, pre):
+        return 2
     try:
         data = chat([{"role": "user", "content": prompt}], model, api_key(repo))
         verdict = parse_json(data["choices"][0]["message"]["content"] or "")
+    except QuotaError as e:
+        print(f"bia: {e}")
+        return 4
     except (RuntimeError, ValueError, KeyError) as e:
         print(f"bia: {e}")
         return 3
@@ -237,6 +307,9 @@ def write_test(repo: Path, card: dict, model: str, rounds: int = 3) -> int:
     for n in range(1, rounds + 1):
         try:
             data = chat(messages, model, key)
+        except QuotaError as e:
+            print(f"bia: {e}")
+            return 4
         except RuntimeError as e:
             print(f"bia: {e}")
             return 3
@@ -271,18 +344,22 @@ def main() -> int:
     ap.add_argument("--model", default=DEFAULT_MODEL)
     ap.add_argument("--as", dest="name", default="bia")
     ap.add_argument("--repo", type=Path, default=Path("."))
+    ap.add_argument("--no-pre", dest="pre", action="store_false", help="pula a pré-revisão local da Alice")
     ns = ap.parse_args()
-    if ns.name.lower() == "claude":
-        sys.exit("bia: o Claude não assina revisão (erro 11)")
+    if ns.name.lower() in SIGNERS_REFUSED:
+        sys.exit(f"bia: {ns.name} não assina revisão: quem escreve cartão ou teste não aprova (erro 11)")
     repo = ns.repo.resolve()
     card = next((c for c in (yaml.safe_load(ns.plan.read_text()) or {}).get("cards", []) if c.get("id") == ns.id), None)
     if not card or card.get("kind") != "test-author":
         sys.exit(f"bia: {ns.id} não é cartão test-author em {ns.plan}")
     if ns.task == "card":
-        return review_card(repo, card, ns.model, ns.name)
-    if ns.task == "test":
-        return review_test(repo, card, ns.model, ns.name)
-    return write_test(repo, card, ns.model)
+        code = review_card(repo, card, ns.model, ns.name, ns.pre)
+    elif ns.task == "test":
+        code = review_test(repo, card, ns.model, ns.name, ns.pre)
+    else:
+        code = write_test(repo, card, ns.model)
+    print(quota_line(api_key(repo)))
+    return code
 
 
 if __name__ == "__main__":

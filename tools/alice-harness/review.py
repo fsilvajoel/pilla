@@ -96,8 +96,8 @@ def signature_problems(cid: str, text: str, files: dict[str, str]) -> list[str]:
     if not m:
         return [f"{cid}: revisão sem assinatura 'revisor: <nome> <modelo> <id>': rode `bia.py test <plano> {cid}`"]
     name, _, rid = m.groups()
-    if name.lower() == "claude":
-        return [f"{cid}: o Claude não assina revisão de teste (erro 11): rode `bia.py test <plano> {cid}`"]
+    if name.lower() in ("claude", "alice"):
+        return [f"{cid}: {name} não assina revisão de teste: quem escreve cartão ou teste não aprova (erro 11)"]
     try:
         meta = json.loads((RAW_DIR / f"{rid}.json").read_text())
     except (OSError, ValueError):
