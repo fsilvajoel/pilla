@@ -7,7 +7,11 @@ from pathlib import Path
 
 from alice import protected_test_problems, restore_allowed
 from cards import quality_problems
-from review import review_problems, template
+import json
+
+import bia
+import review
+from review import blob_sha, review_problems, template
 
 TEST = "src/a.test.ts"
 AUTHOR = {"id": "E9-T01", "kind": "test-author", "assignee": "alice", "allowedPaths": [TEST],
@@ -30,12 +34,20 @@ class RepoCase(unittest.TestCase):
         (self.repo / "src/a.ts").write_text("export const f = 1;\n")
         git(self.repo, "add", ".")
         git(self.repo, "commit", "-qm", "init")
+        self.raw_dir, review.RAW_DIR, bia.RAW_DIR = review.RAW_DIR, self.repo / "raw", self.repo / "raw"
 
     def tearDown(self):
+        review.RAW_DIR = bia.RAW_DIR = self.raw_dir
         self.tmp.cleanup()
 
-    def write_review(self, mark="x", evidence="it 'a' confere f(1)"):
-        text = template(self.repo, AUTHOR).replace("- [ ] fails now — ", f"- [{mark}] fails now — {evidence}")
+    def sign(self, name="bia", card="E9-T01", sha=None):
+        (self.repo / "raw").mkdir(exist_ok=True)
+        meta = {"card": card, "task": "test", "path": TEST, "sha": sha or blob_sha(self.repo, TEST, "worktree")}
+        (self.repo / "raw/r1.json").write_text(json.dumps(meta))
+        return f"revisor: {name} m r1\n"
+
+    def write_review(self, mark="x", evidence="it 'a' confere f(1)", name="bia"):
+        text = self.sign(name) + template(self.repo, AUTHOR).replace("- [ ] fails now — ", f"- [{mark}] fails now — {evidence}")
         text = text.replace("- [ ] f(1) is valid (RN-P01) — ", f"- [{mark}] f(1) is valid (RN-P01) — {evidence}")
         f = self.repo / "docs/plano/revisao/E9-T01.md"
         f.parent.mkdir(parents=True, exist_ok=True)
@@ -53,7 +65,52 @@ class ReviewTest(RepoCase):
         self.write_review()
         self.assertEqual(review_problems(self.repo, AUTHOR, "worktree"), [])
         (self.repo / TEST).write_text("it('b', () => { expect(f(2)).toBe(3); });\n")
-        self.assertIn("outra versão", review_problems(self.repo, AUTHOR, "worktree")[0])
+        self.assertIn("outra versão", " ".join(review_problems(self.repo, AUTHOR, "worktree")))
+
+    def test_claude_cannot_sign_and_the_raw_answer_must_match(self):
+        f = self.write_review(name="claude")
+        self.assertIn("não assina", review_problems(self.repo, AUTHOR, "worktree")[0])
+        f.write_text(f.read_text().replace("revisor: claude m r1\n", ""))
+        self.assertIn("sem assinatura", review_problems(self.repo, AUTHOR, "worktree")[0])
+        self.write_review()
+        self.sign(sha="0" * 40)
+        self.assertIn("outra versão do teste", review_problems(self.repo, AUTHOR, "worktree")[0])
+
+
+class BiaTest(RepoCase):
+    def card(self, checks):
+        return {**AUTHOR, "checks": checks, "readFirst": ["src/a.ts"]}
+
+    def test_red_check_skips_the_api(self):
+        calls = []
+        old, bia.chat = bia.chat, lambda *a, **k: calls.append(a)
+        try:
+            self.assertEqual(bia.review_test(self.repo, self.card(["false"]), "m", "bia"), 2)
+        finally:
+            bia.chat = old
+        self.assertEqual(calls, [])
+
+    def test_approved_review_passes_the_gate(self):
+        answer = {"veredito": "aprovado", "problemas": [],
+                  "itens": [{"n": 1, "ok": True, "onde": "check expect-red"}, {"n": 2, "ok": True, "onde": "it 'a' linha 1"}]}
+        sent = []
+        def fake(messages, model, key, **k):
+            sent.append(messages[0]["content"])
+            return {"id": "gen-1", "choices": [{"message": {"content": json.dumps(answer)}}]}
+        old, bia.chat, bia.api_key = bia.chat, fake, lambda repo: "k"
+        try:
+            self.assertEqual(bia.review_test(self.repo, self.card(["true"]), "m", "bia"), 0)
+        finally:
+            bia.chat = old
+        self.assertIn("export const f = 1", sent[0])  # contrato vai, raciocínio do Claude não
+        self.assertEqual(review_problems(self.repo, AUTHOR, "worktree"), [])
+        answer["problemas"] = [{"linha": 1, "regra": 1, "explicacao": "x"}]
+        old, bia.chat = bia.chat, fake
+        try:
+            self.assertEqual(bia.review_test(self.repo, self.card(["true"]), "m", "bia"), 2)
+        finally:
+            bia.chat = old
+        self.assertIn("não aprovada", review_problems(self.repo, AUTHOR, "worktree")[0])
 
 
 class PreflightTest(RepoCase):

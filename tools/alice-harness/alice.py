@@ -9,7 +9,7 @@ Usage:
   alice.py metrics                               summary of runs/metrics.jsonl
   alice.py evolution                             metrics grouped by harness version (is Alice improving?)
   alice.py cards <plan.yaml>... [--repo <path>]  validate delivery plans (docs/plano/E*.yaml)
-  alice.py review <plan.yaml> <ID> [--repo]      Claude's review of a test-author delivery (required before its implement card)
+  alice.py review <plan.yaml> <ID> [--repo]      check the Bia review of a test-author delivery (bia.py test writes it; required before its implement card)
   alice.py plan-run <plan.yaml> <ID>... [--repo]  run Alice cards in order (skips dependents of failures)
   alice.py status                                is Alice running? (lock: runs/ACTIVE.json)
   alice.py cost <ID>... [--repo] [--since ISO]   Claude cost of the cards, preparation included (the only number for retro/report)
@@ -46,7 +46,7 @@ from policy import load_policy
 from claude_usage import card_since, cost, latest_transcript, load as load_usage, load_all, window
 from retro import tool_error_summary, write_retro
 from rules import find_doc, find_rule, rules_text
-from review import review_problems, template as review_template
+from review import review_problems
 
 HERE = Path(__file__).resolve().parent
 RUNS = HERE / "runs"
@@ -1217,18 +1217,10 @@ def cmd_prompt(plan: Path, cid: str, repo: Path) -> int:
     return 0
 
 def cmd_review(plan: Path, cid: str, repo: Path) -> int:
-    """Revisão do teste de um cartão test-author: cria o modelo ou confere o preenchido (e4-guardrails G)."""
-    from review import review_file
+    """Confere a revisão do teste de um cartão test-author (e4-guardrails G). Quem revisa é a Bia (bia.py test)."""
     card = next((c for c in (yaml.safe_load(plan.read_text()) or {}).get("cards", []) if c.get("id") == cid), None)
     if not card or card.get("kind") != "test-author":
         sys.exit(f"{cid}: não é cartão test-author em {plan}")
-    f = review_file(repo, cid)
-    if not f.exists():
-        f.parent.mkdir(parents=True, exist_ok=True)
-        f.write_text(review_template(repo, card))
-        print(f"modelo criado: {f}\nLeia o teste e, para cada linha do done, marque [x] e escreva onde o teste confere isso "
-              f"(ou deixe [ ] e abra cartão de correção). Rode este comando de novo para conferir.")
-        return 3
     problems = review_problems(repo, card, "worktree")
     print("revisão ok" if not problems else "\n".join(problems))
     return 0 if not problems else 2
