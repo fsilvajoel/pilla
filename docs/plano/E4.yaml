@@ -73,7 +73,7 @@ cards:
   - id: E4-T03
     title: Write tests for redact
     kind: test-author
-    assignee: alice
+    assignee: bia
     rules: []
     refs: [RFC-003 §4.1]
     dependsOn: []
