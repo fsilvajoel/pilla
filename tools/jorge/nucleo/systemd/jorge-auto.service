@@ -1,0 +1,11 @@
+[Unit]
+Description=Jorge: Review automático do harness do pilla (fim de feature ou caixa de entrada)
+
+[Service]
+Type=oneshot
+WorkingDirectory=/home/debian/code/pilla
+Environment=PATH=/usr/local/bin:/usr/bin:/bin
+ExecStart=/usr/bin/python3 /home/debian/code/pilla/tools/jorge/jorge.py auto
+SuccessExitStatus=10 11 20
+TimeoutStartSec=3h
+Nice=10

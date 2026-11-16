@@ -17,7 +17,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 /home/debian/code/pilla/tools/jorge/guarda_claude.py",
+            "command": "python3 /home/debian/code/pilla/tools/jorge/nucleo/guarda_claude.py",
             "timeout": 10,
             "statusMessage": "guarda-jorge"
           }

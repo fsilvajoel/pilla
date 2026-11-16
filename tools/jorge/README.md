@@ -1,36 +1,41 @@
 # Jorge — mantenedor único do harness
 
-Decisão do Joel (16/11/2026): o **Jorge** é o único agente que altera o harness (`tools/alice-harness/**`, `docs/agents/**`, `.agents/policy.yaml`). O Claude fica bloqueado por hook (`guarda_claude.py`). O Jorge roda via Abacus RouteLLM (GPT-6; padrão `gpt-6-sol`, ver `config.yaml`). O papel foi modelado pelo GPT-6 Astra (`modelagem/`).
+Decisão do Joel (16/11/2026): o **Jorge** é o único agente que altera o harness (`tools/alice-harness/**`, `docs/agents/**`, `.agents/policy.yaml`). Roda via Abacus RouteLLM (GPT-6). O papel foi modelado pelo GPT-6 Astra (`modelagem/`). O Claude é bloqueado por hook (`nucleo/guarda_claude.py`) de editar o harness e tudo em `tools/jorge/`, e de ler os logs do Jorge.
+
+## Duas partes
+| Parte | Quem altera | O que tem |
+|---|---|---|
+| `nucleo/` + `jorge.py` | **só o Joel** | runner, invariantes, travas, portões finais, commit/integração/push, teto de créditos, gatilho, hook do Claude, units systemd |
+| `agente/` | **o Jorge** (registrado no relatório) | prompt (`jorge.md`), modelo do relatório, `config.yaml` (modelo e limites, dentro dos tetos do núcleo) |
 
 ## Quando roda
-A cada **Review do processo** (fim de leva ou feature). Quem dispara (Claude ou Joel) escreve o escopo: o que deu errado, a lista de problemas do harness congelado e os pedidos do Joel.
-
-```bash
-python3 tools/jorge/jorge.py review --escopo escopo.md [--retro tools/alice-harness/runs/retro-X.md ...] [--modelo gpt-6-astra] [--travas-aprovadas]
-```
-
-`--travas-aprovadas` libera mudanças em travas (guard_hook, política, orçamento da Bia). **Só o Joel decide usar.**
+- **Automático** (timer systemd de usuário, de hora em hora): `jorge.py auto` dispara um Review quando uma feature em `docs/plano/*/estado.json` fica com todas as etapas `done` e ainda não foi revista, ou quando a caixa de entrada tem itens e o último Review foi há ≥ 20 h. Pula se a Alice estiver ocupada, se o checkout tiver mudança não commitada no harness/Jorge ou se já houve 3 Reviews no dia.
+- **Caixa de entrada:** `python3 tools/jorge/jorge.py anotar "<problema observado>"` (Claude ou Joel). Vai junto no próximo Review.
+- **Manual:** `python3 tools/jorge/jorge.py review --escopo <arq|texto> [--retro ...] [--modelo gpt-6-astra]`.
 
 ## Contrato com o Claude
-O Jorge **não reporta ao Claude**. A saída é uma linha e um código de saída:
+Uma linha, `JORGE_STATUS=<status> versao=<v> [motivo=...] [push=...]`, e o código de saída:
 
 | Status | Código | Significado |
 |---|---|---|
-| `aplicada` | 0 | evoluções commitadas (`feat(alice-harness): harness-vN by jorge`) e integradas com `--ff-only` |
-| `sem_mudancas` | 10 | relatório commitado, nenhuma mudança de código |
-| `nao_aplicada` | 20 | suíte, escopo ou trava reprovou; código revertido, relatório commitado |
-| `pergunta` | 30 | o Jorge precisa de uma decisão: ler só `logs/<versão>/pergunta.md` e responder com `jorge.py responder <versão> --resposta "..."` |
+| `aplicada` | 0 | evoluções commitadas e integradas (`--ff-only`, rebase se a base andou) e push |
+| `sem_mudancas` | 10 | só o relatório foi commitado |
+| `nada_a_fazer` | 11 | gatilho sem novidade, Alice ocupada, checkout sujo, limite diário ou outra execução |
+| `nao_aplicada` | 20 | suíte ou invariante reprovou; código revertido, relatório commitado |
 | `erro` | 40 | falha do runner (detalhe no log, para o Joel) |
 
-Perguntas são exceção. Relatório, conversa, diff, suítes e custo ficam em `logs/<versão>/`. Só `relatorio.md` vai para o git, para o Joel ler no GitHub.
+Perguntas do Jorge vão **para o Joel, no relatório**, sem bloquear. O Joel acompanha pelos pushes no GitHub (`tools/jorge/logs/harness-vN/relatorio.md`).
 
-## Segurança do runner
-- Trabalha num worktree isolado (`../.jorge-wt/<versão>`, branch `jorge/<versão>`) a partir do HEAD. O checkout principal só recebe merge `--ff-only`.
-- Fases controladas pelo runner: ANÁLISE (só leitura, `submit_report`) e depois APLICAÇÃO (escrita restrita, `run_tests`, `finish`).
-- Antes da análise roda a suíte de referência; vermelha bloqueia. No final exige suíte verde, contagem ≥ referência, diff só em área permitida e trava só com aprovação.
-- Sem `.env`; dos `runs/`, só `retro-*`. Lock impede duas execuções ao mesmo tempo. Commits passam pelos hooks (nunca `--no-verify`).
-- O próprio Jorge (`tools/jorge/**`) não é editável por ele nem pelo Claude: mudança aqui é do Joel.
+## Regras mecânicas do núcleo
+- **Invariantes** (bloqueio na escrita e no diff final): nunca mudam `docs/plano/**`, `.env` real (o `.env.example` pode), `.claude/**`, `nucleo/`, `jorge.py`, `logs/`, `apps/**`, `packages/**`, `runs/**`. Fora de `tests/`, orçamento/cota da Bia não sobe; valor novo ≤ 3.
+- **Travas** (guard_hook, política, linhas de orçamento): aplicadas, mas num commit separado com trailer `Trava: sim` para o Joel auditar (`git log --grep 'Trava: sim'`).
+- Worktree isolado (`../.jorge-wt/<versão>`), suíte de referência antes, suíte verde e contagem ≥ referência no fim, lock contra execução dupla, teto de créditos por Review, commits pelos hooks (nunca `--no-verify`). O push não leva commit de outro agente que esteja pendente.
 
-## Arquivos
-- `jorge.md`: prompt de sistema. `relatorio-modelo.md`: modelo do relatório de versão. `config.yaml`: modelo, limites e caminhos.
-- `jorge.py`: runner. `guarda_claude.py`: hook do Claude. `modelagem/`: pedido ao GPT-6 e notas dele sobre o runner.
+## Instalar o timer
+```bash
+cp tools/jorge/nucleo/systemd/jorge-auto.* ~/.config/systemd/user/
+systemctl --user daemon-reload && systemctl --user enable --now jorge-auto.timer
+```
+
+## Testes do núcleo
+`python3 -m unittest tools/jorge/nucleo/test_jorge.py` (da raiz do repositório).

@@ -1,0 +1,10 @@
+[Unit]
+Description=Jorge: checa de hora em hora se há feature concluída ou caixa de entrada vencida
+
+[Timer]
+OnCalendar=hourly
+RandomizedDelaySec=5min
+Persistent=true
+
+[Install]
+WantedBy=timers.target

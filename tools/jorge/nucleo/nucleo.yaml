@@ -1,0 +1,79 @@
+# Núcleo do Jorge — FIXO. Só o Joel altera tools/jorge/nucleo/** (o Jorge e o Claude são bloqueados).
+# O que o Jorge pode ajustar sozinho fica em tools/jorge/agente/config.yaml, sempre dentro dos tetos daqui.
+api:
+  base_url: https://routellm.abacus.ai/v1   # Abacus RouteLLM (compatível com OpenAI); chave ABACUSAI_API_KEY em tools/alice-harness/.env
+  timeout_s: 600
+  retries: 3
+
+modelos_permitidos: [gpt-6-sol, gpt-6.1-sol, gpt-6-luna, gpt-6.1-terra, gpt-6-astra]
+
+agente_padrao:            # usado quando tools/jorge/agente/config.yaml falta, quebra ou pede algo fora do permitido
+  model: gpt-6-sol
+  limites:
+    passos_analise: 40
+    passos_aplicacao: 60
+    linhas_por_leitura: 400
+    linhas_busca: 150
+    linhas_saida_testes: 80
+    repeticao_aviso: 3
+    repeticao_aborta: 5
+    timeout_testes_s: 600
+
+limites_maximos:          # o agente escolhe até aqui
+  passos_analise: 80
+  passos_aplicacao: 120
+  linhas_por_leitura: 800
+  linhas_busca: 300
+  linhas_saida_testes: 200
+  repeticao_aviso: 5
+  repeticao_aborta: 8
+  timeout_testes_s: 900
+
+custo:
+  teto_creditos_review: 3000   # ao atingir, o runner força o fim da fase
+  fator_aborto: 1.5            # acima de teto × fator, aborta com erro
+  max_reviews_dia: 3
+
+auto:
+  horas_minimas_caixa: 20      # caixa de entrada sozinha só dispara Review se o último foi há >= N horas
+
+git:
+  push: true                   # push depois do merge (não empurra commit alheio pendente)
+  timeout_push_s: 1800         # pre-push roda pnpm verify
+
+orcamento:                     # invariante: fora de tests/, nenhum destes valores sobe; valor novo sem antigo <= teto_novo
+  padrao: "(?i)\\b(bia_?budget|bia_?reserve|bia_?quota|max_?bia_?requests?|bia_?max_?requests?|quota|cota)\\b[\"']?\\s*[:=,]\\s*[\"']?(\\d+)"
+  teto_novo: 3
+
+caminhos:
+  escrita:                     # onde o Jorge escreve
+    - tools/alice-harness/**
+    - docs/agents/**
+    - .agents/policy.yaml
+    - tools/jorge/agente/**
+  proibidos:                   # invariantes de caminho: nunca mudam
+    - .claude/**
+    - docs/plano/**
+    - tools/alice-harness/runs/**
+    - tools/jorge/nucleo/**
+    - tools/jorge/jorge.py
+    - tools/jorge/logs/**
+    - tools/jorge/.gitignore
+    - tools/jorge/README.md
+    - apps/**
+    - packages/**
+    - "**/__pycache__/**"
+  segredos:                    # nem leitura nem escrita
+    - "**/.env"
+    - "**/.env.*"
+  segredos_excecao:            # exemplos versionados são liberados
+    - "**/.env.example"
+  leitura_proibida:
+    - .git/**
+    - node_modules/**
+    - "**/node_modules/**"
+  travas:                      # aplicadas, mas em commit separado com `Trava: sim` (auditoria do Joel)
+    - tools/alice-harness/scripts/guard_hook.py
+    - tools/alice-harness/policy.default.yaml
+    - tools/alice-harness/policy.py
+    - .agents/policy.yaml
