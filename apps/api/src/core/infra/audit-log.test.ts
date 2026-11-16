@@ -50,10 +50,11 @@ describe("core.audit_log (RFC-005 §2)", () => {
   });
 
   it.each(["ADMIN", "CLIENT", "SYSTEM"])("accepts actor type %s", async (actorType) => {
-    await client.query(`${insert} values (gen_random_uuid(), $1, null, 'x', 'loan', $2, now(), null)`, [
+    const result = await client.query(`${insert} values (gen_random_uuid(), $1, null, 'x', 'loan', $2, now(), null)`, [
       actorType,
       entityId,
     ]);
+    expect(result.affectedRows).toBe(1);
   });
 
   it("refuses an actor type outside ADMIN, CLIENT, SYSTEM", async () => {

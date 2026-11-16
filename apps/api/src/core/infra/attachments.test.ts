@@ -46,7 +46,7 @@ describe("core.attachments (RFC-005 §2)", () => {
   });
 
   it.each(["RECEIPT", "SIGNED_CONTRACT", "IMPORT_FILE", "OTHER"])("accepts kind %s", async (kind) => {
-    await add(kind);
+    expect((await add(kind)).affectedRows).toBe(1);
   });
 
   it("refuses a kind outside the list", async () => {

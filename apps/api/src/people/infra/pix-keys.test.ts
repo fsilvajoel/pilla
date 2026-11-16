@@ -63,7 +63,7 @@ describe("people.pix_keys (RFC-005 §3)", () => {
   });
 
   it.each(["CPF", "CNPJ", "EMAIL", "PHONE", "RANDOM"])("accepts type %s", async (type) => {
-    await add(await person(), type);
+    expect((await add(await person(), type)).affectedRows).toBe(1);
   });
 
   it("refuses a type outside the list", async () => {

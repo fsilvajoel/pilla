@@ -18,8 +18,9 @@
     "check:deps": "node scripts/check-allowed-deps.mjs",
     "check:schemas": "node scripts/check-schemas.mjs packages/schemas/src && node scripts/check-avoid.mjs docs/memoria/libs/zod.md packages/schemas/src",
     "check:lint-sheet": "node scripts/check-lint-sheet.mjs",
-    "test:scripts": "node --test scripts/check-schemas.test.mjs",
-    "verify": "pnpm check:deps && pnpm check:env && pnpm check:schemas && pnpm check:lint-sheet && pnpm test:scripts && pnpm lint && pnpm typecheck && pnpm depcruise && pnpm test && pnpm test:harness",
+    "test:scripts": "node --test scripts/check-schemas.test.mjs scripts/check-test-quality.test.mjs",
+    "check:tests": "node scripts/check-test-quality.mjs $(git ls-files '*.test.ts')",
+    "verify": "pnpm check:deps && pnpm check:env && pnpm check:tests && pnpm check:schemas && pnpm check:lint-sheet && pnpm test:scripts && pnpm lint && pnpm typecheck && pnpm depcruise && pnpm test && pnpm test:harness",
     "prepare": "lefthook install",
     "test:harness": "python3 -m unittest discover -s tools/alice-harness/tests -t tools/alice-harness"
   },

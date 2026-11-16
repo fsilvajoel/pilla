@@ -10,7 +10,13 @@ type Column = {
   character_maximum_length: number | null;
   column_default: string | null;
 };
-type Person = { active: boolean; version: number; created_at: Date | null; updated_at: Date | null };
+type Person = {
+  active: boolean;
+  version: number;
+  created_at: Date | null;
+  updated_at: Date | null;
+  referred_by_id: string | null;
+};
 
 describe("people.persons (RFC-005 §3)", () => {
   let client: PGlite;
@@ -61,9 +67,8 @@ describe("people.persons (RFC-005 §3)", () => {
   });
 
   it("accepts a cpf of 11 digits and many persons without cpf (RN-P01)", async () => {
-    await add({ cpf: "12345678901" });
-    await add({ cpf: null });
-    await add({ cpf: null });
+    const results = [await add({ cpf: "12345678901" }), await add({ cpf: null }), await add({ cpf: null })];
+    expect(results.map((r) => r.affectedRows)).toEqual([1, 1, 1]);
   });
 
   it.each(["1234567890a", "123.456.789"])("refuses the cpf %s (only digits)", async (cpf) => {
@@ -82,7 +87,8 @@ describe("people.persons (RFC-005 §3)", () => {
   it("accepts a referrer that is a registered person (RN-P02)", async () => {
     const referrer = id();
     await add({ id: referrer });
-    await add({ referred_by_id: referrer });
+    const { rows } = await add({ referred_by_id: referrer });
+    expect(rows[0]?.referred_by_id).toBe(referrer);
   });
 
   it("refuses a referrer that is not a registered person (RN-P02)", async () => {
