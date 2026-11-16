@@ -18,13 +18,14 @@ Documentação e comentários de código em pt-BR; código em inglês ([ADR-0012
 
 ## 2. Papéis
 
-| Quem | Faz | Não faz |
-|---|---|---|
-| **Joel** | decide produto e arquitetura; aprova docs e PRs; faz merge | — |
-| **Claude** (tech lead) | recorta tarefas em cartões claros e conferíveis; escreve **assinaturas, testes e travas**; arquitetura, segurança, integração entre módulos; responde dúvidas da Alice; revisa; comita | ficar no meio do ciclo de tentativa e erro da Alice |
-| **Alice** (local) | implementa até os testes passarem; código repetitivo; rascunhos de docs/PR; resumos; pesquisa em docs oficiais | alterar testes, configs, docs aprovados, dependências; segurança/autenticação; comitar |
+| Quem                   | Faz                                                                                                                                                                                    | Não faz                                                                                |
+| ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| **Joel**               | decide produto e arquitetura; aprova docs e PRs; faz merge                                                                                                                             | —                                                                                      |
+| **Claude** (tech lead) | recorta tarefas em cartões claros e conferíveis; escreve **assinaturas, testes e travas**; arquitetura, segurança, integração entre módulos; responde dúvidas da Alice; revisa; comita | ficar no meio do ciclo de tentativa e erro da Alice                                    |
+| **Alice** (local)      | implementa até os testes passarem; código repetitivo; rascunhos de docs/PR; resumos; pesquisa em docs oficiais                                                                         | alterar testes, configs, docs aprovados, dependências; segurança/autenticação; comitar |
 
 ### Economia de tokens do Claude (regra de operação)
+
 - O ciclo **tentar → testar → corrigir** roda no ambiente da Alice (GPU local); o Claude só recebe o **resultado aprovado** pelas travas.
 - O retorno ao Claude é **compacto**: status, testes, arquivos, linhas, perguntas. Nunca o histórico da Alice.
 - Pedidos à Alice apontam **caminhos de arquivo**; conteúdo não é colado na conversa do Claude.
@@ -32,12 +33,30 @@ Documentação e comentários de código em pt-BR; código em inglês ([ADR-0012
 - Revisão proporcional ao risco ([revisão](docs/agents/revisao.md)).
 - Cada execução registra tokens da Alice; acompanhamos a economia por tarefa.
 
-## 3. Fluxo de trabalho (TDD)
+## 3. Fluxo de trabalho
+
+### 3.1 Ciclo de desenvolvimento (sprint) — definido pelo Joel em 16/11/2026
+
+| #   | Etapa                                        | O que sai                                                                                                             | Quem                                                                       |
+| --- | -------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| 1   | **Planejamento**                             | PRD, ADR, RFC e demais documentos aprovados                                                                           | Joel decide; Claude redige                                                 |
+| 2   | **Refinamento técnico**                      | cartões no tamanho da Alice (`alice.py cards` verde) e cenários de teste de cada feature, citando as regras (CA/T/RN) | Claude fatia; Bia detalha os cenários                                      |
+| 3   | **Desenvolvimento**                          | primeiro os testes, depois o código (`alice.py feature`)                                                              | Bia escreve os testes; Alice escreve o código                              |
+| 4   | **Validação/review**                         | checks verdes, auditoria e revisão do que foi gerado                                                                  | portões do harness, Bia (testes), Claude (revisão final)                   |
+| 5   | **Entrega**                                  | commit, push e PR                                                                                                     | Claude comita; Joel aprova e faz merge                                     |
+| 6   | **Retrospectiva + ajustes + próxima sprint** | retro por feature, custo (Claude × Alice × Bia), ajustes do processo e do harness, plano da sprint seguinte           | retro: harness/Claude; harness: **Jorge** (autônomo); plano: Joel + Claude |
+
+Regras do ciclo:
+
+- Feature só entra em Desenvolvimento com todos os testes da Bia prontos e revisados; daí a Alice pega os cartões dela e o pipeline segue para a próxima feature.
+- Problema de processo ou de harness achado em qualquer etapa vai para a caixa do Jorge (`tools/jorge/jorge.py anotar`); quem acha não conserta no meio da entrega.
+
+### 3.2 TDD dentro do Desenvolvimento
 
 ```
 1. Claude: cartão de tarefa + assinaturas (tipos/interfaces, corpo `throw new Error('not implemented')`)
-2. Claude: testes que falham, cada um citando o ID da regra (CA-xx, T-xx, RN-xx)
-3. Claude: commit "test: ..." no branch da tarefa  → os testes ficam PROTEGIDOS
+2. Bia: testes que falham, cada um citando o ID da regra (CA-xx, T-xx, RN-xx), revisados por ela
+3. Harness: commit "test: ..." da feature  → os testes ficam PROTEGIDOS
 4. Alice: implementa no ambiente dela até a verificação completa passar (§8)
 5. Alice: dúvida → docs oficiais ou ask_claude (§7)
 6. Ambiente: verificação final + checagem do diff → relatório compacto ao Claude
@@ -51,16 +70,17 @@ Testes vêm **antes** do código e são escritos por quem **não** implementa. Q
 
 **Código no repositório só entra pela Alice via `alice-harness`** (`alice.py run <cartão> --repo .`), inclusive quando disparada pelo Claude do Windows. Chamada direta ao modelo (`chat`/curl) serve só para resumo e rascunho de texto. Assim valem sempre as travas de [docs/agents/travas.md](docs/agents/travas.md).
 
-| `kind` do cartão | Alice faz | Escreve em |
-|---|---|---|
-| `implement` (padrão) | implementa → testa → corrige → refatora → lint → verifica | `allowedPaths` (código) |
-| `test-author` | rascunha testes a partir dos IDs; o Claude revisa antes do commit | arquivos de teste do cartão |
-| `pre-review` | revisa o diff em sessão nova contra cartão e glossário; só relata | nada |
-| `docs` | rascunha ficha de módulo, corpo de PR, lições | `docs/memoria/**` do cartão |
-| `cards` | rascunha cartões a partir das tabelas das RFCs | `docs/plano/**` |
-| `research` | pesquisa em documentação oficial, só com bom motivo ([cartão](docs/agents/cartao-de-tarefa.md)) | um resumo em `docs/pesquisa/` |
+| `kind` do cartão     | Alice faz                                                                                       | Escreve em                    |
+| -------------------- | ----------------------------------------------------------------------------------------------- | ----------------------------- |
+| `implement` (padrão) | implementa → testa → corrige → refatora → lint → verifica                                       | `allowedPaths` (código)       |
+| `test-author`        | rascunha testes a partir dos IDs; o Claude revisa antes do commit                               | arquivos de teste do cartão   |
+| `pre-review`         | revisa o diff em sessão nova contra cartão e glossário; só relata                               | nada                          |
+| `docs`               | rascunha ficha de módulo, corpo de PR, lições                                                   | `docs/memoria/**` do cartão   |
+| `cards`              | rascunha cartões a partir das tabelas das RFCs                                                  | `docs/plano/**`               |
+| `research`           | pesquisa em documentação oficial, só com bom motivo ([cartão](docs/agents/cartao-de-tarefa.md)) | um resumo em `docs/pesquisa/` |
 
 **Tarefa da Alice é pequena** (lições LI-011/012/013, conferidas pelo `alice.py cards`):
+
 - no máximo **2 arquivos** em `allowedPaths` e **30 chamadas** de ferramenta; uma função por cartão;
 - arquivo grande é escrito em partes; saída grande (vários cartões, documento longo) é gerada **por partes em modo texto** e montada por script;
 - critérios de pronto e o que exige fidelidade ao plano são escritos pelo Claude, ancorados no ID da regra;
@@ -80,6 +100,7 @@ Testes vêm **antes** do código e são escritos por quem **não** implementa. Q
 ## 6. Estrutura e convenções
 
 Estrutura: [RFC-003 §4.1](docs/rfc/RFC-003-stack-tecnologica.md). Cada módulo da API:
+
 ```
 modules/<module>/
   public/   # única porta de entrada para outros módulos (serviços, tipos, eventos)
@@ -87,6 +108,7 @@ modules/<module>/
   infra/    # repositórios Drizzle, schema do banco do módulo
   http/     # controllers e DTOs (Zod de packages/schemas)
 ```
+
 - Nomes: [glossário](docs/glossario.md). Termo novo entra no glossário antes do código.
 - Dinheiro, taxas, datas, erros e eventos: [RFC-004 §2](docs/rfc/RFC-004-api-e-eventos.md).
 - Erros de domínio: classes com `code` do catálogo (RFC-004 §6); texto pt-BR só no arquivo de mensagens.
@@ -96,6 +118,7 @@ modules/<module>/
 ## 7. Dúvidas: documentação oficial ou pergunta (nunca invenção)
 
 Ordem obrigatória quando faltar conhecimento:
+
 1. **Documentos do projeto** (`docs/`, código vizinho).
 2. **Documentação oficial** via `web_search` + `fetch_page`, só nos domínios de `officialDomains` em [`.agents/policy.yaml`](.agents/policy.yaml) (para `github.com`, só o repositório oficial da biblioteca).
 3. **`ask_claude`**: pausa a tarefa e envia **só a pergunta** (objetiva, com o trecho mínimo). O Claude pesquisa e devolve **só a resposta necessária**; a tarefa continua de onde parou.
