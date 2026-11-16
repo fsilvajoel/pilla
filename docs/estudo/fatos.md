@@ -99,6 +99,20 @@
 - Erro de harness (rodada 5): a mesma regra de tamanho em dois lugares, com dois números. Conserto em duas etapas. Primeiro, o limite por chamada passou a usar a conta do validador, e a ferramenta `append_file` passou a escrever arquivo grande em partes. Depois, a pedido do Joel ("não quero mais limite fixo"), todos os limites de tamanho passaram a sair de uma função só (`cards.size_model`), a partir da janela (`num_ctx`) e da resposta (`num_predict`) do perfil. No qwen35 (32k/8k): 341 linhas por chamada, 512 por arquivo (cabe inteiro numa leitura) e 21,5 mil caracteres de saída de ferramenta (antes 6 mil, o que cortava ao meio um teste de 265 linhas).
 - Lição: quando o agente esbarra num limite, conserte o limite; encolher a entrega para caber (minha dica "abaixo de 100 linhas") corta cobertura.
 
+#### Rodada 11: laço automático (`plan-run --rounds 3`), a Bia escreve (15/11, 23:55)
+
+| Item | Medido |
+|---|---|
+| Quem escreveu | Bia (`assignee: bia`), checks verdes em 3 requisições (as 3 tentativas internas do `bia.py write`) |
+| Rodadas do laço | 1 de 3: o portão final (pré-revisão local por consenso) parou como `error` (Alice local indisponível ou resposta sem JSON depois da 1ª amostra). Não houve reprovação nem nova rodada; o T04 foi pulado |
+| Tempo | 208 s |
+| Tokens Alice (local) | 3.625 entrada / 721 saída (1 amostra) |
+| Tokens Bia | 10.343 entrada / 6.656 saída; 3 requisições; cota restante 27/50 |
+| Custo do Claude nesta sessão | 34 turnos, custo ≈ 0,62M (implementar o laço + testes + medir), contra 330 turnos e ≈5M no modo manual (10 rodadas) |
+
+- O laço cortou a orquestração do Claude: a leva inteira saiu de uma chamada e de uma leitura do retro.
+- Furo do harness achado na medição: o retro não diz por que o portão deu `error` (o motivo só está no log da rodada, que o Claude não lê). Conserto em sessão própria: levar o motivo do `bia.py gate` ao retro e repetir a amostra local que falhar antes de desistir.
+
 ## Ainda NÃO testado (conclusões pendentes)
 - Geração de código TypeScript do produto (E1: motor financeiro; depois API, banco, frontend).
 - Modo test-author (Alice escrevendo testes), pre-review, fila de tarefas, CI com todas as travas (lint, tipos, fronteiras, mutação).
