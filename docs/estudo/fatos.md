@@ -81,6 +81,24 @@
 - Custo: a 2ª entrega gastou 2,83 milhões de tokens de entrada e 37,7 mil de saída da Alice (custo zero de API), e o tempo subiu 4,6×. O Claude gastou ≈ 0,33 milhão de tokens equivalentes nessa leva.
 - Limite observado: as notas da pré-revisão local vêm confusas, e duas delas contradiziam o critério de pronto (trocar o `toBe` de Date/Error). A suspeita, não verificada, é que notas ruins pioraram a 2ª entrega. A pré-revisão local serve de filtro barato; o portão final continua sendo a Bia.
 
+### Rodadas seguintes do E4-T03 (15–16/11)
+
+| Rodada | Resultado | Tempo | Tokens Alice (entrada) | Quem barrou e por quê |
+|---|---|---|---|---|
+| 3 | checks verdes | 86 s | 187 mil | Bia: `toEqual({...input})` não prova que a entrada ficou igual; faltava `structuredClone` |
+| 4 | checks verdes | 77 s | 246 mil | ainda `JSON.parse`; o local reprovou, mas o filtro descartou a nota (sem crases) |
+| 5 | falhou | 574 s | 2,95 milhões | 10 bloqueios: a ferramenta barrava 150 linhas por chamada e o validador aceitava 341 |
+| 6 | checks verdes | 33 s | 32 mil | local aprovou errado; Bia: trocou `ownerCpf` por `cpf` e faltou o array aninhado |
+| 7 | checks verdes | 33 s | 25 mil | Bia: `phoneNumber` não é chave sensível (não termina com `phone`) |
+| 8 | checks verdes | 61 s | 153 mil | local, com razão: o teste redige `phonenumber` e mantém `phoneNumber`, que se contradizem ignorando caixa |
+
+- Filtro de notas locais: a nota só vai para a Alice se citar, entre crases, algo que o pronto exige e o arquivo não tem; as outras ficam em "Descartadas". O filtro tirou 3 de 4 notas contrárias ao pronto, mas também descartou uma nota verdadeira escrita sem crases (rodada 4).
+- Pré-revisão local de cartão: só ruído (4 reprovações seguidas, 2 reclamações reais). De teste: barra coisa certa às vezes, mas também aprova errado (rodada 6).
+- A Bia também tem ruído: reprovou uma vez um cartão que já tinha aprovado.
+- `structuredClone` exigia `@types/node` no apps/api. Virou regra (ADR-0010, emenda): tipagem forte em todo lugar possível, `@types/node` no código Node e nada de `any`. No TypeScript 6, `types` vem vazio por padrão, então é preciso declarar `"types": ["node"]`.
+- Erro de harness (rodada 5): a mesma regra de tamanho em dois lugares, com dois números. Conserto em duas etapas. Primeiro, o limite por chamada passou a usar a conta do validador, e a ferramenta `append_file` passou a escrever arquivo grande em partes. Depois, a pedido do Joel ("não quero mais limite fixo"), todos os limites de tamanho passaram a sair de uma função só (`cards.size_model`), a partir da janela (`num_ctx`) e da resposta (`num_predict`) do perfil. No qwen35 (32k/8k): 341 linhas por chamada, 512 por arquivo (cabe inteiro numa leitura) e 21,5 mil caracteres de saída de ferramenta (antes 6 mil, o que cortava ao meio um teste de 265 linhas).
+- Lição: quando o agente esbarra num limite, conserte o limite; encolher a entrega para caber (minha dica "abaixo de 100 linhas") corta cobertura.
+
 ## Ainda NÃO testado (conclusões pendentes)
 - Geração de código TypeScript do produto (E1: motor financeiro; depois API, banco, frontend).
 - Modo test-author (Alice escrevendo testes), pre-review, fila de tarefas, CI com todas as travas (lint, tipos, fronteiras, mutação).
