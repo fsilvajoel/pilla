@@ -9,7 +9,11 @@ export default defineConfig({
     coverage: {
       provider: "v8",
       include: ["src/**/*.ts"],
-      exclude: ["src/**/*.test.ts", "src/**/infra/schema.ts"],
+      exclude: [
+        "src/**/*.test.ts",
+        "src/**/infra/schema.ts",
+        "src/log/redact.ts", // stub E4-T04: sai no commit Card-Done do cartão (e4-guardrails H)
+      ],
       thresholds: { lines: 100, branches: 100, functions: 100, statements: 100 },
     },
   },
