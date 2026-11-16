@@ -113,6 +113,22 @@
 - O laço cortou a orquestração do Claude: a leva inteira saiu de uma chamada e de uma leitura do retro.
 - Furo do harness achado na medição: o retro não diz por que o portão deu `error` (o motivo só está no log da rodada, que o Claude não lê). Conserto em sessão própria: levar o motivo do `bia.py gate` ao retro e repetir a amostra local que falhar antes de desistir.
 
+#### Rodada 12: portão consertado, `plan-run --rounds 3` (16/11, 00:03–00:10)
+
+Conserto antes da rodada (9de0f20): a amostra local que falha (sem JSON, 5xx, timeout) repete até 2 vezes; o motivo curto do portão em `error` vai ao retro; `claude-usage` e `cost` somam os subagentes (`<sessão>/subagents/agent-*.jsonl`).
+
+| Item | Medido |
+|---|---|
+| Resultado | E4-T03 `escalated` depois de 3 rodadas (Bia escreveu, checks verdes nas 3; o portão local reprovou as 3). E4-T04 pulado (dependência) |
+| Tempo | 411 s (277 + 92 + 42) |
+| Tokens Alice (local) | 27.754 entrada / 22.492 saída |
+| Tokens Bia | 8.412 entrada / 9.268 saída; 5 requisições; cota restante 24/50 |
+| Custo do Claude nesta sessão (subagente) | 30 turnos, custo ≈ 0,44M até a medição (conserto + testes + rodada), mais uns 3 turnos para anotar e commitar |
+
+- Desta vez não houve `error`: as amostras locais voltaram com JSON.
+- O portão local reprovou sem nenhum problema com apoio no pronto: as notas da última rodada caíram todas em "Descartadas" (regra 4 aplicada a `toEqual` com valor literal, que o pronto pede). A Bia reescreveu duas vezes sem nota útil; o retro mostra "(a revisão não deixou nota com apoio no pronto)".
+- Falha de desenho achada: no `bia.py gate`, reprovação "sem consenso" e com zero problemas aceitos conta como reprovação e gasta rodada. Conserto em sessão própria (decisão do Joel): sem consenso → `escalated` direto, ou a Bia revisa como desempate.
+
 ## Ainda NÃO testado (conclusões pendentes)
 - Geração de código TypeScript do produto (E1: motor financeiro; depois API, banco, frontend).
 - Modo test-author (Alice escrevendo testes), pre-review, fila de tarefas, CI com todas as travas (lint, tipos, fronteiras, mutação).
