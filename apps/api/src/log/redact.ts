@@ -8,5 +8,41 @@ export const REDACTED = "[REDACTED]";
  * objeto simples nem array (Date, Error, texto, número, null) volta como veio.
  */
 export function redact(value: unknown): unknown {
-  throw new Error(`not implemented: ${String(value)}`);
+  const isPlainObject = (v: unknown): v is Record<string, unknown> =>
+    typeof v === "object" && v !== null && (v.constructor === Object || Object.getPrototypeOf(v) === null);
+
+  const isSensitiveKey = (key: string): boolean => {
+    const lower = key.toLowerCase();
+    return (
+      lower.endsWith("cpf") ||
+      lower.endsWith("phone") ||
+      lower.endsWith("email") ||
+      lower.endsWith("password") ||
+      lower.endsWith("token")
+    );
+  };
+
+  if (value === null || typeof value !== "object") {
+    return value;
+  }
+
+  if (Array.isArray(value)) {
+    return value.map(redact);
+  }
+
+  if (!isPlainObject(value)) {
+    return value;
+  }
+
+  const result: Record<string, unknown> = {};
+  for (const key of Object.keys(value)) {
+    const val = value[key];
+    if (isSensitiveKey(key)) {
+      result[key] = REDACTED;
+    } else {
+      result[key] = redact(val);
+    }
+  }
+
+  return result;
 }
