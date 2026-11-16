@@ -26,7 +26,9 @@ def load_policy(repo: Path) -> dict[str, Any]:
                 return policy
             
             # Validate keys
-            allowed_keys = {"officialDomains", "denyRead", "protectedWrite", "forbiddenAdded", "limits"}
+            allowed_keys = {"officialDomains", "denyRead", "protectedWrite", "forbiddenAdded"}
+            if "limits" in repo_config:
+                raise ValueError("limits não é mais da política: os tamanhos saem de cards.size_model (erro 15)")
             for key in repo_config:
                 if key not in allowed_keys:
                     raise ValueError(f"Unknown policy key: {key}")
@@ -35,13 +37,6 @@ def load_policy(repo: Path) -> dict[str, Any]:
             for key in ["officialDomains", "denyRead", "protectedWrite", "forbiddenAdded"]:
                 if key in repo_config:
                     policy[key] = repo_config[key]
-
-            # Limits are merged per key
-            if "limits" in repo_config:
-                if "limits" not in policy:
-                    policy["limits"] = {}
-                for limit_key, limit_val in repo_config["limits"].items():
-                    policy["limits"][limit_key] = limit_val
 
     # Ensure forbiddenAdded is a list of (label, compiled re.Pattern)
     if "forbiddenAdded" in policy:

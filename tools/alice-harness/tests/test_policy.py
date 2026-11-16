@@ -26,7 +26,7 @@ class PolicyTest(unittest.TestCase):
         self.assertIn(".env", p["denyRead"])
         self.assertIn("*.test.ts", p["protectedWrite"])
         self.assertIn("AGENTS.md", p["protectedWrite"])
-        self.assertEqual(p["limits"], {"maxWriteLines": 400, "maxToolOutput": 6000, "maxContextChars": 90000})
+        self.assertNotIn("limits", p)  # erro 15: tamanhos saem de cards.size_model
 
     def test_forbidden_added_are_compiled_label_regex_pairs(self):
         p = load_policy(self.repo)
@@ -47,11 +47,10 @@ class PolicyTest(unittest.TestCase):
         self.assertEqual(p["officialDomains"], ["example.org"])
         self.assertIn(".env", p["denyRead"])  # untouched keys keep defaults
 
-    def test_repo_file_merges_limits_per_key(self):
+    def test_repo_file_with_fixed_limits_is_rejected(self):
         self.write("limits:\n  maxWriteLines: 300\n")
-        p = load_policy(self.repo)
-        self.assertEqual(p["limits"]["maxWriteLines"], 300)
-        self.assertEqual(p["limits"]["maxToolOutput"], 6000)
+        with self.assertRaises(ValueError):
+            load_policy(self.repo)
 
     def test_repo_forbidden_added(self):
         self.write("forbiddenAdded:\n  - {label: debugger, pattern: '\\bdebugger\\b'}\n")
@@ -70,7 +69,7 @@ class PolicyTest(unittest.TestCase):
 
     def test_empty_file_means_defaults(self):
         self.write("")
-        self.assertEqual(load_policy(self.repo)["limits"]["maxWriteLines"], 400)
+        self.assertIn(".env", load_policy(self.repo)["denyRead"])
 
 
 if __name__ == "__main__":

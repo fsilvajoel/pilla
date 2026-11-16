@@ -1,4 +1,5 @@
 import re
+from typing import NamedTuple
 
 # bons motivos para gastar uma busca externa (docs/agents/cartao-de-tarefa.md)
 RESEARCH_REASONS = ("regulation", "external-spec", "lib-behavior", "security-advisory")
@@ -179,16 +180,60 @@ WHOLE_WRITE = re.compile(r"\bone write_file\b")
 MAX_TEST_BEHAVIORS = 5
 TEST_LITERAL = re.compile(r"(\"[^\"]{3,}\"|'[^']{3,}')")
 SOURCE = re.compile(r"\((?:[^)]*\b)?(?:RFC-\d|PRD-\d|ADR-\d|RN-[A-Z]\d|Joel)")
-DEFAULT_NUM_PREDICT = 8192  # same default as alice.chat_options
-TOKENS_PER_LINE = 12        # TypeScript, rough
-OUTPUT_SHARE = 0.5          # the rest of the answer goes to thinking and the tool-call JSON
 SIZE_NOTE_LINES = re.compile(r"(\d+)\s*(?:linhas|lines)\b")
+
+# ---- modelo de tamanho (erro 15): o único lugar com números de tamanho; todo limite sai de num_ctx/num_predict
+DEFAULT_NUM_CTX = 32768     # models.yaml: todos os perfis medidos cabem na GPU com 32k
+DEFAULT_NUM_PREDICT = 8192  # o perfil e o cartão (maxOutputTokens) podem trocar
+TOKENS_PER_LINE = 12        # TypeScript, aproximado
+CHARS_PER_TOKEN = 3.5       # código, aproximado
+OUTPUT_SHARE = 0.5          # da resposta; o resto vai para o raciocínio e o JSON da chamada
+FILE_SHARE = 0.25           # da entrada: um arquivo inteiro cabe numa leitura (read_file) e ainda sobra para o resto
+RULES_SHARE = 0.1           # da entrada: texto das regras do cartão no prompt de sistema
+LIB_SHEET_SHARE = 0.03      # da entrada: cada cola de biblioteca
+ECHO_SHARE = 0.02           # da entrada: arquivo curto devolvido depois de cada edição (LI-029)
+
+
+class Size(NamedTuple):
+    num_ctx: int             # tokens da janela
+    num_predict: int         # tokens da resposta
+    call_lines: int          # linhas por chamada de write_file/append_file
+    file_lines: int          # linhas do arquivo inteiro
+    tool_output_chars: int   # saída de uma ferramenta (cabe um arquivo de file_lines)
+    context_chars: int       # histórico antes de compactar: a janela menos a resposta
+    rules_chars: int
+    lib_sheet_chars: int
+    echo_lines: int          # arquivo até este tamanho volta inteiro depois da edição
+
+
+def output_tokens(card: dict, profile: dict | None = None) -> int:
+    """Orçamento de resposta: o cartão (maxOutputTokens) vence o perfil, que vence o padrão."""
+    profile = profile or {}
+    return int(card.get("maxOutputTokens", card.get("num_predict", profile.get("num_predict", DEFAULT_NUM_PREDICT))))
+
+
+def size_model(card: dict, profile: dict | None = None) -> Size:
+    """Todos os limites de tamanho do harness e do validador, derivados da janela e da resposta do modelo."""
+    num_ctx = int((profile or {}).get("num_ctx", DEFAULT_NUM_CTX))
+    num_predict = output_tokens(card, profile)
+    tokens_in = max(num_ctx - num_predict, 0)
+    file_lines = int(tokens_in * FILE_SHARE / TOKENS_PER_LINE)
+    return Size(
+        num_ctx=num_ctx,
+        num_predict=num_predict,
+        call_lines=int(num_predict * OUTPUT_SHARE / TOKENS_PER_LINE),
+        file_lines=file_lines,
+        tool_output_chars=int(file_lines * TOKENS_PER_LINE * CHARS_PER_TOKEN),
+        context_chars=int(tokens_in * CHARS_PER_TOKEN),
+        rules_chars=int(tokens_in * RULES_SHARE * CHARS_PER_TOKEN),
+        lib_sheet_chars=int(tokens_in * LIB_SHEET_SHARE * CHARS_PER_TOKEN),
+        echo_lines=int(tokens_in * ECHO_SHARE / TOKENS_PER_LINE),
+    )
 
 
 def write_file_limit(card: dict, num_predict: int = DEFAULT_NUM_PREDICT) -> int:
     """Lines that fit in one write_file answer, derived from the card's output budget."""
-    tokens = int(card.get("maxOutputTokens", card.get("num_predict", num_predict)))
-    return int(tokens * OUTPUT_SHARE / TOKENS_PER_LINE)
+    return size_model(card, {"num_predict": num_predict}).call_lines
 
 
 def _matches(path: str, patterns) -> bool:

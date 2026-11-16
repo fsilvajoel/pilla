@@ -82,7 +82,4 @@ forbiddenAdded:
   - label: "TODO without id"
     pattern: "\\b(TODO|FIXME)\\b(?!\\s*\\(?[A-Z]+-[A-Z]?\\d+)"
 
-limits:
-  maxWriteLines: 400
-  maxToolOutput: 6000
-  maxContextChars: 90000
+# limites de tamanho: não ficam aqui; saem de cards.size_model (perfil do modelo + cartão), erro 15

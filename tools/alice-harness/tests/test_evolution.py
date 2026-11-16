@@ -168,8 +168,8 @@ class ToolsLI028Test(unittest.TestCase):
 
     def test_short_file_is_shown_after_edit(self):  # LI-029
         import alice
-        self.assertIn("conteúdo atual", alice.current_view("a\nb\n"))
-        self.assertEqual(alice.current_view("x\n" * 60), "")
+        self.assertIn("conteúdo atual", alice.current_view("a\nb\n", 40))
+        self.assertEqual(alice.current_view("x\n" * 60, 40), "")
 
     def test_lib_sheets_follow_the_package_dependencies(self):
         import json, tempfile, alice
@@ -181,12 +181,12 @@ class ToolsLI028Test(unittest.TestCase):
             (r / "docs/memoria/libs").mkdir(parents=True)
             (r / "docs/memoria/libs/zod.md").write_text("use z.int()")
             (r / "docs/memoria/libs/react.md").write_text("hooks")
-            out = alice.lib_sheets(r, {"allowedPaths": ["packages/schemas/src/a.ts"]})
+            out = alice.lib_sheets(r, {"allowedPaths": ["packages/schemas/src/a.ts"]}, 2500)
             self.assertIn("z.int()", out)
             self.assertNotIn("hooks", out)
-            self.assertIn("hooks", alice.lib_sheets(r, {"allowedPaths": [], "libs": ["react"]}))
+            self.assertIn("hooks", alice.lib_sheets(r, {"allowedPaths": [], "libs": ["react"]}, 2500))
             cited = {"allowedPaths": [], "checklist": ["C8 follows the sheet (docs/memoria/libs/react.md)"]}
-            self.assertIn("hooks", alice.lib_sheets(r, cited))
+            self.assertIn("hooks", alice.lib_sheets(r, cited, 2500))
 
 
 class PreReviewGateTest(unittest.TestCase):
@@ -284,7 +284,8 @@ class WriteLimitTest(unittest.TestCase):
         from alice import call_line_limit, load_profile, PROFILE_NAME
         from cards import write_file_limit
         card = {"id": "X"}
-        self.assertEqual(call_line_limit(card), write_file_limit(card, int(load_profile(PROFILE_NAME).get("num_predict", 8192))))
+        from cards import output_tokens
+        self.assertEqual(call_line_limit(card), write_file_limit(card, output_tokens(card, load_profile(PROFILE_NAME))))
         self.assertEqual(call_line_limit({"maxOutputTokens": 2400}), write_file_limit({"maxOutputTokens": 2400}))
 
     def test_a_file_bigger_than_one_call_is_written_in_parts(self):
@@ -311,3 +312,32 @@ class WriteLimitTest(unittest.TestCase):
         self.assertIn("append_file", desc)
         self.assertNotIn("{limit}", " ".join(desc.values()))
         self.assertIn("{limit}", EDIT_NOTES)  # preenchido por call_line_limit no system_prompt
+
+    def test_every_size_limit_comes_from_the_model(self):
+        """Pedido do Joel (16/11): nenhum limite fixo de tamanho; dobrar a janela/resposta dobra os limites."""
+        from cards import size_model
+        small = size_model({}, {"num_ctx": 16384, "num_predict": 4096})
+        big = size_model({}, {"num_ctx": 32768, "num_predict": 8192})
+        for field in ("call_lines", "file_lines", "tool_output_chars", "context_chars", "rules_chars", "lib_sheet_chars", "echo_lines"):
+            self.assertAlmostEqual(getattr(big, field) / getattr(small, field), 2, delta=0.05, msg=field)
+        self.assertEqual(size_model({"maxOutputTokens": 2400}, {"num_predict": 8192}).num_predict, 2400)
+
+    def test_a_file_of_the_limit_is_read_whole(self):
+        """O arquivo do tamanho máximo cabe numa leitura: antes 6000 caracteres cortavam um teste de 265 linhas ao meio."""
+        with tempfile.TemporaryDirectory() as d:
+            repo = Path(d)
+            tools = self.make(repo)
+            size = tools.run.size
+            line = "x" * (size.tool_output_chars // size.file_lines - 8)
+            (repo / "a.ts").write_text("\n".join([line] * size.file_lines) + "\n")
+            self.assertNotIn("omitidos", tools.read_file("a.ts"))
+            with self.assertRaisesRegex(PermissionError, "cabe numa leitura"):
+                tools.append_file("a.ts", "y")
+
+    def test_runtime_uses_the_size_of_its_card(self):
+        with tempfile.TemporaryDirectory() as d:
+            tools = self.make(Path(d), {"id": "X", "title": "x", "allowedPaths": ["a.ts"], "checks": [], "rules": [],
+                                        "maxOutputTokens": 2400})
+            from alice import card_size
+            self.assertEqual(tools.run.size, card_size(tools.run.card))
+            self.assertIn(f"{tools.run.size.call_lines} linhas", tools.run.system_prompt())

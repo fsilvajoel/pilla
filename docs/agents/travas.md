@@ -93,7 +93,7 @@ O domínio verifica e **lança erro** se violar: soma das alocações = valor do
 | Arquivos protegidos (nunca escreve) | lista `protectedWrite` de [`.agents/policy.yaml`](../../.agents/policy.yaml) (testes, `docs/**`, `AGENTS.md`, configs, lockfile, `.github/**`, migrações…), salvo caminho listado explicitamente no cartão (ex.: `kind: test-author`) |
 | `run_check` | comandos fixos do cartão (`pnpm --filter X test` etc.), com tempo limite; saída truncada |
 | Web | `web_search` (Brave) e `fetch_page` só em `officialDomains` da política; texto da web marcado como **dado não confiável** no contexto dela |
-| Limites | por cartão: tentativas e chamadas de ferramenta (`budget`), `maxOutputTokens`; pela política: arquivo ≤ `maxWriteLines`, saída de ferramenta e contexto |
+| Limites | por cartão: tentativas e chamadas de ferramenta (`budget`), `maxOutputTokens`; de tamanho: todos saem de `cards.size_model` (janela e resposta do perfil do modelo + cartão): linhas por chamada, linhas do arquivo (cabe numa leitura), saída de ferramenta, contexto, regras e colas. Nenhum número fixo na política (erro 15) |
 | Refatoração | em `kind: implement`, depois da verificação aprovada há uma rodada obrigatória de limpeza e nova verificação (`refactor: false` desliga) |
 | Raciocínio | `think: false` por padrão (cartão liga em lógica difícil) |
 | Acesso pelo Windows | só via harness; trava técnica: chave SSH própria com `scripts/alice-gate.sh` (pendente) |
