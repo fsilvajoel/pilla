@@ -1450,6 +1450,8 @@ def main() -> int:
     q = sub.add_parser("prompt"); q.add_argument("plan", type=Path); q.add_argument("id"); q.add_argument("--repo", type=Path, default=Path("."))
     v = sub.add_parser("review"); v.add_argument("plan", type=Path); v.add_argument("id"); v.add_argument("--repo", type=Path, default=Path("."))
     e = sub.add_parser("cards"); e.add_argument("plans", nargs="+", type=Path); e.add_argument("--repo", type=Path, default=Path("."))
+    f = sub.add_parser("feature"); f.add_argument("plan", type=Path); f.add_argument("feature"); f.add_argument("--repo", type=Path, default=Path("."))
+    f.add_argument("--stage", choices=("plan", "tests", "implement", "audit", "review", "all"), default="all"); f.add_argument("--rounds", type=int, default=3)
     ns = ap.parse_args()
     if ns.cmd == "rule":
         print(rules_text(ns.repo.resolve(), ns.ids))
@@ -1464,6 +1466,9 @@ def main() -> int:
         return cmd_plan_run(ns.plan, ns.ids, ns.repo.resolve(), ns.rounds)
     if ns.cmd == "prompt":
         return cmd_prompt(ns.plan, ns.id, ns.repo.resolve())
+    if ns.cmd == "feature":  # orquestração por feature (ADR-0014)
+        from feature import cmd_feature
+        return cmd_feature(ns.plan, ns.feature, ns.repo, ns.stage, ns.rounds, RUNS)
     if ns.cmd == "cards":
         return cmd_cards(ns.plans, ns.repo.resolve())
     if ns.cmd == "review":
