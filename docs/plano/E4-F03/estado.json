@@ -1,0 +1,24 @@
+{
+ "feature": "E4-F03",
+ "stages": {
+  "plan": {
+   "status": "done",
+   "seconds": 0,
+   "problems": []
+  },
+  "tests": {
+   "status": "quota",
+   "biaRequests": 2,
+   "biaIn": 6423,
+   "biaOut": 7071,
+   "seconds": 119,
+   "message": "quota: orçamento da feature esgotado (2/2 requisições)",
+   "red": [
+    "node scripts/expect-red.mjs apps/api src/log/redact-prototype.test.ts"
+   ]
+  }
+ },
+ "biaRequests": 2,
+ "testShas": {},
+ "expectRed": false
+}

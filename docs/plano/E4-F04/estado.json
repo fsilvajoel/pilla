@@ -1,0 +1,63 @@
+{
+ "feature": "E4-F04",
+ "stages": {
+  "plan": {
+   "status": "done",
+   "seconds": 0,
+   "problems": []
+  },
+  "tests": {
+   "status": "done",
+   "biaRequests": 1,
+   "biaIn": 2943,
+   "biaOut": 1541,
+   "seconds": 25,
+   "repairs": 0
+  },
+  "implement": {
+   "status": "done",
+   "seconds": 64,
+   "aliceTokens": {
+    "prompt": 108180,
+    "output": 1337
+   },
+   "cards": {
+    "E4-T09": "done"
+   }
+  },
+  "audit": {
+   "status": "done",
+   "biaRequests": 1,
+   "biaIn": 4199,
+   "biaOut": 1299,
+   "seconds": 25,
+   "verdict": "aprovado",
+   "gaps": 0,
+   "extraTests": [],
+   "checksGreen": true
+  },
+  "review": {
+   "status": "ready",
+   "seconds": 11
+  }
+ },
+ "biaRequests": 2,
+ "testShas": {
+  "apps/api/src/log/redact-prototype.test.ts": "eb4282abc4a967dc5d8045ca412e02ebeeb3e576"
+ },
+ "expectRed": true,
+ "scenarios": [
+  {
+   "id": "C9",
+   "descricao": "objeto literal com chave própria constructor é tratado como objeto simples e tem chaves sensíveis redigidas",
+   "card": "E4-T08",
+   "teste": "redacts sensitive keys and keeps constructor and name keys"
+  },
+  {
+   "id": "C10",
+   "descricao": "o mesmo objeto, dentro de outro objeto e dentro de um array, também é redigido",
+   "card": "E4-T08",
+   "teste": "redacts sensitive keys in nested object / redacts sensitive keys in object inside array"
+  }
+ ]
+}

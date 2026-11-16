@@ -1,0 +1,107 @@
+{
+ "feature": "E4-F02",
+ "stages": {
+  "plan": {
+   "status": "done",
+   "seconds": 0,
+   "problems": []
+  },
+  "tests": {
+   "status": "done",
+   "biaRequests": 6,
+   "biaIn": 17504,
+   "biaOut": 19206,
+   "seconds": 398,
+   "repairs": 1,
+   "red": [
+    "node scripts/expect-red.mjs apps/api src/log/redact.test.ts",
+    "pnpm --filter @pilla/api typecheck",
+    "pnpm --filter @pilla/api lint"
+   ],
+   "message": "quota: orçamento da feature esgotado (4/4 requisições)"
+  },
+  "implement": {
+   "status": "done",
+   "seconds": 2521,
+   "aliceTokens": {
+    "prompt": 8590608,
+    "output": 111634
+   },
+   "cards": {
+    "E4-T04": "done",
+    "E4-T05": "done"
+   }
+  },
+  "audit": {
+   "status": "done",
+   "biaRequests": 1,
+   "biaIn": 4595,
+   "biaOut": 4700,
+   "seconds": 85,
+   "verdict": "aprovado",
+   "gaps": 0,
+   "extraTests": [],
+   "checksGreen": true
+  },
+  "review": {
+   "status": "ready",
+   "seconds": 14
+  }
+ },
+ "biaRequests": 4,
+ "testShas": {
+  "apps/api/src/log/redact.test.ts": "b6571add2936f547d4a5af135aacd88ca6341558"
+ },
+ "expectRed": true,
+ "scenarios": [
+  {
+   "id": "C1",
+   "descricao": "cada uma das chaves cpf, phone, email, password e token tem o valor trocado por REDACTED",
+   "card": "E4-T03",
+   "teste": "C1,C2: key cpf is redacted / replaces value with REDACTED (e similarly for phone, email, password, token)"
+  },
+  {
+   "id": "C2",
+   "descricao": "chave que termina com nome sensível, sem diferenciar maiúsculas (accessToken, ownerCpf, userEmail, PASSWORD), vira REDACTED",
+   "card": "E4-T03",
+   "teste": "C1,C2: key accessToken is redacted / replaces value with REDACTED (e similarly for ownerCpf, userEmail, PASSWORD)"
+  },
+  {
+   "id": "C3",
+   "descricao": "outras chaves mantêm o valor (name, amountCents, id)",
+   "card": "E4-T03",
+   "teste": "C3: key name keeps its value / returns the same value (e similarly for amountCents, id)"
+  },
+  {
+   "id": "C4",
+   "descricao": "objeto aninhado é redigido em qualquer profundidade",
+   "card": "E4-T03",
+   "teste": "C4: nested objects / redacts sensitive keys at any depth"
+  },
+  {
+   "id": "C5",
+   "descricao": "objeto dentro de array é redigido",
+   "card": "E4-T03",
+   "teste": "C5: objects inside arrays / redacts sensitive keys in each array element"
+  },
+  {
+   "id": "C6",
+   "descricao": "a entrada não muda, com array aninhado incluído (comparar com structuredClone feito antes)",
+   "card": "E4-T03",
+   "teste": "C6: input is not mutated / returns a new object and leaves the original intact, including nested arrays"
+  },
+  {
+   "id": "C7",
+   "descricao": "Date, Error, string, número e null voltam como vieram (toBe)",
+   "card": "E4-T03",
+   "teste": "C7: non-plain-object values are returned as they came / Date is returned by reference (e similarly for Error, string, number, null)"
+  },
+  {
+   "id": "C8",
+   "descricao": "objeto sem protótipo (criado com Object.create(null)) também é objeto simples: a chave sensível dele vira REDACTED",
+   "card": "E4-T03",
+   "teste": "C8: object without prototype is treated as plain object / redacts sensitive keys in an object with null prototype"
+  }
+ ],
+ "biaRequestsNote": "3 requisições da etapa de testes (16/11 10:17) descontadas: checks rodaram contra a implementação na árvore em vez do stub (erro do Claude); stages.tests.biaRequests guarda o total real"
+}
