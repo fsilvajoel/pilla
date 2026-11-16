@@ -9,7 +9,9 @@ export const REDACTED = "[REDACTED]";
  */
 export function redact(value: unknown): unknown {
   const isPlainObject = (v: unknown): v is Record<string, unknown> =>
-    typeof v === "object" && v !== null && (v.constructor === Object || Object.getPrototypeOf(v) === null);
+    typeof v === "object" &&
+    v !== null &&
+    (Object.getPrototypeOf(v) === Object.prototype || Object.getPrototypeOf(v) === null);
 
   const isSensitiveKey = (key: string): boolean => {
     const lower = key.toLowerCase();
