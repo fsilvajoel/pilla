@@ -1265,7 +1265,7 @@ def run_card(card: dict, repo: Path, rounds: int, ops: PlanOps) -> dict:
         if rnd["exec"] == "done" and test:
             code = ops.local_gate(card, repo) if writer == "bia" else ops.bia_review(card, repo)
             gaps = ops.review_problems(card, repo) if code == 0 else []
-            rnd["review"] = "aprovado" if code == 0 and not gaps else {3: "error", 4: "quota"}.get(code, "reprovado")
+            rnd["review"] = "aprovado" if code == 0 and not gaps else {3: "error", 4: "quota", 5: "inconclusivo"}.get(code, "reprovado")
             if gaps:
                 rnd["gaps"] = gaps[:3]
             if rnd["review"] == "error":
@@ -1282,6 +1282,10 @@ def run_card(card: dict, repo: Path, rounds: int, ops: PlanOps) -> dict:
         rec["rounds"].append(rnd)
         if rnd["exec"] == "done" and (not test or rnd["review"] == "aprovado"):
             rec["status"] = "done"
+            break
+        if rnd["review"] == "inconclusivo":  # o filtro local não bloqueia sozinho nem gasta rodada (ADR-0014)
+            rec["status"] = "escalated"
+            rec["message"] = f"portão local inconclusivo na rodada {n}: reprovou sem nota com apoio no pronto; decide o Claude"
             break
         stop = rnd["review"] if rnd["review"] in STOP_STATUSES else rnd["exec"]
         if stop in STOP_STATUSES or stop.startswith("crash"):

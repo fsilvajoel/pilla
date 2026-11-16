@@ -96,6 +96,14 @@ class PlanRunLoopTest(unittest.TestCase):
         self.assertEqual([r["status"] for r in results], ["done", "done"])
         self.assertEqual(len(results[1]["rounds"]), 1)
 
+    def test_inconclusive_gate_escalates_without_spending_rounds(self):
+        with tempfile.TemporaryDirectory() as d:
+            ops = FakeOps(reviews=[5, 0])
+            rec = run_card({**TEST_CARD, "assignee": "bia"}, Path(d), 3, ops)
+        self.assertEqual(rec["status"], "escalated")
+        self.assertEqual(rec["attempts"], 1)
+        self.assertIn("inconclusivo", rec["message"])
+
     def test_bia_writer_is_gated_locally_never_by_bia_review(self):
         card = {**TEST_CARD, "assignee": "bia"}
         ops = FakeOps(reviews=[2, 0])
@@ -184,10 +192,17 @@ class LocalGateTest(unittest.TestCase):
         self.assertIn("- [x] d — it 'x' linha 3", text)
 
     def test_same_line_twice_rejects(self):
-        bad = {"veredito": "reprovado", "problemas": [{"linha": 4, "regra": 2, "explicacao": "vazio"}]}
+        # a nota cita entre crases algo do pronto que o arquivo não tem (grounded); antes de 16/11 qualquer nota valia
+        bad = {"veredito": "reprovado", "problemas": [{"linha": 4, "regra": 5, "explicacao": "falta `d`"}]}
         code, text = self.run_gate([bad, bad])
         self.assertEqual(code, 2)
         self.assertIn("pré-revisão local", text)
+
+    def test_rejection_without_grounded_note_is_inconclusive(self):  # rodada 12 do E4-T03 (ADR-0014)
+        bad = {"veredito": "reprovado", "problemas": [{"linha": 4, "regra": 4, "explicacao": "refaz o algoritmo"}]}
+        code, text = self.run_gate([bad, bad])
+        self.assertEqual(code, 5)
+        self.assertIn("## Descartadas", text)
 
     def test_unavailable_is_not_approval(self):
         with mock.patch.object(bia, "test_input", return_value=bia.TestInput("a", "s", None, [], "p")), \

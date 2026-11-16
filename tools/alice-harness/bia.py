@@ -14,7 +14,8 @@ lê só o contrato (readFirst, regras) e o que vai revisar; não vê o raciocín
 Regras dela: nunca calcula valor (na sonda errou dígito verificador); cobra fonte de literal, acusa contradição,
 asserção vazia, teste que refaz o algoritmo e comportamento do contrato sem teste. Os checks mecânicos do cartão
 rodam antes: com check vermelho a revisão nem é pedida. Resposta bruta em runs/bia/<id>.json (com o sha lido).
-Saída: 0 aprovado, 2 reprovado, 3 erro de API ou de resposta, 4 cota do OpenRouter na reserva.
+Saída: 0 aprovado, 2 reprovado, 3 erro de API ou de resposta, 4 cota do OpenRouter na reserva, 5 portão local
+inconclusivo (reprovou sem nota com apoio no pronto: não conta como reprovação).
 
 Economia (Joel, 16/11): o free tier dá 50 requisições por dia (free_model_daily_requests em /api/v1/key); a GPU
 local da Alice não tem custo. Então: a Alice escreve teste e código; antes de cada chamada à Bia, a Alice faz a
@@ -380,7 +381,8 @@ def review_test(repo: Path, card: dict, model: str, name: str, pre: bool = True)
 def local_gate(repo: Path, card: dict, samples: int | None = None) -> int:
     """Portão final de teste escrito pela Bia (travas.md 4.9): a Alice local revisa com o mesmo pedido da Bia; aprova
     com 2 amostras aprovadas (todos os itens ok), reprova com problema na mesma linha em 2 amostras ou sem consenso.
-    Os checks (expect-red, qualidade, tipos, lint) já passaram em test_input. 0 aprovado, 2 reprovado, 3 indisponível."""
+    Os checks (expect-red, qualidade, tipos, lint) já passaram em test_input. 0 aprovado, 2 reprovado, 3 indisponível,
+    5 inconclusivo (reprovação sem nenhuma nota com apoio no pronto não conta; ADR-0014)."""
     if str(card.get("assignee")) != "bia":
         print(f"gate: {card['id']} não foi escrito pela Bia; quem revisa é `bia.py test`")
         return 3
@@ -424,6 +426,10 @@ def local_gate(repo: Path, card: dict, samples: int | None = None) -> int:
             first.setdefault(str(p.get("linha")), p)
     problems = [first[line] for line in agreed] or list(first.values())
     write_rejection(repo, card["id"], ti.path, ti.sha or "", problems, card.get("done") or [], ti.src)
+    if not any(grounded(p, card.get("done") or [], ti.src) for p in problems):
+        # rodada 12 do E4-T03: 3 reprovações sem nenhuma nota com apoio no pronto; o filtro local não bloqueia sozinho
+        print(f"pré-revisão local inconclusiva: nenhuma nota com apoio no pronto ({len(verdicts)} amostras); decide o Claude")
+        return 5
     print(f"reprovado pela alice-local ({'consenso' if agreed else 'sem consenso'}; {len(verdicts)} amostras)")
     return 2
 
