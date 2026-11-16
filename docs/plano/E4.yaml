@@ -96,7 +96,8 @@ cards:
       - never edit apps/api/src/log/redact.ts
     hints:
       - one write_file of the whole test file, then run_check 0, 1, 2 and 3
-      - use it.each for the list of sensitive keys, and compare with REDACTED, never with a value built in the test
+      - 'use it.each for the list of sensitive keys, and build plain input objects like { ownerCpf: "x", name: "Ana" }'
+      - the expected value is always REDACTED or the same input value, never one computed in the test
     budget:
       attempts: 4
       toolCalls: 25
