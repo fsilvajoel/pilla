@@ -137,3 +137,9 @@ cards:
       - apps/api/src/log/redact.ts
       - apps/api/src/log/redact.test.ts
     sizeNote: uma função
+# Feature (ADR-0014): testes e implementação do redact numa entrega só; plano em docs/plano/E4-F02/plano.md.
+features:
+  - id: E4-F02
+    title: Redact sensitive log fields
+    cards: [E4-T03, E4-T04]
+    biaBudget: 4
