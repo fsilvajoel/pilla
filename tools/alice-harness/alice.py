@@ -9,6 +9,7 @@ Usage:
   alice.py metrics                               summary of runs/metrics.jsonl
   alice.py evolution                             metrics grouped by harness version (is Alice improving?)
   alice.py cards <plan.yaml>... [--repo <path>]  validate delivery plans (docs/plano/E*.yaml)
+  alice.py review <plan.yaml> <ID> [--repo]      Claude's review of a test-author delivery (required before its implement card)
   alice.py plan-run <plan.yaml> <ID>... [--repo]  run Alice cards in order (skips dependents of failures)
   alice.py status                                is Alice running? (lock: runs/ACTIVE.json)
   alice.py cost <ID>... [--repo] [--since ISO]   Claude cost of the cards, preparation included (the only number for retro/report)
@@ -45,6 +46,7 @@ from policy import load_policy
 from claude_usage import card_since, cost, latest_transcript, load as load_usage, load_all, window
 from retro import tool_error_summary, write_retro
 from rules import find_doc, find_rule, rules_text
+from review import review_problems, template as review_template
 
 HERE = Path(__file__).resolve().parent
 RUNS = HERE / "runs"
@@ -988,10 +990,66 @@ def preflight_problems(card: dict, repo: Path, run_check) -> list[str]:
     for f in card.get("protectedTests") or []:
         if "*" not in str(f) and not (repo / str(f)).exists():
             out.append(f"protectedTests: {f} não existe (o teste vem antes da implementação)")
+    if not out and (repo / ".git").exists():
+        out += protected_test_problems(card, repo)
     if not out and card.get("kind", "implement") in WRITING_KINDS and card.get("checks"):
         if all(run_check(str(c)) == 0 for c in card["checks"]):  # stops at the first red check
             out.append("todos os checks já passam antes de começar: nenhum check distingue pronto de não pronto (LI-025)")
     return out
+
+
+def plan_cards(repo: Path) -> list[dict]:
+    out = []
+    for f in sorted((repo / "docs" / "plano").glob("*.yaml")):
+        out += (yaml.safe_load(f.read_text()) or {}).get("cards") or []
+    return out
+
+
+def protected_test_problems(card: dict, repo: Path) -> list[str]:
+    """e4-guardrails G: o teste que decide o pronto precisa estar commitado, passar no check de qualidade e,
+    se veio de um cartão test-author, ter a revisão do Claude sobre essa versão (erro 11: E4-T02 rodou em cima
+    de um teste impossível)."""
+    out = []
+    for f in [str(x) for x in card.get("protectedTests") or [] if "*" not in str(x)]:
+        if not (repo / f).exists():
+            continue  # já acusado acima
+        tracked = subprocess.run(["git", "ls-files", "--error-unmatch", f], cwd=repo, capture_output=True).returncode == 0
+        clean = subprocess.run(["git", "diff", "--quiet", "HEAD", "--", f], cwd=repo).returncode == 0
+        if not tracked or not clean:
+            out.append(f"protectedTests: {f} não está commitado como está (revise e commite o teste antes da implementação)")
+            continue
+        script = repo / "scripts" / "check-test-quality.mjs"
+        if f.endswith(".test.ts") and script.exists():
+            q = subprocess.run(["node", str(script), f], cwd=repo, capture_output=True, text=True)
+            if q.returncode != 0:
+                out.append(f"protectedTests: {f} reprovado no check de qualidade de teste:\n{q.stderr.strip()}")
+        for author in plan_cards(repo):
+            if author.get("kind") == "test-author" and f in [str(x) for x in author.get("allowedPaths") or []]:
+                out += review_problems(repo, author, "HEAD")
+    return out
+
+
+def restore_allowed(repo: Path, card: dict, run_dir: Path) -> list[str]:
+    """O cartão começa do HEAD: sobra de execução anterior nos allowedPaths vai para run_dir/previous/
+    (nada se perde) e o arquivo volta ao commit, ou some se não existe no commit."""
+    import shutil
+    moved = []
+    for f in [str(x) for x in card.get("allowedPaths") or [] if "*" not in str(x)]:
+        path = repo / f
+        tracked = subprocess.run(["git", "cat-file", "-e", f"HEAD:{f}"], cwd=repo, capture_output=True).returncode == 0
+        changed = path.exists() and (not tracked or subprocess.run(["git", "diff", "--quiet", "HEAD", "--", f], cwd=repo).returncode != 0)
+        if not changed and (path.exists() or not tracked):
+            continue
+        if path.exists():
+            keep = run_dir / "previous" / f
+            keep.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(path, keep)
+        if tracked:
+            subprocess.run(["git", "checkout", "HEAD", "--", f], cwd=repo, check=True)
+        else:
+            path.unlink()
+        moved.append(f)
+    return moved
 
 
 def foreign_changes(repo: Path, card: dict, touched: list[str]) -> list[str]:
@@ -1013,15 +1071,18 @@ def cmd_run(task: Path, repo: Path) -> int:
             sys.exit(f"cartão sem campo obrigatório: {k}")
     if card.get("kind", "implement") not in KINDS:
         sys.exit(f"kind inválido: {card.get('kind')} (use {', '.join(KINDS)})")
-    _, dirty = run_cmd("git status --porcelain --untracked-files=all", repo)
-    card["_baseDirty"] = [l[3:].strip() for l in dirty.splitlines() if l.strip()]
     run_dir = RUNS / card["id"] / time.strftime("%Y%m%d-%H%M%S")
     run_dir.mkdir(parents=True)
+    restored = restore_allowed(repo, card, run_dir) if card.get("kind") in ("implement", "test-author") else []
+    _, dirty = run_cmd("git status --porcelain --untracked-files=all", repo)
+    card["_baseDirty"] = [l[3:].strip() for l in dirty.splitlines() if l.strip()]
     card["_repo"] = str(repo.resolve())
     r = Run(card, repo, run_dir)
     r.messages = [{"role": "system", "content": r.system_prompt()},
                   {"role": "user", "content": f"Comece a tarefa {card['id']}."}]
     r.save("running")
+    if restored:
+        r.log("restore", {"files": restored, "kept": str(run_dir / "previous")})
     problems = preflight_problems(card, repo, lambda c: r.check(c)[0])
     if problems:  # the card is wrong: nothing the model does can fix it
         r.log("preflight", {"problems": problems})
@@ -1155,6 +1216,23 @@ def cmd_prompt(plan: Path, cid: str, repo: Path) -> int:
     print("=== system ===\n" + r.system_prompt() + f"\n\n=== user ===\nComece a tarefa {cid}.")
     return 0
 
+def cmd_review(plan: Path, cid: str, repo: Path) -> int:
+    """Revisão do teste de um cartão test-author: cria o modelo ou confere o preenchido (e4-guardrails G)."""
+    from review import review_file
+    card = next((c for c in (yaml.safe_load(plan.read_text()) or {}).get("cards", []) if c.get("id") == cid), None)
+    if not card or card.get("kind") != "test-author":
+        sys.exit(f"{cid}: não é cartão test-author em {plan}")
+    f = review_file(repo, cid)
+    if not f.exists():
+        f.parent.mkdir(parents=True, exist_ok=True)
+        f.write_text(review_template(repo, card))
+        print(f"modelo criado: {f}\nLeia o teste e, para cada linha do done, marque [x] e escreva onde o teste confere isso "
+              f"(ou deixe [ ] e abra cartão de correção). Rode este comando de novo para conferir.")
+        return 3
+    problems = review_problems(repo, card, "worktree")
+    print("revisão ok" if not problems else "\n".join(problems))
+    return 0 if not problems else 2
+
 def cmd_cards(plans: list[Path], repo: Path) -> int:
     """Validate delivery plans; ids from every docs/plano/*.yaml count as known dependencies."""
     from rules import index_rules
@@ -1198,6 +1276,7 @@ def main() -> int:
     u = sub.add_parser("claude-usage"); u.add_argument("--since", default=""); u.add_argument("--until", default="~")
     g = sub.add_parser("plan-run"); g.add_argument("plan", type=Path); g.add_argument("ids", nargs="+"); g.add_argument("--repo", type=Path, default=Path("."))
     q = sub.add_parser("prompt"); q.add_argument("plan", type=Path); q.add_argument("id"); q.add_argument("--repo", type=Path, default=Path("."))
+    v = sub.add_parser("review"); v.add_argument("plan", type=Path); v.add_argument("id"); v.add_argument("--repo", type=Path, default=Path("."))
     e = sub.add_parser("cards"); e.add_argument("plans", nargs="+", type=Path); e.add_argument("--repo", type=Path, default=Path("."))
     ns = ap.parse_args()
     if ns.cmd == "rule":
@@ -1215,6 +1294,8 @@ def main() -> int:
         return cmd_prompt(ns.plan, ns.id, ns.repo.resolve())
     if ns.cmd == "cards":
         return cmd_cards(ns.plans, ns.repo.resolve())
+    if ns.cmd == "review":
+        return cmd_review(ns.plan, ns.id, ns.repo.resolve())
     if ns.cmd == "evolution":
         print(metrics.evolution_table(metrics.load(RUNS / "metrics.jsonl"), harness_history()))
         return 0

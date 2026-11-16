@@ -175,6 +175,10 @@ MAX_DONE_CHARS = 220
 # e4-guardrails C: the hint is a hint, never the solution (E4-T02 carried the check-digit formula)
 HINT_FORMULA = re.compile(r"%|\bsum of\b|\btimes\b|=>|\breturn\b|\bfor \(|\bwhile \(|\w\(|`|;")
 WHOLE_WRITE = re.compile(r"\bone write_file\b")
+# e4-guardrails F: cartão de teste
+MAX_TEST_BEHAVIORS = 5
+TEST_LITERAL = re.compile(r"(\"[^\"]{3,}\"|'[^']{3,}')")
+SOURCE = re.compile(r"\((?:[^)]*\b)?(?:RFC-\d|PRD-\d|ADR-\d|RN-[A-Z]\d|Joel)")
 DEFAULT_NUM_PREDICT = 8192  # same default as alice.chat_options
 TOKENS_PER_LINE = 12        # TypeScript, rough
 OUTPUT_SHARE = 0.5          # the rest of the answer goes to thinking and the tool-call JSON
@@ -294,6 +298,20 @@ def quality_problems(card: dict, exists=None, producible: set[str] = frozenset()
                 add(f"hint pede um write_file de {path} sem tamanho previsto: ponha 'N linhas' no sizeNote (limite {limit})", "E4-C")
             elif size > limit:
                 add(f"hint pede um write_file de {path} com ~{size} linhas; cabem {limit} na saída ({int(limit * TOKENS_PER_LINE / OUTPUT_SHARE)} tokens): divida em edits", "E4-C")
+
+    # --- test-author (e4-guardrails F): o teste barra defeito; precisa ser possível e não refazer o código
+    if assignee == "alice" and kind == "test-author":
+        for path in [p for p in allowed if re.search(r"\.test\.tsx?$", p)]:
+            if not any("check-test-quality.mjs" in c and path in c for c in checks):
+                add(f"test-author sem o check 'node scripts/check-test-quality.mjs {path}' (asserção vazia, teste impossível)", "E4-F")
+        behaviors = [d for d in done if not DONE_LITERAL.search(d) and not re.match(r"(every test fails now|never edit)", d)]
+        if len(behaviors) > MAX_TEST_BEHAVIORS:
+            add(f"{len(behaviors)} comportamentos no done (máx. {MAX_TEST_BEHAVIORS}): divida o teste em cartões", "E4-F")
+        for d in behaviors:
+            for lit in TEST_LITERAL.findall(d):
+                if not SOURCE.search(d):
+                    add(f"valor exato {lit} no done sem fonte (RFC, PRD, ADR, RN ou Joel): valor calculado por quem escreve "
+                        f"o cartão é o código de novo; afirme a propriedade ou cite a fonte", "E4-F")
 
     # --- size and budget
     if assignee == "alice" and kind in ("implement", "test-author") and any("*" in p for p in allowed):
