@@ -39,8 +39,22 @@ describe("database conventions (RFC-005 §1)", () => {
     expect(bad.map(where)).toEqual([]);
   });
 
+  // Datas de negócio são `date` (RFC-005 §1); estas três têm sufixo _at mas o RFC as tipa como date (§4, §5).
+  const businessDatesNamedAt = [
+    "lending.loans.contracted_at",
+    "lending.loans.disbursed_at",
+    "payments.payments.paid_at",
+  ];
+
   it("stores instants with time zone (*_at)", () => {
-    const bad = columns.filter((c) => c.column_name.endsWith("_at") && c.data_type !== "timestamp with time zone");
+    const bad = columns.filter(
+      (c) =>
+        c.column_name.endsWith("_at") &&
+        c.data_type !== "timestamp with time zone" &&
+        !(
+          c.data_type === "date" && businessDatesNamedAt.includes(`${c.table_schema}.${c.table_name}.${c.column_name}`)
+        ),
+    );
     expect(bad.map(where)).toEqual([]);
   });
 
