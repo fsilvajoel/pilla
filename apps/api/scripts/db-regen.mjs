@@ -3,16 +3,28 @@
 import { spawnSync } from "node:child_process";
 
 // O módulo é o schema do PostgreSQL e o nome do arquivo em drizzle-kit/ (RFC-005 §8); padrão: core.
-const [name, module = "core"] = process.argv.slice(2);
+// --dry-run só imprime os comandos git, sem executar nada (usado no teste).
+const argv = process.argv.slice(2);
+const dryRun = argv.includes("--dry-run");
+const [name, module = "core"] = argv.filter((a) => a !== "--dry-run");
 if (!name) {
-  process.stderr.write("uso: node scripts/db-regen.mjs <nome-da-migracao> [modulo]\n");
+  process.stderr.write("uso: node scripts/db-regen.mjs <nome-da-migracao> [modulo] [--dry-run]\n");
   process.exit(2);
 }
+// Só a pasta do módulo pedido: as migrações novas dos outros módulos ficam intactas.
+const folder = `migrations/${module}`;
+const gitSteps = [
+  ["checkout", "--", folder],
+  ["clean", "-fdq", folder],
+];
+if (dryRun) {
+  for (const args of gitSteps) process.stdout.write(`git ${args.join(" ")}\n`);
+  process.exit(0);
+}
 const run = (cmd, args) => spawnSync(cmd, args, { encoding: "utf8" });
-for (const args of [
-  ["checkout", "--", "migrations"],
-  ["clean", "-fdq", "migrations"],
-]) {
+// Módulo novo ainda não tem pasta no git: não há o que restaurar, só o que limpar.
+const tracked = run("git", ["ls-files", "--", folder]).stdout.trim() !== "";
+for (const args of tracked ? gitSteps : gitSteps.slice(1)) {
   const r = run("git", args);
   if (r.status !== 0) {
     process.stderr.write(`git ${args.join(" ")} falhou:\n${r.stderr}`);
