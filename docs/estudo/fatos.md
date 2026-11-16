@@ -129,6 +129,29 @@ Conserto antes da rodada (9de0f20): a amostra local que falha (sem JSON, 5xx, ti
 - O portão local reprovou sem nenhum problema com apoio no pronto: as notas da última rodada caíram todas em "Descartadas" (regra 4 aplicada a `toEqual` com valor literal, que o pronto pede). A Bia reescreveu duas vezes sem nota útil; o retro mostra "(a revisão não deixou nota com apoio no pronto)".
 - Falha de desenho achada: no `bia.py gate`, reprovação "sem consenso" e com zero problemas aceitos conta como reprovação e gasta rodada. Conserto em sessão própria (decisão do Joel): sem consenso → `escalated` direto, ou a Bia revisa como desempate.
 
+## Orquestração por feature (2026-11-16)
+
+Desenho em [orquestracao.md](../agents/orquestracao.md) e ADR-0014: a Bia escreve todos os testes da feature numa chamada e audita numa chamada; a Alice implementa local (`plan-run`); o Claude lê só `revisao-final.md` e o diff. Prova única com o harness congelado (085a5e5): `alice.py feature docs/plano/E4.yaml E4-F02 --stage all`, `ALICE_PROFILE=qwen35`, 00:35–00:52.
+
+| Etapa | Status | Tempo | Tokens Alice (local) | Requisições Bia |
+|---|---|---|---|---|
+| 1 plano (Claude) | done (validador ok) | 0 s | - | 0 |
+| 2 testes (Bia) | done: 7 de 7 cenários com teste, checks verdes de primeira, 0 reparos | 28 s | - | 1 (1.867 entrada / 2.007 saída) |
+| 3 implementação (Alice) | failed: limite de chamadas de ferramenta (36 chamadas, 1 rodada) | 971 s | 2.475.963 entrada / 33.357 saída | 0 |
+| 4 auditoria | não rodou (implementação não done; a Bia não é chamada) | - | - | 0 |
+| 5 revisão (Claude) | não rodou | - | - | 0 |
+
+| Comparação (E4-T03) | Requisições Bia | Turnos / custo do Claude | Resultado |
+|---|---|---|---|
+| Manual, 10 rodadas por cartão (15/11) | ≈10 | 330 turnos, ≈5M | teste nunca fechou |
+| `plan-run --rounds 3`, rodadas 11 e 12 | 3 e 5 | 34 e 30 turnos, ≈0,6M e ≈0,4M | `error` e `escalated` |
+| Por feature (esta prova) | 1 | 166 turnos, ≈3,07M (subagente inteiro: inventário, ADR, 4 passos de harness com 221 testes, migração, prova e medição) | teste aceito pelos checks na 1ª chamada; implementação falhou |
+
+- Ganho medido: a etapa de testes, que em 12 rodadas por cartão nunca passou do portão, saiu com todos os checks verdes em 1 requisição e 28 s. Cota: 22 → 21 de 50.
+- O custo do Claude desta sessão é de construção, não de operação: a prova em si custou ao Claude 1 disparo e 3 leituras (saída, `testes.md`, `estado.json`).
+- Falha da prova: a Alice estourou o limite de chamadas do E4-T04 (orçamento do cartão) em 971 s e 2,5M de tokens de entrada; os testes da Bia ainda não foram auditados nem commitados. Não consertado (harness congelado); a implementação parcial ficou na árvore, sem commit.
+- Cache: o prefixo da Bia (papel + plano + contrato do HEAD) ficou estável por construção (teste `test_prefix_is_identical_across_calls`), mas com 1 chamada não houve reaproveitamento a medir.
+
 ## Ainda NÃO testado (conclusões pendentes)
 - Geração de código TypeScript do produto (E1: motor financeiro; depois API, banco, frontend).
 - Modo test-author (Alice escrevendo testes), pre-review, fila de tarefas, CI com todas as travas (lint, tipos, fronteiras, mutação).
