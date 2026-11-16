@@ -112,6 +112,24 @@ class BiaTest(RepoCase):
             bia.chat = old
         self.assertIn("não aprovada", review_problems(self.repo, AUTHOR, "worktree")[0])
 
+    def test_mechanical_lines_are_not_asked(self):
+        """run_check e never edit são do harness: a Bia não responde e isso não pode reprovar (erro 13)."""
+        card = {**self.card(["true"]), "done": ["every test fails now (run_check 0)", "f(1) is valid (RN-P01)",
+                                               "never edit src/a.ts"]}
+        sent = []
+        def fake(messages, model, key, **k):
+            sent.append(messages[0]["content"])
+            answer = {"veredito": "aprovado", "problemas": [], "itens": [{"n": 2, "ok": True, "onde": "it 'a' linha 1"}]}
+            return {"id": "gen-2", "choices": [{"message": {"content": json.dumps(answer)}}]}
+        old, bia.chat, bia.api_key = bia.chat, fake, lambda repo: "k"
+        try:
+            self.assertEqual(bia.review_test(self.repo, card, "m", "bia"), 0)
+        finally:
+            bia.chat = old
+        self.assertNotIn("run_check 0", sent[0].split("PRONTO QUANDO:")[1].split("Checks mecânicos")[0])
+        self.assertIn("2. f(1) is valid", sent[0])
+        self.assertEqual(review_problems(self.repo, card, "worktree"), [])
+
 
 class PreflightTest(RepoCase):
     def implement(self):

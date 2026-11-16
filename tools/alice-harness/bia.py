@@ -97,6 +97,16 @@ def save_raw(data: dict, extra: dict) -> str:
     return rid
 
 
+MECHANICAL = re.compile(r"\brun_check\b|^never edit\b", re.I)
+
+
+def mechanical(line: str) -> str:
+    """Linha do done que o harness garante, não o teste: run_check N (checks) e never edit (allowedPaths)."""
+    if not MECHANICAL.search(line):
+        return ""
+    return "check mecânico (passou antes da revisão)" if "run_check" in line else "allowedPaths/protectedTests do harness"
+
+
 def usage(data: dict) -> str:
     u = data.get("usage") or {}
     return f"tokens bia: entrada={u.get('prompt_tokens', 0)} saída={u.get('completion_tokens', 0)} custo={u.get('cost', 0)}"
@@ -130,10 +140,11 @@ def review_test(repo: Path, card: dict, model: str, name: str) -> int:
         print("bia: checks do cartão vermelhos, revisão não pedida:\n" + "\n".join(f"$ {c}\nexit={code}\n{out[-1500:]}" for c, code, out in red))
         return 2
     done = [str(d) for d in card.get("done") or []]
+    asked = [(n, d) for n, d in enumerate(done, 1) if not mechanical(d)]
     src = (repo / path).read_text()
     numbered = "\n".join(f"{i + 1:3d}  {line}" for i, line in enumerate(src.splitlines()))
     prompt = (f"{TEST_RULES}\n\n# CONTRATO\n{contract(repo, card)}\n\n# CARTÃO {card['id']}: {card.get('title', '')}\n"
-              f"PRONTO QUANDO:\n" + "\n".join(f"{i + 1}. {d}" for i, d in enumerate(done)) +
+              f"PRONTO QUANDO:\n" + "\n".join(f"{n}. {d}" for n, d in asked) +
               "\n\nChecks mecânicos (já rodaram e passaram): " + "; ".join(c for c, _, _ in checks) +
               f"\n\n# TESTE {path} (com número de linha)\n{numbered}\n")
     sha = blob_sha(repo, path, "worktree")
@@ -146,12 +157,13 @@ def review_test(repo: Path, card: dict, model: str, name: str) -> int:
     rid = save_raw(data, {"card": card["id"], "task": "test", "path": path, "sha": sha, "reviewer": name, "model": model})
     items = {int(i.get("n", 0)): i for i in verdict.get("itens") or [] if str(i.get("n", "")).isdigit()}
     problems = verdict.get("problemas") or []
-    ok = verdict.get("veredito") == "aprovado" and not problems and all(items.get(n + 1, {}).get("ok") for n in range(len(done)))
+    missing = [n for n, _ in asked if not items.get(n, {}).get("ok")]
+    ok = verdict.get("veredito") == "aprovado" and not problems and not missing
     lines = [f"# Revisão {card['id']}", "", f"revisor: {name} {model} {rid}", f"arquivo: {path} {sha}", ""]
     for n, d in enumerate(done, 1):
-        it = items.get(n, {})
-        mark = "x" if ok and it.get("ok") else " "
-        lines.append(f"- [{mark}] {d} — {str(it.get('onde') or 'sem resposta').strip()}")
+        it, mech = items.get(n, {}), mechanical(d)
+        mark = "x" if ok and (mech or it.get("ok")) else " "
+        lines.append(f"- [{mark}] {d} — {mech or str(it.get('onde') or 'sem resposta').strip()}")
     if problems:
         lines += ["", "## Problemas"] + [f"- linha {p.get('linha')} (regra {p.get('regra')}): {p.get('explicacao')}" for p in problems]
     f = review_file(repo, card["id"])
@@ -160,6 +172,10 @@ def review_test(repo: Path, card: dict, model: str, name: str) -> int:
     print(f"{'aprovado' if ok else 'reprovado'} por {name} ({model}): {f.relative_to(repo)}\n{usage(data)}")
     for p in problems:
         print(f"  - linha {p.get('linha')} (regra {p.get('regra')}): {p.get('explicacao')}")
+    if missing:
+        print(f"  - itens do pronto sem ok da Bia: {', '.join(map(str, missing))}")
+    elif not ok and not problems:
+        print(f"  - veredito '{verdict.get('veredito')}' sem problema listado")
     return 0 if ok else 2
 
 
