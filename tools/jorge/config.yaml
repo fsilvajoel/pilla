@@ -1,0 +1,45 @@
+# Configuração do runner do Jorge (agente único de manutenção do harness).
+# Modelo: Abacus RouteLLM (API compatível com OpenAI). Chave lida de tools/alice-harness/.env
+# (variável ABACUSAI_API_KEY; o nome antigo ABACUSAI_API_ também é aceito).
+api:
+  base_url: https://routellm.abacus.ai/v1
+  model: gpt-6-sol          # GPT-6 de linha; gpt-6-astra é o topo (5x o preço) — use --modelo gpt-6-astra
+  timeout_s: 600
+  retries: 3
+
+limites:
+  passos_analise: 40        # chamadas ao modelo na fase de análise
+  passos_aplicacao: 60      # chamadas ao modelo na fase de aplicação
+  linhas_por_leitura: 400   # read_file devolve no máximo isto por chamada (paginação por start/end)
+  linhas_busca: 150         # search_code
+  linhas_saida_testes: 80   # cauda da saída da suíte devolvida ao modelo
+  repeticao_aviso: 3        # mesma chamada seguida N vezes: aviso
+  repeticao_aborta: 5       # mesma chamada seguida N vezes: aborta
+  timeout_testes_s: 600
+
+caminhos:
+  escrita:                  # globs (relativos à raiz do repo) onde o Jorge pode escrever na APLICAÇÃO
+    - tools/alice-harness/**
+    - docs/agents/**
+    - .agents/policy.yaml
+  proibidos:                # nunca escritos, e lidos só quando indicado em leitura_proibida
+    - .claude/**
+    - "**/.env"
+    - "**/.env.*"
+    - tools/alice-harness/runs/**
+    - docs/plano/**/estado.json
+    - tools/jorge/**
+    - apps/**
+    - packages/**
+    - "**/__pycache__/**"
+  leitura_proibida:
+    - "**/.env"
+    - "**/.env.*"
+    - .git/**
+    - node_modules/**
+  travas:                   # escrita só com --travas-aprovadas (decisão do Joel)
+    - tools/alice-harness/scripts/guard_hook.py
+    - tools/alice-harness/policy.default.yaml
+    - tools/alice-harness/policy.py
+    - .agents/policy.yaml
+  trava_padrao_diff: "(?i)bia_?budget|BIA_RESERVE|biaRequests|estado\\.json"  # linha adicionada/removida com isto = trava

@@ -11,6 +11,17 @@
             "statusMessage": "e4-guardrails"
           }
         ]
+      },
+      {
+        "matcher": "Read|Grep|Glob|Bash|Write|Edit|MultiEdit|NotebookEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 /home/debian/code/pilla/tools/jorge/guarda_claude.py",
+            "timeout": 10,
+            "statusMessage": "guarda-jorge"
+          }
+        ]
       }
     ]
   }

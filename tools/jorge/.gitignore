@@ -1,0 +1,5 @@
+__pycache__/
+logs/*
+!logs/harness-v*/
+logs/harness-v*/*
+!logs/harness-v*/relatorio.md
