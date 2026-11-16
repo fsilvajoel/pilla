@@ -28,7 +28,7 @@ from pathlib import Path
 
 import yaml
 
-from alice import restore_allowed, run_cmd
+from alice import format_touched, restore_allowed, run_cmd
 from review import RAW_DIR, blob_sha, review_file
 from rules import rules_text
 
@@ -250,7 +250,8 @@ def write_test(repo: Path, card: dict, model: str, rounds: int = 3) -> int:
             messages += [{"role": "assistant", "content": text}, {"role": "user", "content": "Responda só com o arquivo num bloco ```ts."}]
             continue
         (repo / path).write_text(m.group(1))
-        red = [(c, code, out) for c, code, out in run_checks(repo, card) if code != 0]
+        format_touched(repo, [path])  # LI-052: o pre-commit roda prettier; formatar é do harness
+        red =[(c, code, out) for c, code, out in run_checks(repo, card) if code != 0]
         print(f"rodada {n}: {'checks verdes' if not red else f'{len(red)} check(s) vermelho(s)'}")
         if not red:
             print(f"bia escreveu {path} em {n} rodada(s); tokens bia: entrada={tokens[0]} saída={tokens[1]}")

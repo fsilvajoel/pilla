@@ -112,6 +112,21 @@ class BiaTest(RepoCase):
             bia.chat = old
         self.assertIn("não aprovada", review_problems(self.repo, AUTHOR, "worktree")[0])
 
+    def test_write_formats_before_checks(self):
+        """O pre-commit roda prettier: o arquivo da Bia sai formatado pelo harness (LI-052, erro 14)."""
+        order = []
+        reply = {"choices": [{"message": {"content": "```ts\nit('a', () => {})\n```"}}]}
+        olds = bia.chat, bia.api_key, bia.format_touched, bia.run_checks, bia.restore_allowed
+        bia.chat, bia.api_key = (lambda *a, **k: reply), (lambda repo: "k")
+        bia.format_touched = lambda repo, files: order.append(("fmt", files))
+        bia.run_checks = lambda repo, card: order.append(("checks",)) or []
+        bia.restore_allowed = lambda *a: None
+        try:
+            self.assertEqual(bia.write_test(self.repo, self.card(["true"]), "m"), 0)
+        finally:
+            bia.chat, bia.api_key, bia.format_touched, bia.run_checks, bia.restore_allowed = olds
+        self.assertEqual(order, [("fmt", [TEST]), ("checks",)])
+
     def test_mechanical_lines_are_not_asked(self):
         """run_check e never edit são do harness: a Bia não responde e isso não pode reprovar (erro 13)."""
         card = {**self.card(["true"]), "done": ["every test fails now (run_check 0)", "f(1) is valid (RN-P01)",
