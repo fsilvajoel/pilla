@@ -107,6 +107,13 @@ modelo gastar qualquer coisa); **—** = só a leitura de quem escreve.
   medir com `alice.py cost <ID>`. Motivo: o E4-T03 orquestrado à mão custou 330 turnos e ≈5M tokens em 10 rodadas,
   64% em releitura de contexto (custo ∝ turnos × contexto).
 
+### Feature (16/11/2026, ADR-0014)
+Cartões test-author (assignee bia) e implement (assignee alice) da mesma entrega formam uma feature no bloco
+`features:` do plano YAML (`id: E<n>-F<nn>`, `cards`, `biaBudget` de 2 a 6), com o plano em
+`docs/plano/<F>/plano.md` (Escopo, Riscos, Dependências, Critérios de aceite `- A<n>:`, Cenários `- C<n>:`).
+O `protectedTests` do implement sai dos `allowedPaths` dos test-author da feature. `alice.py cards` confere tudo.
+Fluxo, esquemas e a tabela de critérios de decisão: [orquestracao.md](orquestracao.md).
+
 ## O que o ambiente faz sozinho (não peça no cartão)
 
 - **Formata** com o Prettier os arquivos tocados, antes dos checks (LI-052).

@@ -6,12 +6,16 @@ Ambiente de trabalho da Alice (modelo local no Ollama): executa as ferramentas q
 - `alice.py cards <plano.yaml>... --repo <path>`: valida os cartões (forma e as regras de escrita de [cartao-de-tarefa.md](../../docs/agents/cartao-de-tarefa.md)). Rodar antes de qualquer fila.
 - `alice.py run <cartão.yaml> --repo <path>`: executa um cartão. Faz o pré-voo antes de chamar o modelo.
 - `alice.py plan-run <plano.yaml> <ID>... --repo <path>`: fila de cartões de um plano, com retrospectiva e tokens no fim.
+- `alice.py feature <plano.yaml> <F> [--stage plan|tests|implement|audit|review|all] [--rounds N] --repo <path>`: orquestração por feature (ADR-0014, [orquestracao.md](../../docs/agents/orquestracao.md)): a Bia escreve todos os testes numa chamada, a Alice implementa local (`plan-run`), a Bia audita numa chamada e o harness prepara `docs/plano/<F>/revisao-final.md` para o Claude. Estado em `docs/plano/<F>/estado.json`; `all` continua da primeira etapa não feita. Instruções fixas por papel em `roles/`.
 - `alice.py resume <run_dir> --answer "<texto>"`: continua uma execução que parou com pergunta. Recusa se houver arquivo alterado fora do cartão.
 - `alice.py status`: diz se há execução em andamento (ninguém edita o repositório enquanto houver).
 - `alice.py rule <ID>... [--repo <path>]`: mostra a definição de uma regra (RN-C03, T-13) ou seção de documento.
 - `alice.py metrics` / `alice.py evolution`: resumo de `runs/metrics.jsonl`; evolução por versão do harness.
 - `alice.py claude-usage --since <data>`: tokens reais do Claude, lidos do transcript da sessão mais recente e dos subagentes dela (`<sessão>/subagents/agent-*.jsonl`); `alice.py cost` soma os mesmos arquivos.
 - `alice.py chat "<pergunta>" [--file <path>]`: pergunta direta ao modelo, sem ferramentas (só resumo e rascunho).
+
+## Pré-revisão local inconclusiva (ADR-0014)
+`bia.py gate` sai com 5 quando reprova sem nenhuma nota com apoio no pronto (`grounded`): o filtro local não bloqueia sozinho; no `plan-run` o cartão fica `escalated` sem gastar rodada e o Claude decide.
 
 ## Estados de uma execução
 | Status | Significa | De quem é |
