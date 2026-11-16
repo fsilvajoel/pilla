@@ -68,6 +68,30 @@ class ReplaceFunctionTest(unittest.TestCase):
         self.assertNotIn("return 2;", out)
         self.assertIn("not implemented", out)
 
+    def test_does_not_duplicate_the_doc_comment_the_model_sends_again(self):
+        # erro 16: o modelo reenvia o /** */ junto com a função e o comentário do esboço aparecia duas vezes
+        new = "/** doc */\nexport function roundToStep(value: Cents, step: Cents): Cents {\n  return value;\n}"
+        out = replace_function(TS, "roundToStep", new)
+        self.assertEqual(out.count("/** doc */"), 1)
+        self.assertIn("return value;", out)
+
+    def test_multiline_doc_comment_is_kept_once(self):
+        ts = "/**\n * a\n * b\n */\nexport function f(): number {\n  return 1;\n}\n"
+        new = "/**\n * a\n * b\n */\nexport function f(): number {\n  return 2;\n}"
+        out = replace_function(ts, "f", new)
+        self.assertEqual(out, ts.replace("return 1", "return 2"))
+
+    def test_keeps_helper_above_and_drops_only_the_doc_comment(self):
+        new = "const h = 1;\n\n/** doc */\nexport function roundToStep(value: Cents): Cents {\n  return value + h;\n}"
+        out = replace_function(TS, "roundToStep", new)
+        self.assertEqual(out.count("/** doc */"), 1)
+        self.assertIn("const h = 1;", out)
+
+    def test_comment_of_the_code_is_kept_when_the_file_has_none(self):
+        ts = "export function f(): number {\n  return 1;\n}\n"
+        out = replace_function(ts, "f", "// novo\nexport function f(): number {\n  return 2;\n}")
+        self.assertIn("// novo", out)
+
     def test_unknown_function_raises(self):
         with self.assertRaisesRegex(ValueError, "não encontrada"):
             replace_function(TS, "nope", "x")

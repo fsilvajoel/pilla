@@ -87,5 +87,22 @@ def replace_function(text: str, name: str, code: str) -> str:
     end = next((j for j in range(start, len(lines)) if lines[j].rstrip("\n") == "}"), None)
     if end is None:
         raise ValueError(f"fim da função {name} não encontrado ('}}' na coluna 0)")
-    body = "\n".join(_LINE_NO.sub("", l) for l in code.strip("\n").splitlines()) + "\n"
+    new_lines = [_LINE_NO.sub("", l) for l in code.strip("\n").splitlines()]
+    if _comment_start(lines, start) < start:  # o comentário do esboço já está no arquivo: não duplicar (erro 16)
+        decl = next(i for i, l in enumerate(new_lines) if head.match(l))
+        new_lines = new_lines[:_comment_start(new_lines, decl)] + new_lines[decl:]
+    body = "\n".join(new_lines) + "\n"
     return "".join(lines[:start]) + body + "".join(lines[end + 1:])
+
+
+def _comment_start(lines: list[str], decl: int) -> int:
+    """Índice da primeira linha do comentário (/** */ ou //) colado acima de `decl`; `decl` se não há comentário."""
+    i = decl
+    if i > 0 and lines[i - 1].strip().endswith("*/"):
+        i -= 1
+        while i > 0 and not lines[i].strip().startswith("/*"):
+            i -= 1
+        return i if lines[i].strip().startswith("/*") else decl
+    while i > 0 and lines[i - 1].strip().startswith("//"):
+        i -= 1
+    return i
