@@ -96,16 +96,21 @@ class BiaTest(RepoCase):
         """GPU local é grátis, o OpenRouter tem 50/dia: se a Alice já reprova, a Bia não é chamada."""
         calls = []
         old, bia.chat = bia.chat, lambda *a, **k: calls.append(a)
-        bia.local_review = lambda prompt: [{"linha": 3, "regra": 2, "explicacao": "asserção vazia"},
-                                           {"linha": 3, "regra": 2, "explicacao": "repetido"}]
+        bia.local_review = lambda prompt: [{"linha": 3, "regra": 2, "explicacao": "falta `PRONTO_TOKEN`"},
+                                           {"linha": 3, "regra": 2, "explicacao": "repetido `PRONTO_TOKEN`"},
+                                           {"linha": 5, "regra": 1, "explicacao": "troque `toBe` por toEqual"}]
         try:
-            self.assertEqual(bia.review_test(self.repo, self.card(["true"]), "m", "bia"), 2)
-            self.assertEqual(bia.review_card(self.repo, self.card(["true"]), "m", "bia"), 2)
+            (self.repo / TEST).write_text("it('a', () => { expect(f(1)).toBe(true); });\n")
+            card = {**self.card(["true"]), "done": ["fails now", "uses PRONTO_TOKEN", "returned as it came (toBe)"]}
+            self.assertEqual(bia.review_test(self.repo, card, "m", "bia"), 2)
+            self.assertEqual(bia.review_card(self.repo, card, "m", "bia"), 2)
         finally:
             bia.chat = old
         self.assertEqual(calls, [])
+        self.assertIn("## Descartadas", review.review_file(self.repo, AUTHOR["id"]).read_text())
         # a reprovação volta para a próxima rodada da Alice, sem repetição, e não vale como aprovação
-        self.assertEqual(review.rejection_notes(self.repo, AUTHOR["id"]), ["- linha 3 (regra 2): asserção vazia"])
+        # só a nota com apoio no pronto (cita o que ele exige e o arquivo não tem); a que contradiz fica de fora
+        self.assertEqual(review.rejection_notes(self.repo, AUTHOR["id"]), ["- linha 3 (regra 2): falta `PRONTO_TOKEN`"])
         self.assertTrue(review_problems(self.repo, AUTHOR, "worktree"))
 
     def test_local_review_needs_two_samples_on_the_same_line(self):

@@ -88,7 +88,7 @@ cards:
     done:
       - every test fails now (the stub throws) and would pass with a correct implementation (run_check 0)
       - 'import { REDACTED, redact } from "./redact";'
-      - each of the keys cpf, phone, email, password and token has its value replaced by REDACTED (RFC-003 §4.1)
+      - each of the keys cpf, phone, email, password and token has its value replaced by REDACTED
       - keys that end with a sensitive name are redacted too, ignoring case (accessToken, ownerCpf, userEmail, PASSWORD), and other keys keep their value (name, amountCents, id)
       - nested objects and objects inside arrays are redacted at any depth
       - the input object is not changed (compare it with a structuredClone made before the call)
@@ -98,6 +98,7 @@ cards:
       - one write_file of the whole test file, then run_check 0, 1, 2 and 3
       - 'use it.each for the list of sensitive keys, and build plain input objects like { ownerCpf: "x", name: "Ana" }'
       - the expected value is always REDACTED or the same input value, never one computed in the test
+      - never write any because the lint refuses it, and compare the whole result with toEqual against a plain object literal, so no cast or property access is needed
     budget:
       attempts: 4
       toolCalls: 25

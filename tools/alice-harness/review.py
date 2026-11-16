@@ -114,7 +114,7 @@ def rejection_notes(repo: Path, cid: str, limit: int = 8, width: int = 300) -> l
     if not f.is_file() or "## Problemas" not in (text := f.read_text()):
         return []
     seen, out = set(), []
-    for line in text.split("## Problemas", 1)[1].splitlines():
+    for line in text.split("## Problemas", 1)[1].split("\n## ", 1)[0].splitlines():
         m = re.match(r"- linha (\S+) \(regra (\S+)\): (.*)", line)
         if m and (m.group(1), m.group(2)) not in seen:
             seen.add((m.group(1), m.group(2)))

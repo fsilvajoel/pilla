@@ -214,11 +214,27 @@ def local_review(prompt: str, samples: int | None = None) -> list[dict] | None:
 LAST_LOCAL: list[dict] = []
 
 
-def write_rejection(repo: Path, cid: str, path: str, sha: str, problems: list[dict]) -> None:
-    """Reprovação local também vira revisao/<ID>.md (sem assinatura válida): a próxima rodada da Alice a lê."""
+CODE = re.compile(r"`([^`]+)`")
+
+
+def grounded(problem: dict, done: list[str], src: str) -> bool:
+    """Nota local só vale se citar (entre crases) algo que o pronto exige e o arquivo não tem. As notas soltas da
+    pré-revisão local contradiziam o pronto em 3 de 4 casos (E4-T03, 16/11) e pioraram a rodada seguinte."""
+    pronto = "\n".join(map(str, done))
+    return any(code in pronto and code not in src for code in CODE.findall(str(problem.get("explicacao") or "")))
+
+
+def write_rejection(repo: Path, cid: str, path: str, sha: str, problems: list[dict],
+                    done: list[str] | None = None, src: str = "") -> None:
+    """Reprovação local também vira revisao/<ID>.md (sem assinatura válida): a próxima rodada da Alice lê só os
+    problemas com apoio no pronto; os demais ficam registrados à parte."""
+    keep = [p for p in problems if grounded(p, done or [], src)]
+    item = lambda p: f"- linha {p.get('linha')} (regra {p.get('regra')}): {p.get('explicacao')}"
     lines = [f"# Revisão {cid}", "", f"revisor: alice-local {PROFILE_NAME} -", f"arquivo: {path} {sha}", "",
              "veredito: reprovado (pré-revisão local)", "", "## Problemas"]
-    lines += [f"- linha {p.get('linha')} (regra {p.get('regra')}): {p.get('explicacao')}" for p in problems]
+    lines += [item(p) for p in keep]
+    if dropped := [p for p in problems if p not in keep]:
+        lines += ["", "## Descartadas (sem apoio no pronto; não vão para a Alice)"] + [item(p) for p in dropped]
     f = review_file(repo, cid)
     f.parent.mkdir(parents=True, exist_ok=True)
     f.write_text("\n".join(lines) + "\n")
@@ -255,7 +271,7 @@ def review_test(repo: Path, card: dict, model: str, name: str, pre: bool = True)
               f"\n\n# TESTE {path} (com número de linha)\n{numbered}\n")
     sha = blob_sha(repo, path, "worktree")
     if pre_rejected(prompt, pre):
-        write_rejection(repo, card["id"], path, sha, LAST_LOCAL)
+        write_rejection(repo, card["id"], path, sha, LAST_LOCAL, card.get("done") or [], src)
         return 2
     try:
         data = chat([{"role": "user", "content": prompt}], model, api_key(repo))
