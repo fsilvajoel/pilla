@@ -674,10 +674,23 @@ def agent_file(wt: Path, name: str) -> str:
 
 
 def changed_paths(wt: Path) -> list[str]:
-    out = git(wt, "status", "--porcelain", "--untracked-files=all")
-    paths = []
-    for line in out.splitlines():
-        p = line[3:].split(" -> ")[-1].strip('"')
+    """Caminhos alterados/novos no worktree. Usa `-z` e a saída crua: o `git()` faz strip(), que comia o espaço
+    inicial de ' M caminho' na 1ª linha e cortava o 1º caractere do caminho ('ools/...'), reprovando v2–v5
+    como 'invariante'."""
+    r = sh(["git", "status", "--porcelain=v1", "-z", "--untracked-files=all"], wt)
+    if r.returncode != 0:
+        raise RuntimeError(f"git status: {r.stderr.strip()}")
+    entries = r.stdout.split("\0")
+    paths: list[str] = []
+    i = 0
+    while i < len(entries):
+        e = entries[i]
+        i += 1
+        if len(e) < 4:
+            continue
+        if e[0] in "RC":
+            i += 1  # renomeação/cópia: com -z, o caminho de origem vem na entrada seguinte
+        p = e[3:]
         if p != "node_modules":
             paths.append(p)
     return paths

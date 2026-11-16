@@ -148,6 +148,29 @@ class SuiteTest(unittest.TestCase):
         self.assertGreaterEqual(int(runner.load_cfg()["reparo"]["rodadas"]), 1)
 
 
+class ChangedPathsTest(unittest.TestCase):
+    def test_primeira_linha_modificada_nao_perde_caractere(self) -> None:
+        """v2–v5: ' M tools/...' na 1ª linha virava 'ools/...' e a verificação final reprovava por invariante."""
+        with tempfile.TemporaryDirectory() as d:
+            wt = Path(d)
+            run = lambda *a: subprocess.run(["git", *a], cwd=wt, check=True, capture_output=True)  # noqa: E731
+            run("init", "-q")
+            run("config", "user.email", "t@t")
+            run("config", "user.name", "t")
+            (wt / "tools/alice-harness").mkdir(parents=True)
+            for n in ("alice.py", "cards.py", "velho.py"):
+                (wt / "tools/alice-harness" / n).write_text("x\n")
+            run("add", ".")
+            run("commit", "-qm", "base")
+            (wt / "tools/alice-harness/alice.py").write_text("y\n")
+            run("mv", "tools/alice-harness/velho.py", "tools/alice-harness/novo.py")
+            (wt / "tools/alice-harness/nova pasta").mkdir()
+            (wt / "tools/alice-harness/nova pasta/x.py").write_text("z\n")
+            self.assertEqual(sorted(runner.changed_paths(wt)),
+                             ["tools/alice-harness/alice.py", "tools/alice-harness/nova pasta/x.py",
+                              "tools/alice-harness/novo.py"])
+
+
 class FeaturesTest(unittest.TestCase):
     def test_feature_concluida(self) -> None:
         with tempfile.TemporaryDirectory() as d:
