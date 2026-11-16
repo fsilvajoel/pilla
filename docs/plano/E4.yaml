@@ -95,7 +95,7 @@ cards:
       - a Date, an Error, a string, a number and null are returned as they came (toBe)
       - never edit apps/api/src/log/redact.ts
     hints:
-      - one write_file of the whole test file under 100 lines (write_file refuses more than 150), then run_check 0, 1, 2 and 3
+      - one write_file of the whole test file, then run_check 0, 1, 2 and 3
       - 'use it.each for the list of sensitive keys, and build plain input objects like { ownerCpf: "x", name: "Ana" }'
       - the expected value is always REDACTED or the same input value, never one computed in the test
       - never write any because the lint refuses it, and compare the whole result with toEqual against a plain object literal, so no cast or property access is needed
@@ -105,7 +105,7 @@ cards:
       minutes: 8
     readFirst:
       - apps/api/src/log/redact.ts
-    sizeNote: uma função; o teste tem ~50 linhas e é o par do E4-T04
+    sizeNote: uma função; o teste tem ~150 linhas (medido nas entregas de 16/11) e é o par do E4-T04
   - id: E4-T04
     title: Implement redact
     kind: implement

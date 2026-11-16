@@ -40,7 +40,7 @@ import yaml
 
 import gates
 import metrics
-from cards import quality_problems, validate_plan
+from cards import quality_problems, validate_plan, write_file_limit
 from edits import apply_edit_tolerant, replace_function
 from policy import load_policy
 from claude_usage import card_since, cost, latest_transcript, load as load_usage, load_all, window
@@ -120,7 +120,14 @@ PROTECTED_WRITE: list[str] = []
 FORBIDDEN_ADDED: list[tuple[str, re.Pattern]] = []
 MAX_WRITE_LINES = MAX_TOOL_OUTPUT = MAX_CONTEXT_CHARS = 0
 MAX_RULES_CHARS = 8000
-MAX_WRITE_CALL_LINES = 150  # LI-011/LI-016: big tool-call payloads break the local model
+
+
+def call_line_limit(card: dict) -> int:
+    """Linhas por chamada de write_file/append_file: a mesma conta do validador de cartões (cards.write_file_limit),
+    com o orçamento de saída do perfil. Antes era um 150 fixo e o validador aceitava 341: o E4-T03 travou com 265
+    linhas, 10 tentativas bloqueadas (erro 15, 16/11). LI-011/LI-016 continuam valendo pela conta, não pelo número."""
+    return write_file_limit(card, int(load_profile(PROFILE_NAME).get("num_predict", 8192)))
+
 GENERATED = re.compile(r"(^|/)(__pycache__|node_modules|dist|coverage|\.turbo|\.next|\.pytest_cache|reports)(/|$)|\.(pyc|tsbuildinfo)$")
 POLICY_FILE = re.compile(r"(^|/)(policy\.default\.yaml|\.agents/policy\.yaml)$")
 KINDS = ("implement", "test-author", "pre-review", "docs", "cards", "research")
@@ -372,7 +379,8 @@ TOOLS_SPEC = [
     ("list_files", "Lista arquivos de um diretório do repositório (recursivo, até 300).", {"path": "string"}),
     ("read_file", "Lê um arquivo do repositório. Opcional: start e end (linhas).", {"path": "string", "start": "integer", "end": "integer"}),
     ("search_code", "Busca regex no repositório; retorna até 50 ocorrências arquivo:linha:texto.", {"pattern": "string", "path": "string"}),
-    ("write_file", f"Escreve o arquivo inteiro (arquivo novo ou reescrita; só em allowedPaths; máx. {MAX_WRITE_CALL_LINES} linhas por chamada).", {"path": "string", "content": "string"}),
+    ("write_file", "Escreve o arquivo inteiro (arquivo novo ou reescrita; só em allowedPaths; máx. {limit} linhas por chamada; maior que isso: write_file com o começo e append_file com o resto).", {"path": "string", "content": "string"}),
+    ("append_file", "Acrescenta linhas no fim de um arquivo que você já criou com write_file (máx. {limit} linhas por chamada). Para arquivo grande, escreva em partes.", {"path": "string", "content": "string"}),
     ("edit_file", "Troca um trecho exato (old) por outro (new) num arquivo. Use esta, e não write_file, quando a mudança é pequena.", {"path": "string", "old": "string", "new": "string", "replace_all": "boolean"}),
     ("replace_function", "Substitui uma função inteira pelo nome (da linha 'export function nome' até a '}' final). Melhor jeito de implementar um esboço 'throw new Error(\"not implemented\")'. code = a função completa.", {"path": "string", "name": "string", "code": "string"}),
     ("view_diff", "Mostra o diff das suas mudanças até agora.", {}),
@@ -383,13 +391,13 @@ TOOLS_SPEC = [
     ("ask_claude", "Pausa a tarefa e pergunta ao Claude (tech lead). Pergunta objetiva, com o trecho mínimo.", {"question": "string"}),
     ("finish", "Declara a tarefa pronta. O ambiente roda a verificação completa. lessons: até 3 aprendizados úteis para tarefas futuras (uma linha cada) ou vazio.", {"summary": "string", "lessons": "string"}),
 ]
-REQUIRED = {"list_files": ["path"], "read_file": ["path"], "search_code": ["pattern"], "write_file": ["path", "content"], "edit_file": ["path", "old", "new"], "view_diff": [], "replace_function": ["path", "name", "code"], "read_rule": ["rule_id"],
+REQUIRED = {"list_files": ["path"], "read_file": ["path"], "search_code": ["pattern"], "write_file": ["path", "content"], "append_file": ["path", "content"], "edit_file": ["path", "old", "new"], "view_diff": [], "replace_function": ["path", "name", "code"], "read_rule": ["rule_id"],
             "run_check": ["index"], "web_search": ["query"], "fetch_page": ["url"], "ask_claude": ["question"], "finish": ["summary"]}
 
-def tools_payload() -> list[dict]:
+def tools_payload(limit: int) -> list[dict]:
     out = []
     for name, desc, props in TOOLS_SPEC:
-        out.append({"type": "function", "function": {"name": name, "description": desc, "parameters": {
+        out.append({"type": "function", "function": {"name": name, "description": desc.replace("{limit}", str(limit)), "parameters": {
             "type": "object", "properties": {k: {"type": t} for k, t in props.items()}, "required": REQUIRED[name]}}})
     return out
 
@@ -451,11 +459,16 @@ class Tools:
                         return "\n".join(hits) + "\n…(limite de 50)"
         return "\n".join(hits) or "(nenhuma ocorrência)"
 
+    def _call_limit(self, n: int) -> None:
+        limit = call_line_limit(self.run.card)
+        if n > limit:
+            raise PermissionError(f"{n} linhas numa chamada (máx. {limit}): write_file com as primeiras {limit} linhas e "
+                                  "append_file com o resto, em partes; o arquivo pode ser maior, a chamada não")
+
     def write_file(self, path: str, content: str) -> str:
         r = self.g.check_write(self.resolve(path))
         n = content.count("\n") + 1
-        if n > MAX_WRITE_CALL_LINES:
-            raise PermissionError(f"{n} linhas numa chamada (máx. {MAX_WRITE_CALL_LINES}): escreva a base com write_file e acrescente o resto com edit_file")
+        self._call_limit(n)
         if n > MAX_WRITE_LINES:
             raise PermissionError(f"arquivo com {n} linhas excede o limite de {MAX_WRITE_LINES}; divida a responsabilidade")
         f = self.repo / r
@@ -463,6 +476,21 @@ class Tools:
         f.write_text(content if content.endswith("\n") else content + "\n")
         self.run.touched.add(r)
         return f"ok: {r} ({n} linhas)" + current_view(content)
+
+    def append_file(self, path: str, content: str) -> str:
+        r = self.g.check_write(self.resolve(path))
+        f = self.repo / r
+        if not f.exists():
+            raise FileNotFoundError(f"{r} não existe; crie o começo com write_file")
+        self._call_limit(content.count("\n") + 1)
+        current = f.read_text()
+        text = current + ("" if current.endswith("\n") else "\n") + (content if content.endswith("\n") else content + "\n")
+        n = text.count("\n")
+        if n > MAX_WRITE_LINES:
+            raise PermissionError(f"arquivo ficaria com {n} linhas (limite {MAX_WRITE_LINES}); divida a responsabilidade")
+        f.write_text(text)
+        self.run.touched.add(r)
+        return f"ok: {r} ({n} linhas no total)" + current_view(text)
 
     def edit_file(self, path: str, old: str, new: str, replace_all: bool = False) -> str:
         r = self.g.check_write(self.resolve(path))
@@ -633,8 +661,8 @@ WRITE_NOTES = {
     "research": "Você escreve SÓ o resumo do cartão. Código, testes e configurações são PROTEGIDOS.",
     "cards": "Você escreve SÓ o arquivo de cartões. Código, testes e configurações são PROTEGIDOS.",
 }
-EDIT_NOTES = (f"Implementar uma função de esboço: replace_function (a função inteira). Arquivo novo: write_file, no máximo {MAX_WRITE_CALL_LINES} linhas "
-              "por chamada (arquivo maior = crie a base e acrescente com edit_file). Ajuste pequeno: edit_file (copie o trecho SEM os números de linha do read_file). "
+EDIT_NOTES = ("Implementar uma função de esboço: replace_function (a função inteira). Arquivo novo: write_file, no máximo {limit} linhas "
+              "por chamada (arquivo maior = write_file com o começo e append_file com o resto, em partes de até {limit}). Ajuste pequeno: edit_file (copie o trecho SEM os números de linha do read_file). "
               "Confira com view_diff.\n"
               "Erro de typecheck ou lint: leia a mensagem (arquivo:linha) e corrija só aquela linha; não reescreva o arquivo inteiro.\n"
               "Mexa só nos arquivos do cartão. Use as funções auxiliares que já existem (não reescreva o que está pronto).\n"
@@ -731,7 +759,7 @@ class Run:
             lint_sheet(self.guard.repo, c),
             path_notes(c["allowedPaths"]),
             lib_sheets(self.guard.repo, c),
-            "# FERRAMENTAS\n" + (EDIT_NOTES if c["allowedPaths"] else "Tarefa só de leitura: read_file, search_code, read_rule e run_check."),
+            "# FERRAMENTAS\n" + (EDIT_NOTES.replace("{limit}", str(call_line_limit(c))) if c["allowedPaths"] else "Tarefa só de leitura: read_file, search_code, read_rule e run_check."),
             f"# FLUXO\n{FLOWS['checklist' if c.get('checklist') else self.kind if self.kind in FLOWS else 'implement']}",
         ]
         return "\n\n".join(x for x in sections if x)
@@ -739,7 +767,7 @@ class Run:
     def chat(self) -> dict:
         prof = load_profile(PROFILE_NAME)
         opts, think = chat_options(prof, self.card)
-        payload = {"model": prof.get("model", MODEL), "stream": False, "messages": self.messages, "tools": tools_payload(),
+        payload = {"model": prof.get("model", MODEL), "stream": False, "messages": self.messages, "tools": tools_payload(call_line_limit(self.card)),
                    "think": think, "options": opts}
         def server_error(n: int, code: int, body: str) -> None:
             self.stats["server_errors"] = self.stats.get("server_errors", 0) + 1

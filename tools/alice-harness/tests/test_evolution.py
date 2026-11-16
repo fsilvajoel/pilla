@@ -269,3 +269,45 @@ class DoneLineTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class WriteLimitTest(unittest.TestCase):
+    """Erro 15 (16/11): o validador dizia que cabiam 341 linhas e o write_file barrava em 150; o E4-T03 travou."""
+
+    def make(self, repo, card=None):
+        from alice import Run, Tools
+        d = repo / "run"
+        d.mkdir()
+        return Tools(Run(card or {"id": "X", "title": "x", "allowedPaths": ["a.ts"], "checks": [], "rules": []}, repo, d))
+
+    def test_runtime_limit_is_the_card_validator_limit(self):
+        from alice import call_line_limit, load_profile, PROFILE_NAME
+        from cards import write_file_limit
+        card = {"id": "X"}
+        self.assertEqual(call_line_limit(card), write_file_limit(card, int(load_profile(PROFILE_NAME).get("num_predict", 8192))))
+        self.assertEqual(call_line_limit({"maxOutputTokens": 2400}), write_file_limit({"maxOutputTokens": 2400}))
+
+    def test_a_file_bigger_than_one_call_is_written_in_parts(self):
+        from alice import call_line_limit
+        with tempfile.TemporaryDirectory() as d:
+            repo = Path(d)
+            tools = self.make(repo, {"id": "X", "title": "x", "allowedPaths": ["a.ts"], "checks": [], "rules": [],
+                                     "maxOutputTokens": 2400})
+            limit = call_line_limit(tools.run.card)
+            part = "\n".join(f"const a{i} = {i};" for i in range(limit))
+            with self.assertRaisesRegex(PermissionError, "append_file"):
+                tools.write_file("a.ts", part + "\nconst z = 0;")
+            with self.assertRaisesRegex(FileNotFoundError, "write_file"):
+                tools.append_file("a.ts", "const z = 0;")
+            self.assertTrue(tools.write_file("a.ts", part).startswith("ok"))
+            self.assertIn(f"{2 * limit} linhas no total", tools.append_file("a.ts", part.replace("a", "b")))
+            self.assertEqual(len((repo / "a.ts").read_text().splitlines()), 2 * limit)
+            self.assertIn("a.ts", tools.run.touched)
+
+    def test_tool_list_and_prompt_show_the_computed_limit(self):
+        from alice import tools_payload, EDIT_NOTES
+        desc = {t["function"]["name"]: t["function"]["description"] for t in tools_payload(123)}
+        self.assertIn("123 linhas", desc["write_file"])
+        self.assertIn("append_file", desc)
+        self.assertNotIn("{limit}", " ".join(desc.values()))
+        self.assertIn("{limit}", EDIT_NOTES)  # preenchido por call_line_limit no system_prompt

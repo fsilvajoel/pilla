@@ -169,7 +169,7 @@ DONE_LITERAL = re.compile(r"((?:export (?:type|const|function|\*)|import (?:\{|t
 PROSE = re.compile(r"(?:\b[a-z]{2,}\b[ ,]+){4,}")
 RULE_ID = re.compile(r"\b(RN-[A-Z]\d{2}|CA-\d{2}|T-\d{2})\b")
 PATH_TOKEN = re.compile(r"(?<![\w./@-])((?:packages|apps|docs|scripts|tools)/[\w./@-]+\.\w+)")
-EDIT_TOOL = re.compile(r"\b(edit_file|write_file|replace_function)\b")
+EDIT_TOOL = re.compile(r"\b(edit_file|write_file|append_file|replace_function)\b")
 BARE_FILE = re.compile(r"(?<![\w./-])([\w-]+(?:\.test)?\.(?:ts|tsx|mjs|md|ya?ml|json))\b(?!/)")
 MAX_DONE_CHARS = 220
 # e4-guardrails C: the hint is a hint, never the solution (E4-T02 carried the check-digit formula)
@@ -297,7 +297,7 @@ def quality_problems(card: dict, exists=None, producible: set[str] = frozenset()
             if size is None:
                 add(f"hint pede um write_file de {path} sem tamanho previsto: ponha 'N linhas' no sizeNote (limite {limit})", "E4-C")
             elif size > limit:
-                add(f"hint pede um write_file de {path} com ~{size} linhas; cabem {limit} na saída ({int(limit * TOKENS_PER_LINE / OUTPUT_SHARE)} tokens): divida em edits", "E4-C")
+                add(f"hint pede um write_file de {path} com ~{size} linhas; cabem {limit} na saída ({int(limit * TOKENS_PER_LINE / OUTPUT_SHARE)} tokens): escreva em partes (write_file + append_file) e tire do hint o \"one write_file\"", "E4-C")
 
     # --- test-author (e4-guardrails F): o teste barra defeito; precisa ser possível e não refazer o código
     if assignee == "alice" and kind == "test-author":
