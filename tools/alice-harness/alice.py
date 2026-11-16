@@ -13,7 +13,7 @@ Usage:
   alice.py plan-run <plan.yaml> <ID>... [--repo]  run Alice cards in order (skips dependents of failures)
   alice.py status                                is Alice running? (lock: runs/ACTIVE.json)
   alice.py cost <ID>... [--repo] [--since ISO]   Claude cost of the cards, preparation included (the only number for retro/report)
-  alice.py claude-usage [--since ISO] [--until ISO]  real Claude tokens from the latest transcript only
+  alice.py claude-usage [--since ISO] [--until ISO]  real Claude tokens of the latest session (subagents included)
 
 Exit codes: 0 done, 2 failed (budget/verification), 3 needs input (ask_claude), 1 usage/config error.
 Only the Python standard library + PyYAML. See docs/agents/travas.md (Ambiente da Alice) in the pilla repo for the rules enforced here.
@@ -43,7 +43,7 @@ import metrics
 from cards import Size, output_tokens, quality_problems, size_model, validate_plan
 from edits import apply_edit_tolerant, replace_function
 from policy import load_policy
-from claude_usage import card_since, cost, latest_transcript, load as load_usage, load_all, window
+from claude_usage import card_since, cost, latest_transcript, load as load_usage, load_all, session_files, window
 from retro import tool_error_summary, write_retro
 from rules import find_doc, find_rule, rules_text
 from review import rejection_notes, review_problems
@@ -1170,7 +1170,7 @@ def cmd_claude_usage(since: str, until: str) -> int:
     if not t:
         print("transcript do Claude Code não encontrado"); return 1
     w = window(load_usage(t), since, until)
-    print(json.dumps({**w, "cost": cost(w), "transcript": t.name}, indent=1))
+    print(json.dumps({**w, "cost": cost(w), "transcript": t.name, "subagents": len(session_files(t)) - 1}, indent=1))
     return 0
 
 REPORT_KEYS = ("status", "attempts", "toolCalls", "aliceTokens", "message", "lessons", "question", "runDir")
@@ -1218,6 +1218,10 @@ class PlanOps:
     def local_gate(self, card: dict, repo: Path) -> int:
         return self._quiet(card["id"], self.bia.local_gate, repo, card)
 
+    def gate_error(self) -> str:
+        """Motivo curto do último portão local em error (sem dado sensível), para o retro."""
+        return str(self.bia.LAST_LOCAL_ERROR)
+
     def review_problems(self, card: dict, repo: Path) -> list[str]:
         return review_problems(repo, card, "worktree")
 
@@ -1264,6 +1268,10 @@ def run_card(card: dict, repo: Path, rounds: int, ops: PlanOps) -> dict:
             rnd["review"] = "aprovado" if code == 0 and not gaps else {3: "error", 4: "quota"}.get(code, "reprovado")
             if gaps:
                 rnd["gaps"] = gaps[:3]
+            if rnd["review"] == "error":
+                why = ops.gate_error() if writer == "bia" else ""
+                rnd["error"] = why
+                rec["message"] = f"portão {'local' if writer == 'bia' else 'da Bia'} em error na rodada {n}: {why or 'sem motivo registrado'}"
         after = ops.usage()
         for k in totals:
             delta = after.get(k, 0) - before.get(k, 0)

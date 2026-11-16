@@ -4,7 +4,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from claude_usage import cost, load, load_all, window, weighted
+from claude_usage import cost, load, load_all, session_files, window, weighted
 
 
 def line(mid, ts, out, read):
@@ -44,3 +44,32 @@ class CostTest(unittest.TestCase):  # e4-guardrails D
             (root / "b" / "s3.jsonl").write_text("\n".join([entry("z", "/"), entry("w", "/other")]))  # a parent folder counts, a sibling does not
             rows = load_all(Path("/r"), root)
             self.assertEqual(window(rows)["turns"], 3)
+
+
+class SubagentTest(unittest.TestCase):
+    """16/11: claude-usage e cost só liam <sessão>.jsonl; o subagente fica em <sessão>/subagents/agent-<id>.jsonl."""
+
+    def tree(self, root: Path) -> Path:
+        def entry(mid: str) -> str:
+            return json.dumps({"type": "assistant", "timestamp": "2026-01-01T10:00", "cwd": "/r",
+                               "message": {"id": mid, "usage": {"output_tokens": 1}}})
+        (root / "p" / "s1" / "subagents").mkdir(parents=True)
+        (root / "p" / "s1.jsonl").write_text(entry("main"))
+        (root / "p" / "s1" / "subagents" / "agent-a1.jsonl").write_text(entry("sub1"))
+        (root / "p" / "s1" / "subagents" / "agent-a2.jsonl").write_text("\n".join([entry("sub2"), entry("sub2")]))
+        (root / "p" / "s1" / "subagents" / "agent-a2.meta.json").write_text("{}")
+        return root / "p" / "s1.jsonl"
+
+    def test_load_sums_session_and_subagents_from_either_path(self):
+        with tempfile.TemporaryDirectory() as d:
+            main = self.tree(Path(d))
+            self.assertEqual(window(load(main))["turns"], 3)
+            sub = main.parent / "s1" / "subagents" / "agent-a1.jsonl"
+            self.assertEqual(session_files(sub)[0], main)
+            self.assertEqual(window(load(sub))["turns"], 3)
+
+    def test_load_all_includes_subagents(self):
+        with tempfile.TemporaryDirectory() as d:
+            self.tree(Path(d))
+            self.assertEqual(window(load_all(Path("/r"), Path(d)))["turns"], 3)
+

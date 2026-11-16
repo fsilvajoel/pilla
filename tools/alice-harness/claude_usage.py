@@ -8,10 +8,22 @@ from pathlib import Path
 FIELDS = ("input_tokens", "cache_creation_input_tokens", "cache_read_input_tokens", "output_tokens")
 
 
+def session_files(transcript: Path) -> list[Path]:
+    """The session transcript plus its subagents. Claude Code keeps a subagent (Agent tool, sidechain) in
+    <projeto>/<sessão>/subagents/agent-<id>.jsonl, next to <projeto>/<sessão>.jsonl; a subagent path maps back to its session."""
+    t = Path(transcript)
+    if t.parent.name == "subagents":
+        t = t.parent.parent.parent / f"{t.parent.parent.name}.jsonl"
+    subs = sorted((t.parent / t.stem / "subagents").glob("agent-*.jsonl"))
+    return ([t] if t.exists() else []) + subs
+
+
 def load(transcript: Path) -> list[tuple[str, dict]]:
-    """One (timestamp, usage) per assistant message id (the transcript repeats a message once per content block)."""
+    """One (timestamp, usage) per assistant message id (the transcript repeats a message once per content block),
+    over the session transcript and its subagents."""
     seen: dict[str, tuple[str, dict]] = {}
-    for line in transcript.read_text().splitlines():
+    lines = [ln for f in session_files(transcript) for ln in f.read_text(errors="replace").splitlines()]
+    for line in lines:
         try:
             e = json.loads(line)
         except json.JSONDecodeError:
@@ -46,10 +58,12 @@ def cost(w: dict) -> int:
 
 
 def load_all(repo: Path, root: Path | None = None) -> list[tuple[str, dict]]:
-    """Usage of every transcript whose session ran in the repo or in a folder above it (all sessions, compacted ones too)."""
+    """Usage of every transcript whose session ran in the repo or in a folder above it (all sessions, compacted ones too,
+    and their subagents)."""
     repo = Path(repo).resolve()
     seen: dict[str, tuple[str, dict]] = {}
-    for f in sorted((root or Path.home() / ".claude" / "projects").glob("*/*.jsonl")):
+    base = root or Path.home() / ".claude" / "projects"
+    for f in sorted([*base.glob("*/*.jsonl"), *base.glob("*/*/subagents/agent-*.jsonl")]):
         for line in f.read_text(errors="replace").splitlines():
             try:
                 e = json.loads(line)
@@ -84,12 +98,14 @@ def card_since(repo: Path, ids: list[str]) -> str | None:
 
 
 def latest_transcript(cwd: Path | None = None) -> Path | None:
-    """Newest Claude Code transcript (override with CLAUDE_TRANSCRIPT)."""
+    """Newest Claude Code session transcript (override with CLAUDE_TRANSCRIPT); `load` adds its subagents.
+    A subagent counts as activity of its session, so the newest file among both picks the session."""
     import os
     if os.environ.get("CLAUDE_TRANSCRIPT"):
         return Path(os.environ["CLAUDE_TRANSCRIPT"])
-    files = sorted(Path.home().glob(".claude/projects/*/*.jsonl"), key=lambda p: p.stat().st_mtime)
-    return files[-1] if files else None
+    files = sorted([*Path.home().glob(".claude/projects/*/*.jsonl"), *Path.home().glob(".claude/projects/*/*/subagents/agent-*.jsonl")],
+                   key=lambda p: p.stat().st_mtime)
+    return session_files(files[-1])[0] if files else None
 
 
 if __name__ == "__main__":

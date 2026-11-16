@@ -10,7 +10,7 @@ Ambiente de trabalho da Alice (modelo local no Ollama): executa as ferramentas q
 - `alice.py status`: diz se há execução em andamento (ninguém edita o repositório enquanto houver).
 - `alice.py rule <ID>... [--repo <path>]`: mostra a definição de uma regra (RN-C03, T-13) ou seção de documento.
 - `alice.py metrics` / `alice.py evolution`: resumo de `runs/metrics.jsonl`; evolução por versão do harness.
-- `alice.py claude-usage --since <data>`: tokens reais do Claude, lidos do transcript.
+- `alice.py claude-usage --since <data>`: tokens reais do Claude, lidos do transcript da sessão mais recente e dos subagentes dela (`<sessão>/subagents/agent-*.jsonl`); `alice.py cost` soma os mesmos arquivos.
 - `alice.py chat "<pergunta>" [--file <path>]`: pergunta direta ao modelo, sem ferramentas (só resumo e rascunho).
 
 ## Estados de uma execução

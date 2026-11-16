@@ -37,6 +37,7 @@ from typing import NamedTuple
 
 import yaml
 
+import gates
 from alice import MODEL as ALICE_MODEL, PROFILE_NAME, chat_options, format_touched, load_profile, post_chat, restore_allowed, run_cmd
 from review import RAW_DIR, blob_sha, rejection_notes, review_file
 from rules import rules_text
@@ -174,25 +175,44 @@ Aprovado só se não houver problema e todos os itens forem ok."""
 
 
 LOCAL_SAMPLES = int(os.environ.get("BIA_LOCAL_SAMPLES", "3"))
+LOCAL_RETRIES = int(os.environ.get("BIA_LOCAL_RETRIES", "2"))  # tentativas a mais por amostra (E4-T03, 16/11)
+LAST_LOCAL_ERROR = ""  # motivo curto da última amostra local perdida; o plan-run leva ao retro
 
 
-def local_verdict(prompt: str) -> dict | None:
-    """Uma revisão na GPU da Alice: o JSON do veredito, None se falhar."""
+def failure_reason(e: Exception, content: str = "") -> str:
+    """Tipo do erro + trecho curto (resposta ou mensagem), mascarado por gates.redact e numa linha só."""
+    text, _ = gates.redact(" ".join(f"{e} {content[:120]}".split()))
+    return f"{type(e).__name__}: {text}"[:200]
+
+
+def local_verdict(prompt: str, retries: int | None = None) -> dict | None:
+    """Uma revisão na GPU da Alice: o JSON do veredito, None se falhar. Resposta sem JSON, 5xx (já repetido pelo
+    post_chat) ou timeout repete a amostra até `retries` vezes; o motivo da última falha fica em LAST_LOCAL_ERROR."""
+    global LAST_LOCAL_ERROR
     prof = load_profile(PROFILE_NAME)
     opts, think = chat_options(prof, {})
     payload = {"model": prof.get("model", ALICE_MODEL), "stream": False, "think": think, "options": opts,
                "messages": [{"role": "user", "content": prompt}]}
-    try:
-        data = post_chat(payload, int(prof.get("timeout", 600)))
-        verdict = parse_json(data["message"]["content"] or "")
-    except (RuntimeError, ValueError, KeyError, OSError) as e:
-        print(f"pré-revisão local indisponível ({e})")
-        return None
-    USAGE["aliceIn"] += int(data.get("prompt_eval_count", 0))
-    USAGE["aliceOut"] += int(data.get("eval_count", 0))
-    print(f"pré-revisão local (alice {PROFILE_NAME}): {verdict.get('veredito')}; tokens alice: "
-          f"entrada={data.get('prompt_eval_count', 0)} saída={data.get('eval_count', 0)}")
-    return verdict
+    tries = 1 + (LOCAL_RETRIES if retries is None else retries)
+    for n in range(1, tries + 1):
+        content = ""
+        try:
+            data = post_chat(payload, int(prof.get("timeout", 600)))
+            USAGE["aliceIn"] += int(data.get("prompt_eval_count", 0))
+            USAGE["aliceOut"] += int(data.get("eval_count", 0))
+            content = str((data.get("message") or {}).get("content") or "")
+            verdict = parse_json(content)
+            if not isinstance(verdict, dict):
+                raise ValueError("JSON não é objeto")
+        except (RuntimeError, ValueError, KeyError, OSError) as e:
+            LAST_LOCAL_ERROR = failure_reason(e, content)
+            print(f"pré-revisão local falhou (tentativa {n}/{tries}): {LAST_LOCAL_ERROR}")
+            continue
+        print(f"pré-revisão local (alice {PROFILE_NAME}): {verdict.get('veredito')}; tokens alice: "
+              f"entrada={data.get('prompt_eval_count', 0)} saída={data.get('eval_count', 0)}")
+        return verdict
+    print(f"pré-revisão local indisponível após {tries} tentativas")
+    return None
 
 
 def local_sample(prompt: str) -> list[dict] | None:
@@ -367,6 +387,8 @@ def local_gate(repo: Path, card: dict, samples: int | None = None) -> int:
     ti = test_input(repo, card)
     if ti is None:
         return 2
+    global LAST_LOCAL_ERROR
+    LAST_LOCAL_ERROR = ""
     samples = samples or LOCAL_SAMPLES
     need = min(2, samples)
     verdicts: list[dict] = []
@@ -375,6 +397,8 @@ def local_gate(repo: Path, card: dict, samples: int | None = None) -> int:
     for _ in range(samples):
         v = local_verdict(ti.prompt)
         if v is None:
+            LAST_LOCAL_ERROR = f"amostra {len(verdicts) + 1}/{samples}: {LAST_LOCAL_ERROR}"
+            print(f"portão local indisponível ({LAST_LOCAL_ERROR})")
             return 3
         verdicts.append(v)
         approved = [x for x in verdicts if x.get("veredito") == "aprovado" and not x.get("problemas")

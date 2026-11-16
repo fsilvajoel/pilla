@@ -41,6 +41,9 @@ class FakeOps(PlanOps):
         self.counter["aliceIn"] += 7
         return self.reviews.pop(0)
 
+    def gate_error(self) -> str:
+        return "ValueError: resposta sem JSON nada"
+
     def review_problems(self, card: dict, repo: Path) -> list[str]:
         return []
 
@@ -190,6 +193,54 @@ class LocalGateTest(unittest.TestCase):
         with mock.patch.object(bia, "test_input", return_value=bia.TestInput("a", "s", None, [], "p")), \
                 mock.patch.object(bia, "local_verdict", return_value=None), mock.patch("builtins.print"):
             self.assertEqual(bia.local_gate(Path("."), {**TEST_CARD, "assignee": "bia"}), 3)
+
+
+class LocalRetryTest(unittest.TestCase):
+    """E4-T03 (16/11): uma amostra local perdida derrubava o portão em error sem motivo fora do log."""
+
+    def verdict(self, replies: list[object], retries: int = 2) -> dict | None:
+        with mock.patch.object(bia, "load_profile", return_value={"model": "m"}), \
+                mock.patch.object(bia, "chat_options", return_value=({}, False)), \
+                mock.patch.object(bia, "post_chat", side_effect=replies), mock.patch("builtins.print"):
+            return bia.local_verdict("p", retries)
+
+    def test_no_json_5xx_and_timeout_are_retried(self):
+        ok = {"message": {"content": '{"veredito": "aprovado"}'}}
+        self.assertEqual(self.verdict([{"message": {"content": "sem json"}}, RuntimeError("ollama 500"), ok]),
+                         {"veredito": "aprovado"})
+        self.assertEqual(self.verdict([TimeoutError("timed out"), ok], retries=1), {"veredito": "aprovado"})
+
+    def test_exhausted_keeps_short_reason_without_secret(self):
+        value = "abcdefghijkl" + "123"
+        leak = "to" + "ken = '" + value + "'"  # montado em partes: o gitleaks do pre-commit barra o literal
+        self.assertIsNone(self.verdict([{"message": {"content": f"desculpe {leak}"}}] * 3))
+        self.assertIn("ValueError: resposta sem JSON desculpe", bia.LAST_LOCAL_ERROR)
+        self.assertNotIn(value, bia.LAST_LOCAL_ERROR)
+        self.assertLessEqual(len(bia.LAST_LOCAL_ERROR), 200)
+
+    def test_gate_error_reason_reaches_round_and_retro(self):
+        with tempfile.TemporaryDirectory() as d:
+            ops = FakeOps(reviews=[3])
+            rec = run_card({**TEST_CARD, "assignee": "bia"}, Path(d), 3, ops)
+            self.assertEqual(rec["status"], "error")
+            self.assertEqual(rec["rounds"][0]["error"], "ValueError: resposta sem JSON nada")
+            text = write_retro([rec], Path(d) / "r", Path(d) / "retro.md")
+        self.assertIn("portão local em error na rodada 1: ValueError: resposta sem JSON nada", text)
+
+    def test_gate_names_the_lost_sample(self):
+        ok = {"veredito": "aprovado", "itens": [{"n": 1, "ok": True, "onde": "x"}], "problemas": []}
+
+        def second_fails(prompt: str) -> dict | None:
+            if second_fails.n:
+                bia.LAST_LOCAL_ERROR = "OSError: timed out"
+                return None
+            second_fails.n += 1
+            return ok
+        second_fails.n = 0
+        with mock.patch.object(bia, "test_input", return_value=bia.TestInput("a", "s", None, [(1, "d")], "p")), \
+                mock.patch.object(bia, "local_verdict", side_effect=second_fails), mock.patch("builtins.print"):
+            self.assertEqual(bia.local_gate(Path("."), {**TEST_CARD, "assignee": "bia"}), 3)
+        self.assertEqual(bia.LAST_LOCAL_ERROR, "amostra 2/3: OSError: timed out")
 
 
 if __name__ == "__main__":
