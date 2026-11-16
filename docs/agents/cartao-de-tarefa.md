@@ -109,9 +109,14 @@ modelo gastar qualquer coisa); **—** = só a leitura de quem escreve.
 
 ### Feature (16/11/2026, ADR-0014)
 Cartões test-author (assignee bia) e implement (assignee alice) da mesma entrega formam uma feature no bloco
-`features:` do plano YAML (`id: E<n>-F<nn>`, `cards`, `biaBudget` de 2 a 6), com o plano em
+`features:` do plano YAML (`id: E<n>-F<nn>`, `cards`, `biaBudget` de 2 a 3 chamadas declaradas), com o plano em
 `docs/plano/<F>/plano.md` (Escopo, Riscos, Dependências, Critérios de aceite `- A<n>:`, Cenários `- C<n>:`).
-O `protectedTests` do implement sai dos `allowedPaths` dos test-author da feature. `alice.py cards` confere tudo.
+O `protectedTests` do implement sai dos `allowedPaths` dos test-author da feature. `alice.py cards` confere o plano.
+Na sprint ([AGENTS.md §3.1](../../AGENTS.md)), Claude refina cartões e Bia detalha cenários com IDs de regras;
+Bia escreve os testes, que precisam estar **prontos e revisados antes da Alice**. Rode `feature --stage tests`,
+revise, e só depois `--stage implement`; `--stage all` não impõe essa pausa nem valida aprovação externa.
+Depois: checks, auditoria Bia, revisão Claude, entrega (commit/push/PR pelo Claude, aprovação/merge pelo Joel),
+retro e ajustes do Jorge fora da fila antes da próxima sprint. O teto declarado não é ledger para retries da rede.
 Fluxo, esquemas e a tabela de critérios de decisão: [orquestracao.md](orquestracao.md).
 
 ## O que o ambiente faz sozinho (não peça no cartão)

@@ -93,13 +93,13 @@ def chat(messages: list[dict], model: str, key: str, timeout: int = 900, tries: 
     for n in range(tries):
         req = urllib.request.Request(URL, body, {"Authorization": f"Bearer {key}", "Content-Type": "application/json"})
         try:
+            USAGE["biaRequests"] += 1  # tentativa de completions, inclusive timeout/erro e retries
             with urllib.request.urlopen(req, timeout=timeout) as r:
                 data = json.loads(r.read())
+            u = data.get("usage") or {}
+            USAGE["biaIn"] += int(u.get("prompt_tokens", 0))
+            USAGE["biaOut"] += int(u.get("completion_tokens", 0))
             if data.get("choices"):
-                u = data.get("usage") or {}
-                USAGE["biaRequests"] += 1
-                USAGE["biaIn"] += int(u.get("prompt_tokens", 0))
-                USAGE["biaOut"] += int(u.get("completion_tokens", 0))
                 return data
             err = data.get("error") or data
         except urllib.error.HTTPError as e:

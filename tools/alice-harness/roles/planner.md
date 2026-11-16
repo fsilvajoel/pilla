@@ -10,7 +10,7 @@ Fonte única de escopo da feature. Seções obrigatórias (o validador confere e
 - `## Critérios de aceite`: linhas `- A<n>: ...`, conferíveis por teste ou check;
 - `## Cenários`: linhas `- C<n>: ...`, um caso de teste por linha, com casos de borda.
 Os cartões continuam no plano YAML (regras de [cartao-de-tarefa.md](../../../docs/agents/cartao-de-tarefa.md));
-a feature os agrupa em `features:` com `biaBudget` (2 a 6 requisições). Antes de rodar: `alice.py cards`.
+a feature os agrupa em `features:` com `biaBudget` (2 a 3 chamadas declaradas; retries de rede não têm ledger independente). Antes de rodar: `alice.py cards`.
 
 ## Etapa 5: revisão final
 Ler só `docs/plano/<F>/revisao-final.md` e o diff. Conferir: critérios de aceite × evidência, cobertura, checks,

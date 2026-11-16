@@ -5,6 +5,7 @@ import tempfile
 import unittest
 import urllib.request
 from pathlib import Path
+from unittest import mock
 
 from alice import protected_test_problems, restore_allowed
 from cards import quality_problems
@@ -21,6 +22,21 @@ AUTHOR = {"id": "E9-T01", "kind": "test-author", "assignee": "alice", "allowedPa
 
 def git(repo: Path, *args: str) -> None:
     subprocess.run(["git", *args], cwd=repo, check=True, capture_output=True)
+
+
+class CoverageCheckTest(unittest.TestCase):
+    def test_global_empty_coverage_fails_but_other_checks_do_not(self):
+        from alice import run_cmd
+        result = subprocess.CompletedProcess([], 0, "All files | Unknown% (0/0)\n", "")
+        with tempfile.TemporaryDirectory() as d, mock.patch("alice.subprocess.run", return_value=result):
+            code, text = run_cmd("vitest run --coverage", Path(d))
+            self.assertNotEqual(code, 0)
+            self.assertIn("0/0", text)
+            self.assertEqual(run_cmd("vitest run", Path(d))[0], 0)
+            result.stdout = "All files | 90% (9/10)\n"
+            self.assertEqual(run_cmd("vitest run --coverage", Path(d))[0], 0)
+            result.returncode = 1
+            self.assertEqual(run_cmd("vitest run --coverage", Path(d))[0], 1)
 
 
 class RepoCase(unittest.TestCase):
@@ -142,6 +158,28 @@ class BiaTest(RepoCase):
         finally:
             bia.quota, urllib.request.urlopen = olds
         self.assertEqual(sent, [])
+
+    def test_network_retries_count_and_error_usage_when_available(self):
+        def reply(payload):
+            response = mock.MagicMock()
+            response.__enter__.return_value.read.return_value = json.dumps(payload).encode()
+            return response
+        old = dict(bia.USAGE)
+        try:
+            with mock.patch.object(bia, "quota", return_value={}), mock.patch.object(bia.time, "sleep"), \
+                 mock.patch.object(bia.urllib.request, "urlopen", side_effect=[reply({"error": "retry", "usage": {"prompt_tokens": 3, "completion_tokens": 2}}), reply({"choices": [{}], "usage": {"prompt_tokens": 4, "completion_tokens": 1}})]):
+                bia.chat([], "m", "k", tries=2)
+            self.assertEqual(bia.USAGE["biaRequests"] - old["biaRequests"], 2)
+            self.assertEqual(bia.USAGE["biaIn"] - old["biaIn"], 7)
+            self.assertEqual(bia.USAGE["biaOut"] - old["biaOut"], 3)
+            with mock.patch.object(bia, "quota", return_value={}), mock.patch.object(bia.urllib.request, "urlopen", side_effect=TimeoutError("timeout")):
+                with self.assertRaises(RuntimeError):
+                    bia.chat([], "m", "k", tries=1)
+            self.assertEqual(bia.USAGE["biaRequests"] - old["biaRequests"], 3)
+            self.assertEqual(bia.USAGE["biaIn"] - old["biaIn"], 7)
+        finally:
+            bia.USAGE.clear()
+            bia.USAGE.update(old)
 
     def test_red_check_skips_the_api(self):
         calls = []

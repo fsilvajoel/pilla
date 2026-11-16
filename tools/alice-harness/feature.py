@@ -9,7 +9,9 @@ Estado em docs/plano/<F>/estado.json; artefatos em docs/plano/<F>/ (testes.md, a
 from __future__ import annotations
 
 import json
+import os
 import shutil
+from contextlib import contextmanager
 import subprocess
 import time
 from pathlib import Path
@@ -194,6 +196,8 @@ class Orchestrator:
 
     def finish(self, name: str, status: str, t0: float, **extra: object) -> str:
         st = self.stage(name)
+        for key in ("message", "red"):
+            st.pop(key, None)
         st.update({"status": status, "seconds": st.get("seconds", 0) + round(time.time() - t0), **extra})
         self.save()
         return status
@@ -218,20 +222,20 @@ class Orchestrator:
             if why := self.can_call():
                 return None, f"quota: {why}", data
             before = self.ops.usage()
-            self.state["biaRequests"] += 1
+            self.state["biaRequests"] += 1  # reserva por chat; ledger por tentativa ainda depende de autoridade externa
             st = self.stage(stage)
             st["biaRequests"] = st.get("biaRequests", 0) + 1
             try:
                 data = self.ops.bia_chat(messages)
                 content = str(data["choices"][0]["message"]["content"] or "")
             except (RuntimeError, KeyError, IndexError) as e:
-                self.save()
                 kind = "quota" if type(e).__name__ == "QuotaError" else "error"
                 return None, f"{kind}: {type(e).__name__}: {gates.redact(str(e))[0][:200]}", data
-            after = self.ops.usage()
-            st["biaIn"] = st.get("biaIn", 0) + after.get("biaIn", 0) - before.get("biaIn", 0)
-            st["biaOut"] = st.get("biaOut", 0) + after.get("biaOut", 0) - before.get("biaOut", 0)
-            self.save()
+            finally:
+                after = self.ops.usage()
+                st["biaIn"] = st.get("biaIn", 0) + after.get("biaIn", 0) - before.get("biaIn", 0)
+                st["biaOut"] = st.get("biaOut", 0) + after.get("biaOut", 0) - before.get("biaOut", 0)
+                self.save()
             try:
                 import bia
                 obj: object = bia.parse_json(content)
@@ -302,6 +306,47 @@ class Orchestrator:
             out += self.ops.run_checks(card)
         return out
 
+    @contextmanager
+    def implementation_stub(self):
+        """Troca só o worktree pelo HEAD para checks TDD; nunca altera o índice."""
+        saved = {}
+        head = {}
+        paths = {str(p) for c in self.f.impls for p in c.get("allowedPaths") or []}
+        for path in sorted(paths):
+            target = self.repo / path
+            saved[path] = (target.read_bytes(), target.stat().st_mode) if target.is_file() else None
+            proc = subprocess.run(["git", "show", f"HEAD:{path}"], cwd=self.repo, capture_output=True)
+            if proc.returncode:
+                exists = subprocess.run(["git", "cat-file", "-e", f"HEAD:{path}"], cwd=self.repo, capture_output=True)
+                if exists.returncode == 0:
+                    raise RuntimeError(f"não foi possível ler stub HEAD:{path}")
+                head[path] = None
+            else:
+                head[path] = proc.stdout
+        changed = []
+        try:
+            for path in sorted(paths):
+                target = self.repo / path
+                changed.append(path)
+                if head[path] is None:
+                    target.unlink(missing_ok=True)
+                else:
+                    target.parent.mkdir(parents=True, exist_ok=True)
+                    target.write_bytes(head[path])
+            yield
+        finally:
+            for path in reversed(changed):
+                target = self.repo / path
+                if saved[path] is None:
+                    target.unlink(missing_ok=True)
+                else:
+                    target.write_bytes(saved[path][0])
+                    os.chmod(target, saved[path][1])
+
+    def checks_against_stub(self) -> Checks:
+        with self.implementation_stub():
+            return self.test_checks()
+
     def stage_tests(self) -> str:
         t0 = time.time()
         self.log_dir.mkdir(parents=True, exist_ok=True)
@@ -318,7 +363,10 @@ class Orchestrator:
         if obj is None:
             return self.finish("tests", why.split(":", 1)[0], t0, message=why)
         self.write_files(obj["files"])
-        red = [r for r in self.test_checks() if r[1] != 0]
+        try:
+            red = [r for r in self.checks_against_stub() if r[1] != 0]
+        except (OSError, RuntimeError, subprocess.SubprocessError) as e:
+            return self.finish("tests", "error", t0, message=f"stub: {e}")
         repairs = 0
         if red:  # no máximo 1 reparo, com todos os erros juntos
             repairs = 1
@@ -328,7 +376,10 @@ class Orchestrator:
                 return self.finish("tests", why.split(":", 1)[0], t0, message=why, red=[c for c, _, _ in red])
             obj = {**fixed, "scenarios": fixed.get("scenarios") or obj["scenarios"]}
             self.write_files(obj["files"])
-            red = [r for r in self.test_checks() if r[1] != 0]
+            try:
+                red = [r for r in self.checks_against_stub() if r[1] != 0]
+            except (OSError, RuntimeError, subprocess.SubprocessError) as e:
+                return self.finish("tests", "error", t0, message=f"stub: {e}")
         self.state["testShas"] = {p: blob_sha(self.repo, p) for p in sorted(paths)}
         self.state["expectRed"] = not red
         self.state["scenarios"] = obj["scenarios"]

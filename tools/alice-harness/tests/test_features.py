@@ -21,7 +21,7 @@ IMPL = {"id": "E9-T02", "kind": "implement", "assignee": "alice", "allowedPaths"
 
 
 def plan(**feat: object) -> dict:
-    return {"cards": [TEST, IMPL], "features": [{"id": "E9-F01", "title": "t", "cards": ["E9-T01", "E9-T02"], "biaBudget": 4, **feat}]}
+    return {"cards": [TEST, IMPL], "features": [{"id": "E9-F01", "title": "t", "cards": ["E9-T01", "E9-T02"], "biaBudget": 3, **feat}]}
 
 
 class FeatureProblemsTest(unittest.TestCase):
@@ -40,8 +40,9 @@ class FeatureProblemsTest(unittest.TestCase):
         self.assertIn("- C<n>", got)
 
     def test_budget_bounds(self):
-        self.assertTrue(feature_problems(plan(biaBudget=10), lambda p: PLANO))
-        self.assertTrue(feature_problems(plan(biaBudget="4"), lambda p: PLANO))
+        self.assertEqual(feature_problems(plan(biaBudget=3), lambda p: PLANO), [])
+        for budget in (1, 4, 6, 10, "4"):
+            self.assertTrue(feature_problems(plan(biaBudget=budget), lambda p: PLANO), budget)
 
     def test_test_author_must_be_bia_and_cover_protected_tests(self):
         p = plan()

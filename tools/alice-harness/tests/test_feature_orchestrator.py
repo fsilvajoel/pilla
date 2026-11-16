@@ -25,7 +25,7 @@ TEST = {"id": "E9-T01", "kind": "test-author", "assignee": "bia", "title": "t", 
         "readFirst": ["a.ts"], "done": ["linha um", "linha dois"], "checks": ["expect-red a.test.ts", "quality a.test.ts"]}
 IMPL = {"id": "E9-T02", "kind": "implement", "assignee": "alice", "allowedPaths": ["a.ts"], "protectedTests": ["a.test.ts"],
         "dependsOn": ["E9-T01"], "done": ["passa"], "checks": ["vitest --coverage a.ts"]}
-PLAN = {"cards": [TEST, IMPL], "features": [{"id": "E9-F01", "title": "f", "cards": ["E9-T01", "E9-T02"], "biaBudget": 4}]}
+PLAN = {"cards": [TEST, IMPL], "features": [{"id": "E9-F01", "title": "f", "cards": ["E9-T01", "E9-T02"], "biaBudget": 3}]}
 
 
 def tests_json(content: str = "good", scenarios: tuple[str, ...] = ("C1", "C2")) -> str:
@@ -130,7 +130,31 @@ class OrchestratorTest(unittest.TestCase):
         self.assertEqual(ops.reviews, [("E9-T01", "auditoria-bia m gen-2-E9-T01", True)])
         for f in ("testes.md", "auditoria.md", "revisao-final.md", "estado.json"):
             self.assertTrue((self.repo / "docs" / "plano" / "E9-F01" / f).is_file(), f)
-        self.assertIn("2/4 requisições", (self.repo / "docs" / "plano" / "E9-F01" / "revisao-final.md").read_text())
+        self.assertIn("2/3 requisições", (self.repo / "docs" / "plano" / "E9-F01" / "revisao-final.md").read_text())
+
+    def test_tests_checks_see_head_stub_without_touching_index_or_implementation(self):
+        (self.repo / "a.ts").write_text("staged\n")
+        subprocess.run(["git", "add", "a.ts"], cwd=self.repo, check=True)
+        (self.repo / "a.ts").write_text("impl\n")
+        before = subprocess.check_output(["git", "show", ":a.ts"], cwd=self.repo)
+        ops = FakeOps(self.repo, [tests_json()])
+        orc = self.orc(ops)
+        self.assertEqual(orc.run("tests", 3), ["tests: done"])
+        self.assertEqual(len(ops.calls), 1)
+        self.assertEqual((self.repo / "a.ts").read_text(), "impl\n")
+        self.assertEqual(subprocess.check_output(["git", "show", ":a.ts"], cwd=self.repo), before)
+
+    def test_tests_stub_git_error_does_not_approve(self):
+        ops = FakeOps(self.repo, [tests_json()])
+        orc = self.orc(ops)
+        real_run = subprocess.run
+        def fail_stub(args, **kwargs):
+            if args[:2] == ["git", "show"] and args[2].startswith("HEAD:"):
+                raise subprocess.CalledProcessError(1, args)
+            return real_run(args, **kwargs)
+        with mock.patch.object(orc, "prefix", return_value="contexto"), mock.patch("feature.subprocess.run", side_effect=fail_stub):
+            self.assertEqual(orc.run("tests", 3), ["tests: error"])
+        self.assertEqual((self.repo / "a.ts").read_text(), "throw\n")
 
     def test_prefix_is_identical_across_calls(self):
         ops = FakeOps(self.repo, [tests_json(), audit_json()])
@@ -173,6 +197,30 @@ class OrchestratorTest(unittest.TestCase):
         self.assertEqual(orc.run("tests", 3), ["tests: quota"])
         self.assertEqual(ops.calls, [])
 
+    def test_finish_drops_stale_diagnostic_but_keeps_counters(self):
+        orc = self.orc(FakeOps(self.repo, []))
+        orc.finish("tests", "error", 0, message="antigo", red=["check"])
+        orc.stage("tests")["biaRequests"] = 2
+        previous = orc.stage("tests")["seconds"]
+        orc.finish("tests", "done", 0)
+        self.assertNotIn("message", orc.stage("tests"))
+        self.assertNotIn("red", orc.stage("tests"))
+        self.assertEqual(orc.stage("tests")["biaRequests"], 2)
+        self.assertGreaterEqual(orc.stage("tests")["seconds"], previous)
+        orc.finish("tests", "error", 0, message="novo", red=["novo"])
+        self.assertEqual(orc.stage("tests")["message"], "novo")
+
+    def test_feature_records_usage_when_chat_raises(self):
+        class ErrorOps(FakeOps):
+            def bia_chat(self, messages):
+                self.calls.append(messages)
+                raise RuntimeError("falha")
+        ops = ErrorOps(self.repo, [])
+        orc = self.orc(ops)
+        self.assertEqual(orc.run("tests", 3), ["tests: error"])
+        self.assertEqual(orc.state["stages"]["tests"]["biaIn"], 10)
+        self.assertEqual(orc.state["stages"]["tests"]["biaOut"], 1)
+
     def test_feature_budget_caps_requests(self):
         plan = {**PLAN, "features": [{**PLAN["features"][0], "biaBudget": 1}]}
         ops = FakeOps(self.repo, [tests_json(scenarios=("C1",)), tests_json()])
@@ -210,6 +258,14 @@ class OrchestratorTest(unittest.TestCase):
         out = self.orc(ops2).run("all", 3)
         self.assertEqual(out[:2], ["plan: done", "tests: done (já feito)"])
         self.assertEqual(out[-1], "review: ready")
+
+    def test_cmd_feature_refuses_legacy_budget_before_any_request(self):
+        plan_file = self.repo / "p.yaml"
+        legacy = {**PLAN, "features": [{**PLAN["features"][0], "biaBudget": 4}]}
+        plan_file.write_text(json.dumps(legacy))
+        ops = FakeOps(self.repo, [])
+        self.assertEqual(cmd_feature(plan_file, "E9-F01", self.repo, "all", 3, self.out, ops), 5)
+        self.assertEqual(ops.calls, [])
 
     def test_cmd_feature_refuses_bad_plan_before_any_request(self):
         (self.repo / "docs" / "plano" / "E9-F01" / "plano.md").write_text("# só título\n")

@@ -12,7 +12,7 @@ política, verificação no `finish`, pré-voo, `plan-run --rounds`, retro, `cos
 | Claude no laço entre rodadas | E4-T03 à mão: 330 turnos, ≈5M tokens, 64% releitura | o orquestrador roda as etapas 2–4 sozinho; o Claude entra só no plano e na revisão final |
 | Alice escreve teste mal | E4-T03: 10 rodadas sem aprovação | teste é da Bia (QA), por feature, num lote |
 | Pré-revisão local como portão final | rodada 12: 3 reprovações sem nenhuma nota com apoio no pronto | reprovação local sem nota com apoio no pronto **não conta** (código 5, inconclusivo → `escalated`); na feature ela não é portão |
-| Bia por cartão e por rodada | rodadas 11–12: 5 requisições num cartão | Bia por feature, com orçamento declarado (`biaBudget`, 2 a 4) |
+| Bia por cartão e por rodada | rodadas 11–12: 5 requisições num cartão | Bia por feature, com orçamento declarado (`biaBudget`, 2 a 3 chamadas; retries de rede não têm ledger independente) |
 | Quem escreve o teste também audita | conflito de papéis | auditoria apoiada em números mecânicos (expect-red, cobertura, checks) e aprovação final do Claude |
 
 ## Papéis (instruções fixas em `tools/alice-harness/roles/`)
@@ -25,6 +25,16 @@ política, verificação no `finish`, pré-voo, `plan-run --rounds`, retro, `cos
 
 ## Fluxo
 
+No ciclo de sprint de [AGENTS.md §3.1](../../AGENTS.md), Joel e Claude aprovam o planejamento (PRD/ADR/RFC);
+no refinamento Claude fatia cartões (`alice.py cards` verde) e Bia detalha cenários com IDs de regras.
+No desenvolvimento Bia escreve **todos** os testes da feature e eles precisam estar prontos e revisados
+**antes** de começar os cartões da Alice. Depois seguem validação/review (checks, auditoria Bia,
+revisão final Claude), entrega (Claude: commit/push/PR; Joel: aprovação/merge) e retrospectiva
+por feature (custos Claude × Alice × Bia, ajustes do processo pelo Jorge fora da fila e plano da próxima sprint).
+Problemas de processo vão à caixa do Jorge, não são corrigidos durante a entrega.
+
+A tabela abaixo descreve as etapas **internas** do comando `feature`, não os seis marcos da sprint.
+
 | # | Etapa | Quem | Artefato (`docs/plano/<F>/`) | Requisições da Bia |
 |---|---|---|---|---|
 | 1 | Plano | Claude | `plano.md`, validado por `alice.py cards` | 0 |
@@ -33,9 +43,13 @@ política, verificação no `finish`, pré-voo, `plan-run --rounds`, retro, `cos
 | 4 | Auditoria | Bia, 1 chamada: plano, testes, diff, cobertura, expect-red; extraTests em lote → validador e checks → Alice de novo; ≤1 ciclo | `auditoria.md`, `docs/plano/revisao/<ID>.md` | 1 + ≤1 |
 | 5 | Revisão final | Claude: lê `revisao-final.md` e o diff, decide, commita com `Card-Done` | `revisao-final.md` | 0 |
 
-Comando: `alice.py feature <plano.yaml> <F> [--stage tests|implement|audit|review|all] [--rounds N]`. O estado fica
-em `docs/plano/<F>/estado.json` (etapa, status, requisições e tokens por etapa); rodar de novo continua da etapa
-pendente. `--stage plan` só valida o plano (o plano é do Claude). O orquestrador nunca commita.
+Comando: `alice.py feature <plano.yaml> <F> [--stage plan|tests|implement|audit|review|all] [--rounds N]`.
+O estado fica em `docs/plano/<F>/estado.json` (etapa, status, chamadas declaradas e tokens por etapa);
+rodar de novo continua da etapa pendente. `--stage plan` só valida o plano (o plano é do Claude).
+Para respeitar a revisão dos testes antes da Alice, rode `--stage tests`, revise os testes e só então
+rode `--stage implement` (seguido de `audit` e `review`); o `--stage all` atual **não interrompe**
+entre tests e implement nem prova aprovação externa: não o use como portão dessa revisão.
+O orquestrador nunca commita. O teto declarado não impede retries de rede nem substitui ledger externo.
 
 ## Formato das mensagens (JSON com esquema fixo, validado em `feature.py`)
 
@@ -49,7 +63,7 @@ pendente. `--stage plan` só valida o plano (o plano é do Claude). O orquestrad
 ## Cache e reuso de contexto
 
 - Prompts da Bia: prefixo estável primeiro (`roles/qa.md` + regras do projeto + `plano.md` + contratos dos
-  cartões), idêntico nas 2–4 chamadas da feature; a instrução da etapa e o variável (erros, diff, cobertura) por
+  cartões), estável entre as chamadas autorizadas da feature; a instrução da etapa e o variável (erros, diff, cobertura) por
   último. O reparo continua a mesma conversa (prefixo igual byte a byte).
 - Prompt da Alice: **mantido** como está (`Run.system_prompt`). Dentro de um cartão ele não muda entre chamadas,
   então o Ollama já reaproveita o prefixo. Reordenar as seções para cache entre cartões contrariaria a LI-055
@@ -69,7 +83,7 @@ pendente. `--stage plan` só valida o plano (o plano é do Claude). O orquestrad
 | extraTests reprovados no validador ou nos checks do teste | descartados, registrados em `auditoria.md`; o Claude decide |
 | extraTests aceitos | Alice roda o implement de novo (local); re-auditoria só se sobrar orçamento (≤1) |
 | pré-revisão local reprova sem nota com apoio no pronto | não conta (inconclusiva); no `plan-run` vira `escalated` direto |
-| **Quando o Claude entra** | etapa 1, etapa 5 e qualquer `escalated`/`error`/`quota` |
+| **Quando o Claude entra** | planejamento/refinamento, revisão dos testes antes da Alice (procedimento externo ao `all`), revisão final e qualquer `escalated`/`error`/`quota` |
 | **Quando gastar a Bia** | só nas etapas 2 e 4, por feature, com checks verdes antes da auditoria |
 
 ## Arquivo por arquivo
@@ -77,7 +91,7 @@ pendente. `--stage plan` só valida o plano (o plano é do Claude). O orquestrad
 | Arquivo | Mantém | Muda / novo | Por quê |
 |---|---|---|---|
 | `docs/plano/E*.yaml` | cartões, campos, `assignee`, `kind` | novo bloco opcional `features:` (`id`, `title`, `cards`, `biaBudget`) | mínimo que agrupa cartões sem mudar um cartão |
-| `cards.py` | todas as regras de cartão | `feature_problems`: cartões existem, sem feature dupla, `biaBudget` 2–6, `plano.md` com as seções; implement da feature protegido por test-author da mesma feature | erro de plano aparece antes de gastar |
+| `cards.py` | todas as regras de cartão | `feature_problems`: cartões existem, sem feature dupla, `biaBudget` 2–3, `plano.md` com as seções; implement da feature protegido por test-author da mesma feature | erro de plano aparece antes de gastar |
 | `alice.py` | `run`, `plan-run`, retro, Guard, pré-voo | subcomando `feature`; pré-voo aceita teste ainda não commitado **só** com o sha que a etapa 2 gravou (`featureTests`) | a etapa 3 roda antes do commit dos testes |
 | `bia.py` | `card`, `test`, `write`, `gate`, cota, reserva, consenso, `grounded` | `chat` aceita o histórico (reparo); `local_gate` com reprovação sem nota com apoio no pronto devolve 5 (inconclusivo) | rodada 12 do E4-T03 |
 | `review.py` | assinatura amarrada ao sha, `rejection_notes` | assinatura `auditoria-bia` vale só com resposta bruta de feature e números mecânicos (expect-red e checks verdes) | conflito de papéis mitigado por números |

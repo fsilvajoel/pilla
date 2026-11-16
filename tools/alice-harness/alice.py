@@ -193,7 +193,10 @@ def run_cmd(cmd: str, cwd: Path, timeout: int = 600) -> tuple[int, str]:
     try:
         p = subprocess.run(shlex.split(cmd), cwd=cwd, capture_output=True, text=True, timeout=timeout,
                            env={**os.environ, "CI": "1", "FORCE_COLOR": "0", "PYTHONDONTWRITEBYTECODE": "1"})
-        return p.returncode, (p.stdout + p.stderr)
+        output = p.stdout + p.stderr
+        if "--coverage" in shlex.split(cmd) and re.search(r"(?mi)^\s*All files\s*\|[^\n]*\bUnknown%\s*\(0/0\)", output):
+            return p.returncode or 1, output + "\ncobertura vazia: All files 0/0\n"
+        return p.returncode, output
     except subprocess.TimeoutExpired:
         return 124, f"timeout após {timeout}s"
     except FileNotFoundError as e:
