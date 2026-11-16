@@ -50,8 +50,10 @@ def validate_plan(plan: dict, known_rules: set[str], external_ids: set[str]) -> 
             
         # Assignee
         assignee = card.get("assignee")
-        if assignee and assignee not in ["alice", "claude"]:
+        if assignee and assignee not in ["alice", "claude", "bia"]:
             problems.append(f"{cid}: assignee inválido: {assignee}")
+        elif assignee == "bia" and kind != "test-author":  # a Bia só escreve teste (cota de 50/dia; travas.md 4.9)
+            problems.append(f"{cid}: assignee bia só em kind test-author (este é {kind})")
             
         # Rules
         rules = card.get("rules", [])
@@ -90,7 +92,7 @@ def validate_plan(plan: dict, known_rules: set[str], external_ids: set[str]) -> 
             problems.append(f"{cid}: allowedPaths vazio só em pre-review")
             
         # Small tasks (LI-011): Alice edits at most 2 files; pre-review needs a closed checklist (LI-013)
-        if assignee == "alice" and kind in ("implement", "test-author") and len(allowed_paths) > 2:
+        if assignee in ("alice", "bia") and kind in ("implement", "test-author") and len(allowed_paths) > 2:
             problems.append(f"{cid}: tarefa da Alice deve ser pequena (até 2 arquivos em allowedPaths)")
         if kind == "pre-review" and not card.get("checklist"):
             problems.append(f"{cid}: pre-review exige checklist (uma linha por item no resultado)")
@@ -345,7 +347,7 @@ def quality_problems(card: dict, exists=None, producible: set[str] = frozenset()
                 add(f"hint pede um write_file de {path} com ~{size} linhas; cabem {limit} na saída ({int(limit * TOKENS_PER_LINE / OUTPUT_SHARE)} tokens): escreva em partes (write_file + append_file) e tire do hint o \"one write_file\"", "E4-C")
 
     # --- test-author (e4-guardrails F): o teste barra defeito; precisa ser possível e não refazer o código
-    if assignee == "alice" and kind == "test-author":
+    if assignee in ("alice", "bia") and kind == "test-author":
         for path in [p for p in allowed if re.search(r"\.test\.tsx?$", p)]:
             if not any("check-test-quality.mjs" in c and path in c for c in checks):
                 add(f"test-author sem o check 'node scripts/check-test-quality.mjs {path}' (asserção vazia, teste impossível)", "E4-F")
@@ -359,7 +361,7 @@ def quality_problems(card: dict, exists=None, producible: set[str] = frozenset()
                         f"o cartão é o código de novo; afirme a propriedade ou cite a fonte", "E4-F")
 
     # --- size and budget
-    if assignee == "alice" and kind in ("implement", "test-author") and any("*" in p for p in allowed):
+    if assignee in ("alice", "bia") and kind in ("implement", "test-author") and any("*" in p for p in allowed):
         add("allowedPaths com curinga em cartão da Alice: liste os arquivos (até 2)", "LI-011")
     calls = (card.get("budget") or {}).get("toolCalls")
     if assignee == "alice" and kind == "implement" and calls and calls < min_tool_calls(card):

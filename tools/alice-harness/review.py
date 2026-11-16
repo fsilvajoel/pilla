@@ -104,6 +104,15 @@ def signature_problems(cid: str, text: str, files: dict[str, str]) -> list[str]:
         return [f"{cid}: a assinatura aponta para {rid}, mas a resposta bruta não existe: rode `bia.py test` de novo"]
     if meta.get("card") != cid or meta.get("task") != "test" or files.get(str(meta.get("path"))) != meta.get("sha"):
         return [f"{cid}: a resposta bruta {rid} é de outro cartão ou de outra versão do teste: rode `bia.py test` de novo"]
+    return signer_problems(cid, name, str(meta.get("writer") or "alice"))
+
+
+def signer_problems(cid: str, name: str, writer: str) -> list[str]:
+    """Quem escreveu o teste não é o portão final (travas.md 4.9): teste da Alice, a Bia assina; teste da Bia, a
+    pré-revisão local da Alice por consenso (alice-local) assina. Resposta bruta antiga, sem writer, é da Alice."""
+    signer = name.lower()
+    if signer == writer or (signer == "alice-local" and writer != "bia"):
+        return [f"{cid}: {name} não assina teste escrito por {writer}: quem escreve o teste não é o portão final"]
     return []
 
 

@@ -23,6 +23,27 @@ def tool_error_summary(events: list[dict]) -> tuple[int, list[tuple[str, int]]]:
     return len(errors), Counter(errors).most_common(3)
 
 
+def rounds_section(results: list[dict]) -> list[str]:
+    """Rodadas do laço do plan-run, com tokens por rodada; no escalated, as notas da última reprovação, para o Claude
+    decidir sem abrir log."""
+    out: list[str] = []
+    for r in results:
+        if not r.get("rounds"):
+            continue
+        out += ["", f"## Rodadas de {r['task']} ({r.get('assignee')}): {r.get('status')}", "",
+                "| Rodada | Quem escreve | Execução | Revisão | s | Alice entrada/saída | Bia entrada/saída | Requisições Bia |",
+                "|---|---|---|---|---|---|---|---|"]
+        for x in r["rounds"]:
+            out.append(f"| {x['n']} | {x.get('writer')} | {x.get('exec')} | {x.get('review')} | {x.get('seconds', '-')} | "
+                       f"{x.get('aliceIn', 0)}/{x.get('aliceOut', 0)} | {x.get('biaIn', 0)}/{x.get('biaOut', 0)} | {x.get('biaRequests', 0)} |")
+        if r.get("status") == "escalated":
+            out += ["", f"Escalado ao Claude depois de {len(r['rounds'])} rodadas; dependentes pulados. Notas da última reprovação:"]
+            out += [f"- {' '.join(str(n).split())}" for n in r.get("lastNotes") or []] or ["- (a revisão não deixou nota com apoio no pronto)"]
+        elif r.get("message") and r.get("status") != "done":
+            out.append(f"\n{' '.join(str(r['message']).split())[:300]}")
+    return out
+
+
 def write_retro(results: list[dict], runs: Path, out: Path) -> str:
     lines = ["# Retrospectiva da fila", "", "| Cartão | Status | s | Tentativas | Chamadas | Erros de ferramenta | Sinais |", "|---|---|---|---|---|---|---|"]
     repeated: Counter = Counter()
@@ -38,6 +59,7 @@ def write_retro(results: list[dict], runs: Path, out: Path) -> str:
         if r.get("status") == "card_error":  # the card writer's error, not the model's (LI-056)
             flags = [" · ".join(str(r.get("message", "")).splitlines())[:200]]
         lines.append(f"| {r['task']} | {r.get('status')} | {r.get('seconds', '-')} | {r.get('attempts', '-')} | {r.get('toolCalls', '-')} | {total} | {'; '.join(flags) or 'ok'} |")
+    lines += rounds_section(results)
     if repeated:
         lines += ["", "## Erros de ferramenta mais repetidos", ""] + [f"- {n}× {msg}" for msg, n in repeated.most_common(5)]
     lines += ["", "Cartão com sinal → dividir, preparar melhor o esboço ou corrigir a ferramenta; registrar lição em docs/memoria/licoes.md."]

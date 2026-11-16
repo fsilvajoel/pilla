@@ -13,7 +13,7 @@ erro do cartão ou do processo do Claude, não do modelo (ver "De onde vêm as r
 id: E2-T20
 title: Implement the allocationPreviewRequest body schema (POST /payments/allocation-preview)
 kind: implement            # implement | test-author | pre-review | docs | cards | research
-assignee: alice            # alice | claude
+assignee: alice            # alice | claude | bia (bia só em kind test-author)
 rules: []                  # IDs (RN-C03, T-13, CA-12): o harness injeta só estas definições
 refs: [RFC-004 §3]         # lidas sob demanda com read_rule
 dependsOn: [E2-T13]
@@ -94,6 +94,18 @@ modelo gastar qualquer coisa); **—** = só a leitura de quem escreve.
 | 21 | Árvore limpa antes do `run` e do `resume`; ninguém edita o repositório enquanto a Alice roda ou está pausada. | arquivo alheio vira "fora do escopo" na conta dela (LI-009, LI-051) | P |
 | 22 | Falhou? Antes de rodar de novo, classifique: **cartão**, **harness** ou **modelo**. Cartão e harness se corrigem com regra nesta página ou trava nova; só o que sobra é do modelo. | repetir a execução sem corrigir a causa só gasta GPU e turnos | — |
 | 23 | Lote novo começa por **um** cartão; o resto da fila só depois de ele passar de primeira. | erro de molde se repete em todos os cartões do lote (LI-041: 3 arquivos com o mesmo defeito) | — |
+
+### Uma leva por sessão (15/11/2026)
+
+- **Uma sessão nova do Claude por leva.** O Claude entra só no começo (cartão, `alice.py cards`) e no fim (ler o
+  `runs/retro-*.md`, decidir e commitar). No meio, `alice.py plan-run <plano> <ID>... --rounds N` repete sozinho
+  execução → checks → revisão → nova rodada com as notas, até aprovar ou acabar N (`escalated`; dependentes pulados).
+  O plan-run nunca commita.
+- **Conserto de harness em sessão própria**, nunca durante uma entrega (harness congelado enquanto a Alice ou a Bia
+  rodam).
+- **A Alice compensa** quando os turnos do Claude para supervisionar ficam abaixo dos turnos para fazer sozinho;
+  medir com `alice.py cost <ID>`. Motivo: o E4-T03 orquestrado à mão custou 330 turnos e ≈5M tokens em 10 rodadas,
+  64% em releitura de contexto (custo ∝ turnos × contexto).
 
 ## O que o ambiente faz sozinho (não peça no cartão)
 

@@ -6,7 +6,9 @@ lê só o contrato (readFirst, regras) e o que vai revisar; não vê o raciocín
 
     python3 bia.py card  <plano> <ID>   revisa o cartão test-author antes de ir para quem escreve
     python3 bia.py test  <plano> <ID>   revisa o teste entregue e grava docs/plano/revisao/<ID>.md assinada
-    python3 bia.py write <plano> <ID>   escreve o teste do cartão (experimento: Bia escreve, outro revisa)
+    python3 bia.py write <plano> <ID>   escreve o teste do cartão (assignee: bia; outro revisa)
+    python3 bia.py gate  <plano> <ID>   portão final de teste escrito pela Bia: pré-revisão local por consenso
+                                        (a Bia não revisa o próprio teste; docs/agents/travas.md 4.9)
     opções: --model <id OpenRouter>  --as <nome do revisor na assinatura>  --repo <raiz>
 
 Regras dela: nunca calcula valor (na sonda errou dígito verificador); cobra fonte de literal, acusa contradição,
@@ -31,11 +33,12 @@ import time
 import urllib.error
 import urllib.request
 from pathlib import Path
+from typing import NamedTuple
 
 import yaml
 
 from alice import MODEL as ALICE_MODEL, PROFILE_NAME, chat_options, format_touched, load_profile, post_chat, restore_allowed, run_cmd
-from review import RAW_DIR, blob_sha, review_file
+from review import RAW_DIR, blob_sha, rejection_notes, review_file
 from rules import rules_text
 
 URL = "https://openrouter.ai/api/v1/chat/completions"
@@ -48,6 +51,10 @@ SIGNERS_REFUSED = ("claude", "alice")  # quem escreve cartão ou teste não apro
 
 class QuotaError(RuntimeError):
     pass
+
+
+# tokens e requisições gastos neste processo; o plan-run lê a diferença por rodada
+USAGE: dict[str, int] = {"aliceIn": 0, "aliceOut": 0, "biaIn": 0, "biaOut": 0, "biaRequests": 0}
 
 
 def quota(key: str) -> dict:
@@ -87,6 +94,10 @@ def chat(messages: list[dict], model: str, key: str, timeout: int = 900, tries: 
             with urllib.request.urlopen(req, timeout=timeout) as r:
                 data = json.loads(r.read())
             if data.get("choices"):
+                u = data.get("usage") or {}
+                USAGE["biaRequests"] += 1
+                USAGE["biaIn"] += int(u.get("prompt_tokens", 0))
+                USAGE["biaOut"] += int(u.get("completion_tokens", 0))
                 return data
             err = data.get("error") or data
         except urllib.error.HTTPError as e:
@@ -165,8 +176,8 @@ Aprovado só se não houver problema e todos os itens forem ok."""
 LOCAL_SAMPLES = int(os.environ.get("BIA_LOCAL_SAMPLES", "3"))
 
 
-def local_sample(prompt: str) -> list[dict] | None:
-    """Uma revisão na GPU da Alice: problemas se reprovar, [] se aprovar, None se falhar."""
+def local_verdict(prompt: str) -> dict | None:
+    """Uma revisão na GPU da Alice: o JSON do veredito, None se falhar."""
     prof = load_profile(PROFILE_NAME)
     opts, think = chat_options(prof, {})
     payload = {"model": prof.get("model", ALICE_MODEL), "stream": False, "think": think, "options": opts,
@@ -177,10 +188,19 @@ def local_sample(prompt: str) -> list[dict] | None:
     except (RuntimeError, ValueError, KeyError, OSError) as e:
         print(f"pré-revisão local indisponível ({e})")
         return None
-    problems = (verdict.get("problemas") or []) if verdict.get("veredito") == "reprovado" else []
-    print(f"pré-revisão local (alice {PROFILE_NAME}): {'reprovado' if problems else 'aprovado'}; tokens alice: "
+    USAGE["aliceIn"] += int(data.get("prompt_eval_count", 0))
+    USAGE["aliceOut"] += int(data.get("eval_count", 0))
+    print(f"pré-revisão local (alice {PROFILE_NAME}): {verdict.get('veredito')}; tokens alice: "
           f"entrada={data.get('prompt_eval_count', 0)} saída={data.get('eval_count', 0)}")
-    return problems
+    return verdict
+
+
+def local_sample(prompt: str) -> list[dict] | None:
+    """Problemas se a Alice local reprovar, [] se aprovar, None se falhar."""
+    verdict = local_verdict(prompt)
+    if verdict is None:
+        return None
+    return (verdict.get("problemas") or []) if verdict.get("veredito") == "reprovado" else []
 
 
 def local_review(prompt: str, samples: int | None = None) -> list[dict] | None:
@@ -251,16 +271,25 @@ def pre_rejected(prompt: str, pre: bool) -> bool:
     return bool(problems)
 
 
-def review_test(repo: Path, card: dict, model: str, name: str, pre: bool = True) -> int:
+class TestInput(NamedTuple):
+    path: str
+    src: str
+    sha: str | None
+    asked: list[tuple[int, str]]
+    prompt: str
+
+
+def test_input(repo: Path, card: dict) -> TestInput | None:
+    """O pedido de revisão do teste (o mesmo para a Bia e para a Alice local); None se falta o arquivo ou há check vermelho."""
     path = str((card.get("allowedPaths") or [None])[0])
     if not (repo / path).is_file():
         print(f"bia: {path} não existe")
-        return 2
+        return None
     checks = run_checks(repo, card)
     red = [(c, code, out) for c, code, out in checks if code != 0]
     if red:
         print("bia: checks do cartão vermelhos, revisão não pedida:\n" + "\n".join(f"$ {c}\nexit={code}\n{out[-1500:]}" for c, code, out in red))
-        return 2
+        return None
     done = [str(d) for d in card.get("done") or []]
     asked = [(n, d) for n, d in enumerate(done, 1) if not mechanical(d)]
     src = (repo / path).read_text()
@@ -269,9 +298,39 @@ def review_test(repo: Path, card: dict, model: str, name: str, pre: bool = True)
               f"PRONTO QUANDO:\n" + "\n".join(f"{n}. {d}" for n, d in asked) +
               "\n\nChecks mecânicos (já rodaram e passaram): " + "; ".join(c for c, _, _ in checks) +
               f"\n\n# TESTE {path} (com número de linha)\n{numbered}\n")
-    sha = blob_sha(repo, path, "worktree")
+    return TestInput(path, src, blob_sha(repo, path, "worktree"), asked, prompt)
+
+
+def write_review(repo: Path, card: dict, signer: str, ti: TestInput, items: dict[int, dict], problems: list[dict], ok: bool) -> Path:
+    done = [str(d) for d in card.get("done") or []]
+    lines = [f"# Revisão {card['id']}", "", f"revisor: {signer}", f"arquivo: {ti.path} {ti.sha}", ""]
+    for n, d in enumerate(done, 1):
+        it, mech = items.get(n, {}), mechanical(d)
+        mark = "x" if ok and (mech or it.get("ok")) else " "
+        lines.append(f"- [{mark}] {d} — {mech or str(it.get('onde') or 'sem resposta').strip()}")
+    if problems:
+        lines += ["", "## Problemas"] + [f"- linha {p.get('linha')} (regra {p.get('regra')}): {p.get('explicacao')}" for p in problems]
+    f = review_file(repo, card["id"])
+    f.parent.mkdir(parents=True, exist_ok=True)
+    f.write_text("\n".join(lines) + "\n")
+    return f
+
+
+def verdict_items(verdict: dict) -> dict[int, dict]:
+    return {int(i.get("n", 0)): i for i in verdict.get("itens") or [] if str(i.get("n", "")).isdigit()}
+
+
+def review_test(repo: Path, card: dict, model: str, name: str, pre: bool = True) -> int:
+    writer = str(card.get("assignee") or "alice")
+    if name.lower() == writer:
+        print(f"bia: {name} escreveu o teste de {card['id']} e não o revisa; o portão é `bia.py gate`")
+        return 3
+    ti = test_input(repo, card)
+    if ti is None:
+        return 2
+    path, sha, asked, src, prompt = ti.path, ti.sha, ti.asked, ti.src, ti.prompt
     if pre_rejected(prompt, pre):
-        write_rejection(repo, card["id"], path, sha, LAST_LOCAL, card.get("done") or [], src)
+        write_rejection(repo, card["id"], path, sha or "", LAST_LOCAL, card.get("done") or [], src)
         return 2
     try:
         data = chat([{"role": "user", "content": prompt}], model, api_key(repo))
@@ -282,21 +341,12 @@ def review_test(repo: Path, card: dict, model: str, name: str, pre: bool = True)
     except (RuntimeError, ValueError, KeyError) as e:
         print(f"bia: {e}")
         return 3
-    rid = save_raw(data, {"card": card["id"], "task": "test", "path": path, "sha": sha, "reviewer": name, "model": model})
-    items = {int(i.get("n", 0)): i for i in verdict.get("itens") or [] if str(i.get("n", "")).isdigit()}
+    rid = save_raw(data, {"card": card["id"], "task": "test", "path": path, "sha": sha, "reviewer": name, "model": model, "writer": writer})
+    items = verdict_items(verdict)
     problems = verdict.get("problemas") or []
     missing = [n for n, _ in asked if not items.get(n, {}).get("ok")]
     ok = verdict.get("veredito") == "aprovado" and not problems and not missing
-    lines = [f"# Revisão {card['id']}", "", f"revisor: {name} {model} {rid}", f"arquivo: {path} {sha}", ""]
-    for n, d in enumerate(done, 1):
-        it, mech = items.get(n, {}), mechanical(d)
-        mark = "x" if ok and (mech or it.get("ok")) else " "
-        lines.append(f"- [{mark}] {d} — {mech or str(it.get('onde') or 'sem resposta').strip()}")
-    if problems:
-        lines += ["", "## Problemas"] + [f"- linha {p.get('linha')} (regra {p.get('regra')}): {p.get('explicacao')}" for p in problems]
-    f = review_file(repo, card["id"])
-    f.parent.mkdir(parents=True, exist_ok=True)
-    f.write_text("\n".join(lines) + "\n")
+    f = write_review(repo, card, f"{name} {model} {rid}", ti, items, problems, ok)
     print(f"{'aprovado' if ok else 'reprovado'} por {name} ({model}): {f.relative_to(repo)}\n{usage(data)}")
     for p in problems:
         print(f"  - linha {p.get('linha')} (regra {p.get('regra')}): {p.get('explicacao')}")
@@ -305,6 +355,53 @@ def review_test(repo: Path, card: dict, model: str, name: str, pre: bool = True)
     elif not ok and not problems:
         print(f"  - veredito '{verdict.get('veredito')}' sem problema listado")
     return 0 if ok else 2
+
+
+def local_gate(repo: Path, card: dict, samples: int | None = None) -> int:
+    """Portão final de teste escrito pela Bia (travas.md 4.9): a Alice local revisa com o mesmo pedido da Bia; aprova
+    com 2 amostras aprovadas (todos os itens ok), reprova com problema na mesma linha em 2 amostras ou sem consenso.
+    Os checks (expect-red, qualidade, tipos, lint) já passaram em test_input. 0 aprovado, 2 reprovado, 3 indisponível."""
+    if str(card.get("assignee")) != "bia":
+        print(f"gate: {card['id']} não foi escrito pela Bia; quem revisa é `bia.py test`")
+        return 3
+    ti = test_input(repo, card)
+    if ti is None:
+        return 2
+    samples = samples or LOCAL_SAMPLES
+    need = min(2, samples)
+    verdicts: list[dict] = []
+    approved: list[dict] = []
+    votes: dict[str, int] = {}
+    for _ in range(samples):
+        v = local_verdict(ti.prompt)
+        if v is None:
+            return 3
+        verdicts.append(v)
+        approved = [x for x in verdicts if x.get("veredito") == "aprovado" and not x.get("problemas")
+                    and all(verdict_items(x).get(n, {}).get("ok") for n, _ in ti.asked)]
+        votes = {}
+        for x in verdicts:
+            for line in {str(p.get("linha")) for p in x.get("problemas") or []}:
+                votes[line] = votes.get(line, 0) + 1
+        if len(approved) >= need or any(c >= need for c in votes.values()):
+            break
+    model = load_profile(PROFILE_NAME).get("model", ALICE_MODEL)
+    if len(approved) >= need:
+        rid = save_raw({"id": f"local-{card['id']}-{time.strftime('%Y%m%d-%H%M%S')}", "samples": verdicts},
+                       {"card": card["id"], "task": "test", "path": ti.path, "sha": ti.sha, "reviewer": "alice-local",
+                        "model": model, "writer": "bia"})
+        f = write_review(repo, card, f"alice-local {model} {rid}", ti, verdict_items(approved[0]), [], True)
+        print(f"aprovado pela alice-local por consenso ({len(approved)}/{len(verdicts)}): {f.relative_to(repo)}")
+        return 0
+    agreed = [line for line, c in votes.items() if c >= need]
+    first: dict[str, dict] = {}
+    for x in verdicts:
+        for p in x.get("problemas") or []:
+            first.setdefault(str(p.get("linha")), p)
+    problems = [first[line] for line in agreed] or list(first.values())
+    write_rejection(repo, card["id"], ti.path, ti.sha or "", problems, card.get("done") or [], ti.src)
+    print(f"reprovado pela alice-local ({'consenso' if agreed else 'sem consenso'}; {len(verdicts)} amostras)")
+    return 2
 
 
 CARD_RULES = """Você é a Bia, revisora independente. Abaixo está um cartão que pede a outro agente um ARQUIVO DE TESTE
@@ -365,7 +462,9 @@ def write_test(repo: Path, card: dict, model: str, rounds: int = 3) -> int:
         f"{WRITE_RULES}\n\n# CONTRATO\n{contract(repo, card)}\n\n# CARTÃO {card['id']}: {card.get('title', '')}\n"
         f"Arquivo: {path}\nPRONTO QUANDO:\n" + "\n".join(f"- {d}" for d in done) +
         "\nDicas:\n" + "\n".join(f"- {h}" for h in card.get("hints") or []) +
-        "\nChecks:\n" + "\n".join(f"{i}: {c}" for i, c in enumerate(card.get("checks") or [])))}]
+        "\nChecks:\n" + "\n".join(f"{i}: {c}" for i, c in enumerate(card.get("checks") or [])) +
+        "".join("\n# REVISÃO ANTERIOR (reprovada; o número da linha é do arquivo antigo)\n" + "\n".join(notes)
+                for notes in [rejection_notes(repo, card["id"])] if notes))}]
     key, tokens = api_key(repo), [0, 0]
     for n in range(1, rounds + 1):
         try:
@@ -401,7 +500,7 @@ def write_test(repo: Path, card: dict, model: str, rounds: int = 3) -> int:
 
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("task", choices=["card", "test", "write"])
+    ap.add_argument("task", choices=["card", "test", "write", "gate"])
     ap.add_argument("plan", type=Path)
     ap.add_argument("id")
     ap.add_argument("--model", default=DEFAULT_MODEL)
@@ -419,6 +518,8 @@ def main() -> int:
         code = review_card(repo, card, ns.model, ns.name, ns.pre)
     elif ns.task == "test":
         code = review_test(repo, card, ns.model, ns.name, ns.pre)
+    elif ns.task == "gate":
+        code = local_gate(repo, card)
     else:
         code = write_test(repo, card, ns.model)
     print(quota_line(api_key(repo)))

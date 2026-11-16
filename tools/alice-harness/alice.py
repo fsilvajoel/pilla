@@ -1173,39 +1173,163 @@ def cmd_claude_usage(since: str, until: str) -> int:
     print(json.dumps({**w, "cost": cost(w), "transcript": t.name}, indent=1))
     return 0
 
-def cmd_plan_run(plan: Path, ids: list[str], repo: Path) -> int:
-    """Run cards from a delivery plan in the given order; skip cards whose dependencies failed in this batch."""
-    cards = {c["id"]: c for c in (yaml.safe_load(plan.read_text()) or {}).get("cards", [])}
-    failed, results = set(), []
-    for cid in ids:
+REPORT_KEYS = ("status", "attempts", "toolCalls", "aliceTokens", "message", "lessons", "question", "runDir")
+STOP_STATUSES = ("needs_input", "card_error", "error", "quota")  # param o cartão sem nova rodada
+
+
+def alice_run(card: dict, repo: Path) -> dict:
+    """Uma execução da Alice (alice.py run em subprocesso): o relatório compacto."""
+    task = RUNS / "plan-tasks" / f"{card['id']}.yaml"
+    task.parent.mkdir(parents=True, exist_ok=True)
+    task.write_text(yaml.safe_dump(card, sort_keys=False, allow_unicode=True))
+    p = subprocess.run([sys.executable, str(HERE / "alice.py"), "run", str(task), "--repo", str(repo)], capture_output=True, text=True)
+    try:
+        rep = json.loads(p.stdout[p.stdout.index("{"):])
+    except ValueError:
+        rep = {"status": f"crash (exit {p.returncode})", "message": (p.stdout + p.stderr)[-400:]}
+    return {"exit": p.returncode, **{k: rep.get(k) for k in REPORT_KEYS}}
+
+
+class PlanOps:
+    """O que o laço do plan-run chama; os testes trocam por dublês (sem rede nem GPU)."""
+
+    def __init__(self) -> None:
+        import bia  # tardio: bia importa alice
+        self.bia = bia
+
+    def _quiet(self, cid: str, fn, *args) -> int:
+        """Saída das funções da Bia vai para plan-tasks/<ID>.log (o Claude lê só o retro)."""
+        import contextlib
+        log = RUNS / "plan-tasks" / f"{cid}.log"
+        log.parent.mkdir(parents=True, exist_ok=True)
+        with log.open("a") as f, contextlib.redirect_stdout(f):
+            print(f"--- {time.strftime('%H:%M:%S')} {getattr(fn, '__name__', fn)}")
+            return int(fn(*args))
+
+    def alice_run(self, card: dict, repo: Path) -> dict:
+        return alice_run(card, repo)
+
+    def bia_write(self, card: dict, repo: Path) -> int:
+        return self._quiet(card["id"], self.bia.write_test, repo, card, self.bia.DEFAULT_MODEL)
+
+    def bia_review(self, card: dict, repo: Path) -> int:
+        return self._quiet(card["id"], self.bia.review_test, repo, card, self.bia.DEFAULT_MODEL, "bia")
+
+    def local_gate(self, card: dict, repo: Path) -> int:
+        return self._quiet(card["id"], self.bia.local_gate, repo, card)
+
+    def review_problems(self, card: dict, repo: Path) -> list[str]:
+        return review_problems(repo, card, "worktree")
+
+    def quota_left(self, repo: Path) -> int | None:
+        q = self.bia.quota(self.bia.api_key(repo))
+        return int(q["remaining"]) if q and "remaining" in q else None
+
+    def reserve(self) -> int:
+        return int(self.bia.RESERVE)
+
+    def usage(self) -> dict[str, int]:
+        return dict(self.bia.USAGE)
+
+
+def run_card(card: dict, repo: Path, rounds: int, ops: PlanOps) -> dict:
+    """Laço de um cartão sem o Claude: execução (Alice ou Bia) → checks → revisão (test-author) → nova rodada com as
+    notas da reprovação (seção REVISÃO ANTERIOR) até aprovar ou acabar `rounds`; aí `escalated`. Nunca commita."""
+    cid, writer = card["id"], str(card.get("assignee"))
+    test = card.get("kind") == "test-author"
+    rec: dict = {"task": cid, "assignee": writer, "rounds": [], "seconds": 0, "status": None}
+    totals = {"aliceIn": 0, "aliceOut": 0, "biaIn": 0, "biaOut": 0, "biaRequests": 0}
+    for n in range(1, (rounds if test else 1) + 1):
+        if test:
+            left = ops.quota_left(repo)
+            if left is not None and left <= ops.reserve():
+                rec["status"], rec["message"] = "quota", f"cota da Bia na reserva ({left} restantes, BIA_RESERVE={ops.reserve()})"
+                break
+        t, before = time.time(), ops.usage()
+        rnd: dict = {"n": n, "writer": writer, "review": "-"}
+        if writer == "bia":
+            code = ops.bia_write(card, repo)
+            rnd["exec"] = {0: "done", 2: "failed", 4: "quota"}.get(code, "error")
+        else:
+            rep = ops.alice_run(card, repo)
+            rnd["exec"] = str(rep.get("status"))
+            rec.update({k: v for k, v in rep.items() if k in REPORT_KEYS and k != "status"})
+            tok = rep.get("aliceTokens") or {}
+            totals["aliceIn"] += int(tok.get("prompt", 0))
+            totals["aliceOut"] += int(tok.get("output", 0))
+            rnd["aliceIn"], rnd["aliceOut"] = int(tok.get("prompt", 0)), int(tok.get("output", 0))
+        if rnd["exec"] == "done" and test:
+            code = ops.local_gate(card, repo) if writer == "bia" else ops.bia_review(card, repo)
+            gaps = ops.review_problems(card, repo) if code == 0 else []
+            rnd["review"] = "aprovado" if code == 0 and not gaps else {3: "error", 4: "quota"}.get(code, "reprovado")
+            if gaps:
+                rnd["gaps"] = gaps[:3]
+        after = ops.usage()
+        for k in totals:
+            delta = after.get(k, 0) - before.get(k, 0)
+            totals[k] += delta
+            rnd[k] = rnd.get(k, 0) + delta
+        rnd["seconds"] = round(time.time() - t)
+        rec["seconds"] += rnd["seconds"]
+        rec["rounds"].append(rnd)
+        if rnd["exec"] == "done" and (not test or rnd["review"] == "aprovado"):
+            rec["status"] = "done"
+            break
+        stop = rnd["review"] if rnd["review"] in STOP_STATUSES else rnd["exec"]
+        if stop in STOP_STATUSES or stop.startswith("crash"):
+            rec["status"] = stop
+            break
+    if rec["status"] is None:
+        rec["status"] = "escalated" if test else rec["rounds"][-1]["exec"]
+    if rec["status"] == "escalated":
+        rec["lastNotes"] = rejection_notes(repo, cid, limit=5, width=200)
+    rec["attempts"] = len(rec["rounds"])
+    rec["aliceTokens"] = {"prompt": totals["aliceIn"], "output": totals["aliceOut"]}
+    rec["bia"] = {"prompt": totals["biaIn"], "output": totals["biaOut"], "requests": totals["biaRequests"]}
+    return rec
+
+
+def plan_run(cards: dict[str, dict], ids: list[str], repo: Path, rounds: int, ops: PlanOps) -> list[dict]:
+    failed: set[str] = set()
+    results: list[dict] = []
+    for i, cid in enumerate(ids):
         card = cards.get(cid)
         if not card:
             results.append({"task": cid, "status": "unknown"}); failed.add(cid); continue
-        if card.get("assignee") != "alice":
-            results.append({"task": cid, "status": "skipped (assignee claude)"}); continue
+        if card.get("assignee") not in ("alice", "bia"):
+            results.append({"task": cid, "status": f"skipped (assignee {card.get('assignee')})"}); continue
         if set(card.get("dependsOn", [])) & failed:
             results.append({"task": cid, "status": "skipped (dependência falhou)"}); failed.add(cid); continue
-        task = RUNS / "plan-tasks" / f"{cid}.yaml"
-        task.parent.mkdir(parents=True, exist_ok=True)
-        task.write_text(yaml.safe_dump(card, sort_keys=False, allow_unicode=True))
-        t = time.time()
-        p = subprocess.run([sys.executable, str(HERE / "alice.py"), "run", str(task), "--repo", str(repo)], capture_output=True, text=True)
-        try:
-            rep = json.loads(p.stdout[p.stdout.index("{"):])
-        except ValueError:
-            rep = {"status": f"crash (exit {p.returncode})", "message": (p.stdout + p.stderr)[-400:]}
-        results.append({"task": cid, "exit": p.returncode, "seconds": round(time.time() - t), **{k: rep.get(k) for k in ("status", "attempts", "toolCalls", "aliceTokens", "message", "lessons", "question", "runDir")}})
-        if p.returncode != 0:
+        rec = run_card(card, repo, rounds, ops)
+        results.append(rec)
+        if rec["status"] != "done":
             failed.add(cid)
+        if rec["status"] == "quota":  # sem a Bia nenhum test-author fecha: para a fila e reporta
+            results += [{"task": rest, "status": "skipped (cota da Bia na reserva)"} for rest in ids[i + 1:]]
+            break
+    return results
+
+
+def cmd_plan_run(plan: Path, ids: list[str], repo: Path, rounds: int = 3, ops: PlanOps | None = None) -> int:
+    """Run cards from a delivery plan in order, each one looping until approved or `rounds` (then escalated);
+    dependents of a card that did not finish are skipped. It never commits: Claude commits after the retro."""
+    ops = ops or PlanOps()
+    cards = {c["id"]: c for c in (yaml.safe_load(plan.read_text()) or {}).get("cards", [])}
+    results = plan_run(cards, ids, repo, rounds, ops)
     stamp = time.strftime('%Y%m%d-%H%M%S')
     out = RUNS / f"plan-{stamp}.json"
     out.write_text(json.dumps(results, ensure_ascii=False, indent=1))
     retro = write_retro(results, RUNS, RUNS / f"retro-{stamp}.md")
     retro += usage_note(repo, ids, results)
+    try:
+        left = ops.quota_left(repo)
+    except SystemExit:  # sem chave do OpenRouter
+        left = None
+    retro += f"- Bia (OpenRouter): {sum((r.get('bia') or {}).get('requests', 0) for r in results)} requisições; cota restante: {'?' if left is None else left}\n"
     (RUNS / f"retro-{stamp}.md").write_text(retro)
     print(retro)
     print(json.dumps({"summary": str(out), "retro": str(RUNS / f"retro-{stamp}.md"), "done": sum(r.get("status") == "done" for r in results), "total": len(results)}, ensure_ascii=False))
-    return 0 if not failed else 2
+    return 0 if all(r.get("status") == "done" or str(r.get("status")).startswith("skipped (assignee") for r in results) else 2
 
 def cmd_resume(run_dir: Path, answer: str) -> int:
     state = json.loads((run_dir / "state.json").read_text())
@@ -1298,7 +1422,7 @@ def main() -> int:
     k = sub.add_parser("cost"); k.add_argument("ids", nargs="+"); k.add_argument("--repo", type=Path, default=Path("."))
     k.add_argument("--since", default=""); k.add_argument("--until", default="~")
     u = sub.add_parser("claude-usage"); u.add_argument("--since", default=""); u.add_argument("--until", default="~")
-    g = sub.add_parser("plan-run"); g.add_argument("plan", type=Path); g.add_argument("ids", nargs="+"); g.add_argument("--repo", type=Path, default=Path("."))
+    g = sub.add_parser("plan-run"); g.add_argument("plan", type=Path); g.add_argument("ids", nargs="+"); g.add_argument("--repo", type=Path, default=Path(".")); g.add_argument("--rounds", type=int, default=3)
     q = sub.add_parser("prompt"); q.add_argument("plan", type=Path); q.add_argument("id"); q.add_argument("--repo", type=Path, default=Path("."))
     v = sub.add_parser("review"); v.add_argument("plan", type=Path); v.add_argument("id"); v.add_argument("--repo", type=Path, default=Path("."))
     e = sub.add_parser("cards"); e.add_argument("plans", nargs="+", type=Path); e.add_argument("--repo", type=Path, default=Path("."))
@@ -1313,7 +1437,7 @@ def main() -> int:
     if ns.cmd == "status":
         return cmd_status()
     if ns.cmd == "plan-run":
-        return cmd_plan_run(ns.plan, ns.ids, ns.repo.resolve())
+        return cmd_plan_run(ns.plan, ns.ids, ns.repo.resolve(), ns.rounds)
     if ns.cmd == "prompt":
         return cmd_prompt(ns.plan, ns.id, ns.repo.resolve())
     if ns.cmd == "cards":
