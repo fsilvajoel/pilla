@@ -152,6 +152,32 @@ Desenho em [orquestracao.md](../agents/orquestracao.md) e ADR-0014: a Bia escrev
 - Falha da prova: a Alice estourou o limite de chamadas do E4-T04 (orçamento do cartão) em 971 s e 2,5M de tokens de entrada; os testes da Bia ainda não foram auditados nem commitados. Não consertado (harness congelado); a implementação parcial ficou na árvore, sem commit.
 - Cache: o prefixo da Bia (papel + plano + contrato do HEAD) ficou estável por construção (teste `test_prefix_is_identical_across_calls`), mas com 1 chamada não houve reaproveitamento a medir.
 
+### Prova 2: E4-T04 dividido em dois cartões (16/11)
+
+Decisão do Joel depois da prova 1: a Bia escreve e revisa os testes (o conflito de papéis do ADR-0014 está aceito); a Alice segue no formato feature; o Claude enfileira cartões do tamanho que a Alice consegue executar. O E4-T04 virou dois cartões: E4-T04 (sem recursão, cenários C1, C2, C3 e C7, check com `vitest -t`) e E4-T05 (recursão, C4 a C6, 100% de cobertura), cada um com 20 chamadas de orçamento.
+
+| Item | Medido |
+|---|---|
+| Tamanho pelo `size_model` (qwen35) | 341 linhas por escrita e 86.016 caracteres de contexto; o stub tem 12 linhas e o teste 109 linhas (3.840 bytes juntos). O cartão original também cabia com folga |
+| E4-T04 (metade da função) | failed: 35 chamadas (limite 20), 0 erros de ferramenta, 616 s, 1 rodada |
+| Tokens Alice (local) | 1.923.003 entrada / 27.435 saída |
+| E4-T05 | pulado (dependência falhou) |
+| Bia | 0 requisições; cota 21/50 |
+| Claude, acumulado desde 15/11 (sessão + subagentes, `alice.py cost`) | 647 turnos, custo ≈ 10,4M; ≈3,07M são a construção do fluxo por feature |
+
+- Dividir não resolveu: com metade do trabalho, a Alice gastou quase o mesmo número de chamadas (35 contra 36), sem nenhum erro de ferramenta.
+- O gargalo não é tamanho, é passo sem convergência. O `size_model` mede se o arquivo e a resposta cabem na janela, mas não mede quantos passos a tarefa pede; um cartão "pequeno" pelo modelo de tamanho ainda pode não fechar.
+- Cada chamada reenvia o histórico: 35 chamadas viraram 1,9M de tokens de entrada para uma função de ~15 linhas. Na GPU local isso é tempo (10 min), não dinheiro.
+- Hipótese não verificada: algum check do cartão nunca fica verde e a Alice repete. O Claude não abre o log do cartão nem roda o check por fora durante a entrega (regras do estudo), então o diagnóstico vai para uma sessão própria de conserto do harness, num cartão descartável.
+
+### Achados até aqui (16/11)
+
+1. O custo pago está nos turnos do Claude, não na IA local: 64% do custo é releitura de contexto. Tirar o Claude do laço entre rodadas (`plan-run --rounds`) cortou a leva de ≈5M para ≈0,4–0,6M.
+2. Testes escritos por um modelo maior (Bia, OpenRouter) a partir de um plano com cenários numerados fecharam em 1 requisição o que 12 rodadas por cartão não fecharam.
+3. Juiz local por consenso de amostras foi ruidoso: reprovou sem nota com apoio no pronto. Reprovação sem nota apoiada passou a ser inconclusiva, não rodada gasta.
+4. Recorte certo não é só tamanho: o limite de passos importa tanto quanto o de linhas. A ferramenta de tamanho não basta para fatiar.
+5. Construir o orquestrador custa caro uma vez (≈3M de Claude); só se paga quando as features passam a fechar. Até agora, nenhuma feature fechou a implementação.
+
 ## Ainda NÃO testado (conclusões pendentes)
 - Geração de código TypeScript do produto (E1: motor financeiro; depois API, banco, frontend).
 - Modo test-author (Alice escrevendo testes), pre-review, fila de tarefas, CI com todas as travas (lint, tipos, fronteiras, mutação).
