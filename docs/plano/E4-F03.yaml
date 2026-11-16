@@ -1,0 +1,74 @@
+delivery: E4-F03
+title: Fix the redact gap for objects with an own constructor key; Bia writes the test, Alice the fix
+cards:
+  - id: E4-T06
+    title: Write the test for a plain object with a constructor key
+    kind: test-author
+    assignee: bia
+    rules: []
+    refs: [RFC-003 §4.1]
+    dependsOn: []
+    allowedPaths:
+      - apps/api/src/log/redact-prototype.test.ts
+    protectedTests: []
+    checks:
+      - node scripts/expect-red.mjs apps/api src/log/redact-prototype.test.ts
+      - node scripts/check-test-quality.mjs apps/api/src/log/redact-prototype.test.ts
+      - pnpm --filter @pilla/api typecheck
+      - pnpm --filter @pilla/api lint
+    done:
+      - every test fails now against the redact in HEAD and would pass with a correct implementation (run_check 0)
+      - 'import { REDACTED, redact } from "./redact";'
+      - a plain object literal with an own key named constructor (scenario C9 of docs/plano/E4-F03/plano.md) gets its cpf key replaced by REDACTED and keeps the constructor and name keys
+      - the same object nested inside another object and inside an array is redacted too
+      - an object made by a class with a cpf field is still returned as it came (toBe)
+      - never edit apps/api/src/log/redact.ts nor apps/api/src/log/redact.test.ts
+    hints:
+      - one write_file of the whole test file, then run_check 0, 1, 2 and 3
+      - the expected value is always REDACTED or the same input value, never one computed in the test
+      - compare the whole result with toEqual against a plain object literal, so no cast or property access is needed
+    budget:
+      attempts: 4
+      toolCalls: 20
+      minutes: 8
+    readFirst:
+      - apps/api/src/log/redact.ts
+      - apps/api/src/log/redact.test.ts
+    sizeNote: um describe com 3 a 4 testes, ~40 linhas
+  - id: E4-T07
+    title: Detect plain objects by prototype in redact
+    kind: implement
+    assignee: alice
+    rules: []
+    refs: [RFC-003 §4.1]
+    dependsOn: [E4-T06]
+    allowedPaths:
+      - apps/api/src/log/redact.ts
+    protectedTests:
+      - apps/api/src/log/redact-prototype.test.ts
+    checks:
+      - pnpm --filter @pilla/api exec vitest run src/log/redact.test.ts src/log/redact-prototype.test.ts --coverage --coverage.include=src/log/redact.ts
+      - pnpm --filter @pilla/api typecheck
+      - pnpm --filter @pilla/api lint
+    done:
+      - all tests in apps/api/src/log/redact.test.ts and apps/api/src/log/redact-prototype.test.ts pass with 100% line and branch coverage of redact.ts (run_check 0)
+      - a plain object is one whose prototype is Object.prototype or null, whatever keys it has
+      - keep REDACTED, the sensitive key rule and the /** */ comments unchanged
+    hints:
+      - the plain object check in redact reads a property that an own key can replace, and the rule to follow is the A1 line of docs/plano/E4-F03/plano.md
+      - one replace_function of redact, then run_check 0, 1 and 2
+    budget:
+      attempts: 4
+      toolCalls: 18
+      minutes: 6
+    readFirst:
+      - apps/api/src/log/redact.ts
+      - apps/api/src/log/redact.test.ts
+    sizeNote: uma linha dentro de redact
+# Feature (ADR-0014): plano em docs/plano/E4-F03/plano.md. Plano próprio porque o E4.yaml guarda o biaBudget 6
+# da E4-F02 (exceção registrada lá; o validador atual aceita 2..3 e a migração é decisão do Joel, JV6-7).
+features:
+  - id: E4-F03
+    title: Redact objects with an own constructor key
+    cards: [E4-T06, E4-T07]
+    biaBudget: 2
