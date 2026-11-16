@@ -40,7 +40,7 @@ import yaml
 
 import gates
 import metrics
-from cards import Size, output_tokens, quality_problems, size_model, validate_plan
+from cards import Size, feature_problems, output_tokens, quality_problems, size_model, validate_plan
 from edits import apply_edit_tolerant, replace_function
 from policy import load_policy
 from claude_usage import card_since, cost, latest_transcript, load as load_usage, load_all, session_files, window
@@ -1406,6 +1406,7 @@ def cmd_cards(plans: list[Path], repo: Path) -> int:
     for f in plans:
         plan = yaml.safe_load(f.read_text()) or {}
         problems = validate_plan(plan, known, all_ids)
+        problems += feature_problems(plan, lambda path: (repo / path).read_text() if (repo / path).is_file() else None)
         for c in plan.get("cards", []):
             problems += quality_problems(c, lambda path: (repo / path).exists(), producible, packages,
                                          line_count=lambda path: len((repo / path).read_text().splitlines()) if (repo / path).is_file() else None,

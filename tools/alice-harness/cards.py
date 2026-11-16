@@ -383,3 +383,74 @@ def quality_problems(card: dict, exists=None, producible: set[str] = frozenset()
             if int(n) >= len(checks):
                 add(f"item {str(item).split()[0]} cita run_check {n}, que não existe (há {len(checks)} checks)", "LI-053")
     return out
+
+
+# ---------------------------------------------------------------- features (ADR-0014, docs/agents/orquestracao.md)
+FEATURE_ID = re.compile(r"^E\d+-F\d{2}$")
+FEATURE_KNOWN = {"id", "title", "cards", "biaBudget"}
+PLAN_SECTIONS = ("Escopo", "Riscos", "Dependências", "Critérios de aceite", "Cenários")
+SCENARIO = re.compile(r"^- (C\d+):\s*(.+)$", re.M)
+BIA_BUDGET = (2, 6)  # testes 1 + reparo ≤1 + auditoria 1 + complemento ≤1; acima de 6 a cota de 50/dia não aguenta
+
+
+def feature_plan_path(fid: str) -> str:
+    return f"docs/plano/{fid}/plano.md"
+
+
+def plan_scenarios(text: str) -> list[tuple[str, str]]:
+    """Cenários do plano.md: linhas '- C<n>: <descrição>' da seção Cenários."""
+    part = text.split("## Cenários", 1)[1].split("\n## ", 1)[0] if "## Cenários" in text else ""
+    return SCENARIO.findall(part)
+
+
+def feature_problems(plan: dict, read=None) -> list[str]:
+    """Problemas do bloco `features:` do plano. `read(path) -> str | None` lê do repositório (plano.md)."""
+    feats = plan.get("features") or []
+    cards = {c.get("id"): c for c in plan.get("cards") or []}
+    out: list[str] = []
+    owner: dict[str, str] = {}
+    for f in feats:
+        fid = str(f.get("id", "?"))
+        if not FEATURE_ID.match(fid):
+            out.append(f"{fid}: id de feature fora do formato E<n>-F<nn>")
+        for k in f:
+            if k not in FEATURE_KNOWN:
+                out.append(f"{fid}: campo desconhecido '{k}' na feature (LI-055)")
+        ids = [str(c) for c in f.get("cards") or []]
+        if not ids:
+            out.append(f"{fid}: feature sem cards")
+        for cid in ids:
+            if cid not in cards:
+                out.append(f"{fid}: cartão {cid} não está neste plano")
+            elif cid in owner:
+                out.append(f"{fid}: {cid} já é da feature {owner[cid]}")
+            owner.setdefault(cid, fid)
+        members = [cards[c] for c in ids if c in cards]
+        tests = [c for c in members if c.get("kind") == "test-author"]
+        impls = [c for c in members if c.get("kind") == "implement"]
+        if not tests or not impls:
+            out.append(f"{fid}: feature precisa de pelo menos um test-author e um implement")
+        for c in tests:
+            if c.get("assignee") != "bia":
+                out.append(f"{fid}: {c['id']} é test-author da feature e precisa de assignee bia (a Bia escreve os testes)")
+        produced = {str(p) for c in tests for p in c.get("allowedPaths") or []}
+        for c in impls:
+            if c.get("assignee") != "alice":
+                out.append(f"{fid}: {c['id']} é implement da feature e precisa de assignee alice")
+            for t in c.get("protectedTests") or []:
+                if str(t) not in produced:
+                    out.append(f"{fid}: {c['id']} protege {t}, que nenhum test-author da feature escreve")
+        budget = f.get("biaBudget")
+        if not isinstance(budget, int) or not BIA_BUDGET[0] <= budget <= BIA_BUDGET[1]:
+            out.append(f"{fid}: biaBudget {budget!r} fora de {BIA_BUDGET[0]}..{BIA_BUDGET[1]} (requisições da Bia por feature)")
+        if read is not None:
+            text = read(feature_plan_path(fid))
+            if text is None:
+                out.append(f"{fid}: falta {feature_plan_path(fid)} (etapa 1, escrito pelo Claude)")
+                continue
+            for sec in PLAN_SECTIONS:
+                if f"## {sec}" not in text:
+                    out.append(f"{fid}: {feature_plan_path(fid)} sem a seção '## {sec}'")
+            if "## Cenários" in text and not plan_scenarios(text):
+                out.append(f"{fid}: a seção Cenários precisa de linhas '- C<n>: <descrição>'")
+    return out
