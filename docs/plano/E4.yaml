@@ -91,11 +91,11 @@ cards:
       - each of the keys cpf, phone, email, password and token has its value replaced by REDACTED
       - keys that end with a sensitive name are redacted too, ignoring case (accessToken, ownerCpf, userEmail, PASSWORD), and other keys keep their value (name, amountCents, id)
       - nested objects and objects inside arrays are redacted at any depth
-      - the input object is not changed (compare it with a structuredClone made before the call)
+      - the input is not changed, an object with a nested array included (compare it with a structuredClone made before the call, never a JSON round trip)
       - a Date, an Error, a string, a number and null are returned as they came (toBe)
       - never edit apps/api/src/log/redact.ts
     hints:
-      - one write_file of the whole test file, then run_check 0, 1, 2 and 3
+      - one write_file of the whole test file under 100 lines (write_file refuses more than 150), then run_check 0, 1, 2 and 3
       - 'use it.each for the list of sensitive keys, and build plain input objects like { ownerCpf: "x", name: "Ana" }'
       - the expected value is always REDACTED or the same input value, never one computed in the test
       - never write any because the lint refuses it, and compare the whole result with toEqual against a plain object literal, so no cast or property access is needed

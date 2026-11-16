@@ -17,6 +17,7 @@
   "devDependencies": {
     "@electric-sql/pglite": "0.5.14",
     "@pilla/config": "workspace:*",
+    "@types/node": "~26.6.6",
     "@vitest/coverage-v8": "^5.1.0",
     "drizzle-kit": "^0.31.11",
     "vitest": "^5.1.0"

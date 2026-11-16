@@ -23,3 +23,9 @@ PostgreSQL, Next.js, Tailwind e TypeScript já estão definidos. Falta o backend
 
 ## Alternativas consideradas
 Ver RFC-003 §3 e §5 (Python, Fastify puro, Prisma, Next.js como backend).
+
+## Emenda 2026-11-15: tipagem forte em todo lugar possível
+Decisão do Joel: a tipagem forte vale em todo lugar possível, pela qualidade do produto.
+- Código que roda em Node (`apps/api`, futuro `apps/worker`) usa `@types/node` na versão do Node do projeto, assim APIs do runtime como `structuredClone` são checadas pelo compilador, em vez de contornadas.
+- Pacotes compartilhados com o navegador (`packages/finance`, `packages/schemas`) ficam sem tipos de runtime: só a lib ES. Assim o compilador barra `Buffer`, `process` etc. em código que também vai para o `apps/web`.
+- `any`, cast para `any` e `@ts-ignore` continuam proibidos (lint e travas do harness); `unknown` + estreitamento é o caminho.
