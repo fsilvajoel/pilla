@@ -14,6 +14,9 @@ desligar regra (`noInlineConfig`): o código é que muda.
 - `@typescript-eslint/consistent-type-assertions`: sem `as`; valide (zod) ou estreite com `typeof`.
   - errado: `export const n = JSON.parse("1") as number;`
   - certo: `const raw: unknown = JSON.parse("1"); export const n = typeof raw === "number" ? raw : 0;`
+- `@typescript-eslint/consistent-type-assertions` (objeto): para ler as chaves de um `unknown`, estreite com um type guard (`v is Record<string, unknown>`), nunca com `as`.
+  - errado: `export const keys = (v: unknown): string[] => Object.keys(v as object);`
+  - certo: `const isRecord = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null; export const keys = (v: unknown): string[] => (isRecord(v) ? Object.keys(v) : []);`
 - `@typescript-eslint/no-non-null-assertion`: sem `!`; trate o `undefined`.
   - errado: `export const first = (a: number[]): number => a[0]!;`
   - certo: `export const first = (a: number[]): number => a[0] ?? 0;`
