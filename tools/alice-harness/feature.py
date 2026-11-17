@@ -412,8 +412,8 @@ class Orchestrator:
     def stage_recheck_tests(self) -> str:
         """Reexecuta os checks dos testes já produzidos; não escreve teste nem chama a Bia."""
         t0 = time.time()
-        if self.stage("tests").get("status") != "escalated":
-            return self.finish("tests", "error", t0, message="recheck exige tests: escalated")
+        if self.stage("tests").get("status") not in ("done", "error", "escalated"):
+            return self.finish("tests", "error", t0, message="recheck exige testes já produzidos")
         paths = self.test_paths()
         scenarios = self.state.get("scenarios")
         expected = [c for c, _ in plan_scenarios((self.repo / feature_plan_path(self.f.fid)).read_text())]
@@ -673,8 +673,10 @@ class Orchestrator:
         out = []
         for s in STAGES:
             if s != "plan" and self.state["stages"].get(s, {}).get("status") == "done":
-                out.append(f"{s}: done (já feito)")
-                continue
+                if s != "implement" or (isinstance(self.stage(s).get("cards"), dict) and
+                                        self.stage(s)["cards"] == {c["id"]: "done" for c in self.f.impls}):
+                    out.append(f"{s}: done (já feito)")
+                    continue
             status = steps[s]()
             out.append(f"{s}: {status}")
             if status not in ("done", "ready"):

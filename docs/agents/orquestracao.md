@@ -53,9 +53,10 @@ rodar de novo continua da etapa pendente. `--stage plan` só valida o plano (o p
 Para respeitar a revisão dos testes antes da Alice, rode `--stage tests`, revise os testes e só então
 rode `--stage implement` (seguido de `audit` e `review`); o `--stage all` atual **não interrompe**
 entre tests e implement nem prova aprovação externa: não o use como portão dessa revisão.
-Com `tests: escalated` e testes corrigidos fora do orquestrador, Claude pode executar `--stage recheck-tests`:
-reexecuta todos os checks sob o stub HEAD sem pedir à Bia nem sobrescrever testes, exige arquivos e cenários
-registrados, atualiza os shas e só marca `tests: done` em verde. `all` não faz essa revalidação sozinho;
+Com testes já produzidos e `tests: done`, `error` ou `escalated`, Claude pode executar `--stage recheck-tests`
+após correção externa ou mudança no plano: reexecuta todos os checks sob o stub HEAD sem pedir à Bia nem
+sobrescrever testes, exige arquivos e cenários registrados do plano atual, atualiza os shas e só marca
+`tests: done` em verde. Falha de evidência ou de check bloqueia a implementação, inclusive se antes estava done. `all` não faz essa revalidação sozinho;
 erro de typecheck/lint de pacote permanece vermelho até ser resolvido, mesmo que seja de outra feature.
 Antes de qualquer etapa que execute agentes (exceto `plan`), dependências de cartões em outra feature do mesmo plano
 exigem estado do produtor com `implement: done` e o cartão dependido em `implement.cards` como `done`;
@@ -63,6 +64,9 @@ estado ausente, inválido ou ambíguo bloqueia a feature sem consumir Bia/Alice.
 de `tests`, entregas antigas de teste saem da árvore e ficam em `runs/feature/<F>/.../previous/`.
 Se `implement` falhar, o orquestrador preserva cópias e restaura ao HEAD os allowedPaths de implementação
 (inclusive diffs anteriores não commitados); testes da Bia não são restaurados nessa etapa.
+No `--stage all`, `implement: done` só é reaproveitado se o mapa de cartões concluídos corresponder
+exatamente aos cartões implement do plano atual; caso contrário, a etapa executa os cartões atuais,
+sem dispensar `tests: done` nem chamar a Bia automaticamente. `--stage implement` já usa o plano atual.
 O orquestrador nunca commita. O teto declarado não impede retries de rede nem substitui ledger externo.
 
 ## Formato das mensagens (JSON com esquema fixo, validado em `feature.py`)

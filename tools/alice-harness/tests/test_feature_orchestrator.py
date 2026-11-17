@@ -304,6 +304,39 @@ class OrchestratorTest(unittest.TestCase):
         self.assertTrue(resumed.state["expectRed"])
         self.assertIn("todos verdes", (resumed.dir / "testes.md").read_text())
 
+    def test_recheck_done_and_error_revalidates_without_bia_and_updates_sha(self):
+        ops = FakeOps(self.repo, [tests_json()])
+        self.assertEqual(self.orc(ops).run("tests", 3), ["tests: done"])
+        initial = self.orc(FakeOps(self.repo, [])).state["testShas"]["a.test.ts"]
+        (self.repo / "a.test.ts").write_text("good changed\n")
+        resumed = self.orc(FakeOps(self.repo, []))
+        self.assertEqual(resumed.run("recheck-tests", 3), ["recheck-tests: done"])
+        self.assertNotEqual(resumed.state["testShas"]["a.test.ts"], initial)
+        self.assertEqual(resumed.state["biaRequests"], 1)
+        self.assertEqual(resumed.ops.calls, [])
+        self.assertEqual(resumed.run("implement", 3), ["implement: done"])
+        self.assertEqual(resumed.ops.runs[0]["E9-T02"]["featureTests"], resumed.state["testShas"])
+        resumed.stage("tests")["status"] = "error"
+        resumed.save()
+        self.assertEqual(self.orc(FakeOps(self.repo, [])).run("recheck-tests", 3), ["recheck-tests: done"])
+
+    def test_recheck_done_invalid_evidence_never_remains_approved(self):
+        self.assertEqual(self.orc(FakeOps(self.repo, [tests_json()])).run("tests", 3), ["tests: done"])
+        resumed = self.orc(FakeOps(self.repo, []))
+        (self.repo / "a.test.ts").unlink()
+        self.assertEqual(resumed.run("recheck-tests", 3), ["recheck-tests: error"])
+        self.assertEqual(resumed.run("implement", 3), ["implement: skipped"])
+        (self.repo / "a.test.ts").write_text("bad\n")
+        self.assertEqual(resumed.run("recheck-tests", 3), ["recheck-tests: escalated"])
+        self.assertEqual(resumed.ops.calls, [])
+        self.assertEqual(resumed.ops.runs, [])
+
+    def test_recheck_pending_does_not_create_approval(self):
+        orc = self.orc(FakeOps(self.repo, []))
+        self.assertEqual(orc.run("recheck-tests", 3), ["recheck-tests: error"])
+        self.assertNotEqual(orc.stage("tests")["status"], "done")
+        self.assertEqual(orc.ops.calls, [])
+
     def test_recheck_refuses_red_missing_or_untrusted_state_without_bia(self):
         ops = FakeOps(self.repo, [tests_json("bad"), tests_json("bad")])
         self.assertEqual(self.orc(ops).run("tests", 3), ["tests: escalated"])
@@ -427,6 +460,36 @@ class OrchestratorTest(unittest.TestCase):
         out = self.orc(ops2).run("all", 3)
         self.assertEqual(out[:2], ["plan: done", "tests: done (já feito)"])
         self.assertEqual(out[-1], "review: ready")
+
+    def test_all_reruns_implementation_when_plan_cards_change(self):
+        ops = FakeOps(self.repo, [tests_json()])
+        self.assertEqual(self.orc(ops).run("tests", 3), ["tests: done"])
+        state = self.orc(FakeOps(self.repo, [])).state
+        state["stages"]["implement"] = {"status": "done", "cards": {"E9-T02": "done", "E9-T04": "failed"}}
+        (self.repo / "docs/plano/E9-F01/estado.json").write_text(json.dumps(state))
+        new_card = {**IMPL, "id": "E9-T07", "dependsOn": ["E9-T02"]}
+        plan = {**PLAN, "cards": [TEST, IMPL, new_card],
+                "features": [{**PLAN["features"][0], "cards": ["E9-T01", "E9-T02", "E9-T07"]}]}
+        resumed = self.orc(FakeOps(self.repo, [audit_json()]), plan)
+        out = resumed.run("all", 3)
+        self.assertIn("implement: done", out)
+        self.assertEqual(list(resumed.ops.runs[0]), ["E9-T02", "E9-T07"])
+        self.assertEqual(resumed.stage("implement")["cards"], {"E9-T02": "done", "E9-T07": "done"})
+        self.assertEqual(resumed.run("all", 3)[2], "implement: done (já feito)")
+        resumed.stage("tests")["status"] = "error"
+        resumed.stage("implement")["cards"] = {"E9-T02": "done"}
+        resumed.save()
+        calls = len(resumed.ops.runs)
+        self.assertEqual(resumed.run("all", 3)[-1], "tests: error")
+        self.assertEqual(len(resumed.ops.runs), calls)
+
+    def test_all_does_not_skip_incomplete_implement_status(self):
+        ops = FakeOps(self.repo, [tests_json()])
+        orc = self.orc(ops)
+        self.assertEqual(orc.run("tests", 3), ["tests: done"])
+        orc.stage("implement").update({"status": "done", "cards": {"E9-T02": "failed"}})
+        self.assertEqual(orc.run("all", 3)[2], "implement: done")
+        self.assertEqual(len(ops.runs), 1)
 
     def test_cross_feature_dependency_requires_done_card_before_agents(self):
         plan = {"cards": [
