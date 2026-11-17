@@ -10,6 +10,42 @@ RFC-004 §2, §5 e §6; ADR-0013; decisões do Joel de 17/11 (`docs/plano/deciso
 - E7-T13 (Bia) e E7-T14 (Alice): `apps/web/components/payment-form.tsx`, rota `/emprestimos/[id]/pagamento`.
 - Fora: upload real do comprovante e chamada à API (pendente do Joel), conferência do pagamento, estorno.
 
+## Tipos e imports (conferidos no código; valem para os testes e para a implementação)
+
+- `toPaymentDraft(loanId: string, values: PaymentFormValues, receipt: ReceiptFile | null): PaymentDraft`
+  (`apps/web/lib/payment-draft.ts`). `PaymentFormValues` (`import type` de `./payment-draft`): `accountId`,
+  `paidAt`, `amount` texto e `method: PaymentMethod` ("PIX" | "BOLETO" | "CASH" | "BANK_TRANSFER"); o literal
+  tipado impede "PIX" de virar `string`.
+- `ReceiptFile` = `Pick<File, "name" | "size" | "type">`: no teste da função, um objeto literal basta (sem `File`).
+- `PaymentDraft` = `{ payment: PaymentFields; receipt: AttachmentUploadUrlRequest | null }`. Esperado do exemplo:
+  `payment` = `{ loanId: "01936f8e-7b2c-7cde-8f00-000000000002", accountId: "01936f8e-7b2c-7cde-8f00-000000000004",
+  paidAt: "2026-12-13", amountCents: 115000, method: "PIX" }` (número comum, nunca bigint) e `receipt` =
+  `{ fileName: "comprovante.pdf", contentType: "application/pdf", sizeBytes: 204800 }`.
+- `ReceiptRequiredError` (classe de `./payment-draft`) com `code` "RECEIPT_REQUIRED"; `MoneyError` de
+  `@pilla/finance`; `ZodError` de `zod`; `maxAttachmentBytes` é valor de `@pilla/schemas`.
+- `PaymentForm` (`apps/web/components/payment-form.tsx`), props `loan`, `accounts`, `onSubmit?`; o teste passa
+  `exampleLoanDetail`, `mockAccounts` e um `vi.fn()`.
+- `verbatimModuleSyntax` e `noUnusedLocals` estão ligados: tipo só entra com `import type`, e nada é importado sem
+  uso. As linhas de import exatas de cada arquivo de teste estão no `done` do cartão (lista fechada); o `vi` vem
+  numa linha própria (`import { vi } from "vitest";`) por causa do validador de cartões.
+
+## Como o teste consulta a tela
+
+- E7-T11 não tem tela: `expect(() => toPaymentDraft(...)).toThrow(Classe)`, só a classe.
+- Tela: `getByRole("heading", { level: 1, name: "Registrar pagamento" })` e o botão
+  `getByRole("button", { name: "Registrar pagamento" })` (mesmo nome; nunca `getByText`). Textos "Contrato 2026-0012"
+  e "Saldo devedor R$ 4.600,00".
+- Rótulos: "Conta de destino", "Data do pagamento", "Valor", "Método", "Comprovante". Conta de destino = id da
+  Conta principal; Método começa em PIX e CASH aparece como "Espécie".
+- Arquivo: `new File([...], "comprovante.pdf", { type: "application/pdf" })` e `fireEvent.change` no rótulo
+  "Comprovante" com `target.files` só com ele; `sizeBytes` esperado = `file.size`.
+- Sucesso: status "Pagamento registrado para conferência."; sem comprovante: alerta "Anexe o comprovante
+  (obrigatório exceto em espécie)."; outros erros: alerta "Confira os campos do pagamento.".
+- Submit assíncrono (React Hook Form): `await screen.findByRole("status")` ou `("alert")`, guardar o elemento e
+  conferir com `toHaveTextContent`; as conferências do `onSubmit` vêm depois. Nunca `await expect(findBy...)`.
+- Não há `userEvent` no projeto: só `fireEvent` de `@testing-library/react`. Modelo: `apps/web/app/page.test.tsx`.
+- Um `render` por teste (dois renders repetem rótulos, botões e textos e o `getBy` acha mais de um).
+
 ## Riscos
 
 - RN-R06 testada só na tela: o E7-T11 testa os três métodos que exigem comprovante e o CASH sem arquivo.
