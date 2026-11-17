@@ -37,59 +37,47 @@ class QuadroTest(unittest.TestCase):
 
     def test_snapshot_uses_isolated_sources_and_is_short(self):
         quadro.set_leva(self.repo, 'E5: iniciar')
-        for agent in ('alice', 'bia', 'jorge'):
+        for agent in ('alice', 'bia'):
             quadro.set_fila(self.repo, agent, agent.upper())
         text = quadro.generate(self.repo, now=self.clock, quota=lambda: {'remaining': 12},
-                               alice_state=lambda: 'E5-T01', jorge_state=lambda: ('aplicada', 'harness-v9'))
+                               alice_state=lambda: 'E5-T01')
         self.assertEqual(text, (self.repo / 'docs/agents/quadro.md').read_text())
         self.assertIn('2026-11-16T23:10:00-03:00', text.splitlines()[2])
         self.assertIn('Alice: cartão E5-T01; fila ALICE', text)
         self.assertIn('Bia: fila BIA; cota OpenRouter 12; reset 00:00 UTC (21h BRT)', text)
-        self.assertIn('Jorge: JORGE_STATUS=aplicada versao=harness-v9; fila JORGE', text)
+        self.assertNotIn('Jorge', text)
         self.assertLessEqual(len(text.splitlines()), 40)
         self.assertEqual(sum(line.startswith('- Alice:') for line in text.splitlines()), 1)
 
     def test_bad_or_missing_sources_do_not_become_empty_or_zero(self):
         quadro.set_fila(self.repo, 'alice', 'E5-T01')
         text = quadro.generate(self.repo, now=self.clock, quota=lambda: (_ for _ in ()).throw(OSError('offline')),
-                               alice_state=lambda: (_ for _ in ()).throw(ValueError('broken')),
-                               jorge_state=lambda: ('aplicada', 'harness-v9'))
+                               alice_state=lambda: (_ for _ in ()).throw(ValueError('broken')))
         self.assertIn('Alice: cartão ?; fila E5-T01', text)
         self.assertIn('Bia: fila ?; cota OpenRouter ?', text)
-        self.assertIn('Jorge: JORGE_STATUS=aplicada versao=harness-v9; fila ?', text)
         self.assertIn('- Leva: ?', text)
         self.assertNotIn('vazia', text)
         self.assertNotIn('cota OpenRouter 0', text)
         (self.repo / 'docs/agents/quadro-entradas.json').write_text('{bad json')
         text = quadro.generate(self.repo, now=self.clock, quota=lambda: {'remaining': 'broken'},
-                               alice_state=lambda: '?', jorge_state=lambda: None)
+                               alice_state=lambda: '?')
         self.assertIn('cota OpenRouter ?', text)
-        self.assertIn('Jorge: JORGE_STATUS=? versao=?', text)
-
-    def test_last_jorge_is_numeric_and_terminal_only(self):
-        for n, status in ((9, 'aplicada'), (10, 'erro'), (11, None)):
-            target = self.repo / f'tools/jorge/logs/harness-v{n}'
-            target.mkdir(parents=True)
-            (target / 'estado.json').write_text(json.dumps({'version': f'harness-v{n}', 'status': status}))
-        self.assertEqual(quadro.last_jorge(self.repo), ('erro', 'harness-v10'))
-        (self.repo / 'tools/jorge/logs/harness-v10/estado.json').write_text('{broken')
-        self.assertEqual(quadro.last_jorge(self.repo), ('aplicada', 'harness-v9'))
 
     def test_multiline_input_does_not_inject_rows_and_failed_publish_keeps_old(self):
-        quadro.set_leva(self.repo, 'E5\n- Jorge: falsa | texto longo ' + 'x' * 300)
+        quadro.set_leva(self.repo, 'E5\n- Bia: falsa | texto longo ' + 'x' * 300)
         quadro.set_fila(self.repo, 'bia', 'B1\n- Alice: falsa')
-        old = quadro.generate(self.repo, now=self.clock, quota=lambda: {}, alice_state=lambda: '?', jorge_state=lambda: None)
-        self.assertEqual(sum(line.startswith('- Jorge:') for line in old.splitlines()), 1)
+        old = quadro.generate(self.repo, now=self.clock, quota=lambda: {}, alice_state=lambda: '?')
+        self.assertEqual(sum(line.startswith('- Bia:') for line in old.splitlines()), 1)
+        self.assertEqual(sum(line.startswith('- Alice:') for line in old.splitlines()), 1)
         self.assertLessEqual(len(old.splitlines()), 40)
         with mock.patch.object(quadro.os, 'replace', side_effect=OSError('falhou')):
             with self.assertRaises(OSError):
-                quadro.generate(self.repo, now=self.clock, quota=lambda: {}, alice_state=lambda: '?', jorge_state=lambda: None)
+                quadro.generate(self.repo, now=self.clock, quota=lambda: {}, alice_state=lambda: '?')
         self.assertEqual((self.repo / 'docs/agents/quadro.md').read_text(), old)
 
     def test_documentation_explains_manual_snapshot(self):
         root = Path(__file__).resolve().parents[3]
-        for rel in ('tools/alice-harness/README.md', 'docs/agents/orquestracao.md',
-                    'docs/agents/cartao-de-tarefa.md'):
+        for rel in ('tools/alice-harness/README.md', 'docs/agents/orquestracao.md'):
             text = (root / rel).read_text()
             for command in ('alice.py leva', 'alice.py fila', 'alice.py quadro'):
                 self.assertIn(command, text, rel)

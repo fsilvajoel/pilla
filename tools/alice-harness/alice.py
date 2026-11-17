@@ -657,7 +657,7 @@ KIND_NOTES = {
     "research": ("Pesquisa externa (o cartão traz a pergunta e o motivo). Use web_search/fetch_page só em documentação oficial. "
                  "Escreva no arquivo do cartão: '## Pergunta', '## Resposta' (até 5 tópicos, cada um com a URL https da fonte) e "
                  "'## Não encontrado' (o que ficou sem fonte). Nada de opinião nem fato sem fonte. O Claude lê só esse resumo."),
-    "cards": "Rascunhe cartões de tarefa YAML no formato de docs/agents/cartao-de-tarefa.md, um por função/endpoint, com rules por ID.",
+    "cards": "Rascunhe cartões de tarefa YAML no formato de Harness-adaV1/skill/escrever-cartao/SKILL.md, um por função/endpoint, com rules por ID.",
 }
 # LI-027: notas que valem só para um pacote (a de dinheiro bigint do motor vazou para os esquemas JSON).
 PATH_NOTES = {
@@ -1645,7 +1645,7 @@ def main() -> int:
     f.add_argument("--cards", help="reset: IDs separados por vírgula"); f.add_argument("--motivo", help="reset: obrigatório")
     f.add_argument("--stage", choices=("plan", "tests", "recheck-tests", "implement", "audit", "review", "all"), default="all"); f.add_argument("--rounds", type=int, default=3)
     l = sub.add_parser("leva"); l.add_argument("texto"); l.add_argument("--repo", type=Path)
-    fi = sub.add_parser("fila"); fi.add_argument("agente", choices=("alice", "bia", "jorge")); fi.add_argument("itens"); fi.add_argument("--repo", type=Path)
+    fi = sub.add_parser("fila"); fi.add_argument("agente", choices=("alice", "bia")); fi.add_argument("itens"); fi.add_argument("--repo", type=Path)
     qu = sub.add_parser("quadro"); qu.add_argument("--repo", type=Path)
     ns = ap.parse_args()
     if ns.cmd == "runs":

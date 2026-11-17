@@ -40,7 +40,6 @@ denyRead:
 
 protectedWrite:
   - tools/alice-harness/*   # herdado de policy.default.yaml; cartão explicitamente autorizado libera caminho exato
-  - tools/jorge/*           # também herdado; mudanças de Jorge são responsabilidade do Review
   - "*.test.ts"
   - "*.spec.ts"
   - "*.test.tsx"

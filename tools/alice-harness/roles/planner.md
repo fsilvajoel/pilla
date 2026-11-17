@@ -9,7 +9,7 @@ Fonte única de escopo da feature. Seções obrigatórias (o validador confere e
 - `## Dependências`: cartões, pacotes e documentos (RFC, RN, ADR) de que a feature depende;
 - `## Critérios de aceite`: linhas `- A<n>: ...`, conferíveis por teste ou check;
 - `## Cenários`: linhas `- C<n>: ...`, um caso de teste por linha, com casos de borda.
-Os cartões continuam no plano YAML (regras de [cartao-de-tarefa.md](../../../docs/agents/cartao-de-tarefa.md));
+Os cartões continuam no plano YAML (regras da skill [escrever-cartao](../../../Harness-adaV1/skill/escrever-cartao/SKILL.md));
 a feature os agrupa em `features:` com `biaBudget` (2 a 3 chamadas declaradas; retries de rede não têm ledger independente). Antes de rodar: `alice.py cards`.
 
 ## Etapa 5: revisão final

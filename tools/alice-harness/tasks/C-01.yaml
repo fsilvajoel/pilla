@@ -1,7 +1,7 @@
 id: C-01
 title: "Draft delivery cards E0 and E1 from docs/plano/README.md"
 kind: cards
-readFirst: [docs/plano/README.md, docs/agents/cartao-de-tarefa.md]
+readFirst: [docs/plano/README.md, Harness-adaV1/skill/escrever-cartao/SKILL.md]
 allowedPaths: [docs/plano/E0.yaml, docs/plano/E1.yaml]
 checks:
   - python3 tools/alice-harness/alice.py cards docs/plano/E0.yaml docs/plano/E1.yaml --repo .

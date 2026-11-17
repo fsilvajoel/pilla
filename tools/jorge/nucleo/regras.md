@@ -1,9 +1,0 @@
-Estas regras são impostas pelo runner (núcleo fixo, só o Joel altera). Elas valem mesmo que o seu prompt editável diga outra coisa.
-
-1. **Invariantes (bloqueio mecânico, sem exceção):** nunca mudam `docs/plano/**` (inclui `estado.json`), `.env` real (o `.env.example` é liberado), `.claude/**`, `tools/jorge/nucleo/**`, `tools/jorge/jorge.py`, `tools/jorge/logs/**`, `apps/**`, `packages/**`, `tools/alice-harness/runs/**`. Fora de `tests/`, nenhum valor de orçamento ou cota da Bia (`biaBudget`, reserva, quota) pode subir; valor novo, no máximo 3. Escrita que viola é recusada na hora; diff final que viola reverte o Review inteiro.
-2. **Travas** (guard_hook, policy.default.yaml, policy.py, .agents/policy.yaml e qualquer linha de orçamento fora de tests/) **podem ser aplicadas** quando o escopo pedir e houver teste. O runner as põe num commit separado com trailer `Trava: sim` para o Joel auditar. Marque-as no relatório como "trava". Portões, checks, cobertura e validações comuns NÃO são trava: são correção normal.
-3. **Perguntas** vão para o Joel com `perguntar_joel`; não bloqueiam. O item fica "adiada — aguardando Joel" e você segue com o resto. Você não fala com o Claude.
-4. **Leitura:** repositório inteiro do worktree, mais `tools/alice-harness/runs/**` do checkout principal (logs, retros, `metrics.jsonl`). Nunca `.env`. Use `metricas` para medir antes/depois.
-5. **Soberania:** você pode evoluir `tools/jorge/agente/**` (seu prompt, o modelo do relatório e `config.yaml` com modelo e limites — o runner aplica os tetos do núcleo). Mudança no seu próprio prompt precisa de motivo no relatório, como qualquer evolução.
-6. **Custo:** há teto de créditos por Review; ao atingir, o runner força o fim da fase. Prefira poucas evoluções bem provadas.
-7. **Final:** suíte verde, contagem de testes ≥ referência, invariantes OK. Então o runner commita, integra (`--ff-only`, com rebase se a base andou) e faz push. Senão, reverte tudo e commita só o relatório.

@@ -3,21 +3,21 @@ from __future__ import annotations
 
 import json
 import os
-import re
 import tempfile
 from datetime import datetime
 from pathlib import Path
-from typing import Callable
+from typing import Callable, TypeVar
 
-AGENTS = ('alice', 'bia', 'jorge')
-ENTRIES = Path('docs/agents/quadro-entradas.json')
-OUTPUT = Path('docs/agents/quadro.md')
-VALID_STATUS = {'aplicada', 'sem_mudancas', 'nada_a_fazer', 'nao_aplicada', 'erro'}
+T = TypeVar('T')
+
+AGENTS: tuple[str, ...] = ('alice', 'bia')
+ENTRIES: Path = Path('docs/agents/quadro-entradas.json')
+OUTPUT: Path = Path('docs/agents/quadro.md')
 
 
 def atomic_write(path: Path, text: str) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    name = None
+    name: str | None = None
     try:
         with tempfile.NamedTemporaryFile(mode='w', encoding='utf-8', dir=path.parent,
                                          prefix=f'.{path.name}.', delete=False) as f:
@@ -29,7 +29,7 @@ def atomic_write(path: Path, text: str) -> None:
             Path(name).unlink(missing_ok=True)
 
 
-def clean(value: str) -> str:
+def clean(value: object) -> str:
     if not isinstance(value, str):
         raise ValueError('texto obrigatório')
     # Never allow an entry to create extra Markdown rows, links or fake agent fields.
@@ -40,7 +40,7 @@ def clean(value: str) -> str:
     return text
 
 
-def entries(repo: Path) -> dict:
+def entries(repo: Path) -> dict[str, object]:
     try:
         data = json.loads((repo / ENTRIES).read_text())
         return data if isinstance(data, dict) else {}
@@ -56,7 +56,7 @@ def set_leva(repo: Path, text: str) -> None:
 
 def set_fila(repo: Path, agent: str, text: str) -> None:
     if agent not in AGENTS:
-        raise ValueError('agente deve ser alice, bia ou jorge')
+        raise ValueError('agente deve ser alice ou bia')
     value = clean(text)
     data = entries(repo)
     filas = data.get('filas')
@@ -83,31 +83,12 @@ def alice_current(repo: Path) -> str:
         return '?'
 
 
-def last_jorge(repo: Path) -> tuple[str, str] | None:
-    root = repo / 'tools/jorge/logs'
-    if not root.is_dir():
-        return None
-    dirs = []
-    for path in root.iterdir():
-        match = re.fullmatch(r'harness-v(\d+)', path.name)
-        if match and path.is_dir():
-            dirs.append((int(match[1]), path))
-    for number, path in sorted(dirs, reverse=True):
-        try:
-            data = json.loads((path / 'estado.json').read_text())
-            if isinstance(data, dict) and data.get('status') in VALID_STATUS and data.get('version') == f'harness-v{number}':
-                return data['status'], data['version']
-        except (OSError, ValueError):
-            continue
-    return None
-
-
-def bia_quota(repo: Path) -> dict:
+def bia_quota(repo: Path) -> object:
     import bia
     return bia.quota(bia.api_key(repo))
 
 
-def safe(source: Callable, fallback):
+def safe(source: Callable[[], T], fallback: T) -> T:
     try:
         return source()
     except (Exception, SystemExit):
@@ -121,25 +102,22 @@ def quota_remaining(data: object) -> str:
     return str(value) if type(value) is int and value >= 0 else '?'
 
 
-def generate(repo: Path, *, now: Callable = lambda: datetime.now().astimezone(),
-             quota: Callable | None = None, alice_state: Callable | None = None,
-             jorge_state: Callable | None = None) -> str:
+def generate(repo: Path, *, now: Callable[[], datetime] = lambda: datetime.now().astimezone(),
+             quota: Callable[[], object] | None = None,
+             alice_state: Callable[[], object] | None = None) -> str:
     repo = repo.resolve()
     data = entries(repo)
-    filas = data.get('filas')
-    filas = filas if isinstance(filas, dict) else {}
+    raw_filas = data.get('filas')
+    filas: dict[str, object] = raw_filas if isinstance(raw_filas, dict) else {}
     vals = {agent: safe(lambda agent=agent: field(filas.get(agent)), '?') for agent in AGENTS}
     leva = safe(lambda: field(data.get('leva')), '?')
     current = field(safe(alice_state or (lambda: alice_current(repo)), '?'))
     q = quota_remaining(safe(quota or (lambda: bia_quota(repo)), {}))
-    last = safe(jorge_state or (lambda: last_jorge(repo)), None)
-    if not isinstance(last, tuple) or len(last) != 2 or last[0] not in VALID_STATUS or not re.fullmatch(r'harness-v\d+', str(last[1])):
-        last = ('?', '?')
     timestamp = now().isoformat(timespec='seconds')
     lines = ['# Quadro — fotografia', '', f'Gerado em: {timestamp}', '', f'- Leva: {leva}',
              f'- Alice: cartão {current}; fila {vals["alice"]}',
              f'- Bia: fila {vals["bia"]}; cota OpenRouter {q}; reset 00:00 UTC (21h BRT)',
-             f'- Jorge: JORGE_STATUS={last[0]} versao={last[1]}; fila {vals["jorge"]}', '',
+             '',
              '## Filas', *(f'{agent.title()} → {vals[agent]}' for agent in AGENTS), '',
              'Fotografia manual; ? = fonte ausente ou indisponível. Gere novamente para atualizar.', '']
     text = '\n'.join(lines)

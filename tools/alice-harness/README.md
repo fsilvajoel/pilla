@@ -3,14 +3,14 @@
 Ambiente de trabalho da Alice (modelo local no Ollama): executa as ferramentas que ela pede, com limites (leitura do repositório, escrita restrita, testes, busca em documentação oficial). Configuração em `.env` (ver `.env.example`).
 
 ## Comandos
-- `alice.py cards <plano.yaml>... --repo <path>`: valida os cartões (forma e as regras de escrita de [cartao-de-tarefa.md](../../docs/agents/cartao-de-tarefa.md)). Rodar antes de qualquer fila.
+- `alice.py cards <plano.yaml>... --repo <path>`: valida os cartões (forma e as regras de escrita da skill [escrever-cartao](../../Harness-adaV1/skill/escrever-cartao/SKILL.md)). Rodar antes de qualquer fila.
 - `alice.py run <cartão.yaml> --repo <path>`: executa um cartão. Faz o pré-voo antes de chamar o modelo.
 - `alice.py plan-run <plano.yaml> <ID>... --repo <path>`: fila de cartões de um plano, com retrospectiva e tokens no fim.
 - `alice.py feature <plano.yaml> <F> [--stage plan|tests|recheck-tests|implement|audit|review|all] [--rounds N] --repo <path>`: orquestração por feature (ADR-0014, [orquestracao.md](../../docs/agents/orquestracao.md)): a Bia escreve todos os testes numa chamada, a Alice implementa local (`plan-run`), a Bia audita numa chamada e o harness prepara `docs/plano/<F>/revisao-final.md` para o Claude. Estado em `docs/plano/<F>/estado.json`; `all` continua da primeira etapa não feita. `--stage recheck-tests` revalida testes existentes com `tests: done`, `error` ou `escalated` após correção externa ou mudança no plano, sem chamar Bia nem reescrever testes; só marca done com todos os checks verdes contra o stub e cenários/arquivos presentes. Instruções fixas por papel em `roles/`.
 - `alice.py resume <run_dir> --answer "<texto>"`: continua uma execução que parou com pergunta. Recusa se houver arquivo alterado fora do cartão.
 - `alice.py status`: diz se há execução em andamento (ninguém edita o repositório enquanto houver).
-- `alice.py leva "<texto>" [--repo <path>]` / `alice.py fila <alice|bia|jorge> "<itens>" [--repo <path>]`: Claude registra leva e fila estruturadas, com gravação atômica em `docs/agents/quadro-entradas.json` (fila ausente é `?`; não use `vazia` por omissão).
-- `alice.py quadro [--repo <path>]`: gera manualmente [quadro.md](../../docs/agents/quadro.md), fotografia datada da leva, cartão da Alice, filas, último status Jorge e cota restante consultada na API do OpenRouter (reset 00:00 UTC = 21h BRT); fonte indisponível aparece como `?`. Uma consulta de quota por geração quando houver credencial; não é portão de autorização da Bia. Agentes leem o quadro para se orientar em vez de varrer logs; para evidência histórica e custos, consultam retros e relatórios. É fotografia manual, sem atualização automática: confira a data e gere de novo após registrar mudanças.
+- `alice.py leva "<texto>" [--repo <path>]` / `alice.py fila <alice|bia> "<itens>" [--repo <path>]`: Claude registra leva e fila estruturadas, com gravação atômica em `docs/agents/quadro-entradas.json` (fila ausente é `?`; não use `vazia` por omissão).
+- `alice.py quadro [--repo <path>]`: gera manualmente [quadro.md](../../docs/agents/quadro.md), fotografia datada da leva, cartão da Alice, filas e cota restante consultada na API do OpenRouter (reset 00:00 UTC = 21h BRT); fonte indisponível aparece como `?`. Uma consulta de quota por geração quando houver credencial; não é portão de autorização da Bia. Agentes leem o quadro para se orientar em vez de varrer logs; para evidência histórica e custos, consultam retros e relatórios. É fotografia manual, sem atualização automática: confira a data e gere de novo após registrar mudanças.
 - `alice.py rule <ID>... [--repo <path>]`: mostra a definição de uma regra (RN-C03, T-13) ou seção de documento.
 - `alice.py metrics` / `alice.py evolution`: resumo de `~/.local/state/alice-harness/metrics.jsonl`; evolução por versão do harness. Registros de teste do cartão interno `E9-X` são excluídos.
 - `alice.py runs summarize`: gera `runs/contexto.md` com as 12 lições mais recentes de `docs/memoria/licoes.md`.
@@ -47,7 +47,7 @@ Antes da primeira chamada ao modelo: o comando de cada check existe; os arquivos
 5. Em `pre-review`: uma linha por item do checklist, evidência que existe, e "ok" recusado quando o check citado no item (`run_check N`) está vermelho (LI-053).
 6. Aprovado em `implement`: uma rodada de limpeza e nova verificação (`refactor: false` desliga).
 
-Campos do cartão: ver [cartao-de-tarefa.md](../../docs/agents/cartao-de-tarefa.md).
+Campos do cartão: ver a skill [escrever-cartao](../../Harness-adaV1/skill/escrever-cartao/SKILL.md).
 
 ## Travas extras (`gates.py`)
 São ideias do [harness-toolkit](https://github.com/tech-leads-club/harness-toolkit), reescritas aqui; nenhum código foi copiado (a licença é Elastic 2.0).

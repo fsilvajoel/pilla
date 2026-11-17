@@ -42,12 +42,12 @@ class PolicyTest(unittest.TestCase):
         self.assertNotIn("TODO without id", hits("// TODO(RN-C03) fix"))
         self.assertEqual(hits("const total = 1"), [])
 
-    def test_harness_and_jorge_remain_protected_with_and_without_repo_override(self):
+    def test_harness_remains_protected_with_and_without_repo_override(self):
         for override in (None, "protectedWrite: []\n", "protectedWrite: [custom/*]\n"):
             if override is not None:
                 self.write(override)
             p = load_policy(self.repo)
-            for path in ("tools/alice-harness/alice.py", "tools/jorge/agente/jorge.md"):
+            for path in ("tools/alice-harness/alice.py", "tools/alice-harness/roles/developer.md"):
                 self.assertTrue(any(fnmatch.fnmatch(path, pattern)
                                     for pattern in p["protectedWrite"]), path)
 

@@ -44,12 +44,12 @@ Documentação e comentários de código em pt-BR; código em inglês ([ADR-0012
 | 3   | **Desenvolvimento**                          | primeiro os testes, depois o código (`alice.py feature`)                                                              | Bia escreve os testes; Alice escreve o código                              |
 | 4   | **Validação/review**                         | checks verdes, auditoria e revisão do que foi gerado                                                                  | portões do harness, Bia (testes), Claude (revisão final)                   |
 | 5   | **Entrega**                                  | commit, push e PR                                                                                                     | Claude comita; Joel aprova e faz merge                                     |
-| 6   | **Retrospectiva + ajustes + próxima sprint** | retro por feature, custo (Claude × Alice × Bia), ajustes do processo e do harness, plano da sprint seguinte           | retro: harness/Claude; harness: **Jorge** (autônomo); plano: Joel + Claude |
+| 6   | **Retrospectiva + ajustes + próxima sprint** | retro por feature, custo (Claude × Alice × Bia), ajustes do processo e do harness, plano da sprint seguinte           | retro: harness/Claude; harness: **Claude** (dono); plano: Joel + Claude    |
 
 Regras do ciclo:
 
 - Feature só entra em Desenvolvimento com todos os testes da Bia prontos e revisados; daí a Alice pega os cartões dela e o pipeline segue para a próxima feature.
-- Problema de processo ou de harness achado em qualquer etapa vai para a caixa do Jorge (`tools/jorge/jorge.py anotar`); quem acha não conserta no meio da entrega.
+- Problema de processo ou de harness achado em qualquer etapa é anotado para o Claude, dono do harness desde 17/11, que trata no fim da leva; quem acha não conserta no meio da entrega.
 
 ### 3.2 TDD dentro do Desenvolvimento
 
