@@ -6,11 +6,12 @@ formulário validado pelos esquemas de `packages/schemas`).
 
 ## Escopo
 
-- E6-T01 (Bia): testes de `apps/web/lib/simulation.ts`. Dois cartões da Alice, em sequência, protegem o mesmo
-  teste: E6-T02 `frequencyOf` (opção da tela → periodicidade do motor; check só com `-t frequencyOf`) e, depois,
-  E6-T07 `simulate` (corpo `SimulateLoanRequest` → juros, total, parcela e cronograma via `generateSchedule`;
-  check com cobertura 100% e remoção do stub).
-- E6-T03 (Bia) e E6-T04 (Alice, depois do E6-T07): `apps/web/lib/simulation-form.ts`, com `toSimulateRequest`
+- E6-T01 (Bia): testes de `apps/web/lib/simulation.ts`. Três cartões da Alice, em sequência, protegem o mesmo
+  teste: E6-T02 `frequencyOf` (opção da tela → periodicidade do motor; check só com `-t frequencyOf`), E6-T07
+  `simulate` (corpo `SimulateLoanRequest` → juros, total, parcela e cronograma via `generateSchedule`; check só com
+  `-t simulate`, stub mantido) e E6-T09 (remove o stub e a exclusão do `vitest.config.ts`; arquivo inteiro com
+  cobertura 100%).
+- E6-T03 (Bia) e E6-T04 (Alice, depois do E6-T09): `apps/web/lib/simulation-form.ts`, com `toSimulateRequest`
   (textos da tela → `SimulateLoanRequest`, validado por `simulateLoanRequest`).
 - Fora: modalidade SINGLE_PAYMENT na tela, "a cada N dias" livre, "Por parcela: x%" (`taxa_do_periodo` não existe
   no motor e o arredondamento para periodicidade em dias não está definido), campo Cliente, criar contrato.

@@ -87,6 +87,9 @@ cards:
       - apps/web/lib/simulation.ts
       - packages/finance/src/due-dates.ts
     sizeNote: frequencyOf com ~15 linhas; o resto de simulation.ts não muda
+  # E6-T07 falhou na 1ª (17/11, 21 chamadas > 20): 5 leituras, write_file do arquivo inteiro e cobertura 100% num cartão só;
+  # a 1ª parcela lida por índice vira "possivelmente undefined" e o desvio de fallback nenhum teste cobre. Agora o T07
+  # implementa simulate só com os testes do describe simulate, e o E6-T09 tira o stub e roda a cobertura.
   - id: E6-T07
     title: Implement simulate
     kind: implement
@@ -94,6 +97,49 @@ cards:
     rules: [RN-C03, RN-C04]
     refs: [PRD-001 RF-10, RFC-002 §3.4, ADR-0013]
     dependsOn: [E6-T02]
+    allowedPaths:
+      - apps/web/lib/simulation.ts
+    protectedTests:
+      - apps/web/lib/simulation.test.ts
+    checks:
+      - pnpm --filter @pilla/web exec vitest run lib/simulation.test.ts -t simulate
+      - pnpm --filter @pilla/web typecheck
+      - pnpm --filter @pilla/web lint
+    done:
+      - the four tests of the describe simulate in apps/web/lib/simulation.test.ts pass (run_check 0)
+      - 'import { bps, cents, generateSchedule, isoDate } from "@pilla/finance";'
+      - simulate calls generateSchedule with type INSTALLMENT, count equal to installmentCount, the request frequency, disbursementDate and roundingStep 500n (RN-C03)
+      - principalCents and monthlyInterestRateBps become Cents and Bps through BigInt and then cents and bps, never with as
+      - firstDueDate is plain text in the request and becomes IsoDate through isoDate before it reaches generateSchedule
+      - interest, total and installmentAmount are Cents made with cents, and schedule is the array generateSchedule gives
+      - simulate has no if, no ternary, no ?? and no ?. and no try and no catch, so an error of generateSchedule such as DueDateError of RN-C04 goes up untouched
+      - simulation.ts keeps the line '// @stub E6-T02', frequencyOf as E6-T02 left it, the import type lines, the types and the /** */ comments
+      - the parameters of simulate lose the underscore, and the import line of the done is the only new line outside simulate
+    hints:
+      - the import line of the done goes right after the line '// @stub E6-T02', above the two import type lines, and each of its four names is used inside simulate
+      - the request is SimulateLoanRequest of simulate-loan.ts with plain number and string, while ScheduleTerms of schedule.ts wants Cents, Bps and IsoDate
+      - a branded value comes only from its maker in money.ts or isoDate of @pilla/finance, which takes the text and checks it, so a plain number goes through BigInt first
+      - interest and total are sums over the lines that generateSchedule gives, and adding two Cents gives a plain bigint, so each sum goes through cents before it enters the result
+      - never read a line by index such as schedule[0], because the strict tsconfig makes it possibly undefined and its fallback would be a branch no test reaches
+      - RN-C03 says every installment has the same total, so the installment amount comes from total and the number of lines
+      - one edit_file of simulation.ts that adds the import line, one replace_function of simulate, then run_check 0, 1 and 2
+    budget:
+      attempts: 5
+      toolCalls: 20
+      minutes: 12
+    readFirst:
+      - apps/web/lib/simulation.ts
+      - packages/finance/src/schedule.ts
+      - packages/finance/src/money.ts
+      - packages/schemas/src/api/lending/simulate-loan.ts
+    sizeNote: simulate com ~20 linhas e 1 linha de import nova; o resto de simulation.ts não muda
+  - id: E6-T09
+    title: Remove the simulation stub and check full coverage
+    kind: implement
+    assignee: alice
+    rules: []
+    refs: [PRD-001 RF-10, ADR-0013]
+    dependsOn: [E6-T07]
     allowedPaths:
       - apps/web/lib/simulation.ts
       - apps/web/vitest.config.ts
@@ -105,32 +151,22 @@ cards:
       - pnpm --filter @pilla/web lint
     done:
       - all tests in apps/web/lib/simulation.test.ts pass with 100% line and branch coverage of simulation.ts (run_check 0)
-      - 'import { bps, cents, generateSchedule, isoDate } from "@pilla/finance";'
-      - simulate calls generateSchedule with type INSTALLMENT, count equal to installmentCount, the request frequency, disbursementDate and roundingStep 500n (RN-C03)
-      - principalCents and monthlyInterestRateBps become Cents and Bps through BigInt and then cents and bps, never with as
-      - firstDueDate is plain text in the request and becomes IsoDate through isoDate before it reaches generateSchedule
-      - interest, total and installmentAmount are Cents made with cents, and schedule is the array generateSchedule gives
-      - an error of generateSchedule, such as DueDateError of RN-C04, goes up untouched, with no try and no catch in simulate
-      - frequencyOf stays as E6-T02 left it, and the types, signatures and /** */ comments stay, except that the parameters of simulate lose the underscore
       - simulation.ts has no '// @stub E6-T02' line and apps/web/vitest.config.ts has no line that excludes lib/simulation.ts
+      - 'import { bps, cents, generateSchedule, isoDate } from "@pilla/finance";'
+      - frequencyOf and simulate keep the behavior E6-T02 and E6-T07 gave them, and every other line of the two files stays
     hints:
-      - the import type lines stay, and the import line of the done is the only value import, each of its four names used inside simulate
-      - the request is SimulateLoanRequest of simulate-loan.ts with plain number and string, while ScheduleTerms of schedule.ts wants Cents, Bps and IsoDate
-      - a branded value comes only from its maker in money.ts or date.ts, which checks the input, so a plain number goes through BigInt first
-      - adding two Cents gives a plain bigint, so each total goes through cents before it enters the result
-      - the summary comes from the lines that generateSchedule gives, as the /** */ comment of simulate says
-      - one write_file of simulation.ts with frequencyOf kept as it is, then one edit_file of apps/web/vitest.config.ts that deletes the line with stub E6-T02, then run_check 0, 1 and 2
+      - E6-T02 and E6-T07 already made the code, so this card only deletes two lines and runs the full check
+      - the line of vitest.config.ts to delete is the one inside coverage.exclude with lib/simulation.ts and the comment stub E6-T02, and the line of lib/simulation-form.ts right below it stays
+      - if run_check 0 shows a line or branch of simulation.ts not covered, fix that line in simulation.ts so it has no branch, because the test file is protected and never changes
+      - one edit_file of simulation.ts that deletes the line '// @stub E6-T02', one edit_file of apps/web/vitest.config.ts that deletes the line with stub E6-T02, then run_check 0, 1 and 2
     budget:
-      attempts: 5
-      toolCalls: 20
-      minutes: 12
+      attempts: 4
+      toolCalls: 17
+      minutes: 8
     readFirst:
       - apps/web/lib/simulation.ts
-      - packages/finance/src/schedule.ts
-      - packages/finance/src/money.ts
-      - packages/finance/src/date.ts
-      - packages/schemas/src/api/lending/simulate-loan.ts
-    sizeNote: simulation.ts com 50 linhas; vitest.config.ts perde 1 linha
+      - apps/web/vitest.config.ts
+    sizeNote: simulation.ts e vitest.config.ts perdem 1 linha cada
   - id: E6-T03
     title: Write the tests for toSimulateRequest
     kind: test-author
@@ -183,8 +219,8 @@ cards:
     assignee: alice
     rules: []
     refs: [PRD-001 RF-10, RFC-004 §5, ADR-0013]
-    # E6-T07 explícito: na v13 o T04 gastou as 18 chamadas no typecheck do simulation.ts ainda parcial.
-    dependsOn: [E6-T03, E6-T07]
+    # E6-T09 explícito: na v13 o T04 gastou as 18 chamadas no typecheck do simulation.ts ainda parcial.
+    dependsOn: [E6-T03, E6-T09]
     allowedPaths:
       - apps/web/lib/simulation-form.ts
       - apps/web/vitest.config.ts
@@ -356,7 +392,7 @@ cards:
 features:
   - id: E6-F01
     title: Browser-side loan simulation logic
-    cards: [E6-T01, E6-T03, E6-T02, E6-T07, E6-T04]
+    cards: [E6-T01, E6-T03, E6-T02, E6-T07, E6-T09, E6-T04]
     biaBudget: 8
   - id: E6-F02
     title: Loan simulation component
