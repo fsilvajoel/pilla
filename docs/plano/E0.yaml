@@ -9,7 +9,7 @@ cards:
   rules: []
   refs:
   - RFC-003 §4
-  - docs/agents/travas.md
+  - docs/travas.md
   dependsOn: []
   allowedPaths:
   - package.json
@@ -34,7 +34,7 @@ cards:
   rules: []
   refs:
   - RFC-003 §4
-  - docs/agents/travas.md
+  - docs/travas.md
   dependsOn:
   - E0-T01
   allowedPaths:
@@ -55,7 +55,7 @@ cards:
   rules: []
   refs:
   - RFC-003 §4
-  - docs/agents/travas.md
+  - docs/travas.md
   dependsOn:
   - E0-T02
   allowedPaths:
@@ -81,7 +81,7 @@ cards:
   rules: []
   refs:
   - RFC-003 §4
-  - docs/agents/travas.md
+  - docs/travas.md
   dependsOn:
   - E0-T02
   allowedPaths:
@@ -101,7 +101,7 @@ cards:
   rules: []
   refs:
   - RFC-003 §4
-  - docs/agents/travas.md
+  - docs/travas.md
   dependsOn:
   - E0-T02
   allowedPaths:
@@ -120,7 +120,7 @@ cards:
   rules: []
   refs:
   - RFC-003 §4
-  - docs/agents/travas.md
+  - docs/travas.md
   dependsOn:
   - E0-T03
   - E0-T04
@@ -142,7 +142,7 @@ cards:
   rules: []
   refs:
   - RFC-003 §4
-  - docs/agents/travas.md
+  - docs/travas.md
   dependsOn:
   - E0-T06
   allowedPaths:
@@ -163,7 +163,7 @@ cards:
   rules: []
   refs:
   - RFC-003 §4
-  - docs/agents/travas.md
+  - docs/travas.md
   dependsOn:
   - E0-T07
   allowedPaths:
@@ -182,7 +182,7 @@ cards:
   rules: []
   refs:
   - RFC-003 §4
-  - docs/agents/travas.md
+  - docs/travas.md
   dependsOn:
   - E0-T08
   allowedPaths: []

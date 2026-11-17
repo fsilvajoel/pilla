@@ -1,13 +1,13 @@
-// travas §7: falha se algum package.json usar dependência fora da lista de docs/agents/travas.md ("Dependências permitidas").
+// travas §7: falha se algum package.json usar dependência fora da lista de docs/travas.md ("Dependências permitidas").
 import { readFileSync, readdirSync, existsSync } from "node:fs";
 import { join } from "node:path";
 
-const doc = readFileSync("docs/agents/travas.md", "utf8");
+const doc = readFileSync("docs/travas.md", "utf8");
 const section = doc.split(/^# Dependências permitidas/m)[1] ?? "";
 const allowed = [...section.matchAll(/`([^`\s]+)`/g)]
   .map((m) => m[1])
   .filter((n) => /^(@[a-z0-9-]+\/)?[a-z0-9.*-]+$/.test(n));
-if (allowed.length === 0) throw new Error("lista de dependências permitidas não encontrada em docs/agents/travas.md");
+if (allowed.length === 0) throw new Error("lista de dependências permitidas não encontrada em docs/travas.md");
 const ok = (name) =>
   name.startsWith("@pilla/") || allowed.some((a) => (a.endsWith("/*") ? name.startsWith(a.slice(0, -1)) : a === name));
 

@@ -1,10 +1,10 @@
 # Plano de entrega
 
-Cartões no formato de [docs/agents/cartao-de-tarefa.md](../agents/cartao-de-tarefa.md), um arquivo por entrega. Quem escreve cartão segue as **regras para quem escreve o cartão** dessa página. Validação (obrigatória antes de qualquer fila): `python3 tools/alice-harness/alice.py cards docs/plano/E0.yaml docs/plano/E1.yaml docs/plano/E2.yaml --repo .`
+Cartões e fluxo de entrega: [workflow feature do Harness-adaV1](../../Harness-adaV1/workflow/feature.md). Registro histórico abaixo.
 
 | Entrega | Objetivo | Pronto quando |
 |---|---|---|
-| **E0** Esqueleto | monorepo, toolchain e **todas as travas `E0`** de [travas.md](../agents/travas.md) funcionando no CI | CI verde num PR vazio e vermelho em PR com cada violação de exemplo |
+| **E0** Esqueleto | monorepo, toolchain e **todas as travas `E0`** de [travas.md](../travas.md) funcionando no CI | CI verde num PR vazio e vermelho em PR com cada violação de exemplo |
 | **E1** Motor financeiro | `packages/finance` completo (RFC-002), TDD | todos os casos T-01..T-14 e CA-01..CA-08 do cálculo passando; cobertura 100%; mutação ≥ 90% |
 | **E2a** Contratos de eventos | `packages/schemas`: os 10 eventos da RFC-004 §7 em Zod, a partir de um módulo-modelo | 10 blocos de `events.test.ts` verdes; cobertura 100%; pré-revisão com evidência |
 | E2b+ | apps (api, worker, web), módulos | depois da E2a, com as métricas dela |

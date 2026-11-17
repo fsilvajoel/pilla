@@ -1,10 +1,10 @@
-# Hooks locais (docs/agents/travas.md §8): pre-commit = format + lint + gitleaks; pre-push = typecheck + testes.
+# Hooks locais (docs/travas.md §8): pre-commit = format + lint + gitleaks; pre-push = typecheck + testes.
 pre-commit:
   parallel: true
   commands:
     format:
       glob: "*.{ts,tsx,mjs,cjs,json}"
-      exclude: ["pnpm-lock.yaml", "tools/**", "docs/**", "**/migrations/**/meta/**"]
+      exclude: ["pnpm-lock.yaml", "docs/**", "**/migrations/**/meta/**"]
       run: pnpm exec prettier --check {staged_files}
     lint:
       glob: "*.{ts,tsx}"

@@ -2,9 +2,8 @@
 /docs/adr/            @fsilvajoel
 /docs/prd/            @fsilvajoel
 /AGENTS.md            @fsilvajoel
-/.agents/             @fsilvajoel
+/Harness-adaV1/       @fsilvajoel
 /.github/             @fsilvajoel
 /packages/config/     @fsilvajoel
 /.dependency-cruiser.cjs @fsilvajoel
 /lefthook.yml         @fsilvajoel
-/tools/alice-harness/ @fsilvajoel

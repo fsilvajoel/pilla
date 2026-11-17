@@ -1,4 +1,4 @@
-// Proibições de docs/agents/travas.md §3. Comentários de desligar regra são proibidos (noInlineConfig).
+// Proibições de docs/travas.md §3. Comentários de desligar regra são proibidos (noInlineConfig).
 import tseslint from "typescript-eslint";
 
 const testFiles = ["**/*.test.ts", "**/*.spec.ts", "**/*.test.tsx", "**/*.spec.tsx"];
@@ -26,15 +26,7 @@ const pureBans = [
 
 export const pillaEslint = tseslint.config(
   {
-    ignores: [
-      "**/dist/**",
-      "**/coverage/**",
-      "**/reports/**",
-      "**/.stryker-tmp/**",
-      "**/*.config.*",
-      "tools/**",
-      "docs/**",
-    ],
+    ignores: ["**/dist/**", "**/coverage/**", "**/reports/**", "**/.stryker-tmp/**", "**/*.config.*", "docs/**"],
   },
   { linterOptions: { noInlineConfig: true, reportUnusedDisableDirectives: "error" } },
   ...tseslint.configs.strictTypeChecked,

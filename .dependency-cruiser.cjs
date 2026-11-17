@@ -1,4 +1,4 @@
-/** Fronteiras de arquitetura (docs/agents/travas.md §4). Regra quebrada = CI vermelho. */
+/** Fronteiras de arquitetura (docs/travas.md §4). Regra quebrada = CI vermelho. */
 module.exports = {
   forbidden: [
     { name: "no-circular", severity: "error", comment: "sem ciclos de importação", from: {}, to: { circular: true } },

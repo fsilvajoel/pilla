@@ -9,7 +9,7 @@ Sistema de gestão de empréstimos (financeira), modular. Produto de estudo de a
 - Repositório **público**: nada de IP, senha, token ou detalhe da infraestrutura em arquivo versionado.
 - Commits pequenos; `main` sempre funcionando.
 - Idioma (ADR-0012): código, commits e títulos de PR em **inglês**; docs, comentários de código, corpo de PR e textos do sistema em **pt-BR**. Nomes do domínio: `docs/glossario.md`.
-- Trabalho combinado com a Alice: `NOTAS-ALICE.md`.
+- Processo dos agentes (papéis, workflow, gates): `Harness-adaV1/` (ver `Harness-adaV1/workflow/feature.md`).
 
 ## Configuração e segredos (`.env`)
 - `.env`: valores reais (senhas, tokens, chaves, URLs internas). **Nunca vai para o git** (está no `.gitignore`), permissão `600`. Não exibir o conteúdo dele em respostas, logs ou commits, e não mandá-lo à Alice.

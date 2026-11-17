@@ -1,6 +1,6 @@
 import { defineConfig } from "vitest/config";
 
-// Telas e componentes do web: mínimo de 85% (módulos, docs/agents/travas.md §4.1).
+// Telas e componentes do web: mínimo de 85% (módulos, docs/travas.md §4.1).
 export default defineConfig({
   resolve: { alias: { "@": new URL(".", import.meta.url).pathname } },
   test: {

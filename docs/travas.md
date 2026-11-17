@@ -1,6 +1,6 @@
 # Travas (guardrails) por camada
 
-> Detalhe do [AGENTS.md](../../AGENTS.md). Listas de sites oficiais, arquivos protegidos, padrões proibidos e limites: fonte única em [`.agents/policy.yaml`](../../.agents/policy.yaml).
+> Detalhe do [AGENTS.md](../AGENTS.md). Travas do processo dos agentes (papéis, gates, ferramentas): [Harness-adaV1/](../Harness-adaV1/README.md).
 
 Implementação da E0: configs na raiz, `packages/config/`, `scripts/` e `.github/` (`pnpm verify` roda tudo). Coluna "Quando": `E0` = entra no esqueleto do projeto; `E1+` = entra junto com o primeiro código do tipo; `Futuro` = planejado.
 
@@ -83,34 +83,6 @@ O domínio verifica e **lança erro** se violar: soma das alocações = valor do
 | CODEOWNERS: `docs/adr/`, `docs/prd/`, `AGENTS.md`, configs de lint/CI → Joel | E0 |
 | modelo de PR (pt-BR) com checklist: IDs, testes, docs, prints | E0 |
 | PR pequeno: aviso acima de 400 linhas alteradas (exceto gerados) | E0 |
-
-## 4.9 Ambiente da Alice (`alice-harness`)
-| Trava | Detalhe |
-|---|---|
-| Ferramentas permitidas | `list_files`, `read_file`, `search_code`, `read_rule`, `write_file`, `edit_file`, `view_diff`, `run_check`, `web_search`, `fetch_page`, `ask_claude`, `finish`. Nada além (sem shell livre, sem git, sem rede livre) |
-| Leitura | só dentro do repositório; bloqueados `.env*`, `.git/`, `node_modules/`, arquivos fora do repo (caminho real resolvido, sem `..` nem links simbólicos para fora) |
-| Escrita | **só nos caminhos do cartão de tarefa** (`allowedPaths`) |
-| Arquivos protegidos (nunca escreve) | lista `protectedWrite` de [`.agents/policy.yaml`](../../.agents/policy.yaml) (testes, `docs/**`, `AGENTS.md`, configs, lockfile, `.github/**`, migrações…), salvo caminho listado explicitamente no cartão (ex.: `kind: test-author`) |
-| `run_check` | comandos fixos do cartão (`pnpm --filter X test` etc.), com tempo limite; saída truncada |
-| Web | `web_search` (Brave) e `fetch_page` só em `officialDomains` da política; texto da web marcado como **dado não confiável** no contexto dela |
-| Limites | por cartão: tentativas e chamadas de ferramenta (`budget`), `maxOutputTokens`; de tamanho: todos saem de `cards.size_model` (janela e resposta do perfil do modelo + cartão): linhas por chamada, linhas do arquivo (cabe numa leitura), saída de ferramenta, contexto, regras e colas. Nenhum número fixo na política (erro 15) |
-| Refatoração | em `kind: implement`, depois da verificação aprovada há uma rodada obrigatória de limpeza e nova verificação (`refactor: false` desliga) |
-| Raciocínio | `think: false` por padrão (cartão liga em lógica difícil) |
-| Acesso pelo Windows | só via harness; trava técnica: chave SSH própria com `scripts/alice-gate.sh` (pendente) |
-| Verificação final | o próprio ambiente roda a verificação completa ([AGENTS.md §8](../../AGENTS.md)) antes de reportar sucesso |
-| Checagem do diff | rejeita se: tocou fora de `allowedPaths`; linha adicionada casa com `forbiddenAdded` da política (`any`, `@ts-ignore`, `eslint-disable`, `.only/.skip`, `TODO` sem ID, `console.`); adicionou dependência (CI, E0) |
-| Pré-voo do cartão | antes de chamar o modelo: comando de cada check existe, arquivos de `readFirst`/`protectedTests` existem e, em tarefa de escrita, algum check está vermelho. Senão a execução termina como `card_error` (erro de quem escreveu o cartão) |
-| Formatação | o Prettier do repositório roda nos arquivos tocados antes dos checks |
-| Lint no pedido | as seções de [docs/memoria/lint.md](../memoria/lint.md) que valem para os arquivos do cartão; a cola é conferida contra o ESLint por `scripts/check-lint-sheet.mjs` |
-| Pré-revisão | uma linha por item do checklist, com evidência que existe; item que cita `run_check N` não aceita "ok" com esse check vermelho |
-| Esquemas | `scripts/check-schemas.mjs`: exports no `index.ts`, regex só em `common.ts`, campo com sufixo (`Cents`, `Bps`, `Id`, `Date`, `At`, `cpf`) usa a primitiva; `scripts/check-avoid.mjs`: hábitos da versão antiga da biblioteca (os dois no `pnpm verify`) |
-| Relatório compacto | status, arquivos, diff, tentativas, tokens da Alice, segundos, avisos, `lessons` (até 3) e pergunta pendente |
-| Quem escreve não é o portão | cartão `test-author` pode ter `assignee: bia` (o validador recusa bia em outro kind). Teste da Alice: o portão final é a Bia (`bia.py test`, pré-revisão local antes). Teste da Bia: a Bia não revisa o próprio teste; o portão final é a pré-revisão local da Alice **por consenso** (`bia.py gate`: 2 amostras aprovadas com todos os itens ok; indisponível não aprova), somada aos checks do cartão (expect-red, `check-test-quality.mjs`, tipos, lint). A assinatura `alice-local` só vale se a resposta bruta diz `writer: bia`; `review.signer_problems` confere no hook, no pré-voo e no `alice.py review`. Por quê: quem escreveu tende a não ver o próprio erro (erro 11), e a Alice local, que não escreveu, é grátis e não gasta a cota de 50/dia |
-| Feature (ADR-0014) | `alice.py feature`: a Bia escreve **e** audita os testes da feature (conflito de papéis aceito, LI-065). Mitigação: a assinatura `auditoria-bia` só vale com a resposta bruta marcada `feature` e com os números mecânicos gravados pelo orquestrador (`expectRed` contra o stub na etapa de testes e `checksGreen` na auditoria; `review.audit_problems`), e a aprovação final é do Claude. `biaBudget` válido é 2–3 chamadas declaradas; não há ledger independente por retry de rede. Pela sprint (§3.1 do AGENTS.md), testes precisam estar prontos e revisados **antes** da Alice: `feature --stage tests`, revisão externa, depois `--stage implement`; `--stage all` ainda não impõe pausa/aprovação. A pré-revisão local que reprova sem nota apoiada no pronto é inconclusiva (exit 5) e não bloqueia sozinha. A linha acima continua valendo para cartões fora de feature |
-| Exceção "não compensa a Alice" (v17.1, Joel 17/11) | `assignee: bia` em `kind: implement` só com os três campos `exception: nao-compensa-alice`, `exceptionReason` (não vazio) e `exceptionApprovedBy: "Joel AAAA-MM-DD"`; sem eles o validador recusa como antes, e a exceção não abre outro kind. Executor: `bia.py impl` (`alice.py feature`/`plan-run` chamam o mesmo). A Bia só escreve nos `allowedPaths` exatos (nunca em teste protegido), com pré-voo, Prettier e checkpoint/rollback do cartão. **A Bia não revisa o próprio código**: o portão é local, os checks do cartão (cobertura 0/0 continua falha), e na feature vale a auditoria + revisão final do Claude. Cada requisição (inclusive retry de rede) conta em `biaBudget`/`biaRequests` da feature; o teto restante é passado ao cartão e limita as tentativas de rede, e esgotado vira `escalated` sem subir `toolCalls` nem grace |
-| Laço sem o Claude | `alice.py plan-run --rounds N` (padrão 3) repete execução → checks → revisão até aprovar; acabou N, status `escalated` e o retro traz rodadas, tokens por rodada e as notas da última reprovação. Cota da Bia na reserva (`BIA_RESERVE`) para a fila. Nunca commita |
-| Registro | cada execução em `runs/<tarefa>/` (JSONL) e uma linha em `runs/metrics.jsonl` (`alice.py metrics`), fora do repositório |
-
 
 # Dependências permitidas
 

@@ -611,7 +611,7 @@ cards:
   assignee: claude
   rules: []
   refs:
-  - docs/agents/travas.md §1
+  - docs/travas.md §1
   dependsOn:
   - E1-T17
   allowedPaths:

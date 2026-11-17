@@ -21,9 +21,8 @@
     "check:lint-sheet": "node scripts/check-lint-sheet.mjs",
     "test:scripts": "node --test scripts/check-schemas.test.mjs scripts/check-test-quality.test.mjs",
     "check:tests": "node scripts/check-test-quality.mjs $(git ls-files '*.test.ts' '*.test.tsx')",
-    "verify": "pnpm check:deps && pnpm check:env && pnpm check:tests && pnpm check:schemas && pnpm check:lint-sheet && pnpm test:scripts && pnpm lint && pnpm typecheck && pnpm depcruise && pnpm test && pnpm test:harness",
-    "prepare": "lefthook install",
-    "test:harness": "python3 -m unittest discover -s tools/alice-harness/tests -t tools/alice-harness"
+    "verify": "pnpm check:deps && pnpm check:env && pnpm check:tests && pnpm check:schemas && pnpm check:lint-sheet && pnpm test:scripts && pnpm lint && pnpm typecheck && pnpm depcruise && pnpm test",
+    "prepare": "lefthook install"
   },
   "devDependencies": {
     "@commitlint/cli": "^21.2.4",

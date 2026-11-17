@@ -1,6 +1,6 @@
 // Portão de qualidade de teste (e4-guardrails F). Teste serve para barrar defeito: ele precisa ser possível
 // (sem contradição) e afirmar algo (sem asserção vazia), sem refazer o algoritmo do código.
-// Vale para teste da Alice (cartão test-author) e para teste do Claude (pre-commit).
+// Vale para todo teste (pre-commit e pnpm check:tests).
 // Regras:
 //   Q1 asserção que sempre passa: toBeInstanceOf(Object), toBeDefined(), expect(true|false|literal), expect(x).toBe(x)
 //   Q2 teste sem nenhum expect

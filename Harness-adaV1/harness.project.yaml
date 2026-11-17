@@ -22,20 +22,25 @@ language:
 # Papel (agent/*.md) -> quem executa e com qual perfil de modelo.
 # Só este arquivo liga papel a nome e modelo; agent/ fica neutro.
 roles:
-  developer: {name: alice, model_profile: qwen35}
-  reviewer: {name: bia, model_profile: openrouter-reviewer}
-  coordinator: {name: claude, model_profile: claude}
-  platform: {name: claude, model_profile: claude}
-  planner: {name: claude, model_profile: claude}
+  developer: {name: developer, model_profile: local}
+  reviewer: {name: reviewer, model_profile: remote-reviewer}
+  coordinator: {name: coordinator, model_profile: lead}
+  platform: {name: platform, model_profile: lead}
+  planner: {name: planner, model_profile: lead}
 
 # Comandos de verificação do projeto alvo. Cartões, skills e gates citam a
 # chave (commands.test etc.), nunca o comando literal.
 commands:
-  test: pnpm --filter <pkg> exec vitest run <arquivo> -t <filtro>
-  coverage: pnpm --filter <pkg> exec vitest run --coverage <arquivo>
+  test: pnpm --filter <pkg> exec vitest run <arquivo>
+  coverage: pnpm --filter <pkg> test
   typecheck: pnpm --filter <pkg> typecheck
   lint: pnpm --filter <pkg> lint
+  format: pnpm exec prettier --check <arquivos>
   deps: pnpm depcruise
+  tests-qual: pnpm check:tests
+  schemas: pnpm check:schemas
+  db: pnpm --filter @pilla/api db:generate
+  mutation: pnpm --filter @pilla/finance mutation
   verify: pnpm verify
 
 # Gate portable: textos que não podem aparecer fora deste arquivo.
