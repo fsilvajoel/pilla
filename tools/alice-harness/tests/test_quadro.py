@@ -96,6 +96,42 @@ class QuadroTest(unittest.TestCase):
             self.assertIn('fotografia manual', text.lower(), rel)
             self.assertIn('quadro.md', text, rel)
 
+    def test_cli_defaults_to_git_root_and_explicit_repo_wins(self):
+        root = Path(__file__).resolve().parents[3]
+        harness = root / 'tools/alice-harness'
+        with mock.patch('alice.subprocess.run', return_value=mock.Mock(returncode=0, stdout=str(root) + '\n')) as git, \
+             mock.patch.object(quadro, 'set_leva') as leva, mock.patch.object(quadro, 'set_fila') as fila, \
+             mock.patch.object(quadro, 'generate', return_value='snapshot') as generate, \
+             mock.patch('sys.argv', ['alice.py', 'leva', 'E6']), mock.patch('pathlib.Path.cwd', return_value=harness):
+            self.assertEqual(alice.main(), 0)
+            git.assert_called_once()
+            self.assertIn('--show-toplevel', git.call_args.args[0])
+            leva.assert_called_once_with(root, 'E6')
+        with mock.patch('alice.subprocess.run', return_value=mock.Mock(returncode=0, stdout=str(root) + '\n')), \
+             mock.patch.object(quadro, 'set_fila') as fila, \
+             mock.patch('sys.argv', ['alice.py', 'fila', 'bia', 'E6']), mock.patch('pathlib.Path.cwd', return_value=harness):
+            self.assertEqual(alice.main(), 0)
+            fila.assert_called_once_with(root, 'bia', 'E6')
+        with mock.patch('alice.subprocess.run', return_value=mock.Mock(returncode=0, stdout=str(root) + '\n')), \
+             mock.patch.object(quadro, 'generate', return_value='snapshot') as generate, \
+             mock.patch('sys.argv', ['alice.py', 'quadro']), mock.patch('pathlib.Path.cwd', return_value=harness), \
+             contextlib.redirect_stdout(io.StringIO()):
+            self.assertEqual(alice.main(), 0)
+            generate.assert_called_once_with(root)
+        with mock.patch('alice.subprocess.run', side_effect=AssertionError('git should not run')), \
+             mock.patch.object(quadro, 'set_leva') as leva, \
+             mock.patch('sys.argv', ['alice.py', 'leva', 'E6', '--repo', str(self.repo)]):
+            self.assertEqual(alice.main(), 0)
+            leva.assert_called_once_with(self.repo.resolve(), 'E6')
+
+    def test_cli_no_git_root_fails_without_writing(self):
+        with mock.patch('alice.subprocess.run', return_value=mock.Mock(returncode=128, stdout='', stderr='not a git repository')), \
+             mock.patch.object(quadro, 'set_leva') as leva, \
+             mock.patch('sys.argv', ['alice.py', 'leva', 'E6']):
+            with self.assertRaises(SystemExit):
+                alice.main()
+            leva.assert_not_called()
+
     def test_cli_quadro_delegates_without_network(self):
         with mock.patch.object(quadro, 'generate', return_value='fotografia') as generate, \
              mock.patch('sys.argv', ['alice.py', 'quadro', '--repo', str(self.repo)]), \

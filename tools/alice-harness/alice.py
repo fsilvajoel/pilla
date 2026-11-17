@@ -1499,15 +1499,21 @@ def main() -> int:
     e = sub.add_parser("cards"); e.add_argument("plans", nargs="+", type=Path); e.add_argument("--repo", type=Path, default=Path("."))
     f = sub.add_parser("feature"); f.add_argument("plan"); f.add_argument("feature", nargs="?"); f.add_argument("--repo", type=Path, default=Path("."))
     f.add_argument("--stage", choices=("plan", "tests", "implement", "audit", "review", "all"), default="all"); f.add_argument("--rounds", type=int, default=3)
-    l = sub.add_parser("leva"); l.add_argument("texto"); l.add_argument("--repo", type=Path, default=Path("."))
-    fi = sub.add_parser("fila"); fi.add_argument("agente", choices=("alice", "bia", "jorge")); fi.add_argument("itens"); fi.add_argument("--repo", type=Path, default=Path("."))
-    qu = sub.add_parser("quadro"); qu.add_argument("--repo", type=Path, default=Path("."))
+    l = sub.add_parser("leva"); l.add_argument("texto"); l.add_argument("--repo", type=Path)
+    fi = sub.add_parser("fila"); fi.add_argument("agente", choices=("alice", "bia", "jorge")); fi.add_argument("itens"); fi.add_argument("--repo", type=Path)
+    qu = sub.add_parser("quadro"); qu.add_argument("--repo", type=Path)
     ns = ap.parse_args()
     if ns.cmd in ("run", "resume", "chat", "plan-run") or ns.cmd == "feature" and ns.plan != "accept":
         announce_profile()
     if ns.cmd in ("leva", "fila", "quadro"):
         import quadro
-        repo = ns.repo.resolve()
+        if ns.repo is None:
+            result = subprocess.run(["git", "rev-parse", "--show-toplevel"], capture_output=True, text=True)
+            if result.returncode or not result.stdout.strip():
+                raise SystemExit("não foi possível identificar a raiz git; informe --repo")
+            repo = Path(result.stdout.strip()).resolve()
+        else:
+            repo = ns.repo.resolve()
         if ns.cmd == "leva":
             quadro.set_leva(repo, ns.texto)
         elif ns.cmd == "fila":
