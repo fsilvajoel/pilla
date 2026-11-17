@@ -8,7 +8,6 @@ Conduzir qualquer pedido escolhendo o workflow certo e mantendo cada papel na su
 |---|---|
 | coordinator | conduz todas as etapas |
 | papel da tarefa | planner, reviewer ou developer, conforme o workflow escolhido |
-| platform | só via [delegation](delegation.md) |
 
 ## Etapas
 
@@ -19,7 +18,6 @@ Conduzir qualquer pedido escolhendo o workflow certo e mantendo cada papel na su
 | 3 | ligar o papel à tarefa | coordinator | capability da etapa | — | papel existe em `roles` | cartão |
 | 4 | executar no menor escopo válido | papel da tarefa | skills da capability | tools da capability | gates da etapa | saída da etapa |
 | 5 | validar | coordinator | — | `ada.py --check`, `run_cmd` | gates do workflow escolhido | evidência dos gates |
-| 6 | escalar se estrutural | coordinator | — | `validate_then_delegate.py` | [auto-validation](../policy/auto-validation.md) cumprida | pedido de delegação |
 
 ## Responsabilidade por camada
 - Agente: como agir num papel.

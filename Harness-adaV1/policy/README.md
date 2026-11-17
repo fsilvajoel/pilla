@@ -7,9 +7,8 @@ Regras globais do harness. Valem para todo papel, workflow e skill.
 | Policy | Assunto |
 |---|---|
 | [quality](quality.md) | validar antes de concluir, escopo explícito, evidência acima de suposição |
-| [auto-validation](auto-validation.md) | validar localmente antes de escalar |
+| [auto-validation](auto-validation.md) | validar localmente antes de devolver a etapa |
 | [editing](editing.md) | edição mínima e dentro do escopo |
-| [delegation](delegation.md) | quando e como delegar |
 | [research](research.md) | pesquisa externa com fonte e domínios permitidos |
 | [security](security.md) | segredos, acesso e ações externas |
 | [idioma](idioma.md) | idioma de texto, código e commits |

@@ -19,14 +19,13 @@ language:
   code: en
   commits: en
 
-# Papel (agent/*.md) -> quem executa e com qual perfil de modelo.
-# Só este arquivo liga papel a nome e modelo; agent/ fica neutro.
+# Papel -> subagente do Claude Code (.claude/agents/<nome>.md). O orquestrador é a sessão principal.
 roles:
-  developer: {name: developer, model_profile: local}
-  reviewer: {name: reviewer, model_profile: remote-reviewer}
-  coordinator: {name: coordinator, model_profile: lead}
-  platform: {name: platform, model_profile: lead}
-  planner: {name: planner, model_profile: lead}
+  orchestrator: {agent: null}
+  planner: {agent: ../.claude/agents/planner.md}
+  test-writer: {agent: ../.claude/agents/test-writer.md}
+  reviewer: {agent: ../.claude/agents/reviewer.md}
+  implementer: {agent: ../.claude/agents/implementer.md}
 
 # Comandos de verificação do projeto alvo. Cartões, skills e gates citam a
 # chave (commands.test etc.), nunca o comando literal.

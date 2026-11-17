@@ -17,7 +17,7 @@ Documentação e comentários de código em pt-BR; código em inglês ([ADR-0012
 
 ## 2. Papéis
 
-**Joel** decide produto e arquitetura, aprova docs e PRs e faz merge. Os papéis dos agentes (coordinator, planner, reviewer, developer, platform) e quem executa cada um estão em [Harness-adaV1/](Harness-adaV1/README.md) (`agent/` e `roles` em `harness.project.yaml`).
+**Joel** decide produto e arquitetura, aprova docs e PRs e faz merge. Os papéis dos agentes são subagentes do Claude Code em [.claude/agents/](.claude/agents/) (planner, test-writer, reviewer, implementer); a sessão principal é o orquestrador e segue o [workflow feature](Harness-adaV1/workflow/feature.md).
 
 ## 3. Fluxo de trabalho
 
@@ -56,7 +56,7 @@ Ordem obrigatória quando faltar conhecimento:
 
 1. **Documentos do projeto** (`docs/`, código vizinho).
 2. **Documentação oficial**, conforme [Harness-adaV1/policy/research.md](Harness-adaV1/policy/research.md).
-3. **Pergunta** ao coordinator (e, se preciso, ao Joel), objetiva e com o trecho mínimo.
+3. **Pergunta** ao orquestrador (e, se preciso, ao Joel), objetiva e com o trecho mínimo.
 
 Regra de negócio nunca é pesquisada na web.
 
