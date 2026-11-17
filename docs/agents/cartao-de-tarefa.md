@@ -100,7 +100,10 @@ modelo gastar qualquer coisa); **—** = só a leitura de quem escreve.
 - **Uma sessão nova do Claude por leva.** O Claude entra só no começo (cartão, `alice.py cards`) e no fim (ler o
   `runs/retro-*.md`, decidir e commitar). No meio, `alice.py plan-run <plano> <ID>... --rounds N` repete sozinho
   execução → checks → revisão → nova rodada com as notas, até aprovar ou acabar N (`escalated`; dependentes pulados).
-  O plan-run nunca commita.
+  O plan-run nunca commita. Para retomada, os agentes leem [quadro.md](quadro.md), não varrem logs:
+  é fotografia manual datada, não estado em tempo real. Claude registra a leva com `alice.py leva "<texto>"`,
+  as filas com `alice.py fila <alice|bia|jorge> "<itens>"` e gera `alice.py quadro`; campo ausente é `?`.
+  Retros continuam necessários para a auditoria e os custos.
 - **Conserto de harness em sessão própria**, nunca durante uma entrega (harness congelado enquanto a Alice ou a Bia
   rodam).
 - **A Alice compensa** quando os turnos do Claude para supervisionar ficam abaixo dos turnos para fazer sozinho;

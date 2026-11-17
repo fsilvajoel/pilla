@@ -32,6 +32,10 @@ No desenvolvimento Bia escreve **todos** os testes da feature e eles precisam es
 revisão final Claude), entrega (Claude: commit/push/PR; Joel: aprovação/merge) e retrospectiva
 por feature (custos Claude × Alice × Bia, ajustes do processo pelo Jorge fora da fila e plano da próxima sprint).
 Problemas de processo vão à caixa do Jorge, não são corrigidos durante a entrega.
+Ao retomar, Claude, Alice e Bia consultam [quadro.md](quadro.md) para estado resumido, em vez de varrer logs.
+É uma fotografia manual datada: Claude registra `alice.py leva "<texto>"` e
+`alice.py fila <alice|bia|jorge> "<itens>"` e então executa `alice.py quadro`.
+Fonte ausente aparece como `?`; data antiga exige nova geração. Retros e relatórios continuam fonte de auditoria.
 
 A tabela abaixo descreve as etapas **internas** do comando `feature`, não os seis marcos da sprint.
 
