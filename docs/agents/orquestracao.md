@@ -43,7 +43,7 @@ A tabela abaixo descreve as etapas **internas** do comando `feature`, não os se
 |---|---|---|---|---|
 | 1 | Plano | Claude | `plano.md`, validado por `alice.py cards` | 0 |
 | 2 | Testes | Bia, 1 chamada com o plano + contratos de **todos** os cartões test-author; checks mecânicos; ≤1 reparo em lote | `testes.md` (cenário → teste, checks) | 1 + ≤1 |
-| 3 | Implementação | Alice, `plan_run` dos cartões implement (local; as notas vêm dos checks) | `runs/retro-*.md` | 0 |
+| 3 | Implementação | Alice, `plan_run` dos cartões implement (local; as notas vêm dos checks); exceção aprovada: Bia, portão nos checks | `runs/retro-*.md` | 0 (exceção: 1 por rodada, ≤3 rodadas + retries, sempre dentro do `biaBudget`) |
 | 4 | Auditoria | Bia, 1 chamada: plano, testes, diff, cobertura, expect-red; extraTests em lote → validador e checks → Alice de novo; ≤1 ciclo | `auditoria.md`, `docs/plano/revisao/<ID>.md` | 1 + ≤1 |
 | 5 | Revisão final | Claude: lê `revisao-final.md` e o diff, decide, commita com `Card-Done` | `revisao-final.md` | 0 |
 
@@ -102,6 +102,16 @@ redigida e limitada; vazio em `done`); a retro mostra as duas coisas.
 **Cobertura em checks filtrados (JV17-5, caracterização).** Check não-final com `-t` e sem `--coverage` passa só
 se o comando sair verde e não impõe cobertura do arquivo; o check final precisa de cobertura real, e 0/0 é falha.
 Sem cobertura final, `review` termina em erro 17.
+**Implement pela Bia (exceção v17.1, Joel 17/11).** Cartão implement com `assignee: bia` só passa no validador
+com `exception: nao-compensa-alice` + `exceptionReason` + `exceptionApprovedBy: "Joel AAAA-MM-DD"` (travas.md 4.9).
+Na etapa 3 ele roda no mesmo `implement_by_card` (checkpoint, snapshot, rollback, allowedPaths, pré-voo), mas o
+escritor é `bia.write_impl`: até 3 rodadas de "pedido → arquivos dos allowedPaths → Prettier → checks", com o vermelho
+de volta como feedback. **Portão local**: a Bia não revisa o próprio código; o cartão fica `done` só com os checks
+verdes (cobertura 0/0 é falha), e a auditoria e a revisão final seguem iguais. **Orçamento**: antes do cartão o
+orquestrador passa `biaCap = biaBudget − biaRequests` (o `plan_run` ainda desconta o que cartões anteriores da mesma
+rodada gastaram); cada requisição, inclusive retry de rede, conta em `biaRequests` da feature e da etapa, e as tentativas
+de rede são limitadas ao que resta. Cap 0 antes do cartão ou no meio dele → `escalated` (o Claude decide); nada sobe
+`toolCalls` nem grace. Na feature, o `biaBudget` precisa cobrir testes + auditoria + as rodadas do implement.
 O orquestrador nunca commita. O teto declarado não impede retries de rede nem substitui ledger externo.
 
 ## Formato das mensagens (JSON com esquema fixo, validado em `feature.py`)

@@ -536,7 +536,8 @@ class Orchestrator:
             return self.implement_by_card(cards, t0)
         # allowedPaths com glob: sem checkpoint exato possível → comportamento antigo (lote do HEAD, restore total)
         self.stage("implement").pop("snapshots", None)
-        results = self.ops.plan_run(cards, list(cards), self.rounds)
+        results = self.ops.plan_run({cid: {**c, **self.bia_cap(c)} for cid, c in cards.items()}, list(cards), self.rounds)
+        self.charge_bia(results)
         tok = {"prompt": sum(int((r.get("aliceTokens") or {}).get("prompt", 0)) for r in results),
                "output": sum(int((r.get("aliceTokens") or {}).get("output", 0)) for r in results)}
         self.results += results
@@ -554,6 +555,21 @@ class Orchestrator:
             except (OSError, RuntimeError, subprocess.SubprocessError) as e:
                 return self.finish("implement", "error", t0, **extra, message=f"restore da implementação falhou: {e}")
         return self.finish("implement", status, t0, **extra)
+
+    def bia_cap(self, card: dict) -> dict:
+        """Implement da Bia (exceção nao-compensa-alice): o que resta do biaBudget vai como teto do cartão."""
+        if card.get("assignee") != "bia":
+            return {}
+        return {"biaCap": max(0, self.f.budget - int(self.state["biaRequests"]))}
+
+    def charge_bia(self, results: list[dict]) -> None:
+        """Requisições da Bia no implement (cada tentativa de chat) entram no biaRequests da feature e da etapa."""
+        spent = sum(int((r.get("bia") or {}).get("requests", 0)) for r in results)
+        if spent:
+            self.state["biaRequests"] += spent
+            st = self.stage("implement")
+            st["biaRequests"] = st.get("biaRequests", 0) + spent
+            self.save()
 
     def impl_paths(self) -> list[str] | None:
         """União exata dos allowedPaths da implementação; None se houver glob ou nenhum caminho (sem checkpoint)."""
@@ -629,11 +645,12 @@ class Orchestrator:
             except OSError as e:
                 statuses[cid] = "error"
                 return self.finish("implement", "error", t0, **extra(), message=f"checkpoint de {cid} falhou: {e}")
-            res = self.ops.plan_run({cid: {**card, "keepWorktree": True}}, [cid], self.rounds)
+            res = self.ops.plan_run({cid: {**card, "keepWorktree": True, **self.bia_cap(card)}}, [cid], self.rounds)
             self.results += res
             for r in res:
                 tok["prompt"] += int((r.get("aliceTokens") or {}).get("prompt", 0))
                 tok["output"] += int((r.get("aliceTokens") or {}).get("output", 0))
+            self.charge_bia(res)
             status = next((str(r.get("status")) for r in res if r.get("task") == cid), "error")
             if status == "done":
                 try:

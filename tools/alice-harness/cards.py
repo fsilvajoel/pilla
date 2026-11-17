@@ -4,6 +4,18 @@ from typing import NamedTuple
 # bons motivos para gastar uma busca externa (docs/agents/cartao-de-tarefa.md)
 RESEARCH_REASONS = ("regulation", "external-spec", "lib-behavior", "security-advisory")
 
+# Exceção registrada (Joel, 17/11): a Bia implementa um cartão que não compensa para a Alice
+# (estourou o toolCalls mesmo refatiado). Só o Joel aprova; sem os três campos, bia + implement continua recusado.
+BIA_IMPL_EXCEPTION = "nao-compensa-alice"
+
+
+def bia_impl_exception(card: dict) -> bool:
+    """True quando o cartão é implement da Bia com a exceção aprovada e justificada."""
+    return (card.get("kind") == "implement" and card.get("exception") == BIA_IMPL_EXCEPTION
+            and bool(str(card.get("exceptionReason") or "").strip())
+            and bool(re.fullmatch(r"Joel \d{4}-\d{2}-\d{2}", str(card.get("exceptionApprovedBy") or ""))))
+
+
 def validate_plan(plan: dict, known_rules: set[str], external_ids: set[str]) -> list[str]:
     problems = []
     
@@ -52,8 +64,10 @@ def validate_plan(plan: dict, known_rules: set[str], external_ids: set[str]) -> 
         assignee = card.get("assignee")
         if assignee and assignee not in ["alice", "claude", "bia"]:
             problems.append(f"{cid}: assignee inválido: {assignee}")
-        elif assignee == "bia" and kind != "test-author":  # a Bia só escreve teste (cota de 50/dia; travas.md 4.9)
-            problems.append(f"{cid}: assignee bia só em kind test-author (este é {kind})")
+        elif assignee == "bia" and kind != "test-author" and not bia_impl_exception(card):
+            # a Bia só escreve teste (cota de 50/dia; travas.md 4.9); exceção: implement aprovado pelo Joel
+            problems.append(f"{cid}: assignee bia só em kind test-author (este é {kind}); implement da Bia exige "
+                            f"exception: {BIA_IMPL_EXCEPTION}, exceptionReason e exceptionApprovedBy: 'Joel AAAA-MM-DD'")
             
         # Rules
         rules = card.get("rules", [])
@@ -76,7 +90,7 @@ def validate_plan(plan: dict, known_rules: set[str], external_ids: set[str]) -> 
             problems.append(f"{cid}: done vazio")
             
         # Alice + Implement requires protectedTests
-        if assignee == "alice" and kind == "implement":
+        if assignee in ("alice", "bia") and kind == "implement":
             if not card.get("protectedTests"):
                 problems.append(f"{cid}: implement da Alice exige protectedTests (TDD)")
                 
@@ -164,7 +178,8 @@ def validate_plan(plan: dict, known_rules: set[str], external_ids: set[str]) -> 
 
 KNOWN_FIELDS = {"id", "title", "kind", "assignee", "rules", "refs", "dependsOn", "allowedPaths", "protectedTests", "checks",
                 "done", "budget", "readFirst", "sizeNote", "checklist", "libs", "think", "refactor", "question", "why",
-                "num_predict", "maxOutputTokens", "hints", "generatedPaths"}
+                "num_predict", "maxOutputTokens", "hints", "generatedPaths",
+                "exception", "exceptionReason", "exceptionApprovedBy"}
 KNOWN_BUDGET = {"attempts", "toolCalls", "minutes"}
 SHELL_TOKENS = {"|", "||", "&&", ";", ">", ">>", "<", "!", "2>&1", "&"}
 # same expression the done-line gate of the harness uses (alice.done_line_problems, LI-042)
@@ -435,7 +450,7 @@ def feature_problems(plan: dict, read=None) -> list[str]:
                 out.append(f"{fid}: {c['id']} é test-author da feature e precisa de assignee bia (a Bia escreve os testes)")
         produced = {str(p) for c in tests for p in c.get("allowedPaths") or []}
         for c in impls:
-            if c.get("assignee") != "alice":
+            if c.get("assignee") != "alice" and not (c.get("assignee") == "bia" and bia_impl_exception(c)):
                 out.append(f"{fid}: {c['id']} é implement da feature e precisa de assignee alice")
             for t in c.get("protectedTests") or []:
                 if str(t) not in produced:

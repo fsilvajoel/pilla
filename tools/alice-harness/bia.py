@@ -9,13 +9,16 @@ lê só o contrato (readFirst, regras) e o que vai revisar; não vê o raciocín
     python3 bia.py write <plano> <ID>   escreve o teste do cartão (assignee: bia; outro revisa)
     python3 bia.py gate  <plano> <ID>   portão final de teste escrito pela Bia: pré-revisão local por consenso
                                         (a Bia não revisa o próprio teste; docs/agents/travas.md 4.9)
+    python3 bia.py impl  <plano> <ID>   implement da Bia, só com exception: nao-compensa-alice aprovada pelo Joel;
+                                        portão local = checks do cartão (a Bia não revisa o próprio código)
     opções: --model <id OpenRouter>  --as <nome do revisor na assinatura>  --repo <raiz>
 
 Regras dela: nunca calcula valor (na sonda errou dígito verificador); cobra fonte de literal, acusa contradição,
 asserção vazia, teste que refaz o algoritmo e comportamento do contrato sem teste. Os checks mecânicos do cartão
 rodam antes: com check vermelho a revisão nem é pedida. Resposta bruta em runs/bia/<id>.json (com o sha lido).
 Saída: 0 aprovado, 2 reprovado, 3 erro de API ou de resposta, 4 cota do OpenRouter na reserva, 5 portão local
-inconclusivo (reprovou sem nota com apoio no pronto: não conta como reprovação).
+inconclusivo (reprovou sem nota com apoio no pronto: não conta como reprovação; em impl, 5 = erro do cartão),
+6 orçamento da feature esgotado (impl).
 
 Economia (Joel, 16/11): o free tier dá 50 requisições por dia (free_model_daily_requests em /api/v1/key); a GPU
 local da Alice não tem custo. Na orquestração, Bia escreve os testes da feature; Alice implementa o código.
@@ -40,7 +43,8 @@ from typing import NamedTuple
 import yaml
 
 import gates
-from alice import MODEL as ALICE_MODEL, PROFILE_NAME, chat_options, format_touched, load_profile, post_chat, restore_allowed, run_cmd
+from alice import (MODEL as ALICE_MODEL, PROFILE_NAME, chat_options, format_touched, load_profile, post_chat, preflight_problems,
+                   restore_allowed, run_cmd)
 from review import RAW_DIR, blob_sha, rejection_notes, review_file
 from rules import rules_text
 
@@ -529,9 +533,108 @@ def write_test(repo: Path, card: dict, model: str, rounds: int = 3) -> int:
     return 2
 
 
+IMPL_RULES = """Você é a Bia e vai IMPLEMENTAR o código de um cartão (TypeScript) para os testes protegidos passarem (TDD).
+Exceção registrada pelo Joel: este cartão não coube na Alice. Regras:
+- Edite SÓ os arquivos listados em "Arquivos que você escreve"; os testes protegidos são somente leitura.
+- Não calcule nem invente valor: o teste, as regras e o contrato são a fonte. Tipos explícitos, nada de any.
+- Responda com cada arquivo INTEIRO assim, e nada mais:
+FILE: <caminho>
+```ts
+<conteúdo completo>
+```"""
+FILE_BLOCK = re.compile(r"FILE:\s*`?([^\s`]+)`?\s*\n```[A-Za-z]*\n(.*?)```", re.S)
+ANY_BLOCK = re.compile(r"```(?:ts|tsx|typescript)?\n(.*?)```", re.S)
+BUDGET_OUT = 6  # orçamento de requisições (da feature) acabou antes de fechar: escalated, sem estourar
+
+
+def impl_files(text: str, allowed: list[str]) -> tuple[dict[str, str], str]:
+    """Arquivos da resposta, só dentro de allowedPaths; com um só caminho aceita um bloco sem cabeçalho.
+    Devolve (arquivos, motivo do problema ou '')."""
+    found = {p.strip(): body for p, body in FILE_BLOCK.findall(text)}
+    if not found and len(allowed) == 1 and (m := ANY_BLOCK.search(text)):
+        found = {allowed[0]: m.group(1)}
+    outside = sorted(p for p in found if p not in allowed)
+    if outside:
+        return {}, f"arquivos fora do cartão: {', '.join(outside)}; escreva só {', '.join(allowed)}"
+    if not found:
+        return {}, "Responda só com os arquivos no formato FILE: <caminho> + bloco ```ts."
+    return found, ""
+
+
+def write_impl(repo: Path, card: dict, model: str, rounds: int = 3, max_requests: int | None = None) -> int:
+    """Implement da Bia (exceção nao-compensa-alice, cards.bia_impl_exception). Portão local: checks do cartão
+    (cobertura 0/0 é falha em run_cmd); a Bia não revisa o próprio código. `max_requests` = o que resta do
+    biaBudget da feature: cada tentativa de chat conta, e ela para antes de passar do teto.
+    Saída: 0 done, 2 checks vermelhos ao fim das rodadas, 3 erro de API, 4 cota na reserva, 5 erro do cartão,
+    6 orçamento esgotado."""
+    allowed = [str(p) for p in card.get("allowedPaths") or [] if not any(ch in str(p) for ch in "*?[")]
+    protected = [str(p) for p in card.get("protectedTests") or [] if "*" not in str(p)]
+    if not allowed or set(allowed) & set(protected):
+        print(f"bia: {card['id']} sem allowedPaths exatos (ou com teste protegido neles)")
+        return 5
+    log_dir = RAW_DIR / f"impl-{card['id']}-{time.strftime('%Y%m%d-%H%M%S')}"
+    log_dir.mkdir(parents=True, exist_ok=True)
+    if not (card.get("keepWorktree") and card.get("kind") == "implement"):
+        restore_allowed(repo, card, log_dir)  # sem orquestrador: parte do HEAD (o checkpoint é dele)
+    problems = preflight_problems(card, repo, lambda c: run_cmd(c, repo)[0])
+    if problems:
+        print("bia: erro do cartão:\n" + "\n".join(f"- {p}" for p in problems))
+        return 5
+    def show(f: str) -> str:
+        return (repo / f).read_text() if (repo / f).is_file() else "(não existe ainda)"
+    done = [str(d) for d in card.get("done") or []]
+    messages = [{"role": "user", "content": (
+        f"{IMPL_RULES}\n\n# CONTRATO\n{contract(repo, card)}\n\n# CARTÃO {card['id']}: {card.get('title', '')}\n"
+        "PRONTO QUANDO:\n" + "\n".join(f"- {d}" for d in done) +
+        "\nDicas:\n" + "\n".join(f"- {h}" for h in card.get("hints") or []) +
+        "\nChecks:\n" + "\n".join(f"{i}: {c}" for i, c in enumerate(card.get("checks") or [])) +
+        "\n\n# TESTES PROTEGIDOS (somente leitura)\n" + "\n".join(f"=== {t} ===\n{show(t)}" for t in protected) +
+        "\n\n# ARQUIVOS QUE VOCÊ ESCREVE (conteúdo atual)\n" + "\n".join(f"=== {f} ===\n{show(f)}" for f in allowed) +
+        "".join("\n# REVISÃO ANTERIOR (reprovada)\n" + "\n".join(notes)
+                for notes in [rejection_notes(repo, card["id"])] if notes))}]
+    key, tokens, start = api_key(repo), [0, 0], USAGE["biaRequests"]
+    for n in range(1, rounds + 1):
+        left = 3 if max_requests is None else max_requests - (USAGE["biaRequests"] - start)
+        if left <= 0:
+            print(f"bia: orçamento da feature esgotado ({USAGE['biaRequests'] - start}/{max_requests} requisições) "
+                  f"antes da rodada {n}")
+            return BUDGET_OUT
+        try:
+            data = chat(messages, model, key, tries=min(3, left))
+        except QuotaError as e:
+            print(f"bia: {e}")
+            return 4
+        except RuntimeError as e:
+            print(f"bia: {e}")
+            return BUDGET_OUT if max_requests is not None and USAGE["biaRequests"] - start >= max_requests else 3
+        u = data.get("usage") or {}
+        tokens[0] += u.get("prompt_tokens", 0)
+        tokens[1] += u.get("completion_tokens", 0)
+        text = data["choices"][0]["message"]["content"] or ""
+        (log_dir / f"round-{n}.json").write_text(json.dumps(data, ensure_ascii=False, indent=1))
+        files, why = impl_files(text, allowed)
+        if why:
+            messages += [{"role": "assistant", "content": text}, {"role": "user", "content": why}]
+            continue
+        for f, body in files.items():
+            (repo / f).parent.mkdir(parents=True, exist_ok=True)
+            (repo / f).write_text(body)
+        format_touched(repo, sorted(files))
+        red = [(c, code, out) for c, code, out in run_checks(repo, card) if code != 0]
+        print(f"rodada {n}: {'checks verdes' if not red else f'{len(red)} check(s) vermelho(s)'}")
+        if not red:
+            print(f"bia implementou {', '.join(sorted(files))} em {n} rodada(s); tokens bia: entrada={tokens[0]} saída={tokens[1]}")
+            return 0
+        messages += [{"role": "assistant", "content": text},
+                     {"role": "user", "content": "Checks vermelhos; corrija e devolva os arquivos inteiros:\n" +
+                      "\n".join(f"$ {c}\nexit={code}\n{out[-2000:]}" for c, code, out in red)}]
+    print(f"bia não fechou {card['id']} em {rounds} rodadas; tokens bia: entrada={tokens[0]} saída={tokens[1]}")
+    return 2
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("task", choices=["card", "test", "write", "gate"])
+    ap.add_argument("task", choices=["card", "test", "write", "gate", "impl"])
     ap.add_argument("plan", type=Path)
     ap.add_argument("id")
     ap.add_argument("--model", default=DEFAULT_MODEL)
@@ -543,6 +646,13 @@ def main() -> int:
         sys.exit(f"bia: {ns.name} não assina revisão: quem escreve cartão ou teste não aprova (erro 11)")
     repo = ns.repo.resolve()
     card = next((c for c in (yaml.safe_load(ns.plan.read_text()) or {}).get("cards", []) if c.get("id") == ns.id), None)
+    if ns.task == "impl":
+        from cards import bia_impl_exception
+        if not card or card.get("assignee") != "bia" or not bia_impl_exception(card):
+            sys.exit(f"bia: {ns.id} não é implement da Bia com exceção aprovada em {ns.plan}")
+        code = write_impl(repo, card, ns.model)
+        print(quota_line(api_key(repo)))
+        return code
     if not card or card.get("kind") != "test-author":
         sys.exit(f"bia: {ns.id} não é cartão test-author em {ns.plan}")
     if ns.task == "card":

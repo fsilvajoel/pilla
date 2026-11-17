@@ -1355,6 +1355,10 @@ class PlanOps:
     def bia_write(self, card: dict, repo: Path) -> int:
         return self._quiet(card["id"], self.bia.write_test, repo, card, self.bia.DEFAULT_MODEL)
 
+    def bia_implement(self, card: dict, repo: Path, cap: int | None) -> int:
+        """Implement da Bia (exceção aprovada); `cap` = requisições que restam no biaBudget da feature."""
+        return self._quiet(card["id"], self.bia.write_impl, repo, card, self.bia.DEFAULT_MODEL, 3, cap)
+
     def bia_review(self, card: dict, repo: Path) -> int:
         return self._quiet(card["id"], self.bia.review_test, repo, card, self.bia.DEFAULT_MODEL, "bia")
 
@@ -1386,15 +1390,25 @@ def run_card(card: dict, repo: Path, rounds: int, ops: PlanOps) -> dict:
     test = card.get("kind") == "test-author"
     rec: dict = {"task": cid, "assignee": writer, "rounds": [], "seconds": 0, "status": None}
     totals = {"aliceIn": 0, "aliceOut": 0, "biaIn": 0, "biaOut": 0, "biaRequests": 0}
+    cap = card.get("biaCap")  # o orquestrador da feature passa o que resta do biaBudget (implement da Bia)
+    if writer == "bia" and not test and cap is not None and int(cap) <= 0:
+        rec.update(status="escalated", message="orçamento da feature esgotado antes do cartão (biaBudget)", attempts=0,
+                   aliceTokens={"prompt": 0, "output": 0}, bia={"prompt": 0, "output": 0, "requests": 0})
+        return rec
     for n in range(1, (rounds if test else 1) + 1):
-        if test:
+        if test or writer == "bia":
             left = ops.quota_left(repo)
             if left is not None and left <= ops.reserve():
                 rec["status"], rec["message"] = "quota", f"cota da Bia na reserva ({left} restantes, BIA_RESERVE={ops.reserve()})"
                 break
         t, before = time.time(), ops.usage()
         rnd: dict = {"n": n, "writer": writer, "review": "-"}
-        if writer == "bia":
+        if writer == "bia" and not test:  # exceção nao-compensa-alice: portão = checks locais, sem revisão da Bia
+            code = ops.bia_implement(card, repo, None if cap is None else int(cap))
+            rnd["exec"] = {0: "done", 2: "failed", 4: "quota", 5: "card_error", 6: "escalated"}.get(code, "error")
+            if rnd["exec"] == "escalated":
+                rec["message"] = "orçamento da feature esgotado no meio do cartão (biaBudget); decide o Claude"
+        elif writer == "bia":
             code = ops.bia_write(card, repo)
             rnd["exec"] = {0: "done", 2: "failed", 4: "quota"}.get(code, "error")
         else:
@@ -1455,6 +1469,9 @@ def plan_run(cards: dict[str, dict], ids: list[str], repo: Path, rounds: int, op
             results.append({"task": cid, "status": f"skipped (assignee {card.get('assignee')})"}); continue
         if set(card.get("dependsOn", [])) & failed:
             results.append({"task": cid, "status": "skipped (dependência falhou)"}); failed.add(cid); continue
+        if card.get("biaCap") is not None:  # teto único da feature: desconta o que os cartões anteriores gastaram
+            spent = sum(int((r.get("bia") or {}).get("requests", 0)) for r in results)
+            card = {**card, "biaCap": max(0, int(card["biaCap"]) - spent)}
         rec = run_card(card, repo, rounds, ops)
         results.append(rec)
         if rec["status"] != "done":

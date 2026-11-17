@@ -47,3 +47,24 @@
 | Consumo de Bia | 0 | nenhuma chamada |
 | Consumo de Alice | 0 | nenhuma chamada |
 | Suítes rodadas | várias parciais + 3 completas | referência, intermediária e final |
+
+## v17.1 (17/11, substituto)
+
+Substituto temporário do Jorge, por decisão do Joel (17/11): E6-T07, E7-T09 e E7-T10 passam a ser implementados
+pela Bia, como exceção registrada. As regras gerais continuam as mesmas.
+
+| Item | O que mudou | Onde |
+|---|---|---|
+| Exceção no validador | `assignee: bia` + `kind: implement` só com `exception: nao-compensa-alice`, `exceptionReason` não vazio e `exceptionApprovedBy: "Joel AAAA-MM-DD"`. Sem esses campos, a recusa continua; a exceção não vale para outros kinds; `protectedTests` passa a ser obrigatório também nesse caso | `cards.py` (`bia_impl_exception`) |
+| Escritor | `bia.write_impl` / `bia.py impl`: até 3 rodadas (pedido → arquivos dos `allowedPaths` exatos → Prettier → checks, com o vermelho de volta como feedback). Recusa teste protegido e glob; pré-voo antes de gastar | `bia.py` |
+| Portão | local: os checks do cartão (cobertura 0/0 continua falha). A Bia não revisa o próprio código. Na feature, seguem a auditoria e a revisão final do Claude | `alice.run_card` (rodada sem revisão) |
+| Orçamento | o orquestrador passa `biaCap = biaBudget − biaRequests`, e o `plan_run` desconta o que os cartões anteriores gastaram. Cada requisição (com os retries de rede) entra em `biaRequests` da feature e da etapa. Com cap 0, o cartão fica `escalated` sem chamar a Bia; se o orçamento acaba no meio, também fica `escalated`. `toolCalls` e grace não foram alterados | `feature.py` (`bia_cap`, `charge_bia`), `alice.py` |
+| Checkpoint | o cartão da Bia passa pelo mesmo `implement_by_card`: checkpoint, snapshot no done e rollback na falha | sem mudança |
+| Cartões | E6-T07, E7-T09 e E7-T10 com a exceção; E7-F03 `biaBudget` 4 → 7; E6-F01 continua em 8; `BIA_BUDGET=(2,10)` mantido | `docs/plano/E6.yaml`, `E7.yaml` |
+| Docs | travas.md 4.9 (nova linha) e orquestracao.md (etapa 3 e parágrafo "Implement pela Bia") | `docs/agents/` |
+
+Suíte: 299 (referência, verde) → 314 (verde), com 15 testes novos em `tests/test_bia_implement.py`.
+Validação: `alice.py cards` deu ok para E6 e E7. `alice.py prompt` montou o prompt dos 3 cartões. O pré-voo dos 3, com os `testShas` da feature, ficou limpo.
+Retomada: o E6-F01 reaproveita o snapshot do E6-T02 (`reusable` = [E6-T02]), então não é preciso reset. O E7-F03 não tem cartão done e recomeça do HEAD.
+Risco: o cap do implement não reserva a auditoria. Se a Bia gastar todo o restante (E6-F01: 5, E7-F03: 4), a etapa audit para em `quota`.
+Fora do escopo: `docs/agents/cartao-de-tarefa.md:16` ainda diz "bia só em kind test-author". Falta mencionar a exceção (é arquivo do Jorge/Claude).
