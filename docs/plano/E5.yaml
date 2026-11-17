@@ -1,0 +1,284 @@
+delivery: E5
+title: Domain services of the api (people first); Bia writes the tests, Alice the code
+# Leva 17/11: só o que tem base em PRD/RFC aprovado e ADR aceita. createPerson, edição, busca, endereços, PIX e
+# CONTRATOS ficam para depois das decisões do Joel (docs/plano/E5-F02/plano.md, seção Escopo, "Fora").
+# Caminhos seguem o código atual (apps/api/src/<módulo>/...), não o src/modules/... da RFC-003 §3 (decisão pendente).
+# Dados de teste (ids, nomes, CPF, telefone) vão nos hints: são entrada que o teste lê de volta, não valor calculado.
+# IP de teste é de documentação (RFC 5737, 203.0.113.0/24): o repositório é público.
+cards:
+  - id: E5-T01
+    title: Write the tests for uuidV7 and newId
+    kind: test-author
+    assignee: bia
+    rules: []
+    refs: [RFC-004 §2, RFC-005 §1]
+    dependsOn: []
+    allowedPaths:
+      - apps/api/src/core/public/ids.test.ts
+    protectedTests: []
+    checks:
+      - node scripts/expect-red.mjs apps/api src/core/public/ids.test.ts
+      - node scripts/check-test-quality.mjs apps/api/src/core/public/ids.test.ts
+      - pnpm --filter @pilla/api typecheck
+      - pnpm --filter @pilla/api lint
+    done:
+      - every test fails now against the stub in HEAD and would pass with a correct implementation (run_check 0)
+      - 'import { describe, expect, it } from "vitest";'
+      - 'import { newId, uuidV7 } from "./ids";'
+      - 'uuidV7 of unixMs 1645557742000 and the random bytes of the hints gives "017f22e2-79b0-7cc3-98c4-dc0c0c07398f" (RFC-004 §2, test vector of RFC 9562 A.6)'
+      - 'uuidV7 of 0 and 10 zero bytes gives "00000000-0000-7000-8000-000000000000", of 281474976710655 and 10 bytes 0xff gives "ffffffff-ffff-7fff-bfff-ffffffffffff" (RFC-004 §2)'
+      - uuidV7 throws RangeError for random of length 9 and 11 and for unixMs -1, 1.5 and 281474976710656 (RFC-004 §2, 48-bit time and 74 random bits)
+      - newId toMatch /^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/ and two calls give different values (RFC-004 §2)
+      - the time in the first 12 hex digits of newId is between Date.now taken right before and right after the call (RFC-004 §2, ordered by time)
+      - never edit apps/api/src/core/public/ids.ts
+    hints:
+      - the import lines of the done are the only imports of the file, each name in them is used, and nothing else is imported
+      - uuidV7 takes unixMs, a plain number of milliseconds, and random, a Uint8Array of exactly 10 bytes, and gives the UUID text in lower case
+      - newId takes no argument and gives a string
+      - the random bytes of the RFC 9562 vector are 0x7c 0xc3 0x98 0xc4 0xdc 0x0c 0x0c 0x07 0x39 0x8f, written with Uint8Array.of
+      - the 10 bytes 0xff are a Uint8Array of length 10 filled with 0xff, and the 10 zero bytes are a new Uint8Array of length 10
+      - the RangeError cases with a bad random pass unixMs 0, and the cases with a bad unixMs pass a new Uint8Array of length 10
+      - each RangeError case is its own expect over a function that calls uuidV7, passed to toThrow with RangeError
+      - for the time check, keep Date.now in a const before the call and another after it, drop the first dash of the id, read its first 12 hex digits with parseInt base 16, and compare with toBeGreaterThanOrEqual and toBeLessThanOrEqual
+      - every expected value is a literal written in the test, never built with padStart or with text plus a variable
+      - one describe for uuidV7 and one for newId
+      - one write_file of the whole test file, then run_check 0, 1, 2 and 3
+    budget:
+      attempts: 4
+      toolCalls: 16
+      minutes: 8
+    readFirst:
+      - apps/api/src/core/public/ids.ts
+    sizeNote: dois describe, 8 a 9 testes, ~60 linhas
+  - id: E5-T02
+    title: Implement uuidV7 and newId and remove the stub
+    kind: implement
+    assignee: alice
+    rules: []
+    refs: [RFC-004 §2, RFC-005 §1]
+    dependsOn: [E5-T01]
+    allowedPaths:
+      - apps/api/src/core/public/ids.ts
+      - apps/api/vitest.config.ts
+    protectedTests:
+      - apps/api/src/core/public/ids.test.ts
+    checks:
+      - pnpm --filter @pilla/api exec vitest run src/core/public/ids.test.ts --coverage --coverage.include=src/core/public/ids.ts --coverage.exclude=none --coverage.thresholds.lines=100 --coverage.thresholds.branches=100
+      - pnpm --filter @pilla/api typecheck
+      - pnpm --filter @pilla/api lint
+    done:
+      - all tests in apps/api/src/core/public/ids.test.ts pass with 100% line and branch coverage of ids.ts (run_check 0)
+      - ids.ts has no '// @stub E5-T02' line and apps/api/vitest.config.ts has no line that excludes src/core/public/ids.ts
+      - uuidV7 throws RangeError when unixMs is not an integer, is below 0 or is above 281474976710655, and when random.length is not 10
+      - newId gives uuidV7 of Date.now and of 10 bytes from crypto.getRandomValues
+      - the signatures, the /** */ comments and the parameter types stay, and the parameters lose the leading underscore
+      - ids.ts gets no import line
+    hints:
+      - the only file read is apps/api/src/core/public/ids.ts, because the steps are in these hints
+      - the byte layout is RFC 9562 §5.7, the UUID v7 of RFC-004 §2, in 16 bytes
+      - bytes 0 to 5 hold the 48-bit time big-endian, and bytes 6 to 15 hold the 10 random bytes as they come
+      - then the high 4 bits of byte 6 become 0111, the version 7, and the high 2 bits of byte 8 become 10, the variant
+      - keep the 16 bytes in a Uint8Array and read and write them through a DataView over its buffer, with setBigUint64 at offset 0 for the time shifted left by 16 bits as a BigInt, then set of the random at offset 6
+      - change bytes 6 and 8 with getUint8 and setUint8 and the bit operators and with or
+      - never read a byte by index, since the strict tsconfig makes it possibly undefined and its guard would be a branch no test reaches
+      - the text is the 32 lower case hex digits, two per byte with a leading zero, split 8, 4, 4, 4 and 12 by dashes
+      - the two guards come first, one if on the three unixMs conditions and one if on the length, each throwing a RangeError
+      - crypto is a global of Node, so newId needs no import
+      - the line of vitest.config.ts to delete is the one inside coverage.exclude with src/core/public/ids.ts and the comment stub E5-T02
+      - one edit_file of ids.ts that replaces the two function bodies and deletes the stub line, one edit_file of apps/api/vitest.config.ts that deletes the line with stub E5-T02, then run_check 0, 1 and 2
+    budget:
+      attempts: 4
+      toolCalls: 17
+      minutes: 8
+    readFirst:
+      - apps/api/src/core/public/ids.ts
+      - apps/api/vitest.config.ts
+    sizeNote: duas funções, ~20 linhas; vitest.config.ts perde 1 linha
+  - id: E5-T03
+    title: Write the tests for recordAudit
+    kind: test-author
+    assignee: bia
+    rules: []
+    refs: [ADR-0006, RFC-001 §5, RFC-005 §2]
+    dependsOn: []
+    allowedPaths:
+      - apps/api/src/core/public/audit.test.ts
+    protectedTests: []
+    checks:
+      - node scripts/expect-red.mjs apps/api src/core/public/audit.test.ts
+      - node scripts/check-test-quality.mjs apps/api/src/core/public/audit.test.ts
+      - pnpm --filter @pilla/api typecheck
+      - pnpm --filter @pilla/api lint
+    done:
+      - every test fails now against the stub in HEAD and would pass with a correct implementation (run_check 0)
+      - 'import type { PGlite } from "@electric-sql/pglite";'
+      - 'import type { PgliteDatabase } from "drizzle-orm/pglite";'
+      - 'import { afterAll, beforeAll, describe, expect, it } from "vitest";'
+      - 'import { migratedTestDb } from "../../db/test-db";'
+      - 'import { recordAudit, type AuditEntry } from "./audit";'
+      - recordAudit of entry 1 resolves toBeUndefined and the row read by SQL has every column equal to the field of the entry (ADR-0006, who, when, before and after)
+      - recordAudit of entry 2 stores actor_id, before and ip as null and the other columns equal to the entry (RFC-005 §2, nullable columns)
+      - after recordAudit of entry 3 succeeds, a second recordAudit of entry 3 rejects.toThrow, because id is the primary key (RFC-005 §2)
+      - never edit apps/api/src/core/public/audit.ts
+    hints:
+      - the import lines of the done are the only imports of the file, each name in them is used, and nothing else is imported
+      - open the database as persons.test.ts does, with let db and let client filled in beforeAll from migratedTestDb and client closed in afterAll
+      - 'entry 1 is id "01970000-0000-7000-8000-000000000001", actorType "ADMIN", actorId "01970000-0000-7000-8000-000000000002", action "example.updated", entityType "example"'
+      - 'entry 1 also has entityId "01970000-0000-7000-8000-000000000003", before { name: "Ana" }, after { name: "Ana Souza" }, at the Date of "2026-11-17T12:00:00.000Z" and ip "203.0.113.10"'
+      - 'entry 2 is id "01970000-0000-7000-8000-000000000004", actorType "SYSTEM", actorId null, action "example.created", entityType "example", entityId "01970000-0000-7000-8000-000000000005"'
+      - 'entry 2 also has before null, after { name: "Bia" }, at the Date of "2026-11-17T13:30:00.000Z" and ip null'
+      - 'entry 3 is entry 1 spread with id "01970000-0000-7000-8000-000000000006"'
+      - each entry is a const typed AuditEntry with every field written as a literal
+      - the expected row of each entry is written out as a literal object with the snake case column names, never built from the entry
+      - the select is client.query of "select actor_type, actor_id, action, entity_type, entity_id, before, after, at, ip from core.audit_log where id = $1" with the entry id, and toEqual is on rows
+      - the row type of client.query is a local type with actor_type string, actor_id string or null, action, entity_type and entity_id string, before and after unknown, at Date and ip string or null
+      - one it per entry, three it in one describe recordAudit
+      - one write_file of the whole test file, then run_check 0, 1, 2 and 3
+    budget:
+      attempts: 4
+      toolCalls: 16
+      minutes: 10
+    readFirst:
+      - apps/api/src/core/public/audit.ts
+      - apps/api/src/people/infra/persons.test.ts
+    sizeNote: um describe, 3 testes, ~80 linhas
+  - id: E5-T04
+    title: Implement recordAudit and remove the stub
+    kind: implement
+    assignee: alice
+    rules: []
+    refs: [ADR-0006, RFC-001 §5, RFC-005 §2]
+    dependsOn: [E5-T03]
+    allowedPaths:
+      - apps/api/src/core/public/audit.ts
+      - apps/api/vitest.config.ts
+    protectedTests:
+      - apps/api/src/core/public/audit.test.ts
+    checks:
+      - pnpm --filter @pilla/api exec vitest run src/core/public/audit.test.ts --coverage --coverage.include=src/core/public/audit.ts --coverage.exclude=none --coverage.thresholds.lines=100 --coverage.thresholds.branches=100
+      - pnpm --filter @pilla/api typecheck
+      - pnpm --filter @pilla/api lint
+    done:
+      - all tests in apps/api/src/core/public/audit.test.ts pass with 100% line and branch coverage of audit.ts (run_check 0)
+      - audit.ts has no '// @stub E5-T04' line and apps/api/vitest.config.ts has no line that excludes src/core/public/audit.ts
+      - 'import { auditLog } from "../infra/schema";'
+      - recordAudit awaits the insert of the entry as it is into auditLog, with no if, no try and no catch, so a database error goes up untouched
+      - the types ActorType and AuditEntry, the /** */ comments and the signature stay, and the parameters lose the leading underscore
+    hints:
+      - the only file read is apps/api/src/core/public/audit.ts, because the steps are in these hints
+      - the fields of AuditEntry have the same names as the columns of auditLog, so the entry goes to values of db.insert with no mapping
+      - the import line of the done goes right below the import type line of drizzle-orm/pg-core that stays
+      - the line of vitest.config.ts to delete is the one inside coverage.exclude with src/core/public/audit.ts and the comment stub E5-T04
+      - one edit_file of audit.ts that adds the import, replaces the body of recordAudit and deletes the stub line, one edit_file of apps/api/vitest.config.ts that deletes the line with stub E5-T04, then run_check 0, 1 and 2
+    budget:
+      attempts: 4
+      toolCalls: 17
+      minutes: 8
+    readFirst:
+      - apps/api/src/core/public/audit.ts
+      - apps/api/vitest.config.ts
+    sizeNote: recordAudit com 1 linha e 1 linha de import; vitest.config.ts perde 1 linha
+  - id: E5-T05
+    title: Write the tests for insertPerson and findPersonById
+    kind: test-author
+    assignee: bia
+    rules: [RN-P01, RN-P02]
+    refs: [PRD-001 RF-01, PRD-001 RF-04, RFC-005 §3]
+    dependsOn: []
+    allowedPaths:
+      - apps/api/src/people/infra/person-repository.test.ts
+    protectedTests: []
+    checks:
+      - node scripts/expect-red.mjs apps/api src/people/infra/person-repository.test.ts
+      - node scripts/check-test-quality.mjs apps/api/src/people/infra/person-repository.test.ts
+      - pnpm --filter @pilla/api typecheck
+      - pnpm --filter @pilla/api lint
+    done:
+      - every test fails now against the stub in HEAD and would pass with a correct implementation (run_check 0)
+      - 'import type { PGlite } from "@electric-sql/pglite";'
+      - 'import type { PgliteDatabase } from "drizzle-orm/pglite";'
+      - 'import { afterAll, beforeAll, describe, expect, it } from "vitest";'
+      - 'import { migratedTestDb } from "../../db/test-db";'
+      - 'import { findPersonById, insertPerson } from "./person-repository";'
+      - insertPerson of Maria resolves toBeUndefined and her row has email, birth_date, referred_by_id and notes null, active true and version 1 (RFC-005 §3 defaults)
+      - insertPerson of Ana and then of João stores every field of João, his cpf null and his referred_by_id the id of Ana (RN-P02, RN-P01 lets cpf be null)
+      - after insertPerson of Rui succeeds, insertPerson of Rui Filho with the same cpf rejects.toThrow (RN-P01, unique cpf)
+      - findPersonById of Carla, inserted by SQL, toMatchObject her fields in camelCase with the defaults, and its createdAt toBeInstanceOf Date (PRD-001 RF-04)
+      - findPersonById of an id that is not in the table resolves toBeNull (PRD-001 RF-04)
+      - never edit apps/api/src/people/infra/person-repository.ts
+    hints:
+      - the import lines of the done are the only imports of the file, each name in them is used, and nothing else is imported
+      - open the database as persons.test.ts does, with let db and let client filled in beforeAll from migratedTestDb and client closed in afterAll
+      - 'Maria is id "01970000-0000-7000-8000-000000000001", fullName "Maria Souza", cpf "52998224725", phone "+5511987654321", and nothing else'
+      - 'Ana is id "01970000-0000-7000-8000-000000000002", fullName "Ana Costa", cpf null, phone "+5511900000002"'
+      - 'João is id "01970000-0000-7000-8000-000000000003", fullName "João Lima", cpf null, phone "+5521912345678", email "joao@example.com", birthDate "1985-03-09"'
+      - 'João also has referredById "01970000-0000-7000-8000-000000000002" and notes "indicado pela Ana"'
+      - 'Rui is id "01970000-0000-7000-8000-000000000004", fullName "Rui Alves", cpf "11144477735", phone "+5511900000004"'
+      - 'Rui Filho is id "01970000-0000-7000-8000-000000000005", fullName "Rui Alves Filho", cpf "11144477735", phone "+5511900000005"'
+      - 'Carla is id "01970000-0000-7000-8000-000000000010", full_name "Carla Dias", cpf "39053344705", phone "+5531988887777", birth_date "1992-07-01"'
+      - 'the unknown id is "01970000-0000-7000-8000-000000000099"'
+      - insertPerson takes the db and one object of the columns of persons in camelCase, so the optional fields not used are left out, never set to undefined
+      - the select after insertPerson is client.query of "select full_name, cpf, phone, email, birth_date::text as birth_date, referred_by_id, notes, active, version from people.persons where id = $1" with the id, and toEqual is on rows
+      - birth_date goes through ::text in that select, because a raw date column read by client.query comes back as Date, not as text
+      - Carla goes in with client.query of "insert into people.persons (id, full_name, cpf, phone, birth_date) values ($1, $2, $3, $4, $5)" and her five values
+      - 'findPersonById of Carla gives birthDate "1992-07-01" as text, email, referredById, notes and anonymizedAt null, active true and version 1'
+      - every expected row and object is a literal written in the test, never built from the input
+      - one describe insertPerson with three it and one describe findPersonById with two it
+      - one write_file of the whole test file, then run_check 0, 1, 2 and 3
+    budget:
+      attempts: 4
+      toolCalls: 16
+      minutes: 10
+    readFirst:
+      - apps/api/src/people/infra/person-repository.ts
+      - apps/api/src/people/infra/persons.test.ts
+    sizeNote: dois describe, 5 testes, ~100 linhas
+  - id: E5-T06
+    title: Implement insertPerson and findPersonById and remove the stub
+    kind: implement
+    assignee: alice
+    rules: [RN-P01, RN-P02]
+    refs: [PRD-001 RF-01, PRD-001 RF-04, RFC-005 §3]
+    dependsOn: [E5-T05]
+    allowedPaths:
+      - apps/api/src/people/infra/person-repository.ts
+      - apps/api/vitest.config.ts
+    protectedTests:
+      - apps/api/src/people/infra/person-repository.test.ts
+    checks:
+      - pnpm --filter @pilla/api exec vitest run src/people/infra/person-repository.test.ts --coverage --coverage.include=src/people/infra/person-repository.ts --coverage.exclude=none --coverage.thresholds.lines=100 --coverage.thresholds.branches=100
+      - pnpm --filter @pilla/api typecheck
+      - pnpm --filter @pilla/api lint
+    done:
+      - all tests in apps/api/src/people/infra/person-repository.test.ts pass with 100% line and branch coverage of person-repository.ts (run_check 0)
+      - person-repository.ts has no '// @stub E5-T06' line and apps/api/vitest.config.ts has no line that excludes src/people/infra/person-repository.ts
+      - 'import { eq } from "drizzle-orm";'
+      - 'import { persons, type PersonRow } from "./schema";'
+      - insertPerson awaits the insert of the row into persons and gives nothing back, with no if, no try and no catch, so the unique cpf error of RN-P01 goes up untouched
+      - findPersonById selects from persons where the id column equals id, and gives the first row or null when there is none
+      - the type NewPersonRow, the /** */ comments and the signatures stay, and the parameters lose the leading underscore
+    hints:
+      - the only file read is apps/api/src/people/infra/person-repository.ts, because the steps are in these hints
+      - the import type line of ./schema in HEAD becomes the second import line of the done, which brings persons as a value, and the import type line of drizzle-orm/pg-core stays
+      - the import of eq goes above the import type line of drizzle-orm/pg-core
+      - the insert is db.insert of persons with values of the row, and the select is db.select from persons with where and eq on persons.id
+      - the first row or null is the first element with ?? null, the only branch, and the two findPersonById tests cover both sides
+      - the line of vitest.config.ts to delete is the one inside coverage.exclude with src/people/infra/person-repository.ts and the comment stub E5-T06
+      - one edit_file of person-repository.ts that rewrites the import lines, the two bodies and deletes the stub line, one edit_file of apps/api/vitest.config.ts that deletes the line with stub E5-T06, then run_check 0, 1 and 2
+    budget:
+      attempts: 4
+      toolCalls: 17
+      minutes: 8
+    readFirst:
+      - apps/api/src/people/infra/person-repository.ts
+      - apps/api/vitest.config.ts
+    sizeNote: duas funções de 2 linhas e 2 linhas de import; vitest.config.ts perde 1 linha
+features:
+  - id: E5-F01
+    title: Command foundation of the api (UUID v7 ids and audit record)
+    cards: [E5-T01, E5-T02, E5-T03, E5-T04]
+    biaBudget: 3
+  - id: E5-F02
+    title: Person repository (insert and read by id)
+    cards: [E5-T05, E5-T06]
+    biaBudget: 3
