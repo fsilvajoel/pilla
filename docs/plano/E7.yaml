@@ -406,7 +406,10 @@ cards:
   - id: E7-T09
     title: Implement the basic render of the LoanList component
     kind: implement
-    assignee: alice
+    assignee: bia
+    exception: nao-compensa-alice
+    exceptionReason: "estourou 20 toolCalls 2x mesmo refatiado; decisão do Joel 17/11"
+    exceptionApprovedBy: "Joel 2026-11-17"
     rules: []
     refs: [RFC-004 §5, docs/plano/decisoes-2026-11-17.md]
     dependsOn: [E7-T08]
@@ -484,7 +487,10 @@ cards:
   - id: E7-T10
     title: Implement the basic render of the LoanDetail component
     kind: implement
-    assignee: alice
+    assignee: bia
+    exception: nao-compensa-alice
+    exceptionReason: "estourou 20 toolCalls 2x mesmo refatiado; decisão do Joel 17/11"
+    exceptionApprovedBy: "Joel 2026-11-17"
     rules: []
     refs: [PRD-001 RF-18, RFC-004 §5, docs/plano/decisoes-2026-11-17.md]
     dependsOn: [E7-T08]
@@ -757,8 +763,9 @@ cards:
       - apps/web/lib/labels.ts
       - packages/finance/src/index.ts
     sizeNote: payment-form.tsx com ~120 linhas (grande para a Alice; fatiar fica para decisão do Joel)
-# Features (ADR-0014): planos em docs/plano/E7-F0<n>/plano.md. biaBudget entre 4 e 6 (teto liberado pelo Joel só
-# nesta madrugada, commit 85328f5): telas pequenas agrupadas num cartão da Bia com mais cenários.
+# Features (ADR-0014): planos em docs/plano/E7-F0<n>/plano.md. biaBudget entre 4 e 7 (teto liberado pelo Joel só
+# nesta madrugada, commit 85328f5): telas pequenas agrupadas num cartão da Bia com mais cenários. E7-F03 em 7: a Bia
+# também implementa E7-T09 e E7-T10 (exceção nao-compensa-alice, Joel 17/11).
 features:
   - id: E7-F01
     title: Person registration form and today in Brasília
@@ -771,7 +778,7 @@ features:
   - id: E7-F03
     title: Loan list and loan detail with installments
     cards: [E7-T08, E7-T09, E7-T15, E7-T10, E7-T16]
-    biaBudget: 4
+    biaBudget: 7
   - id: E7-F04
     title: Register a payment with receipt and destination account
     cards: [E7-T11, E7-T12, E7-T13, E7-T14]

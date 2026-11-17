@@ -94,7 +94,10 @@ cards:
   - id: E6-T07
     title: Implement simulate
     kind: implement
-    assignee: alice
+    assignee: bia
+    exception: nao-compensa-alice
+    exceptionReason: "estourou 20 toolCalls 2x mesmo refatiado; decisão do Joel 17/11"
+    exceptionApprovedBy: "Joel 2026-11-17"
     rules: [RN-C03, RN-C04]
     refs: [PRD-001 RF-10, RFC-002 §3.4, RFC-004 §5, PRD-001 CA-11, ADR-0013]
     dependsOn: [E6-T02]
