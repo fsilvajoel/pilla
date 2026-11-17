@@ -39,7 +39,7 @@ cards:
       - packages/schemas/src/api/lending/simulate-loan.ts
     sizeNote: um describe por função, 5 a 6 testes, ~60 linhas
   - id: E6-T02
-    title: Implement frequencyOf and simulate and ignore apps/web/AGENTS.md
+    title: Implement frequencyOf and simulate
     kind: implement
     assignee: alice
     rules: []
@@ -47,24 +47,23 @@ cards:
     dependsOn: [E6-T01]
     allowedPaths:
       - apps/web/lib/simulation.ts
-      - .gitignore
+      - apps/web/vitest.config.ts
     protectedTests:
       - apps/web/lib/simulation.test.ts
     checks:
       - pnpm --filter @pilla/web exec vitest run lib/simulation.test.ts --coverage --coverage.include=lib/simulation.ts --coverage.exclude=none --coverage.thresholds.lines=100 --coverage.thresholds.branches=100
-      - node scripts/check-count.mjs .gitignore web/AGENTS.md 1
       - pnpm --filter @pilla/web typecheck
       - pnpm --filter @pilla/web lint
     done:
       - all tests in apps/web/lib/simulation.test.ts pass with 100% line and branch coverage of simulation.ts (run_check 0)
-      - .gitignore ends with one new line that ignores the agents notes file of the web app, written as in the hint (run_check 1)
       - simulate calls generateSchedule with type INSTALLMENT, count equal to installmentCount and roundingStep 500n
       - numbers from the request become bigint with BigInt and get their brand with cents and bps of @pilla/finance, never with as
-      - keep the types, the signatures and the /** */ comments unchanged
+      - keep the types, the signatures and the /** */ comments unchanged, except that the parameters lose the leading underscore
+      - simulation.ts has no '// @stub E6-T02' line and apps/web/vitest.config.ts has no line that excludes lib/simulation.ts
     hints:
       - frequencyOf is a switch over the four presets, as the /** */ comment of frequencyOf lists them
       - simulate builds the input of generateSchedule from the request fields and reads the summary from the lines it returns
-      - one write_file of simulation.ts, then one edit_file of .gitignore that adds the last line apps/web/AGENTS.md, then run_check 0, 1, 2 and 3
+      - one write_file of simulation.ts, then one edit_file of apps/web/vitest.config.ts that deletes the line with stub E6-T02, then run_check 0, 1 and 2
     budget:
       attempts: 5
       toolCalls: 24
@@ -73,7 +72,7 @@ cards:
       - apps/web/lib/simulation.ts
       - packages/finance/src/schedule.ts
       - packages/schemas/src/api/lending/simulate-loan.ts
-    sizeNote: simulation.ts com ~50 linhas; .gitignore ganha 1 linha
+    sizeNote: simulation.ts com ~50 linhas; vitest.config.ts perde 1 linha
   - id: E6-T03
     title: Write the tests for toSimulateRequest
     kind: test-author
@@ -118,6 +117,7 @@ cards:
     dependsOn: [E6-T03]
     allowedPaths:
       - apps/web/lib/simulation-form.ts
+      - apps/web/vitest.config.ts
     protectedTests:
       - apps/web/lib/simulation-form.test.ts
     checks:
@@ -127,10 +127,11 @@ cards:
     done:
       - all tests in apps/web/lib/simulation-form.test.ts pass with 100% line and branch coverage of simulation-form.ts (run_check 0)
       - amount and monthlyRate go through parseReais, frequency through frequencyOf and the whole object through simulateLoanRequest.parse
-      - keep the interface, the signature and the /** */ comments unchanged
+      - keep the interface, the signature and the /** */ comments unchanged, except that the parameter loses the leading underscore
+      - simulation-form.ts has no '// @stub E6-T04' line and apps/web/vitest.config.ts has no line that excludes lib/simulation-form.ts
     hints:
       - parseReais gives a bigint and Number turns it into the number the request schema expects, and installmentCount is text that Number turns into a number too
-      - one write_file of simulation-form.ts, then run_check 0, 1 and 2
+      - one write_file of simulation-form.ts, then one edit_file of apps/web/vitest.config.ts that deletes the line with stub E6-T04, then run_check 0, 1 and 2
     budget:
       attempts: 4
       toolCalls: 18
@@ -185,6 +186,7 @@ cards:
     dependsOn: [E6-T05]
     allowedPaths:
       - apps/web/components/loan-simulation.tsx
+      - apps/web/vitest.config.ts
     protectedTests:
       - apps/web/components/loan-simulation.test.tsx
     checks:
@@ -195,11 +197,12 @@ cards:
       - all tests in apps/web/components/loan-simulation.test.tsx pass with at least 85% coverage of loan-simulation.tsx (run_check 0)
       - the form uses useForm of react-hook-form typed with SimulationFormValues and register on each field
       - the submit calls toSimulateRequest and simulate inside try and catch; the catch shows the alert of the /** */ comment
-      - keep "use client", the props interface, the signature and the /** */ comment unchanged
+      - keep "use client", the props interface, the signature and the /** */ comment unchanged, except that the prop is destructured without the underscore alias
+      - loan-simulation.tsx has no '// @stub E6-T06' line and apps/web/vitest.config.ts has no line that excludes components/loan-simulation.tsx
     hints:
       - keep the result or the error in useState, and the table maps the schedule lines to rows keyed by number
       - the due date in dd/mm/aaaa comes from splitting the IsoDate on the dash and joining the parts in reverse with a slash
-      - one write_file of loan-simulation.tsx, then run_check 0, 1 and 2
+      - one write_file of loan-simulation.tsx, then one edit_file of apps/web/vitest.config.ts that deletes the line with stub E6-T06, then run_check 0, 1 and 2
     budget:
       attempts: 5
       toolCalls: 20

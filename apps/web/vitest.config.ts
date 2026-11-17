@@ -16,6 +16,9 @@ export default defineConfig({
         "app/layout.tsx", // casca <html>/<body> do Next; não renderiza dentro do jsdom
         "components/ui/**", // código gerado pelo shadcn/ui; coberto pelos testes das telas que o usam
         "lib/utils.ts", // cn() do shadcn/ui: só repassa para clsx + tailwind-merge
+        "lib/simulation.ts", // stub E6-T02: sai no commit Card-Done do cartão (e4-guardrails H)
+        "lib/simulation-form.ts", // stub E6-T04: sai no commit Card-Done do cartão (e4-guardrails H)
+        "components/loan-simulation.tsx", // stub E6-T06: sai no commit Card-Done do cartão (e4-guardrails H)
       ],
       thresholds: { lines: 85, branches: 85, functions: 85, statements: 85 },
     },
