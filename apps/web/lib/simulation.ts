@@ -26,8 +26,8 @@ export function frequencyOf(_preset: FrequencyPreset): Frequency {
  * sempre do tipo INSTALLMENT com `count` = `installmentCount` (SINGLE_PAYMENT já chega com 1 parcela, RFC-002
  * §3.4), passo de arredondamento de R$ 5,00 (RN-C03). `disbursementDate` vem por parâmetro (RFC-002:
  * nada de relógio dentro do cálculo). `interest` é a soma dos juros das parcelas, `total` a soma das parcelas e
- * `installmentAmount` o total da 1ª parcela. Erros do motor (ex.: 1º vencimento não posterior ao desembolso,
- * RN-C04) sobem sem tratamento.
+ * `installmentAmount` o valor de cada parcela, o mesmo em todas (RN-C03). Erros do motor (ex.: 1º vencimento não
+ * posterior ao desembolso, RN-C04) sobem sem tratamento.
  */
 export function simulate(_request: SimulateLoanRequest, _disbursementDate: IsoDate): SimulationResult {
   throw new Error("not implemented");

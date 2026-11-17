@@ -7,8 +7,15 @@ Plano da feature (etapa 1, ADR-0014). Cartões em `docs/plano/E7.yaml`; referên
 
 - E7-T08 (Bia): `apps/web/components/loan-list.test.tsx` e `apps/web/components/loan-detail.test.tsx`; telas
   pequenas, sem submit, num cartão só.
-- E7-T09 (Alice): `apps/web/components/loan-list.tsx`, rota `/emprestimos`.
-- E7-T10 (Alice): `apps/web/components/loan-detail.tsx`, rota `/emprestimos/[id]`.
+- E7-T09 → E7-T15 (Alice): `apps/web/components/loan-list.tsx`, rota `/emprestimos`. E7-T09 faz o render básico
+  (link "Novo contrato", tabela e contrato ativo; check só com `-t "shows the RFC-004 loan"`, stub mantido); E7-T15
+  faz a lista vazia, o "—" e o rótulo de contrato fechado, tira o stub e a exclusão do `vitest.config.ts` e roda o
+  arquivo inteiro com cobertura.
+- E7-T10 → E7-T16 (Alice): `apps/web/components/loan-detail.tsx`, rota `/emprestimos/[id]`. E7-T10 faz título,
+  resumo e parcelas (check com `-t "shows the summary|shows the installments"`, stub mantido); E7-T16 faz a
+  situação e o link "Registrar pagamento", tira o stub e roda o arquivo inteiro com cobertura.
+- Refatiamento de 17/11: E7-T09 e E7-T10 falharam no teto de 20 chamadas lendo cinco arquivos; cada cartão novo lê
+  só o componente (e `labels.ts` no E7-T09), com os tipos e as assinaturas na dica.
 - Fora: filtros e paginação da lista, API de verdade, ações de ativar e cancelar (pendente do Joel).
 
 ## Tipos e imports (conferidos no código; valem para os testes e para a implementação)
@@ -37,7 +44,9 @@ Plano da feature (etapa 1, ADR-0014). Cartões em `docs/plano/E7.yaml`; referên
 - Detalhe: `getByRole("heading", { level: 1, name: "Contrato 2026-0012" })`; resumo "R$ 5.000,00",
   "R$ 1.900,00", "R$ 6.900,00", "R$ 2.300,00", "R$ 4.600,00".
 - Parcelas: linha 14/12/2026 conferida só por "Paga" ("1.150,00" aparece duas vezes nela); linha 14/02/2027 com
-  "1.150,00", "0,00" e "Aberta".
+  "1.150,00" e "Aberta" ("0,00" aparece duas vezes nela, Pago e Encargos). O done do E7-T08 pedia "0,00" e
+  o teste entregue em 17/11 tem esse `getByText` que nunca passa: a Bia refaz o `loan-detail.test.tsx` (decisão
+  de reabrir o E7-T08 é do Joel).
 - Sem submit: `render` e `getBy` bastam.
 - Não há `userEvent` no projeto: só `fireEvent` de `@testing-library/react`. Modelo: `apps/web/app/page.test.tsx`.
 - Um `render` por teste (dois renders repetem rótulos, botões e textos e o `getBy` acha mais de um).

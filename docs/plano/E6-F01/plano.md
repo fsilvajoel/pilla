@@ -11,6 +11,11 @@ formulário validado pelos esquemas de `packages/schemas`).
   `simulate` (corpo `SimulateLoanRequest` → juros, total, parcela e cronograma via `generateSchedule`; check só com
   `-t simulate`, stub mantido) e E6-T09 (remove o stub e a exclusão do `vitest.config.ts`; arquivo inteiro com
   cobertura 100%).
+- E6-T07 refeito em 17/11 depois de duas falhas (21 e 24 chamadas): lê só `simulation.ts`, recebe os tipos e as
+  assinaturas na dica e escreve só nesse arquivo. O comentário do stub não fala mais em "1ª parcela": o valor da
+  parcela é o mesmo em todas (RN-C03), sem leitura por índice nem desestruturação (o desvio do `undefined` ficaria
+  sem cobertura no E6-T09). Não há teste de função auxiliar, então `simulate` fica num cartão só; dividir exige
+  testes novos da Bia (decisão do Joel). O E6-T06 passa a depender do E6-T09, fim da cadeia.
 - E6-T03 (Bia) e E6-T04 (Alice, depois do E6-T09): `apps/web/lib/simulation-form.ts`, com `toSimulateRequest`
   (textos da tela → `SimulateLoanRequest`, validado por `simulateLoanRequest`).
 - Fora: modalidade SINGLE_PAYMENT na tela, "a cada N dias" livre, "Por parcela: x%" (`taxa_do_periodo` não existe

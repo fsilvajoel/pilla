@@ -365,7 +365,7 @@ cards:
       - 'loan-list test "shows the RFC-004 loan": the row of 2026-0012 links to "/emprestimos/01936f8e-7b2c-7cde-8f00-000000000002" and has "R$ 4.600,00", "14/02/2027" and "Em dia" (RFC-004 §5, decisões do Joel de 17/11)'
       - 'loan-list tests "shows a closed loan", row 2026-0003 with "Quitado", "R$ 0,00" and "—", and "shows an empty list", "Nenhum contrato." and no table (decisões do Joel de 17/11)'
       - 'loan-detail test "shows the summary": h1 "Contrato 2026-0012" and "R$ 1.900,00", "R$ 6.900,00", "R$ 2.300,00" and "R$ 4.600,00" (RFC-004 §5, decisões do Joel de 17/11)'
-      - 'loan-detail test "shows the installments": row 14/12/2026 has "Paga", row 14/02/2027 has "1.150,00", "0,00" and "Aberta" (RFC-004 §5)'
+      - 'loan-detail test "shows the installments": row 14/12/2026 has "Paga", row 14/02/2027 has "1.150,00" and "Aberta" (RFC-004 §5)'
       - 'loan-detail tests "links the payment of an active loan" to "/emprestimos/01936f8e-7b2c-7cde-8f00-000000000002/pagamento" and "hides the payment link of a draft" (decisões do Joel de 17/11)'
       - never edit apps/web/components/loan-list.tsx nor apps/web/components/loan-detail.tsx
     hints:
@@ -384,6 +384,7 @@ cards:
       - pass the fixtures of @/lib/mock-data as they are, never new objects, so no type import is needed
       - each getByText string is the whole text of one cell or one dd, exactly as written, never a part or a regex
       - in row 14/12/2026 the text 1.150,00 appears twice, Parcela and Pago, so that row is checked only by Paga
+      - in row 14/02/2027 the text 0,00 appears twice, Pago and Encargos, so that row is checked only by 1.150,00 and Aberta
       - each href is written as the whole literal string of the done, never joined
       - these components have no submit, so render and getBy are enough, and apps/web/app/page.test.tsx is the model
     budget:
@@ -399,13 +400,58 @@ cards:
       - apps/web/app/page.test.tsx
       - apps/web/vitest.setup.ts
     sizeNote: loan-list.test.tsx com 3 testes, ~50 linhas; loan-detail.test.tsx com 4 testes, ~55 linhas
+  # E7-T09/T10 refatiados em 17/11 (falharam no teto de 20 chamadas): cada componente vira render básico com o stub
+  # mantido e check -t só nos testes do básico (E7-T09, E7-T10) e estados/variações com o arquivo inteiro e
+  # cobertura (E7-T15, E7-T16), que tiram o stub e a linha do vitest.config.ts.
   - id: E7-T09
-    title: Implement the LoanList component
+    title: Implement the basic render of the LoanList component
     kind: implement
     assignee: alice
     rules: []
     refs: [RFC-004 §5, docs/plano/decisoes-2026-11-17.md]
     dependsOn: [E7-T08]
+    allowedPaths:
+      - apps/web/components/loan-list.tsx
+    protectedTests:
+      - apps/web/components/loan-list.test.tsx
+    checks:
+      - pnpm --filter @pilla/web exec vitest run components/loan-list.test.tsx -t "shows the RFC-004 loan"
+      - pnpm --filter @pilla/web typecheck
+      - pnpm --filter @pilla/web lint
+    done:
+      - the test "shows the RFC-004 loan" of apps/web/components/loan-list.test.tsx passes (run_check 0)
+      - the two import type lines of loan-list.tsx stay, and the only value imports are these three lines
+      - 'import { cents, formatReais } from "@pilla/finance";'
+      - 'import Link from "next/link";'
+      - 'import { loanStandingLabel, loanStatusLabel } from "@/lib/labels";'
+      - the link Novo contrato to /emprestimos/novo, then the table with the six column headers of the /** */ comment and one row per loan, key id
+      - amounts use formatReais and cents of @pilla/finance and the labels come from apps/web/lib/labels.ts, never written again in the component
+      - keep the '// @stub E7-T09' line, the props interface, the signature and the /** */ comment unchanged, except that the prop is destructured without the underscore alias
+      - the empty list and the dash of a null date are left to E7-T15
+    hints:
+      - the files to read are the two of readFirst, the only file to write is apps/web/components/loan-list.tsx, and the test is not read
+      - LoanListItem of @pilla/schemas has id, loanNumber and personName as string, principalCents and outstandingCents as number, status as LoanStatus, standing as LoanStanding or null, and nextDueDate as an aaaa-mm-dd string or null
+      - cents of @pilla/finance takes a bigint and gives Cents, formatReais takes Cents and gives the text without R$, so each number goes through BigInt, then cents, then formatReais
+      - loanStandingLabel and loanStatusLabel are records keyed by LoanStanding and LoanStatus, and a null key is a type error, so the standing label is read only when status is ACTIVE and standing is not null, else the status label
+      - the date in dd/mm/aaaa comes from splitting the text on the dash and joining the parts in reverse with a slash, and a null date may show the dash already
+      - each value is the whole text of its own td, and the Contrato cell holds the Link with the text loanNumber
+      - Link of next/link renders an anchor with href, and the component needs no "use client"
+      - one write_file of loan-list.tsx, then run_check 0, 1 and 2
+    budget:
+      attempts: 4
+      toolCalls: 18
+      minutes: 10
+    readFirst:
+      - apps/web/components/loan-list.tsx
+      - apps/web/lib/labels.ts
+    sizeNote: loan-list.tsx com ~60 linhas; só o teste do contrato ativo
+  - id: E7-T15
+    title: Finish the LoanList component with the empty list and the closed loan
+    kind: implement
+    assignee: alice
+    rules: []
+    refs: [RFC-004 §5, docs/plano/decisoes-2026-11-17.md]
+    dependsOn: [E7-T09]
     allowedPaths:
       - apps/web/components/loan-list.tsx
       - apps/web/vitest.config.ts
@@ -417,37 +463,70 @@ cards:
       - pnpm --filter @pilla/web lint
     done:
       - all tests in apps/web/components/loan-list.test.tsx pass with at least 85% coverage of loan-list.tsx (run_check 0)
-      - the two import type lines of loan-list.tsx stay, and the only value imports are these three lines
-      - 'import { cents, formatReais } from "@pilla/finance";'
-      - 'import Link from "next/link";'
-      - 'import { loanStandingLabel, loanStatusLabel } from "@/lib/labels";'
-      - amounts use formatReais and cents of @pilla/finance and the labels come from apps/web/lib/labels.ts, never written again in the component
-      - keep the props interface, the signature and the /** */ comment unchanged, except that the prop is destructured without the underscore alias
+      - with no loans, the text "Nenhum contrato." in place of the table, and the link Novo contrato stays
+      - a null nextDueDate shows "—" and a loan not ACTIVE shows loanStatusLabel of its status
+      - the imports, the props interface, the signature and the /** */ comment stay as E7-T09 left them
       - loan-list.tsx has no '// @stub E7-T09' line and apps/web/vitest.config.ts has no line that excludes components/loan-list.tsx
     hints:
-      - cents takes a bigint and formatReais takes Cents, so the number goes through BigInt and cents first
-      - the date in dd/mm/aaaa comes from splitting the text on the dash and joining the parts in reverse with a slash
-      - each value is the whole text of its own td, so the test finds it with getByText
-      - Link of next/link renders an anchor with href, and the component needs no "use client"
-      - one write_file of loan-list.tsx, then one edit_file of apps/web/vitest.config.ts that deletes the line with stub E7-T09, then run_check 0, 1 and 2
+      - the component already renders the active loan, so only the empty list, the dash and the status label of a closed loan change
+      - edit_file in loan-list.tsx, never a new write_file of the whole file
+      - the table is not rendered at all when loans is empty, so queryByRole table is null
+      - the dash is the single character of the done, the whole text of its td
+      - one edit_file of apps/web/vitest.config.ts deletes the line with stub E7-T09, and one edit_file of loan-list.tsx deletes the stub line
+      - edit_file of loan-list.tsx, the two edit_file of the stub lines, then run_check 0, 1 and 2
     budget:
       attempts: 4
-      toolCalls: 20
-      minutes: 12
+      toolCalls: 17
+      minutes: 10
     readFirst:
       - apps/web/components/loan-list.tsx
-      - apps/web/components/loan-list.test.tsx
-      - apps/web/lib/labels.ts
-      - packages/schemas/src/api/lending/loan-views.ts
-      - packages/finance/src/index.ts
-    sizeNote: loan-list.tsx com ~70 linhas
+    sizeNote: loan-list.tsx +10 linhas; tira o stub
   - id: E7-T10
-    title: Implement the LoanDetail component
+    title: Implement the basic render of the LoanDetail component
     kind: implement
     assignee: alice
     rules: []
     refs: [PRD-001 RF-18, RFC-004 §5, docs/plano/decisoes-2026-11-17.md]
     dependsOn: [E7-T08]
+    allowedPaths:
+      - apps/web/components/loan-detail.tsx
+    protectedTests:
+      - apps/web/components/loan-detail.test.tsx
+    checks:
+      - pnpm --filter @pilla/web exec vitest run components/loan-detail.test.tsx -t "shows the summary|shows the installments"
+      - pnpm --filter @pilla/web typecheck
+      - pnpm --filter @pilla/web lint
+    done:
+      - the tests "shows the summary" and "shows the installments" of apps/web/components/loan-detail.test.tsx pass (run_check 0)
+      - the two import type lines of loan-detail.tsx stay, and the only value imports are these two lines
+      - 'import { cents, formatReais } from "@pilla/finance";'
+      - 'import { installmentStatusLabel } from "@/lib/labels";'
+      - the h1, the personName, the dl of the five summary pairs and the table of installments of the /** */ comment
+      - keep the '// @stub E7-T10' line, the props interface, the signature and the /** */ comment unchanged, except that the prop is destructured without the underscore alias
+      - the loan situation and the payment link are left to E7-T16
+    hints:
+      - the only file to read is apps/web/components/loan-detail.tsx, the only file to write is the same file, and the test is not read
+      - LoanDetailResponse of @pilla/schemas has loanNumber and personName as string, principalCents, interestCents, totalCents, paidCents and outstandingCents as number, and installments as an array of LoanInstallment
+      - LoanInstallment has number as number, dueDate as an aaaa-mm-dd string, totalCents, paidCents and lateChargesCents as number and status as InstallmentStatus
+      - cents of @pilla/finance takes a bigint and gives Cents, formatReais takes Cents and gives the text without R$, so each number goes through BigInt, then cents, then formatReais
+      - the h1 text is exactly "Contrato " plus loanNumber, each summary value is "R$ " plus the formatted amount as the whole text of its own dd, and each table value the whole text of its own td
+      - the date in dd/mm/aaaa comes from splitting the text on the dash and joining the parts in reverse with a slash
+      - the installments are read with map over the array, never by index
+      - one write_file of loan-detail.tsx, then run_check 0, 1 and 2
+    budget:
+      attempts: 4
+      toolCalls: 18
+      minutes: 10
+    readFirst:
+      - apps/web/components/loan-detail.tsx
+    sizeNote: loan-detail.tsx com ~70 linhas; sem situação nem link
+  - id: E7-T16
+    title: Finish the LoanDetail component with the situation and the payment link
+    kind: implement
+    assignee: alice
+    rules: []
+    refs: [PRD-001 RF-18, RFC-004 §5, docs/plano/decisoes-2026-11-17.md]
+    dependsOn: [E7-T10]
     allowedPaths:
       - apps/web/components/loan-detail.tsx
       - apps/web/vitest.config.ts
@@ -459,30 +538,27 @@ cards:
       - pnpm --filter @pilla/web lint
     done:
       - all tests in apps/web/components/loan-detail.test.tsx pass with at least 85% coverage of loan-detail.tsx (run_check 0)
-      - the two import type lines of loan-detail.tsx stay, and the only value imports are these three lines
+      - the value imports become these three lines
       - 'import { cents, formatReais } from "@pilla/finance";'
       - 'import Link from "next/link";'
       - 'import { installmentStatusLabel, loanStandingLabel, loanStatusLabel } from "@/lib/labels";'
-      - amounts use formatReais and cents of @pilla/finance and the labels come from apps/web/lib/labels.ts, never written again in the component
-      - keep the props interface, the signature and the /** */ comment unchanged, except that the prop is destructured without the underscore alias
+      - the situation shows loanStatusLabel of status and, when standing is not null, also loanStandingLabel of standing
+      - only when status is ACTIVE, the link Registrar pagamento to "/emprestimos/" plus id plus "/pagamento"
       - loan-detail.tsx has no '// @stub E7-T10' line and apps/web/vitest.config.ts has no line that excludes components/loan-detail.tsx
     hints:
-      - cents takes a bigint and formatReais takes Cents, so the number goes through BigInt and cents first
-      - the date in dd/mm/aaaa comes from splitting the text on the dash and joining the parts in reverse with a slash
-      - the h1 text is exactly "Contrato " plus loanNumber, each summary value is the whole text of its own dd, and each table value the whole text of its own td
-      - the payment link is rendered only under a check of status ACTIVE, with Link of next/link, and the component needs no "use client"
-      - one write_file of loan-detail.tsx, then one edit_file of apps/web/vitest.config.ts that deletes the line with stub E7-T10, then run_check 0, 1 and 2
+      - the component already renders the h1, the summary and the table, so only the imports, the situation and the link change
+      - edit_file in loan-detail.tsx, never a new write_file of the whole file
+      - LoanDetailResponse has id as string, status as LoanStatus and standing as LoanStanding or null, and a null key in loanStandingLabel is a type error
+      - Link of next/link renders an anchor with href, and the component needs no "use client"
+      - one edit_file of apps/web/vitest.config.ts deletes the line with stub E7-T10, and one edit_file of loan-detail.tsx deletes the stub line
+      - the edit_file calls of loan-detail.tsx, the edit_file of vitest.config.ts, then run_check 0, 1 and 2
     budget:
       attempts: 4
-      toolCalls: 20
-      minutes: 12
+      toolCalls: 18
+      minutes: 10
     readFirst:
       - apps/web/components/loan-detail.tsx
-      - apps/web/components/loan-detail.test.tsx
-      - apps/web/lib/labels.ts
-      - packages/schemas/src/api/lending/loan-views.ts
-      - packages/finance/src/index.ts
-    sizeNote: loan-detail.tsx com ~90 linhas
+    sizeNote: loan-detail.tsx +15 linhas; tira o stub
 
   # ---------------------------------------------------------------- E7-F04: registrar pagamento
   - id: E7-T11
@@ -694,7 +770,7 @@ features:
     biaBudget: 6
   - id: E7-F03
     title: Loan list and loan detail with installments
-    cards: [E7-T08, E7-T09, E7-T10]
+    cards: [E7-T08, E7-T09, E7-T15, E7-T10, E7-T16]
     biaBudget: 4
   - id: E7-F04
     title: Register a payment with receipt and destination account
