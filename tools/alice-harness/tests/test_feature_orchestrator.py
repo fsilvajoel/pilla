@@ -207,6 +207,35 @@ class OrchestratorTest(unittest.TestCase):
         self.assertFalse((self.repo / "a.test.ts").exists())
         self.assertIn("typecheck", orc.stage("tests")["message"])
 
+    def test_old_untracked_test_is_restored_before_shared_checks(self):
+        (self.repo / "a.test.ts").write_text("rejeitado\n")
+        plan = {**PLAN, "cards": [{**TEST, "checks": ["expect-red a.test.ts", "quality a.test.ts",
+                                                       "pnpm --filter @pilla/web typecheck"]}, IMPL]}
+        class SharedOps(FakeOps):
+            def run_checks(self, card):
+                if card.get("checks") == ["pnpm --filter @pilla/web typecheck"]:
+                    code = 1 if (self.repo / "a.test.ts").is_file() else 0
+                    return [(card["checks"][0], code, "teste antigo na árvore")]
+                result = super().run_checks(card)
+                return [(c, 0 if c == "pnpm --filter @pilla/web typecheck" else code, out)
+                        for c, code, out in result]
+            restore = FeatureOps.restore
+        ops = SharedOps(self.repo, [tests_json()])
+        orc = self.orc(ops, plan)
+        self.assertEqual(orc.run("tests", 3), ["tests: done"], orc.stage("tests").get("message"))
+        self.assertEqual(len(ops.calls), 1)
+        self.assertEqual((orc.log_dir / "previous/a.test.ts").read_text(), "rejeitado\n")
+        self.assertEqual((self.repo / "a.test.ts").read_text(), "good\n")
+
+    def test_restore_error_is_not_green_or_spent(self):
+        class BrokenOps(FakeOps):
+            def restore(self, card, keep):
+                raise OSError("não foi possível guardar")
+        ops = BrokenOps(self.repo, [tests_json()])
+        orc = self.orc(ops)
+        self.assertEqual(orc.run("tests", 3), ["tests: error"])
+        self.assertEqual(ops.calls, [])
+
     def test_shared_checks_pass_then_normal_test_checks_still_run(self):
         plan = {**PLAN, "cards": [{**TEST, "checks": ["expect-red a.test.ts", "quality a.test.ts",
                                                        "pnpm --filter @pilla/web typecheck"]}, IMPL]}
@@ -233,6 +262,34 @@ class OrchestratorTest(unittest.TestCase):
         orc = self.orc(ops)
         self.assertEqual(orc.run("all", 3)[-1], "tests: escalated")
         self.assertEqual(ops.runs, [])
+
+    def test_failed_implement_restores_partial_code_and_keeps_tests(self):
+        class PartialOps(FakeOps):
+            restore = FeatureOps.restore
+            def plan_run(self, cards, ids, rounds):
+                (self.repo / "a.ts").write_text("broken\n")
+                return [{"task": i, "status": "failed", "aliceTokens": {"prompt": 20, "output": 2}} for i in ids]
+        ops = PartialOps(self.repo, [tests_json()])
+        orc = self.orc(ops)
+        self.assertEqual(orc.run("tests", 3), ["tests: done"])
+        self.assertEqual(orc.run("implement", 3), ["implement: failed"])
+        self.assertEqual((self.repo / "a.ts").read_text(), "throw\n")
+        self.assertEqual((orc.log_dir / "previous/a.ts").read_text(), "broken\n")
+        self.assertEqual((self.repo / "a.test.ts").read_text(), "good\n")
+        self.assertEqual(orc.stage("implement")["cards"], {"E9-T02": "failed"})
+
+    def test_implement_restore_failure_is_error_not_done(self):
+        class BrokenRestore(FakeOps):
+            def plan_run(self, cards, ids, rounds):
+                return [{"task": i, "status": "failed"} for i in ids]
+            def restore(self, card, keep):
+                if card["kind"] == "implement":
+                    raise OSError("não foi possível salvar implementação")
+        ops = BrokenRestore(self.repo, [tests_json()])
+        orc = self.orc(ops)
+        self.assertEqual(orc.run("tests", 3), ["tests: done"])
+        self.assertEqual(orc.run("implement", 3), ["implement: error"])
+        self.assertIn("não foi possível", orc.stage("implement")["message"])
 
     def test_recheck_existing_tests_without_bia_updates_sha(self):
         ops = FakeOps(self.repo, [tests_json("bad"), tests_json("bad")])
@@ -370,6 +427,51 @@ class OrchestratorTest(unittest.TestCase):
         out = self.orc(ops2).run("all", 3)
         self.assertEqual(out[:2], ["plan: done", "tests: done (já feito)"])
         self.assertEqual(out[-1], "review: ready")
+
+    def test_cross_feature_dependency_requires_done_card_before_agents(self):
+        plan = {"cards": [
+            {**TEST, "id": "E9-T01"}, {**IMPL, "id": "E9-T02"},
+            {**TEST, "id": "E9-T03", "allowedPaths": ["b.test.ts"], "dependsOn": ["E9-T02"]},
+            {**IMPL, "id": "E9-T04", "allowedPaths": ["b.ts"], "protectedTests": ["b.test.ts"], "dependsOn": ["E9-T03"]}],
+            "features": [{**PLAN["features"][0]},
+                         {"id": "E9-F02", "title": "f2", "cards": ["E9-T03", "E9-T04"], "biaBudget": 2}]}
+        target = self.repo / "docs/plano/E9-F02"
+        target.mkdir()
+        (target / "plano.md").write_text(PLANO)
+        (self.repo / "b.ts").write_text("throw\n")
+        plan_file = self.repo / "p.yaml"
+        plan_file.write_text(json.dumps(plan))
+        class F02Ops(FakeOps):
+            def bia_chat(self, messages):
+                self.calls.append([dict(m) for m in messages])
+                data = json.loads(tests_json())
+                data["files"][0]["path"] = "b.test.ts"
+                data["scenarios"] = [{**s, "card": "E9-T03"} for s in data["scenarios"]]
+                return {"id": "f02", "choices": [{"message": {"content": json.dumps(data)}}]}
+            def run_checks(self, card):
+                return [(c, 0, "verde") for c in card.get("checks") or []]
+        ops = F02Ops(self.repo, [])
+        # Sem produtor, ou com tests done mas implementação falha, nenhum check/agente de F02 roda.
+        for prior in (None,
+                      {"feature": "E9-F01", "stages": {"tests": {"status": "done"}}},
+                      {"feature": "E9-F01", "stages": {"implement": {"status": "failed", "cards": {"E9-T02": "done"}}}},
+                      {"feature": "E9-F01", "stages": {"implement": {"status": "done", "cards": {"E9-T02": "skipped"}}}},
+                      {"feature": "E9-F99", "stages": {"implement": {"status": "done", "cards": {"E9-T02": "done"}}}}):
+            source = self.repo / "docs/plano/E9-F01/estado.json"
+            if prior is None:
+                source.unlink(missing_ok=True)
+            else:
+                source.write_text(json.dumps(prior))
+            self.assertEqual(cmd_feature(plan_file, "E9-F02", self.repo, "tests", 3, self.out, ops), 5)
+            self.assertEqual(ops.calls, [])
+        source.write_text(json.dumps({"feature": "E9-F01", "stages": {"implement": {
+            "status": "done", "cards": {"E9-T02": "done"}}}}))
+        self.assertEqual(cmd_feature(plan_file, "E9-F02", self.repo, "tests", 3, self.out, ops), 0)
+        self.assertEqual(len(ops.calls), 1)
+        # Apenas dependência interna no produtor não requer estado prévio.
+        source.unlink()
+        own_ops = FakeOps(self.repo, [tests_json()])
+        self.assertEqual(cmd_feature(plan_file, "E9-F01", self.repo, "tests", 3, self.out, own_ops), 0)
 
     def test_cmd_feature_refuses_legacy_budget_before_any_request(self):
         plan_file = self.repo / "p.yaml"

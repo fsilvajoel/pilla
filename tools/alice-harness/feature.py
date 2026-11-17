@@ -363,19 +363,19 @@ class Orchestrator:
     def stage_tests(self) -> str:
         t0 = time.time()
         try:
+            self.log_dir.mkdir(parents=True, exist_ok=True)
+            for c in self.f.tests:  # entrega antiga sai antes do preflight; cópia fica em runs/previous
+                self.ops.restore(c, self.log_dir)
+                old = self.repo / "docs" / "plano" / "revisao" / f"{c['id']}.md"
+                if old.is_file():
+                    (self.log_dir / "previous").mkdir(parents=True, exist_ok=True)
+                    shutil.move(str(old), str(self.log_dir / "previous" / old.name))
             shared = self.shared_test_checks()
         except (OSError, RuntimeError, subprocess.SubprocessError) as e:
-            return self.finish("tests", "error", t0, message=f"checks compartilhados indisponíveis: {e}")
+            return self.finish("tests", "error", t0, message=f"restore ou checks compartilhados indisponíveis: {e}")
         if red := [r for r in shared if r[1] != 0]:
             return self.finish("tests", "escalated", t0, red=[c for c, _, _ in red],
                                message="checks compartilhados vermelhos antes da Bia:\n" + red_text(red))
-        self.log_dir.mkdir(parents=True, exist_ok=True)
-        for c in self.f.tests:  # entrega antiga (rodadas por cartão) sai da árvore, sem se perder
-            self.ops.restore(c, self.log_dir)
-            old = self.repo / "docs" / "plano" / "revisao" / f"{c['id']}.md"
-            if old.is_file():
-                (self.log_dir / "previous").mkdir(parents=True, exist_ok=True)
-                shutil.move(str(old), str(self.log_dir / "previous" / old.name))
         scenarios = [c for c, _ in plan_scenarios((self.repo / feature_plan_path(self.f.fid)).read_text())]
         paths = self.test_paths()
         messages = [{"role": "user", "content": self.prefix() + "\n\n# ETAPA: TESTES\n" + role_section("qa", "Etapa: testes")}]
@@ -459,10 +459,18 @@ class Orchestrator:
         self.results += results
         st = self.stage("implement")
         prev = st.get("aliceTokens") or {"prompt": 0, "output": 0}
-        status = "done" if all(r.get("status") == "done" for r in results) else \
-            next(str(r.get("status")) for r in results if r.get("status") != "done")
-        return self.finish("implement", status, t0, aliceTokens={k: prev[k] + tok[k] for k in tok},
-                           cards={str(r.get("task")): str(r.get("status")) for r in results})
+        status = "done" if results and all(r.get("status") == "done" for r in results) else \
+            next((str(r.get("status")) for r in results if r.get("status") != "done"), "error")
+        extra = {"aliceTokens": {k: prev[k] + tok[k] for k in tok},
+                 "cards": {str(r.get("task")): str(r.get("status")) for r in results}}
+        if status != "done":
+            try:
+                self.log_dir.mkdir(parents=True, exist_ok=True)
+                for c in self.f.impls:
+                    self.ops.restore(c, self.log_dir)
+            except (OSError, RuntimeError, subprocess.SubprocessError) as e:
+                return self.finish("implement", "error", t0, **extra, message=f"restore da implementação falhou: {e}")
+        return self.finish("implement", status, t0, **extra)
 
     # --- etapa 4
     def impl_checks(self) -> Checks:
@@ -719,9 +727,42 @@ def cmd_feature_accept(fid: str, repo: Path) -> int:
     return 0
 
 
+def external_dependency_problems(plan: dict, fid: str, repo: Path) -> list[str]:
+    """Dependências fora da feature exigem conclusão comprovada no estado do produtor."""
+    features = plan.get("features") or []
+    current = next((f for f in features if f.get("id") == fid), None)
+    if current is None:
+        return [f"feature {fid} não está no plano"]
+    members = set(current.get("cards") or [])
+    cards = {c.get("id"): c for c in plan.get("cards") or []}
+    problems = []
+    for cid in members:
+        for dep in cards.get(cid, {}).get("dependsOn") or []:
+            if dep in members:
+                continue
+            owners = [f.get("id") for f in features if dep in (f.get("cards") or [])]
+            if len(owners) != 1:
+                problems.append(f"{cid}: dependência {dep} sem feature produtora única no plano")
+                continue
+            owner = owners[0]
+            try:
+                state = json.loads((repo / "docs" / "plano" / owner / "estado.json").read_text())
+                impl = state.get("stages", {}).get("implement", {})
+                valid = state.get("feature") == owner and impl.get("status") == "done" and \
+                    impl.get("cards", {}).get(dep) == "done"
+            except (OSError, ValueError, TypeError, AttributeError):
+                valid = False
+            if not valid:
+                problems.append(f"{cid}: dependência {dep} da feature {owner} não está implement: done no estado")
+    return problems
+
+
 def cmd_feature(plan_path: Path, fid: str, repo: Path, stage: str, rounds: int, runs: Path, ops: FeatureOps | None = None) -> int:
     plan = yaml.safe_load(plan_path.read_text()) or {}
     repo = repo.resolve()
+    if stage != "plan" and (deps := external_dependency_problems(plan, fid, repo)):
+        print("dependências da feature não concluídas:\n- " + "\n- ".join(deps))
+        return 5
     orc = Orchestrator(repo, plan, fid, ops or FeatureOps(repo), runs)
     if stage in ("all", "tests", "recheck-tests") and orc.stage_plan() != "done":
         print("plano da feature com problema (etapa 1, do Claude):\n- " + "\n- ".join(orc.stage("plan").get("problems") or []))

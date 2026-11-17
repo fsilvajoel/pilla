@@ -57,6 +57,12 @@ Com `tests: escalated` e testes corrigidos fora do orquestrador, Claude pode exe
 reexecuta todos os checks sob o stub HEAD sem pedir à Bia nem sobrescrever testes, exige arquivos e cenários
 registrados, atualiza os shas e só marca `tests: done` em verde. `all` não faz essa revalidação sozinho;
 erro de typecheck/lint de pacote permanece vermelho até ser resolvido, mesmo que seja de outra feature.
+Antes de qualquer etapa que execute agentes (exceto `plan`), dependências de cartões em outra feature do mesmo plano
+exigem estado do produtor com `implement: done` e o cartão dependido em `implement.cards` como `done`;
+estado ausente, inválido ou ambíguo bloqueia a feature sem consumir Bia/Alice. Antes dos checks compartilhados
+de `tests`, entregas antigas de teste saem da árvore e ficam em `runs/feature/<F>/.../previous/`.
+Se `implement` falhar, o orquestrador preserva cópias e restaura ao HEAD os allowedPaths de implementação
+(inclusive diffs anteriores não commitados); testes da Bia não são restaurados nessa etapa.
 O orquestrador nunca commita. O teto declarado não impede retries de rede nem substitui ledger externo.
 
 ## Formato das mensagens (JSON com esquema fixo, validado em `feature.py`)
