@@ -1,5 +1,5 @@
-// @stub E5-T04
 import type { PgDatabase, PgQueryResultHKT } from "drizzle-orm/pg-core";
+import { auditLog } from "../infra/schema";
 
 /** Quem fez a alteração (RFC-005 §2, `core.audit_log.actor_type`). */
 export type ActorType = "ADMIN" | "CLIENT" | "SYSTEM";
@@ -19,6 +19,6 @@ export type AuditEntry = {
 };
 
 /** Grava a entrada como veio em `core.audit_log`; um erro do banco sobe sem tratamento. */
-export function recordAudit(_db: PgDatabase<PgQueryResultHKT>, _entry: AuditEntry): Promise<void> {
-  throw new Error("not implemented");
+export async function recordAudit(db: PgDatabase<PgQueryResultHKT>, entry: AuditEntry): Promise<void> {
+  await db.insert(auditLog).values(entry);
 }
