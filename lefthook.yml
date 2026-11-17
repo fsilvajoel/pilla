@@ -10,7 +10,7 @@ pre-commit:
       glob: "*.{ts,tsx}"
       run: pnpm exec eslint --no-warn-ignored {staged_files}
     test-quality:
-      glob: "*.test.ts"
+      glob: "*.test.{ts,tsx}"
       run: node scripts/check-test-quality.mjs {staged_files}
     gitleaks:
       run: gitleaks git --pre-commit --staged --no-banner
