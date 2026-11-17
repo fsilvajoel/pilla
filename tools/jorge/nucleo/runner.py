@@ -818,7 +818,8 @@ def finalize(cfg: Json, st: State) -> str:
             commit(wt, st, normal + ([] if locks else [rel]), f"feat(alice-harness): {st.version} by jorge", trailers)
         if locks:
             commit(wt, st, locks + [rel], f"feat(alice-harness): {st.version} locks by jorge",
-                   trailers + "\nTrava: sim\nTrava-Arquivos: " + ", ".join(locks))
+                   # um rodapé por arquivo: commitlint limita a linha do rodapé a 100 caracteres (v8)
+                   trailers + "\nTrava: sim" + "".join(f"\nTrava-Arquivo: {p}" for p in locks))
     else:
         commit(wt, st, [rel], f"docs(jorge): {st.version} report ({status})", trailers)
     st.d["commit"] = git(wt, "rev-parse", "HEAD")
