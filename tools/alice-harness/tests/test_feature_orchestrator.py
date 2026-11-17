@@ -163,6 +163,19 @@ class OrchestratorTest(unittest.TestCase):
         cut = a.index("# ETAPA:")
         self.assertEqual(a[:cut], b[:cut])
 
+    def test_qa_prompt_uses_existing_readfirst_types_on_initial_and_repair(self):
+        schema = self.repo / "request-schema.ts"
+        schema.write_text("export type Request = { count: number };\n")
+        plan = {**PLAN, "cards": [{**TEST, "readFirst": ["request-schema.ts"]}, IMPL]}
+        ops = FakeOps(self.repo, [tests_json("bad"), tests_json("good")])
+        self.assertEqual(self.orc(ops, plan).run("tests", 3), ["tests: done"])
+        for call in ops.calls:
+            text = call[0]["content"]
+            self.assertIn("count: number", text)
+            self.assertIn("import type", text)
+        self.assertIn("diagnósticos", ops.calls[1][-1]["content"])
+        self.assertNotIn("tsconfig", self.orc(FakeOps(self.repo, []), PLAN).prefix())
+
     def test_out_of_schema_gets_one_retry(self):
         ops = FakeOps(self.repo, [tests_json(scenarios=("C1",)), tests_json(), audit_json()])
         orc = self.orc(ops)
@@ -178,6 +191,36 @@ class OrchestratorTest(unittest.TestCase):
         self.assertEqual(ops.runs, [])
         self.assertIn("fora do esquema", orc.state["stages"]["tests"]["message"])
 
+    def test_shared_checks_fail_before_spending_bia_or_touching_tests(self):
+        class SharedOps(FakeOps):
+            def run_checks(self, card):
+                if card.get("checks") == ["pnpm --filter @pilla/web typecheck"]:
+                    return [(card["checks"][0], 1, "erro em teste alheio")]
+                return super().run_checks(card)
+        plan = {**PLAN, "cards": [{**TEST, "checks": ["expect-red a.test.ts", "quality a.test.ts",
+                                                       "pnpm --filter @pilla/web typecheck"]}, IMPL]}
+        ops = SharedOps(self.repo, [tests_json()])
+        orc = self.orc(ops, plan)
+        self.assertEqual(orc.run("tests", 3), ["tests: escalated"])
+        self.assertEqual(ops.calls, [])
+        self.assertEqual(orc.state["biaRequests"], 0)
+        self.assertFalse((self.repo / "a.test.ts").exists())
+        self.assertIn("typecheck", orc.stage("tests")["message"])
+
+    def test_shared_checks_pass_then_normal_test_checks_still_run(self):
+        plan = {**PLAN, "cards": [{**TEST, "checks": ["expect-red a.test.ts", "quality a.test.ts",
+                                                       "pnpm --filter @pilla/web typecheck"]}, IMPL]}
+        class SharedOps(FakeOps):
+            def run_checks(self, card):
+                if card.get("checks") == ["pnpm --filter @pilla/web typecheck"]:
+                    return [(card["checks"][0], 0, "sem erro")]
+                result = super().run_checks(card)
+                return [(c, 0 if c == "pnpm --filter @pilla/web typecheck" else code, out) for c, code, out in result]
+        ops = SharedOps(self.repo, [tests_json("bad"), tests_json("good")])
+        self.assertEqual(self.orc(ops, plan).run("tests", 3), ["tests: done"])
+        self.assertEqual(len(ops.calls), 2)
+        self.assertIn("quality a.test.ts", ops.calls[1][-1]["content"])
+
     def test_red_checks_get_one_batch_repair(self):
         ops = FakeOps(self.repo, [tests_json("bad"), tests_json("good")])
         orc = self.orc(ops)
@@ -190,6 +233,33 @@ class OrchestratorTest(unittest.TestCase):
         orc = self.orc(ops)
         self.assertEqual(orc.run("all", 3)[-1], "tests: escalated")
         self.assertEqual(ops.runs, [])
+
+    def test_recheck_existing_tests_without_bia_updates_sha(self):
+        ops = FakeOps(self.repo, [tests_json("bad"), tests_json("bad")])
+        orc = self.orc(ops)
+        self.assertEqual(orc.run("tests", 3), ["tests: escalated"])
+        before = orc.state["testShas"]["a.test.ts"]
+        (self.repo / "a.test.ts").write_text("good\n")
+        resumed = self.orc(FakeOps(self.repo, []))
+        self.assertEqual(resumed.run("recheck-tests", 3), ["recheck-tests: done"])
+        self.assertEqual(resumed.state["biaRequests"], 2)
+        self.assertNotEqual(resumed.state["testShas"]["a.test.ts"], before)
+        self.assertTrue(resumed.state["expectRed"])
+        self.assertIn("todos verdes", (resumed.dir / "testes.md").read_text())
+
+    def test_recheck_refuses_red_missing_or_untrusted_state_without_bia(self):
+        ops = FakeOps(self.repo, [tests_json("bad"), tests_json("bad")])
+        self.assertEqual(self.orc(ops).run("tests", 3), ["tests: escalated"])
+        resumed = self.orc(FakeOps(self.repo, []))
+        self.assertEqual(resumed.run("recheck-tests", 3), ["recheck-tests: escalated"])
+        self.assertEqual(resumed.state["biaRequests"], 2)
+        (self.repo / "a.test.ts").unlink()
+        self.assertEqual(resumed.run("recheck-tests", 3), ["recheck-tests: error"])
+        (self.repo / "a.test.ts").write_text("good\n")
+        resumed.state["scenarios"] = []
+        self.assertEqual(resumed.run("recheck-tests", 3), ["recheck-tests: error"])
+        self.assertNotEqual(resumed.stage("tests")["status"], "done")
+        self.assertEqual(self.orc(FakeOps(self.repo, [])).state["biaRequests"], 2)
 
     def test_quota_in_reserve_spends_nothing(self):
         ops = FakeOps(self.repo, [tests_json()], left=5)

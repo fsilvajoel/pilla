@@ -291,6 +291,18 @@ class Orchestrator:
         return self.finish("plan", "done" if not problems else "card_error", t0, problems=problems)
 
     # --- etapa 2
+    def shared_test_checks(self) -> Checks:
+        """Checks de pacote existentes antes da escrita: não confundir erro alheio com erro da Bia."""
+        seen: set[str] = set()
+        out: Checks = []
+        for card in self.f.tests:
+            for command in map(str, card.get("checks") or []):
+                if not re.fullmatch(r"pnpm\s+--filter\s+\S+\s+(?:typecheck|lint)", command.strip()) or command in seen:
+                    continue
+                seen.add(command)
+                out += self.ops.run_checks({**card, "checks": [command]})
+        return out
+
     def write_files(self, files: list[dict]) -> list[str]:
         written = []
         for f in files:
@@ -350,6 +362,13 @@ class Orchestrator:
 
     def stage_tests(self) -> str:
         t0 = time.time()
+        try:
+            shared = self.shared_test_checks()
+        except (OSError, RuntimeError, subprocess.SubprocessError) as e:
+            return self.finish("tests", "error", t0, message=f"checks compartilhados indisponíveis: {e}")
+        if red := [r for r in shared if r[1] != 0]:
+            return self.finish("tests", "escalated", t0, red=[c for c, _, _ in red],
+                               message="checks compartilhados vermelhos antes da Bia:\n" + red_text(red))
         self.log_dir.mkdir(parents=True, exist_ok=True)
         for c in self.f.tests:  # entrega antiga (rodadas por cartão) sai da árvore, sem se perder
             self.ops.restore(c, self.log_dir)
@@ -389,6 +408,35 @@ class Orchestrator:
             return self.finish("tests", "escalated", t0, repairs=repairs, red=[c for c, _, _ in red],
                                message="checks vermelhos depois do reparo em lote: decide o Claude")
         return self.finish("tests", "done", t0, repairs=repairs)
+
+    def stage_recheck_tests(self) -> str:
+        """Reexecuta os checks dos testes já produzidos; não escreve teste nem chama a Bia."""
+        t0 = time.time()
+        if self.stage("tests").get("status") != "escalated":
+            return self.finish("tests", "error", t0, message="recheck exige tests: escalated")
+        paths = self.test_paths()
+        scenarios = self.state.get("scenarios")
+        expected = [c for c, _ in plan_scenarios((self.repo / feature_plan_path(self.f.fid)).read_text())]
+        if not paths or not all((self.repo / p).is_file() for p in paths):
+            return self.finish("tests", "error", t0, message="arquivos de teste ausentes: recheck recusado")
+        if not isinstance(scenarios, list) or not scenarios or any(not isinstance(s, dict) for s in scenarios) or \
+                any(not str(s.get("teste") or "").strip() for s in scenarios) or \
+                any(c not in {str(s.get("id")) for s in scenarios} for c in expected):
+            return self.finish("tests", "error", t0, message="cenários sem vínculo válido: recheck recusado")
+        try:
+            red = [r for r in self.checks_against_stub() if r[1] != 0]
+        except (OSError, RuntimeError, subprocess.SubprocessError) as e:
+            return self.finish("tests", "error", t0, message=f"stub: {e}")
+        if red:
+            return self.finish("tests", "escalated", t0, red=[c for c, _, _ in red],
+                               message="checks vermelhos na rechecagem:\n" + red_text(red))
+        shas = {p: blob_sha(self.repo, p) for p in sorted(paths)}
+        if not all(shas.values()):
+            return self.finish("tests", "error", t0, message="sha de teste indisponível: recheck recusado")
+        self.state["testShas"] = shas
+        self.state["expectRed"] = True
+        self.write_tests_md(scenarios, [], self.stage("tests").get("repairs", 0))
+        return self.finish("tests", "done", t0)
 
     def write_tests_md(self, scenarios: list[dict], red: Checks, repairs: int) -> None:
         lines = [f"# Testes da feature {self.f.fid}", "", "Escritos pela Bia numa chamada (etapa 2, ADR-0014).", "",
@@ -609,7 +657,8 @@ class Orchestrator:
 
     def run(self, stage: str, rounds: int) -> list[str]:
         self.rounds, self.results = rounds, []
-        steps: dict[str, Callable[[], str]] = {"plan": self.stage_plan, "tests": self.stage_tests, "implement": self.stage_implement,
+        steps: dict[str, Callable[[], str]] = {"plan": self.stage_plan, "tests": self.stage_tests,
+                                               "recheck-tests": self.stage_recheck_tests, "implement": self.stage_implement,
                                                "audit": self.stage_audit, "review": self.stage_review}
         if stage != "all":
             return [f"{stage}: {steps[stage]()}"]
@@ -674,10 +723,10 @@ def cmd_feature(plan_path: Path, fid: str, repo: Path, stage: str, rounds: int, 
     plan = yaml.safe_load(plan_path.read_text()) or {}
     repo = repo.resolve()
     orc = Orchestrator(repo, plan, fid, ops or FeatureOps(repo), runs)
-    if stage in ("all", "tests") and orc.stage_plan() != "done":
+    if stage in ("all", "tests", "recheck-tests") and orc.stage_plan() != "done":
         print("plano da feature com problema (etapa 1, do Claude):\n- " + "\n- ".join(orc.stage("plan").get("problems") or []))
         return 5
-    summary = orc.run("tests" if stage == "tests" else stage, rounds) if stage != "all" else orc.run("all", rounds)
+    summary = orc.run(stage, rounds)
     print(retro_text(orc, summary, runs))
     last = summary[-1].split(": ", 1)[1] if summary else ""
     return 0 if last in ("done", "ready") or last.startswith("done") else 2

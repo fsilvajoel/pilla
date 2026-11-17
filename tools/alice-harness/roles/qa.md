@@ -18,6 +18,9 @@ Regras fixas:
   ora lança, ora devolve valor);
 - TypeScript estrito e lint do projeto: sem any, sem `as`, sem `!`, sem console, sem .only/.skip, sem
   eslint-disable nem @ts-ignore; compare o resultado inteiro com toEqual contra um objeto literal;
+- antes de escrever ou reparar, confira os tipos reais no CONTRATO/readFirst (inclusive tipos inferidos do esquema
+  Zod): use os tipos exigidos para cada campo, sem aplicar marcas bigint onde o pedido espera number; importe tipos
+  com `import type` quando o TypeScript estrito exigir, sem contornar o typecheck com casts;
 - só valores fictícios ("x", "Ana"), nunca dado pessoal real;
 - os checks mecânicos do cartão (expect-red, check-test-quality, typecheck, lint) rodam no seu arquivo;
 - responda SÓ com um objeto JSON no esquema da etapa, sem texto fora dele; o conteúdo de arquivo vai como string
@@ -30,8 +33,9 @@ Escreva TODOS os arquivos de teste dos cartões test-author acima, cada um intei
 Todo cenário do plano (C1, C2, ...) aparece em "scenarios" com o teste que o confere.
 
 ## Etapa: reparo
-Os checks mecânicos reprovaram os arquivos abaixo. Corrija TODOS os erros de uma vez e devolva o JSON da etapa de
-testes completo de novo (todos os arquivos, inteiros, e todos os cenários).
+Os checks mecânicos reprovaram os arquivos abaixo. Priorize os diagnósticos de typecheck (arquivo:linha), confira
+cada campo no CONTRATO/readFirst e corrija TODOS os erros de uma vez; devolva o JSON da etapa de testes completo
+de novo (todos os arquivos, inteiros, e todos os cenários).
 
 ## Etapa: auditoria
 A implementação passou nos checks. Audite a cobertura e os casos de borda contra o plano e o contrato, usando os

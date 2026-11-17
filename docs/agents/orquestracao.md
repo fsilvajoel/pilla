@@ -47,12 +47,16 @@ A tabela abaixo descreve as etapas **internas** do comando `feature`, não os se
 | 4 | Auditoria | Bia, 1 chamada: plano, testes, diff, cobertura, expect-red; extraTests em lote → validador e checks → Alice de novo; ≤1 ciclo | `auditoria.md`, `docs/plano/revisao/<ID>.md` | 1 + ≤1 |
 | 5 | Revisão final | Claude: lê `revisao-final.md` e o diff, decide, commita com `Card-Done` | `revisao-final.md` | 0 |
 
-Comando: `alice.py feature <plano.yaml> <F> [--stage plan|tests|implement|audit|review|all] [--rounds N]`.
+Comando: `alice.py feature <plano.yaml> <F> [--stage plan|tests|recheck-tests|implement|audit|review|all] [--rounds N]`.
 O estado fica em `docs/plano/<F>/estado.json` (etapa, status, chamadas declaradas e tokens por etapa);
 rodar de novo continua da etapa pendente. `--stage plan` só valida o plano (o plano é do Claude).
 Para respeitar a revisão dos testes antes da Alice, rode `--stage tests`, revise os testes e só então
 rode `--stage implement` (seguido de `audit` e `review`); o `--stage all` atual **não interrompe**
 entre tests e implement nem prova aprovação externa: não o use como portão dessa revisão.
+Com `tests: escalated` e testes corrigidos fora do orquestrador, Claude pode executar `--stage recheck-tests`:
+reexecuta todos os checks sob o stub HEAD sem pedir à Bia nem sobrescrever testes, exige arquivos e cenários
+registrados, atualiza os shas e só marca `tests: done` em verde. `all` não faz essa revalidação sozinho;
+erro de typecheck/lint de pacote permanece vermelho até ser resolvido, mesmo que seja de outra feature.
 O orquestrador nunca commita. O teto declarado não impede retries de rede nem substitui ledger externo.
 
 ## Formato das mensagens (JSON com esquema fixo, validado em `feature.py`)
