@@ -1193,7 +1193,10 @@ def cmd_status() -> int:
 
 def card_cost(repo: Path, ids: list[str], since: str = "", until: str = "~") -> dict:
     """e4-guardrails D: Claude cost of the cards, preparation included (from before the commit that added them), every session."""
-    since = since or card_since(repo, ids) or ""
+    if not since:
+        since = card_since(repo, ids)
+        if since is None:
+            raise ValueError(f"início não encontrado para cartão(ões): {', '.join(ids)}; informe --since explicitamente")
     w = window(load_all(repo), since, until)
     return {**w, "cost": cost(w), "since": since or "(início: cartão sem commit)", "until": until}
 
@@ -1202,13 +1205,21 @@ def usage_note(repo: Path, ids: list[str], results: list[dict]) -> str:
     """Claude vs Alice tokens of these cards (study data, reported proactively). Claude: only the D number."""
     alice_in = sum((r.get("aliceTokens") or {}).get("prompt", 0) for r in results)
     alice_out = sum((r.get("aliceTokens") or {}).get("output", 0) for r in results)
-    c = card_cost(repo, ids)
+    try:
+        c = card_cost(repo, ids)
+    except ValueError as e:
+        return (f"\n## Tokens nestes cartões\n- Alice (GPU local): {alice_in} entrada / {alice_out} saída\n"
+                f"- Claude: ? ({e})\n")
     return (f"\n## Tokens nestes cartões\n- Alice (GPU local): {alice_in} entrada / {alice_out} saída\n"
             f"- Claude desde {c['since']} (preparo incluído, todas as sessões): {c['turns']} turnos, "
             f"custo ≈ {c['cost']} (alice.py cost {' '.join(ids)})\n")
 
 def cmd_cost(ids: list[str], repo: Path, since: str, until: str) -> int:
-    c = card_cost(repo, ids, since, until)
+    try:
+        c = card_cost(repo, ids, since, until)
+    except ValueError as e:
+        print(f"cost: {e}", file=sys.stderr)
+        return 2
     print(json.dumps(c, indent=1))
     return 0
 

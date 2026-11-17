@@ -18,9 +18,10 @@ Saída: 0 aprovado, 2 reprovado, 3 erro de API ou de resposta, 4 cota do OpenRou
 inconclusivo (reprovou sem nota com apoio no pronto: não conta como reprovação).
 
 Economia (Joel, 16/11): o free tier dá 50 requisições por dia (free_model_daily_requests em /api/v1/key); a GPU
-local da Alice não tem custo. Então: a Alice escreve teste e código; antes de cada chamada à Bia, a Alice faz a
-mesma revisão localmente (--no-pre desliga) e, se ela já achar problema, a requisição não sai; a cota é lida antes
-de cada chamada e a Bia para com BIA_RESERVE (padrão 5) restantes; 429 de cota esgotada não é repetido.
+local da Alice não tem custo. Na orquestração, Bia escreve os testes da feature; Alice implementa o código.
+No fluxo legado por cartão, Alice pode escrever teste test-author e faz pré-revisão local antes da Bia
+(--no-pre desliga); se achar problema, a requisição não sai. A cota é lida antes de cada chamada e a Bia
+para com BIA_RESERVE (padrão 5) restantes; 429 de cota esgotada não é repetido.
 `bia.py write` é último recurso (gasta até 3 requisições).
 """
 from __future__ import annotations

@@ -2,8 +2,12 @@
 from __future__ import annotations
 
 import json
+import subprocess
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
+
+import yaml
 
 FIELDS = ("input_tokens", "cache_creation_input_tokens", "cache_read_input_tokens", "output_tokens")
 
@@ -34,10 +38,19 @@ def load(transcript: Path) -> list[tuple[str, dict]]:
     return sorted(seen.values())
 
 
+def _instant(value: str) -> datetime:
+    """Naive ISO timestamps from older transcripts/commits are UTC, not local time."""
+    dt = datetime.fromisoformat(value.replace('Z', '+00:00'))
+    return (dt if dt.tzinfo is not None else dt.replace(tzinfo=timezone.utc)).astimezone(timezone.utc)
+
+
 def window(rows: list[tuple[str, dict]], since: str = "", until: str = "~") -> dict:
+    start = _instant(since) if since else None
+    end = _instant(until) if until != '~' else None
     tot = {k: 0 for k in FIELDS} | {"turns": 0}
     for t, u in rows:
-        if since <= t < until:
+        instant = _instant(t)
+        if (start is None or start <= instant) and (end is None or instant < end):
             tot["turns"] += 1
             for k in FIELDS:
                 tot[k] += int(u.get(k) or 0)
@@ -79,22 +92,55 @@ def load_all(repo: Path, root: Path | None = None) -> list[tuple[str, dict]]:
     return sorted(seen.values())
 
 
+def _git(repo: Path, *args: str) -> str:
+    return subprocess.run(['git', '-C', str(repo), *args], capture_output=True, text=True, check=True).stdout
+
+
+def _card_ids(source: str) -> set[str]:
+    """Only structured card IDs, never a matching substring of another ID or a comment."""
+    try:
+        plan = yaml.safe_load(source) or {}
+    except yaml.YAMLError:
+        return set()
+    if not isinstance(plan, dict) or not isinstance(plan.get('cards'), list):
+        return set()
+    return {str(c['id']) for c in plan['cards'] if isinstance(c, dict) and isinstance(c.get('id'), str)}
+
+
 def card_since(repo: Path, ids: list[str]) -> str | None:
-    """Start of the preparation: commit time of the parent of the first commit that put any of the cards in docs/plano (UTC)."""
-    import subprocess
-    import time
-    starts = []
-    for cid in ids:
-        out = subprocess.run(["git", "-C", str(repo), "log", "--reverse", "--format=%H", "-S", f"id: {cid}", "--", "docs/plano"],
-                             capture_output=True, text=True).stdout.split()
-        if not out:
-            return None
-        parent = subprocess.run(["git", "-C", str(repo), "log", "-1", "--format=%ct", f"{out[0]}^"],
-                                capture_output=True, text=True).stdout.strip()
-        if not parent:
-            parent = subprocess.run(["git", "-C", str(repo), "log", "-1", "--format=%ct", out[0]], capture_output=True, text=True).stdout.strip()
-        starts.append(int(parent))
-    return time.strftime("%Y-%m-%dT%H:%M:%S", time.gmtime(min(starts)))
+    """Parent time of first commit adding each requested card to a versioned YAML plan (UTC); None if any is absent."""
+    requested = set(ids)
+    found: dict[str, int] = {}
+    try:
+        commits = _git(repo, 'log', '--reverse', '--format=%H', '--', 'docs/plano').split()
+        for sha in commits:
+            # Diff only changed YAML paths; do not scan every version of every file.
+            changed = _git(repo, 'diff-tree', '--root', '--no-commit-id', '--name-only', '-r', sha, '--', 'docs/plano').splitlines()
+            for path in changed:
+                if not path.endswith(('.yaml', '.yml')):
+                    continue
+                try:
+                    current = _card_ids(_git(repo, 'show', f'{sha}:{path}'))
+                except subprocess.CalledProcessError:  # deleted/renamed path
+                    current = set()
+                try:
+                    parent = _card_ids(_git(repo, 'show', f'{sha}^:{path}'))
+                except subprocess.CalledProcessError:  # initial file in this commit
+                    parent = set()
+                added = (current - parent) & requested - found.keys()
+                if added:
+                    try:
+                        timestamp = int(_git(repo, 'show', '-s', '--format=%ct', f'{sha}^').strip())
+                    except subprocess.CalledProcessError:  # root commit
+                        timestamp = int(_git(repo, 'show', '-s', '--format=%ct', sha).strip())
+                    found.update({cid: timestamp for cid in added})
+            if len(found) == len(requested):
+                break
+    except (subprocess.CalledProcessError, ValueError):
+        return None
+    if len(found) != len(requested) or not found:
+        return None
+    return datetime.fromtimestamp(min(found.values()), timezone.utc).strftime('%Y-%m-%dT%H:%M:%S')
 
 
 def latest_transcript(cwd: Path | None = None) -> Path | None:

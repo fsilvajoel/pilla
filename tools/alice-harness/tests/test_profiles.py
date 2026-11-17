@@ -1,5 +1,6 @@
 """Model profiles (bench of models through the same harness)."""
 import unittest
+from pathlib import Path
 from unittest import mock
 
 import alice
@@ -39,6 +40,24 @@ class ProfileTest(unittest.TestCase):
     def test_rate(self):
         self.assertEqual(alice.rate(100, 2_000_000_000), 50.0)
         self.assertEqual(alice.rate(5, 0), 0.0)
+
+    def test_operational_text_matches_sources_without_credentials(self):
+        root = Path(__file__).resolve().parents[3]
+        readme = (root / 'tools/alice-harness/README.md').read_text()
+        env = (root / 'tools/alice-harness/.env.example').read_text()
+        bia = (root / 'tools/alice-harness/bia.py').read_text()
+        jorge = (root / 'tools/jorge/agente/jorge.md').read_text()
+        self.assertIn('cards.size_model', readme)
+        self.assertNotIn('até 150 linhas por chamada', readme)
+        self.assertNotIn('padrão `gemma`', readme)
+        self.assertIn('models.yaml:default', readme)
+        self.assertIn('Bia escreve os testes da feature', bia)
+        self.assertNotIn('a Alice escreve teste e código', bia)
+        self.assertNotIn('timer diário', jorge)
+        self.assertIn('# ABACUSAI_API_KEY=', env)
+        self.assertEqual(env.count('BRAVE_SEARCH_API_KEY='), 1)
+        self.assertIn('OPEN_ROUTER_API_KEY=', env)
+        self.assertNotIn('troque-pela-sua-chave-real', env)
 
 
 if __name__ == "__main__":

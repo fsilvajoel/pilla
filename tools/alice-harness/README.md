@@ -11,7 +11,7 @@ Ambiente de trabalho da Alice (modelo local no Ollama): executa as ferramentas q
 - `alice.py status`: diz se há execução em andamento (ninguém edita o repositório enquanto houver).
 - `alice.py rule <ID>... [--repo <path>]`: mostra a definição de uma regra (RN-C03, T-13) ou seção de documento.
 - `alice.py metrics` / `alice.py evolution`: resumo de `runs/metrics.jsonl`; evolução por versão do harness.
-- `alice.py claude-usage --since <data>`: tokens reais do Claude, lidos do transcript da sessão mais recente e dos subagentes dela (`<sessão>/subagents/agent-*.jsonl`); `alice.py cost` soma os mesmos arquivos.
+- `alice.py claude-usage [--since ISO] [--until ISO]`: tokens reais do Claude na sessão mais recente e subagentes. `alice.py cost <ID>... [--since ISO] [--until ISO]` soma todas as sessões do repositório desde antes da introdução dos cartões no git; sem cartão versionado, exige `--since` explícito. Datas ISO sem fuso são UTC; offsets são convertidos para UTC.
 - `alice.py chat "<pergunta>" [--file <path>]`: pergunta direta ao modelo, sem ferramentas (só resumo e rascunho).
 
 ## Pré-revisão local inconclusiva (ADR-0014)
@@ -32,7 +32,7 @@ Antes da primeira chamada ao modelo: o comando de cada check existe; os arquivos
 `Run.system_prompt` monta o pedido em seções fixas (TAREFA, ARQUIVOS, PRONTO QUANDO, REGRAS DE CÓDIGO, FERRAMENTAS, FLUXO). Entram sozinhos: as definições de `rules`, a cola do lint ([docs/memoria/lint.md](../../docs/memoria/lint.md), só as seções dos arquivos do cartão), as notas do pacote e as colas de biblioteca.
 
 ## Ferramentas do modelo
-`list_files`, `read_file`, `search_code`, `read_rule`, `write_file` (até 150 linhas por chamada), `edit_file`, `replace_function`, `view_diff`, `run_check`, `web_search`, `fetch_page`, `ask_claude`, `finish`.
+`list_files`, `read_file`, `search_code`, `read_rule`, `write_file`, `edit_file`, `replace_function`, `view_diff`, `run_check`, `web_search`, `fetch_page`, `ask_claude`, `finish`. Limites de tamanho por cartão e perfil saem de `cards.size_model(card, profile)`, inclusive linhas por chamada de `write_file`; não há número fixo.
 
 ## Verificação no `finish`
 1. Prettier nos arquivos tocados (LI-052).
@@ -65,7 +65,7 @@ O script `scripts/alice-gate.sh` atua como um comando forçado para a chave SSH 
 - `scripts/check-brave.sh` — testa a chave da API de busca do Brave.
 
 ## Perfis de modelo (`models.yaml`)
-`ALICE_PROFILE=<perfil>` (env ou `.env`; padrão `gemma`) escolhe modelo, `num_ctx`, `think` e amostragem.
+`ALICE_PROFILE=<perfil>` (ambiente prevalece sobre `.env`; sem ambos, usa `models.yaml:default`) escolhe modelo, `num_ctx`, `think` e amostragem.
 O prompt de sistema é sempre o do harness, por isso o perfil usa o modelo-base, não um wrapper com SYSTEM.
 `num_ctx` mínimo: 32768 (o harness compacta em ~90 mil caracteres, ~28 mil tokens, mais a saída).
 As métricas registram `profile`, `model`, `outTokPerSec` e `promptTokPerSec`.
