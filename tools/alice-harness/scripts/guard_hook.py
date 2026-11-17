@@ -4,9 +4,9 @@
 (b) Write/Edit em arquivo de allowedPaths de cartão da Alice ainda não done (docs/plano/*.yaml);
 (c) Bash com python3, node ou vitest que cite esses arquivos, exceto se a Alice já entregou o cartão
     (revisão: rodar a suíte uma vez é permitido; reescrever continua proibido);
-(d) git commit com arquivo de cartão da Alice sem o trailer 'Card-Done: <ID>' e, em test-author, sem a
-    revisão docs/plano/revisao/<ID>.md completa e do conteúdo staged (erro 11);
-    ou com a etiqueta 'stub <ID>' ainda no índice (exclusão provisória de cobertura esquecida, erro 12);
+(d) git commit com arquivo de cartão da Alice sem 'Card-Done: <ID>', salvo novo placeholder staged
+    de implement com 'Card-Stub: <ID>'; em test-author exige revisão staged completa (erro 11);
+    Done com etiqueta 'stub <ID>' ainda no índice é recusado (erro 12);
 (e) git commit/push com --no-verify (never-no-verify).
 Done = trailer 'Card-Done: <ID>' num commit (Card-Reopen desfaz), ou ID citado em commit até LEGACY_UNTIL
 (cartões fechados antes do trailer existir). Entregue = status done no resumo plan-*.json da fila E arquivo do cartão
@@ -97,16 +97,61 @@ def stub_marks(cid: str) -> list[str]:
     return [":".join(line.split(":", 2)[:2]) for line in out.splitlines() if line]
 
 
+# Subconjunto proposital de TS/TSX: todo token desconhecido falha fechado, não interpreta código.
+STUB_LINE = re.compile(
+    r'^\s*(?:(?:import\s+(?:type\s+)?(?:[\w{},*\s]+\s+from\s+)?[\x27\"][^\x27\"]+[\x27\"];?)'
+    r'|(?:(?:export\s+)?(?:interface|type)\s+\w+[^{}]*\{[^{}]*\};?)'
+    r'|(?:(?:export\s+)?type\s+\w+\s*=\s*[^;{}]+;)'
+    r'|(?:/\*\*?[^{}]*\*/|\*[^{}]*|//[^{}]*)'
+    r'|(?:\s*))\s*$'
+)
+STUB_SIGNATURE = re.compile(r'^\s*(?:export\s+)?(?:default\s+)?(?:async\s+)?function\s+\w+\s*\([^{};]*\)\s*(?::\s*[^{};]+)?\s*\{\s*$')
+STUB_THROW = re.compile(r'^\s*throw\s+new\s+Error\s*\(\s*([\x27\"])not implemented\1\s*\)\s*;\s*$')
+
+
+def staged_stub(path: str) -> bool:
+    """Somente arquivo novo de código TS/TSX, com funções cuja única instrução lança o placeholder."""
+    if not re.fullmatch(r'[\w./-]+\.tsx?', path) or '..' in Path(path).parts:
+        return False
+    old = subprocess.run(['git', '-C', str(REPO), 'cat-file', '-e', f'HEAD:{path}'], capture_output=True)
+    blob = subprocess.run(['git', '-C', str(REPO), 'show', f':{path}'], capture_output=True, text=True)
+    if old.returncode == 0 or blob.returncode or not blob.stdout:
+        return False
+    lines = blob.stdout.splitlines()
+    i, functions = 0, 0
+    while i < len(lines):
+        line = lines[i]
+        if STUB_SIGNATURE.fullmatch(line):
+            if i + 2 >= len(lines) or not STUB_THROW.fullmatch(lines[i + 1]) or not re.fullmatch(r'\s*}\s*;?\s*', lines[i + 2]):
+                return False
+            functions += 1
+            i += 3
+            continue
+        if not STUB_LINE.fullmatch(line):
+            return False
+        i += 1
+    return functions > 0
+
+
+def has_trailer(cmd: str, kind: str, cid: str) -> bool:
+    return bool(re.search(rf'(?:^|[\x27\"\n])Card-{kind}:\s*{re.escape(cid)}(?=[\x27\"\n]|$)', cmd))
+
+
 def commit_problems(cmd: str) -> list[str]:
     staged = [line for line in git("diff", "--cached", "--name-only").splitlines() if line]
     out = []
     for c in open_cards():
         paths = [str(p) for p in c.get("allowedPaths") or []]
         mine = [f for f in staged if any(f == p or fnmatch.fnmatch(f, p) for p in paths)]
-        tagged = re.search(rf"Card-Done:\s*{re.escape(c['id'])}\b", cmd)
-        if not mine and not tagged:
+        tagged = has_trailer(cmd, 'Done', c['id'])
+        stub = has_trailer(cmd, 'Stub', c['id'])
+        if not mine and not tagged and not stub:
             continue
-        if mine and not tagged:
+        if stub and not tagged and (not mine or c.get('kind') != 'implement' or
+                                    not all(staged_stub(p) for p in mine)):
+            out.append(f"{c['id']}: Card-Stub exige arquivo novo de implement, staged e apenas placeholder")
+        if mine and not tagged and not (stub and c.get('kind') == 'implement' and
+                                       all(staged_stub(p) for p in mine)):
             out.append(f"{', '.join(mine)} é de {c['id']}: o commit precisa do trailer 'Card-Done: {c['id']}'")
         if c.get("kind") == "test-author":
             out += review_problems(REPO, c, "staged")
