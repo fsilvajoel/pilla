@@ -21,3 +21,6 @@ next-env.d.ts
 docs/agents/quadro.md
 docs/agents/quadro-entradas.json
 apps/web/AGENTS.md
+
+# worktrees temporários dos agentes do Claude Code
+.claude/worktrees/
