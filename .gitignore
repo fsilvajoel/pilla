@@ -16,3 +16,7 @@ reports/
 .vitest/
 .next/
 next-env.d.ts
+
+# quadro dos agentes: fotografia local gerada por alice.py quadro/leva/fila
+docs/agents/quadro.md
+docs/agents/quadro-entradas.json
