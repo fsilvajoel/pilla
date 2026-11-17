@@ -1,19 +1,14 @@
-# Auditoria <ID da feature>
+# Revisão dos testes <ID da feature>
 
-auditor: reviewer <executor em roles do yaml> <id da geração>
+revisor: reviewer
 
-## Checks
-| Check | Resultado |
-|---|---|
-| <comando> | verde/vermelho |
+`pnpm gate expect-red <feature>`: <PASS/FAIL>
 
-Expect-red antes da implementação: <sim/não>
+- [x] C1 — <evidência: arquivo:linhas e o que mostram>
+- [ ] C2 — <o que falta>
 
 ## Veredito
 <aprovado | reprovado>
 
 ## Lacunas
 - <critério ou cenário sem teste; "nenhuma" se zero>
-
-## Testes extras sugeridos
-- <nome e motivo; vazio se nenhum>

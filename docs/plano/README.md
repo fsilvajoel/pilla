@@ -1,6 +1,6 @@
 # Plano de entrega
 
-Cartões e fluxo de entrega: [workflow feature do Harness-adaV1](../../Harness-adaV1/workflow/feature.md). Registro histórico abaixo.
+Fluxo de entrega: [workflow feature do Harness-adaV1](../../Harness-adaV1/workflow/feature.md). Registro histórico abaixo.
 
 | Entrega | Objetivo | Pronto quando |
 |---|---|---|

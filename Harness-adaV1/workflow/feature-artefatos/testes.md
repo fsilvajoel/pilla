@@ -1,12 +1,11 @@
 # Testes <ID da feature>
 
-| Cenário | Descrição | Cartão | Teste |
-|---|---|---|---|
-| C1 | <descrição> | <ID> | <nome do teste> |
+| Cenário | Critério | Teste |
+|---|---|---|
+| C1 | A1 | <nome do teste> |
 
 ## Arquivos de teste
-| Arquivo | sha do blob |
-|---|---|
-| <caminho> | <sha> |
+- <caminho>
 
-Expect-red: <sim/não> (todos os testes novos falham contra o esboço).
+## Expect-red
+Saída de `pnpm gate expect-red <feature>`: <PASS/FAIL e resumo>.

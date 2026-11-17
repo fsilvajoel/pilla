@@ -62,10 +62,10 @@ Regra de negócio nunca é pesquisada na web.
 
 ## 8. Definição de pronto
 
-- [ ] Testes do cartão passam; nenhum teste alterado por quem implementou.
+- [ ] Testes da feature passam; nenhum teste alterado por quem implementou.
 - [ ] `typecheck`, `lint`, fronteiras (dependency-cruiser), cobertura e (em `finance`) mutação dentro dos mínimos. O código já nasce seguindo o lint: as regras, com exemplo errado e certo, estão em [docs/memoria/lint.md](docs/memoria/lint.md).
 - [ ] Sem `any`, `@ts-ignore`, `eslint-disable`, `.only/.skip`, `console.`, TODO sem ID.
-- [ ] Nenhum arquivo fora do escopo do cartão; nenhuma dependência nova.
+- [ ] Nenhum arquivo fora do escopo do plano da feature; nenhuma dependência nova.
 - [ ] Nomes conforme glossário; textos pt-BR no arquivo de mensagens.
 - [ ] IDs das regras citados no código (onde a regra é aplicada) e no PR.
 - [ ] Docs atualizados se o comportamento mudou.

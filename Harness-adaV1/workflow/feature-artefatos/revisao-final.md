@@ -1,32 +1,23 @@
 # Revisão final <ID da feature>
 
-## Etapas
-| Etapa | Status | s | Observação |
-|---|---|---|---|
-| plan | | | |
-| tests | | | |
-| implement | | | |
-| audit | | | |
-| review | | | |
+revisor: reviewer
 
 ## Critérios de aceite
-- [x] A1 — <evidência>
+- [x] A1 — <evidência: arquivo:linhas ou comando>
 
-## Pronto por cartão
-| Cartão | Item do done | Evidência |
-|---|---|---|
-| <ID> | <linha do done> | <arquivo:linhas ou check> |
+## Gates
+| Gate | Resultado |
+|---|---|
+| `pnpm gate tests-reviewed <feature>` | PASS/FAIL |
+| `pnpm gate coverage <feature>` | PASS/FAIL |
+| `pnpm verify` | verde/vermelho |
 
-## Checks e cobertura
-- Checks: <todos verdes?>
-- Cobertura dos arquivos tocados: <x/y>. Cobertura ausente, vazia (0/0) ou check vermelho = **falha**.
+## Diff
+- Escopo: <só arquivos do plano?>
+- Achados: <arquivo:linha e o problema; "nenhum" se zero>
 
-## Auditoria
-<veredito e lacunas da auditoria>
+## Lacunas
+- <cenário do contrato sem teste, comportamento sem cenário; "nenhuma" se zero>
 
-## Custo
-| Papel | Requisições | Tokens entrada/saída | s |
-|---|---|---|---|
-| developer | | | |
-| reviewer | | | |
-| coordinator | | | |
+## Veredito
+<aprovado | reprovado>
