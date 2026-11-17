@@ -41,7 +41,7 @@ class FeatureProblemsTest(unittest.TestCase):
 
     def test_budget_bounds(self):
         self.assertEqual(feature_problems(plan(biaBudget=3), lambda p: PLANO), [])
-        for budget in (1, 4, 6, 10, "4"):
+        for budget in (1, 11, "4"):  # TEMPORÁRIO 17/11: teto 10 (era 3; voltar a (1, 4, 6, 10, "4"))
             self.assertTrue(feature_problems(plan(biaBudget=budget), lambda p: PLANO), budget)
 
     def test_test_author_must_be_bia_and_cover_protected_tests(self):

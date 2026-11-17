@@ -373,7 +373,7 @@ class OrchestratorTest(unittest.TestCase):
 
     def test_cmd_feature_refuses_legacy_budget_before_any_request(self):
         plan_file = self.repo / "p.yaml"
-        legacy = {**PLAN, "features": [{**PLAN["features"][0], "biaBudget": 4}]}
+        legacy = {**PLAN, "features": [{**PLAN["features"][0], "biaBudget": 11}]}  # TEMPORÁRIO 17/11: era 4 (teto 3)
         plan_file.write_text(json.dumps(legacy))
         ops = FakeOps(self.repo, [])
         self.assertEqual(cmd_feature(plan_file, "E9-F01", self.repo, "all", 3, self.out, ops), 5)

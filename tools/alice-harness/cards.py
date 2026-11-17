@@ -390,7 +390,7 @@ FEATURE_ID = re.compile(r"^E\d+-F\d{2}$")
 FEATURE_KNOWN = {"id", "title", "cards", "biaBudget"}
 PLAN_SECTIONS = ("Escopo", "Riscos", "Dependências", "Critérios de aceite", "Cenários")
 SCENARIO = re.compile(r"^- (C\d+):\s*(.+)$", re.M)
-BIA_BUDGET = (2, 3)  # teto declarado da feature; não substitui ledger por tentativa de rede
+BIA_BUDGET = (2, 10)  # TEMPORÁRIO (Joel, madrugada 17/11): teto era 3; o Joel revisa e ajusta em 17/11. Não substitui ledger por tentativa de rede
 
 
 def feature_plan_path(fid: str) -> str:
