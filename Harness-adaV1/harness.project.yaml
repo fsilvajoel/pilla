@@ -1,0 +1,60 @@
+name: Harness-adaV1
+entrypoint: python3 script/ada.py --project .
+project_root: .
+output_dir: .harness/runs
+agent_dir: agent
+skill_dir: skill
+capability_dir: capability
+policy_dir: policy
+tool_dir: tools
+workflow_dir: workflow
+gate_dir: gate
+script_dir: script
+rules_path: null
+default_model_profile: default
+
+# Idioma (policy/idioma.md): texto do harness em pt-BR; código e commits em inglês.
+language:
+  docs: pt-BR
+  code: en
+  commits: en
+
+# Papel (agent/*.md) -> quem executa e com qual perfil de modelo.
+# Só este arquivo liga papel a nome e modelo; agent/ fica neutro.
+roles:
+  developer: {name: alice, model_profile: qwen35}
+  reviewer: {name: bia, model_profile: openrouter-reviewer}
+  coordinator: {name: claude, model_profile: claude}
+  platform: {name: claude, model_profile: claude}
+  planner: {name: claude, model_profile: claude}
+
+# Comandos de verificação do projeto alvo. Cartões, skills e gates citam a
+# chave (commands.test etc.), nunca o comando literal.
+commands:
+  test: pnpm --filter <pkg> exec vitest run <arquivo> -t <filtro>
+  coverage: pnpm --filter <pkg> exec vitest run --coverage <arquivo>
+  typecheck: pnpm --filter <pkg> typecheck
+  lint: pnpm --filter <pkg> lint
+  deps: pnpm depcruise
+  verify: pnpm verify
+
+# Gate portable: textos que não podem aparecer fora deste arquivo.
+portable:
+  forbidden:
+    - pilla
+    - /home/
+    - tools/alice-harness
+    - docs/regras
+    - /apps/
+
+# Pesquisa externa (policy/research.md): domínios permitidos; vazio = só fonte oficial.
+research:
+  domains: []
+
+checks:
+  - portable
+  - skill-format
+  - tool-contract
+  - redact
+  - edit-guard
+  - ssh-gate
