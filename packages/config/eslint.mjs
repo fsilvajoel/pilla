@@ -14,7 +14,7 @@ const testBans = [
     message: "expect(true) não testa nada (travas §3).",
   },
 ];
-const commonBans = [{ selector: "ExportDefaultDeclaration", message: "Use export nomeado (travas §3)." }];
+export const commonBans = [{ selector: "ExportDefaultDeclaration", message: "Use export nomeado (travas §3)." }];
 const pureBans = [
   { selector: "Literal[raw=/^[0-9]*\\.[0-9]/]", message: "Literal decimal: dinheiro é bigint em centavos (ADR-0004)." },
   { selector: "NewExpression[callee.name='Date']", message: "Relógio deve ser injetado (travas §3)." },

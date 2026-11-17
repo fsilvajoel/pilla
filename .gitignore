@@ -14,3 +14,5 @@ reports/
 .stryker-tmp/
 *.tsbuildinfo
 .vitest/
+.next/
+next-env.d.ts
