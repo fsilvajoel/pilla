@@ -939,7 +939,8 @@ class Run:
             if not calls:
                 self.messages.append({"role": "user", "content": "Use as ferramentas. Quando terminar, chame finish."})
                 budget.tick()
-            for c in calls:
+            state = budget.status() if not calls else "ok"
+            for position, c in enumerate(calls):
                 name = c["function"]["name"]
                 args = c["function"].get("arguments") or {}
                 if isinstance(args, str):
@@ -947,8 +948,17 @@ class Run:
                         args = json.loads(args)
                     except json.JSONDecodeError:
                         args = {}
+                if budget.nudged and budget.after >= budget.grace:
+                    # Remaining calls were announced but not run; a finish inside the
+                    # grace window still goes through full verification.
+                    for pending in calls[position:]:
+                        self.messages.append({"role": "tool", "tool_name": pending["function"]["name"],
+                                              "content": "BLOQUEADO: limite de chamadas de ferramenta; chamada não executada"})
+                    state = "stop"
+                    break
                 self.stats["tool_calls"] += 1
                 budget.tick()
+                state = budget.status()
                 if name == "ask_claude":
                     q = str(args.get("question", ""))
                     self.log("ask_claude", {"question": q})
@@ -1026,10 +1036,14 @@ class Run:
                 self.log("tool", {"name": name, "args": {k: (v if len(str(v)) < 200 or name == "finish" else str(v)[:200] + "…") for k, v in args.items()}, "result": str(result)[:500]})
                 self.messages.append({"role": "tool", "tool_name": name, "content": truncate(str(result), self.size.tool_output_chars)})
             self.save("running")
-            state = budget.status()
             if state == "stop":
                 self.stats["attempts"] += 1
-                return self.end("failed", 2, f"limite de chamadas de ferramenta ({self.max_tools}) ignorado: o aviso pediu run_check e finish")
+                try:
+                    ok, problems = self.verify()
+                    detail = truncate(self.redact(problems), 1500) if not ok else "checks verdes, mas finish não foi chamado"
+                except Exception as e:  # fail closed if local verification itself cannot run
+                    detail = f"verificação local falhou: {type(e).__name__}: {self.redact(str(e))}"
+                return self.end("failed", 2, f"limite de chamadas de ferramenta ({self.max_tools}); " + detail)
             if state == "nudge":
                 self.stats["attempts"] += 1
                 if self.stats["attempts"] >= self.max_attempts:
