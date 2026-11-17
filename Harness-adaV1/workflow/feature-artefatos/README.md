@@ -12,4 +12,4 @@ Copie o molde, troque os `<...>` e apague o que não se aplica.
 | todas | `estado.json` ([estado.md](estado.md)) | motor |
 
 Ordem: `plan → tests → (revisão dos testes) → implement → audit → review`. A implementação só começa com os testes
-prontos e revisados (skill [revisar-teste](../../skill/revisar-teste/SKILL.md)).
+prontos e revisados (skill [revisar-teste](../../../.claude/skills/revisar-teste/SKILL.md)).

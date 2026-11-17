@@ -19,4 +19,4 @@ Sistema de gestão de empréstimos (financeira), modular. Produto de estudo de a
 - Antes de cada commit: `git status` e conferir que o `.env` não aparece.
 
 ## Skills
-- Skills de terceiros em `.claude/skills/` (fixadas em commit revisado; ver `.claude/skills/README.md`). Regras locais de lá prevalecem: `the-judge` revisa em pt-BR e **só publica no GitHub com ok do Joel**; ADRs/RFCs vencem qualquer sugestão das skills.
+- Fonte única das skills: `.claude/skills/` (próprias e de terceiros; terceiros fixadas em commit revisado; ver `.claude/skills/README.md`). Regras locais de lá prevalecem: `the-judge` revisa em pt-BR e **só publica no GitHub com ok do Joel**; ADRs/RFCs vencem qualquer sugestão das skills.

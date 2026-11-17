@@ -36,7 +36,7 @@ Arquivo que o motor grava e lê para retomar a feature. **Ninguém edita à mão
 | Estado | Significado | O que fazer |
 |---|---|---|
 | `quota` | acabou a cota do serviço externo | esperar a cota; não subir orçamento |
-| `card_error` | o pré-voo recusou o cartão | corrigir o cartão (skill [escrever-cartao](../../skill/escrever-cartao/SKILL.md)) |
+| `card_error` | o pré-voo recusou o cartão | corrigir o cartão |
 | `needs_input` | o agente pediu decisão humana | responder e retomar |
 | `failed` | esgotou tentativas | classificar: cartão, harness ou modelo |
 | `error` | gate falhou (ex.: cobertura ausente, vazia 0/0 ou check vermelho) | ver a mensagem; não é sucesso |

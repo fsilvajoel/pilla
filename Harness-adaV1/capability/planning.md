@@ -1,11 +1,11 @@
 # Capability: planning
 
 ## Objetivo
-Definir escopo, critérios de aceite, cenários e cartões antes da execução.
+Definir escopo, critérios de aceite, cenários e contrato antes da execução.
 
 ## Composição
-- skill: [escrever-cartao](../skill/escrever-cartao/SKILL.md)
+- subagente: [planner](../../.claude/agents/planner.md)
 - policy: [quality](../policy/quality.md)
-- gate: cartões validados antes da fila ([escrever-cartao](../skill/escrever-cartao/SKILL.md), regra 20)
+- gate: o orquestrador confere o plano (critérios `A<n>`, cenários `C<n>`, contrato) antes da etapa tests
 - artefato: [plano.md](../workflow/feature-artefatos/plano.md)
 - workflow: [feature](../workflow/feature.md), etapa plan

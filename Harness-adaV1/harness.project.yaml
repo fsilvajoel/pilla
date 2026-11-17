@@ -3,7 +3,7 @@ entrypoint: python3 script/ada.py --project .
 project_root: .
 output_dir: .harness/runs
 agent_dir: agent
-skill_dir: skill
+skill_dir: ../.claude/skills
 capability_dir: capability
 policy_dir: policy
 tool_dir: tools
@@ -50,10 +50,6 @@ portable:
     - tools/alice-harness
     - docs/regras
     - /apps/
-
-# Pesquisa externa (policy/research.md): domínios permitidos; vazio = só fonte oficial.
-research:
-  domains: []
 
 checks:
   - portable

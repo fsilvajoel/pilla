@@ -1,11 +1,12 @@
 # Capabilities
 
-Comportamentos completos e reutilizáveis. Uma capability junta skills (conhecimento), tools (execução),
+Comportamentos completos e reutilizáveis. Uma capability junta skills (conhecimento), subagentes (execução),
 policies (regras) e gates (aprovação). Formato: [_modelo.md](_modelo.md).
 
-| Capability | Skills | Papel típico |
+As skills ficam em `.claude/skills/` na raiz do repositório (fonte única) e os subagentes em `.claude/agents/`.
+
+| Capability | Skills | Subagente |
 |---|---|---|
-| [planning](planning.md) | escrever-cartao | planner |
-| [testing](testing.md) | escrever-teste, revisar-teste | reviewer |
-| [code-modification](code-modification.md) | editar-arquivo | developer |
-| [web-research](web-research.md) | pesquisa-web | qualquer papel, por cartão `research` |
+| [planning](planning.md) | — | planner |
+| [testing](testing.md) | escrever-teste, revisar-teste | test-writer, reviewer |
+| [code-modification](code-modification.md) | editar-arquivo | implementer |

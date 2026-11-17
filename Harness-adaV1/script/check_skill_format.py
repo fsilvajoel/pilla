@@ -1,9 +1,12 @@
 #!/usr/bin/env python3
-"""Gate skill-format: toda skill é `skill/<nome>/SKILL.md` com frontmatter válido.
+"""Gate skill-format: toda skill é `.claude/skills/<nome>/SKILL.md` com frontmatter válido.
+
+A fonte única das skills é `.claude/skills/` na raiz do repositório (nas
+mensagens abaixo, `skill/` abrevia esse diretório).
 
 Regras (detalhes em `gate/skill-format.md`):
 
-- em `skill/` só há pastas, `README.md` e `_modelo.md`;
+- em `skill/` só há pastas, `README.md`, `_modelo.md` e a licença das skills de terceiros;
 - cada pasta tem `SKILL.md` começando com frontmatter `---`;
 - o frontmatter tem `name` igual ao nome da pasta e `description` não vazia;
 - skills próprias (as que não estão em `THIRD_PARTY`) têm também as seções do
@@ -21,7 +24,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 
 # Skills de terceiros, copiadas sem alteração de conteúdo (proveniência em
-# skill/README.md). Só delas não se exigem as seções do modelo.
+# .claude/skills/README.md). Só delas não se exigem as seções do modelo.
 THIRD_PARTY: frozenset[str] = frozenset(
     {
         "accessibility",
@@ -47,7 +50,10 @@ REQUIRED_SECTIONS: tuple[str, ...] = (
     "Exemplos práticos",
 )
 
-ALLOWED_FILES: frozenset[str] = frozenset({"README.md", "_modelo.md"})
+ALLOWED_FILES: frozenset[str] = frozenset({"README.md", "_modelo.md", "LICENSE-tech-leads-club-agent-skills"})
+
+# Diretório padrão: `.claude/skills/` na raiz do repositório.
+DEFAULT_SKILL_ROOT = ROOT.parent / ".claude" / "skills"
 
 
 def parse_frontmatter(text: str) -> dict[str, str] | None:
@@ -146,7 +152,7 @@ def check_skills(skill_root: Path) -> list[str]:
 
 
 def main() -> int:
-    skill_root = Path(sys.argv[1]).resolve() if len(sys.argv) > 1 else ROOT / "skill"
+    skill_root = Path(sys.argv[1]).resolve() if len(sys.argv) > 1 else DEFAULT_SKILL_ROOT
     problems = check_skills(skill_root)
     if problems:
         print("Gate skill-format falhou.")

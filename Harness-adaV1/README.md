@@ -9,7 +9,7 @@ Esqueleto de harness portátil para um fluxo de agentes local ao projeto.
 | Pasta | Conteúdo |
 |---|---|
 | `agent/` | índice dos papéis; as definições são os subagentes em `../.claude/agents/` |
-| `skill/` | conhecimento reutilizável: `skill/<nome>/SKILL.md` |
+| `../.claude/skills/` | conhecimento reutilizável (fonte única): `.claude/skills/<nome>/SKILL.md` |
 | `capability/` | comportamentos que juntam skills, tools, policies e gates |
 | `policy/` | regras globais (inclui [idioma](policy/idioma.md)) |
 | `tools/` | integrações externas e wrappers de comando |

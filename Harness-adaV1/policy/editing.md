@@ -8,4 +8,4 @@ Manter a mudança mínima, dentro do escopo e rastreável.
 - Não tocar arquivo fora de `allowedPaths`, teste protegido ou arquivo gerado.
 - Diff revisável: cada mudança se explica pelo cartão.
 - Diff vazio quando o cartão pede mudança é falha.
-- Como editar na prática: skill [editar-arquivo](../skill/editar-arquivo/SKILL.md).
+- Como editar na prática: skill [editar-arquivo](../../.claude/skills/editar-arquivo/SKILL.md).

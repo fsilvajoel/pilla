@@ -4,8 +4,9 @@
 Definir e validar o comportamento esperado em testes antes de a implementação ser aceita.
 
 ## Composição
-- skills: [escrever-teste](../skill/escrever-teste/SKILL.md), [revisar-teste](../skill/revisar-teste/SKILL.md)
-- tools: `tools/run_cmd.py` (roda `commands.test` e `commands.coverage`), `tools/search_code.py`
+- skills: [escrever-teste](../../.claude/skills/escrever-teste/SKILL.md),
+  [revisar-teste](../../.claude/skills/revisar-teste/SKILL.md)
+- subagentes: [test-writer](../../.claude/agents/test-writer.md), [reviewer](../../.claude/agents/reviewer.md)
 - policy: [quality](../policy/quality.md)
 - gates: [expect-red](../gate/expect-red.md), [testes-revisados](../gate/testes-revisados.md),
   [cobertura](../gate/cobertura.md), [auditoria](../gate/auditoria.md)

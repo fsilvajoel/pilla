@@ -18,11 +18,11 @@ Papéis de [agent/](../agent/README.md); quem executa cada papel vem de `roles` 
 
 | # | Etapa | Papel | Skills / capability | Tools | Gates de saída | Artefato |
 |---|---|---|---|---|---|---|
-| 1 | plan | planner | [escrever-cartao](../skill/escrever-cartao/SKILL.md) / [planning](../capability/planning.md) | `search_code`, `list_files` | cartões validados | [plano.md](feature-artefatos/plano.md) |
-| 2 | tests | reviewer | [escrever-teste](../skill/escrever-teste/SKILL.md) / [testing](../capability/testing.md) | `run_cmd` (`commands.test`) | [expect-red](../gate/expect-red.md) | [testes.md](feature-artefatos/testes.md) |
-| 3 | revisão dos testes | reviewer (outra instância, não quem escreveu) | [revisar-teste](../skill/revisar-teste/SKILL.md) / [testing](../capability/testing.md) | `run_cmd` | [expect-red](../gate/expect-red.md), sha registrado | [testes.md](feature-artefatos/testes.md) (`sha do blob`) |
-| 4 | implement | developer, um cartão por vez | [editar-arquivo](../skill/editar-arquivo/SKILL.md) / [code-modification](../capability/code-modification.md) | `replace_function`, `run_cmd` | [edit-guard](../gate/edit-guard.md), [testes-revisados](../gate/testes-revisados.md), [done-checks](../gate/done-checks.md) | diff + `estado.json` |
-| 5 | audit | reviewer | [revisar-teste](../skill/revisar-teste/SKILL.md) / [testing](../capability/testing.md) | `run_cmd` (`commands.test`, `commands.coverage`) | [cobertura](../gate/cobertura.md), [auditoria](../gate/auditoria.md) | [auditoria.md](feature-artefatos/auditoria.md) |
+| 1 | plan | planner | [planner](../../.claude/agents/planner.md) / [planning](../capability/planning.md) | `search_code`, `list_files` | cartões validados | [plano.md](feature-artefatos/plano.md) |
+| 2 | tests | reviewer | [escrever-teste](../../.claude/skills/escrever-teste/SKILL.md) / [testing](../capability/testing.md) | `run_cmd` (`commands.test`) | [expect-red](../gate/expect-red.md) | [testes.md](feature-artefatos/testes.md) |
+| 3 | revisão dos testes | reviewer (outra instância, não quem escreveu) | [revisar-teste](../../.claude/skills/revisar-teste/SKILL.md) / [testing](../capability/testing.md) | `run_cmd` | [expect-red](../gate/expect-red.md), sha registrado | [testes.md](feature-artefatos/testes.md) (`sha do blob`) |
+| 4 | implement | developer, um cartão por vez | [editar-arquivo](../../.claude/skills/editar-arquivo/SKILL.md) / [code-modification](../capability/code-modification.md) | `replace_function`, `run_cmd` | [edit-guard](../gate/edit-guard.md), [testes-revisados](../gate/testes-revisados.md), [done-checks](../gate/done-checks.md) | diff + `estado.json` |
+| 5 | audit | reviewer | [revisar-teste](../../.claude/skills/revisar-teste/SKILL.md) / [testing](../capability/testing.md) | `run_cmd` (`commands.test`, `commands.coverage`) | [cobertura](../gate/cobertura.md), [auditoria](../gate/auditoria.md) | [auditoria.md](feature-artefatos/auditoria.md) |
 | 6 | review | coordinator | — | `run_cmd` (`commands.verify`) | todos do "Pronto quando" | [revisao-final.md](feature-artefatos/revisao-final.md) |
 
 **Bloqueio:** a etapa 4 não começa sem as etapas 2 e 3 concluídas, com `expectRed = true` e `testShas` gravados
