@@ -5,17 +5,32 @@ Plano da feature (etapa 1, ADR-0014). Cartões em `docs/plano/E6.yaml`; referên
 
 ## Escopo
 
-- E6-T05 (Bia) e E6-T06 (Alice): `apps/web/components/loan-simulation.tsx`, o componente cliente
-  `LoanSimulation` com formulário, botão "Simular", resumo e tabela do cronograma. Usa `toSimulateRequest` e
-  `simulate` da E6-F01.
+- E6-T05 (Bia): testes de `apps/web/components/loan-simulation.tsx`, o componente cliente `LoanSimulation`.
+  Dois cartões da Alice, em sequência, protegem o mesmo teste: E6-T06 formulário, botão "Simular", resumo e
+  alerta (check só com os três testes dele via `-t`) e, depois, E6-T08 tabela do cronograma (suíte inteira,
+  cobertura e remoção do stub). Usa `toSimulateRequest` e `simulate` da E6-F01.
 - Fora: a página `app/(admin)/loans/simulate/page.tsx` (depende da decisão sobre a data de desembolso), campo
   Cliente, botões Cancelar e Criar contrato (RF-11), "Por parcela: x%".
+
+## Como o teste consulta a tela (valem para o teste e para o componente)
+
+- Imports exatos do teste no `done` do E6-T05; `toBeInTheDocument` e `toHaveTextContent` vêm do
+  `apps/web/vitest.setup.ts` (jest-dom), sem import.
+- Props: `disbursementDate` é `IsoDate`, feito com `isoDate("2026-11-14")` de `@pilla/finance`.
+- Campos achados por `getByLabelText` com o texto exato do rótulo; cada campo tem um `<label>` ligado a ele.
+- Resultado assíncrono: `expect(await screen.findByText("R$ 6.900,00")).toBeInTheDocument()`; nunca
+  `await expect(screen.findByText(...))`, que passa uma Promise ao matcher.
+- Cada valor do resumo e cada célula da tabela é o texto inteiro do seu próprio elemento.
+- A parcela "1.150,00" se repete em todas as linhas e outros valores podem se repetir: a linha da 1ª parcela é
+  achada por `findByRole("row", { name: /14\/12\/2026/ })` e as células por `within(row)`.
+- O alerta é achado por `findByRole("alert")` e o texto conferido com `toHaveTextContent`; `role="alert"` não tem
+  nome acessível, então `{ name: ... }` nunca acha.
 
 ## Riscos
 
 - Submit do React Hook Form é assíncrono: o teste espera o resultado com `findBy*`.
-- Cobertura 0/0 pela exclusão `stub E6-T06`: o check do implement passa `--coverage.exclude=none`.
-- Componente grande para um cartão: o cálculo e a conversão ficam na E6-F01; aqui só tela.
+- Cobertura 0/0 pela exclusão `stub E6-T06`: o check do E6-T08 passa `--coverage.exclude=none`.
+- Componente grande para um cartão: o cálculo e a conversão ficam na E6-F01, e a tela se divide em E6-T06 e E6-T08.
 
 ## Dependências
 

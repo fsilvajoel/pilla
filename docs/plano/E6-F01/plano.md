@@ -6,13 +6,39 @@ formulário validado pelos esquemas de `packages/schemas`).
 
 ## Escopo
 
-- E6-T01 (Bia) e E6-T02 (Alice): `apps/web/lib/simulation.ts`, com `frequencyOf` (opção da tela → periodicidade
-  do motor) e `simulate` (corpo `SimulateLoanRequest` → juros, total, parcela e cronograma via `generateSchedule`).
-  O E6-T02 também põe `apps/web/AGENTS.md` no `.gitignore`.
-- E6-T03 (Bia) e E6-T04 (Alice): `apps/web/lib/simulation-form.ts`, com `toSimulateRequest` (textos da tela →
-  `SimulateLoanRequest`, validado por `simulateLoanRequest`).
+- E6-T01 (Bia): testes de `apps/web/lib/simulation.ts`. Dois cartões da Alice, em sequência, protegem o mesmo
+  teste: E6-T02 `frequencyOf` (opção da tela → periodicidade do motor; check só com `-t frequencyOf`) e, depois,
+  E6-T07 `simulate` (corpo `SimulateLoanRequest` → juros, total, parcela e cronograma via `generateSchedule`;
+  check com cobertura 100% e remoção do stub).
+- E6-T03 (Bia) e E6-T04 (Alice, depois do E6-T07): `apps/web/lib/simulation-form.ts`, com `toSimulateRequest`
+  (textos da tela → `SimulateLoanRequest`, validado por `simulateLoanRequest`).
 - Fora: modalidade SINGLE_PAYMENT na tela, "a cada N dias" livre, "Por parcela: x%" (`taxa_do_periodo` não existe
   no motor e o arredondamento para periodicidade em dias não está definido), campo Cliente, criar contrato.
+
+## Tipos e imports (conferidos no código; valem para os testes e para a implementação)
+
+- `SimulateLoanRequest` (`import type` de `@pilla/schemas`) é inferido do Zod (`packages/schemas/src/common.ts`):
+  `type` "INSTALLMENT" | "SINGLE_PAYMENT"; `principalCents`, `monthlyInterestRateBps`, `installmentCount` são
+  `number` comuns (500000, 633, 6), nunca bigint; `frequency` é `{ unit: "DAY" | "MONTH", interval: number }`;
+  `firstDueDate` é `string` ("2026-12-14"). No teste, o corpo é um literal tipado com números e textos puros:
+  nada de `cents`, `bps` ou `isoDate` dentro dele.
+- `simulate(request, disbursementDate)`: o 2º argumento é `IsoDate` (texto com marca), feito com `isoDate("2026-11-14")`
+  de `@pilla/finance`. É a única entrada com marca.
+- `SimulationResult` (de `./simulation`): `interest`, `total`, `installmentAmount` são `Cents` (bigint com marca):
+  compare com `toBe(190000n)`. `schedule` é `readonly ScheduledInstallment[]` com os campos `number`, `dueDate`,
+  `principal`, `interest`, `total` (`packages/finance/src/schedule.ts`), não os nomes `principalCents`/`interestCents`/
+  `totalCents` da resposta da API (`scheduleLineSchema`).
+- `frequencyOf` devolve `Frequency` (`{ unit, interval }`); compare com `toEqual` contra o objeto literal.
+- `toSimulateRequest(values: SimulationFormValues)`: todos os campos de `SimulationFormValues` são texto, menos
+  `frequency` (`FrequencyPreset`: "WEEKLY" | "BIWEEKLY" | "MONTHLY" | "BIMONTHLY"). Devolve `SimulateLoanRequest`
+  (números puros).
+- Erros: `DueDateError` e `MoneyError` são classes de `@pilla/finance`; `ZodError` é classe de `zod`.
+- `verbatimModuleSyntax` e `noUnusedLocals` estão ligados: tipo (`SimulateLoanRequest`, `SimulationFormValues`,
+  `Cents`, `Frequency`...) só entra com `import type`, e nada é importado sem uso. As linhas de import exatas de cada
+  arquivo de teste estão no `done` do cartão.
+- Entradas dos exemplos: RFC-004 §5 = INSTALLMENT, 500000, 633, 6 parcelas, MONTH 1, 1º vencimento 2026-12-14,
+  desembolso 2026-11-14. CA-11 = INSTALLMENT, 100000, 1000, 4 parcelas, DAY 7, 1º vencimento 2026-11-21,
+  desembolso 2026-11-14 (as datas do CA-11 são escolha do plano; o valor da parcela não depende delas).
 
 ## Riscos
 
