@@ -1,0 +1,89 @@
+{
+ "feature": "E5-F04",
+ "stages": {
+  "plan": {
+   "status": "done",
+   "seconds": 0,
+   "problems": []
+  },
+  "tests": {
+   "status": "done",
+   "biaRequests": 1,
+   "biaIn": 2312,
+   "biaOut": 1045,
+   "seconds": 31,
+   "repairs": 0
+  },
+  "implement": {
+   "status": "done",
+   "aliceTokens": {
+    "prompt": 198066,
+    "output": 2544
+   },
+   "cards": {
+    "E5-T10": "done"
+   },
+   "snapshots": {
+    "E5-T10": {
+     "stamp": "20261117-094939-1",
+     "sha256": "2c2e91e0fd4f3e086df5d4a09cdb74be0a85a2775da773288d06d58848f8f9ab"
+    }
+   },
+   "reused": [],
+   "seconds": 49
+  },
+  "audit": {
+   "status": "done",
+   "biaRequests": 1,
+   "biaIn": 4079,
+   "biaOut": 1564,
+   "seconds": 43,
+   "verdict": "aprovado",
+   "gaps": 0,
+   "extraTests": [],
+   "checksGreen": true
+  },
+  "review": {
+   "status": "error",
+   "seconds": 10,
+   "message": "erro 17: cobertura ausente, vazia (0/0) ou check vermelho"
+  }
+ },
+ "biaRequests": 2,
+ "testShas": {
+  "apps/api/src/lending/domain/reversal.test.ts": "84f1e86eb462747d0b3d2b2f8c265f17cb3cdac6"
+ },
+ "expectRed": true,
+ "scenarios": [
+  {
+   "id": "C1",
+   "descricao": "RENEWED e RENEGOTIATED bloqueiam o estorno",
+   "card": "E5-T09",
+   "teste": "returns true for RENEWED / returns true for RENEGOTIATED"
+  },
+  {
+   "id": "C2",
+   "descricao": "ACTIVE, PAID_OFF e WRITTEN_OFF não bloqueiam",
+   "card": "E5-T09",
+   "teste": "returns false for ACTIVE / returns false for PAID_OFF / returns false for WRITTEN_OFF"
+  },
+  {
+   "id": "C3",
+   "descricao": "PAID_OFF com saldo 1n reabre",
+   "card": "E5-T09",
+   "teste": "returns true for PAID_OFF with 1n"
+  },
+  {
+   "id": "C4",
+   "descricao": "PAID_OFF com saldo 0n não reabre",
+   "card": "E5-T09",
+   "teste": "returns false for PAID_OFF with 0n"
+  },
+  {
+   "id": "C5",
+   "descricao": "ACTIVE com saldo 500n não reabre",
+   "card": "E5-T09",
+   "teste": "returns false for ACTIVE with 500n"
+  }
+ ]
+}

@@ -1,0 +1,60 @@
+{
+ "feature": "E6-F02",
+ "stages": {
+  "plan": {
+   "status": "done",
+   "seconds": 0,
+   "problems": []
+  },
+  "tests": {
+   "status": "done",
+   "biaRequests": 3,
+   "biaIn": 11443,
+   "biaOut": 10758,
+   "seconds": 174,
+   "repairs": 0
+  },
+  "implement": {
+   "status": "failed",
+   "seconds": 125,
+   "aliceTokens": {
+    "prompt": 304750,
+    "output": 9297
+   },
+   "cards": {
+    "E6-T06": "failed"
+   }
+  }
+ },
+ "biaRequests": 3,
+ "testShas": {
+  "apps/web/components/loan-simulation.test.tsx": "8b9d5dc4f9fd8d655249da2231a073a636a807ad"
+ },
+ "expectRed": true,
+ "scenarios": [
+  {
+   "id": "C1",
+   "descricao": "render mostra os campos e o botão",
+   "card": "E6-T05",
+   "teste": "shows inputs labelled Valor emprestado, Taxa ao mês (%), Nº de parcelas, Periodicidade, 1º vencimento and a button Simular"
+  },
+  {
+   "id": "C2",
+   "descricao": "preencher o exemplo da RFC-004 §5 e clicar em Simular mostra o resumo",
+   "card": "E6-T05",
+   "teste": "shows Total a receber, Juros and Parcela for the RFC-004 §5 example"
+  },
+  {
+   "id": "C3",
+   "descricao": "no mesmo resultado, a tabela tem a linha da 1ª parcela",
+   "card": "E6-T05",
+   "teste": "shows the first installment row with 14/12/2026, 833,33, 316,67 and 1.150,00"
+  },
+  {
+   "id": "C4",
+   "descricao": "valor 5000 sem vírgula e Simular mostra um elemento com role alert",
+   "card": "E6-T05",
+   "teste": "shows an alert when amount 5000 without comma is submitted"
+  }
+ ]
+}
