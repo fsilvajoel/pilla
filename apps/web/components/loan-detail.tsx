@@ -1,7 +1,8 @@
-// @stub E7-T10
-
 import type { LoanDetailResponse } from "@pilla/schemas";
 import type { JSX } from "react";
+import Link from "next/link";
+import { cents, formatReais } from "@pilla/finance";
+import { installmentStatusLabel, loanStandingLabel, loanStatusLabel } from "@/lib/labels";
 
 export interface LoanDetailProps {
   /** resposta de GET /loans/{id} (dados de mentira, decisões do Joel de 17/11) */
@@ -18,6 +19,69 @@ export interface LoanDetailProps {
  * (`installmentStatusLabel[status]`), uma linha por parcela (key = number). Só quando o status é ACTIVE, um link
  * "Registrar pagamento" (`Link` de next/link) para "/emprestimos/" + id + "/pagamento".
  */
-export function LoanDetail({ loan: _loan }: LoanDetailProps): JSX.Element {
-  throw new Error("not implemented");
+export function LoanDetail({ loan }: LoanDetailProps): JSX.Element {
+  const formatCurrency = (value: number): string => {
+    return formatReais(cents(BigInt(value)));
+  };
+
+  const formatDate = (dateStr: string): string => {
+    const parts = dateStr.split("-");
+    return parts.reverse().join("/");
+  };
+
+  const summaryItems = [
+    { label: "Valor emprestado", value: loan.principalCents },
+    { label: "Juros", value: loan.interestCents },
+    { label: "Total", value: loan.totalCents },
+    { label: "Pago", value: loan.paidCents },
+    { label: "Saldo devedor", value: loan.outstandingCents },
+  ] as const;
+
+  return (
+    <section>
+      <h1>Contrato {loan.loanNumber}</h1>
+      <p>{loan.personName}</p>
+      <p>
+        Situação: {loanStatusLabel[loan.status]}
+        {loan.standing && ` - ${loanStandingLabel[loan.standing]}`}
+      </p>
+      <dl>
+        {summaryItems.map((item) => (
+          <div key={item.label}>
+            <dt>{item.label}</dt>
+            <dd>R$ {formatCurrency(item.value)}</dd>
+          </div>
+        ))}
+      </dl>
+      {loan.status === "ACTIVE" && (
+        <p>
+          <Link href={`/emprestimos/${loan.id}/pagamento`}>Registrar pagamento</Link>
+        </p>
+      )}
+      <table>
+        <thead>
+          <tr>
+            <th>Nº</th>
+            <th>Vencimento</th>
+            <th>Parcela</th>
+            <th>Pago</th>
+            <th>Encargos</th>
+            <th>Situação</th>
+          </tr>
+        </thead>
+        <tbody>
+          {loan.installments.map((installment) => (
+            <tr key={installment.number}>
+              <td>{installment.number}</td>
+              <td>{formatDate(installment.dueDate)}</td>
+              <td>{formatCurrency(installment.totalCents)}</td>
+              <td>{formatCurrency(installment.paidCents)}</td>
+              <td>{formatCurrency(installment.lateChargesCents)}</td>
+              <td>{installmentStatusLabel[installment.status]}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </section>
+  );
 }

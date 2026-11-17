@@ -2,6 +2,9 @@
 
 import type { LoanListItem } from "@pilla/schemas";
 import type { JSX } from "react";
+import { cents, formatReais } from "@pilla/finance";
+import Link from "next/link";
+import { loanStandingLabel, loanStatusLabel } from "@/lib/labels";
 
 export interface LoanListProps {
   /** itens de GET /loans (dados de mentira, decisões do Joel de 17/11) */
@@ -17,6 +20,44 @@ export interface LoanListProps {
  * ACTIVE, senão `loanStatusLabel[status]` (`@/lib/labels`). Sem contratos, no lugar da tabela, o texto
  * "Nenhum contrato.".
  */
-export function LoanList({ loans: _loans }: LoanListProps): JSX.Element {
-  throw new Error("not implemented");
+export function LoanList({ loans }: LoanListProps): JSX.Element {
+  return (
+    <>
+      <Link href="/emprestimos/novo">Novo contrato</Link>
+      {loans.length === 0 ? (
+        <p>Nenhum contrato.</p>
+      ) : (
+        <table>
+          <thead>
+            <tr>
+              <th>Contrato</th>
+              <th>Cliente</th>
+              <th>Valor emprestado</th>
+              <th>Saldo devedor</th>
+              <th>Próximo vencimento</th>
+              <th>Situação</th>
+            </tr>
+          </thead>
+          <tbody>
+            {loans.map((loan) => (
+              <tr key={loan.id}>
+                <td>
+                  <Link href={`/emprestimos/${loan.id}`}>{loan.loanNumber}</Link>
+                </td>
+                <td>{loan.personName}</td>
+                <td>R$ {formatReais(cents(BigInt(loan.principalCents)))}</td>
+                <td>R$ {formatReais(cents(BigInt(loan.outstandingCents)))}</td>
+                <td>{loan.nextDueDate ? loan.nextDueDate.split("-").reverse().join("/") : "—"}</td>
+                <td>
+                  {loan.status === "ACTIVE" && loan.standing
+                    ? loanStandingLabel[loan.standing]
+                    : loanStatusLabel[loan.status]}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+    </>
+  );
 }

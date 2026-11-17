@@ -26,7 +26,7 @@ export default defineConfig({
         "lib/new-loan.ts", // stub E7-T05: sai no commit Card-Done do cartão (e4-guardrails H)
         "components/new-loan-form.tsx", // stub E7-T07: sai no commit Card-Done do cartão (e4-guardrails H)
         "components/loan-list.tsx", // stub E7-T09: sai no commit Card-Done do cartão (e4-guardrails H)
-        "components/loan-detail.tsx", // stub E7-T10: sai no commit Card-Done do cartão (e4-guardrails H)
+
         "lib/payment-draft.ts", // stub E7-T12: sai no commit Card-Done do cartão (e4-guardrails H)
         "components/payment-form.tsx", // stub E7-T14: sai no commit Card-Done do cartão (e4-guardrails H)
       ],
