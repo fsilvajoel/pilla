@@ -37,6 +37,8 @@ denyRead:
   - "*/node_modules/*"
 
 protectedWrite:
+  - "tools/alice-harness/*"
+  - "tools/jorge/*"
   - "*.test.ts"
   - "*.spec.ts"
   - "*.test.tsx"

@@ -39,7 +39,8 @@ denyRead:
   - "*/node_modules/*"
 
 protectedWrite:
-  - tools/alice-harness/*   # a Alice não edita as próprias travas (cartão do harness libera caminho exato)
+  - tools/alice-harness/*   # herdado de policy.default.yaml; cartão explicitamente autorizado libera caminho exato
+  - tools/jorge/*           # também herdado; mudanças de Jorge são responsabilidade do Review
   - "*.test.ts"
   - "*.spec.ts"
   - "*.test.tsx"

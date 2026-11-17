@@ -33,10 +33,15 @@ def load_policy(repo: Path) -> dict[str, Any]:
                 if key not in allowed_keys:
                     raise ValueError(f"Unknown policy key: {key}")
 
-            # Lists are replaced
+            # Proteções básicas são obrigatórias; o arquivo do repo só pode ampliá-las.
             for key in ["officialDomains", "denyRead", "protectedWrite", "forbiddenAdded"]:
                 if key in repo_config:
-                    policy[key] = repo_config[key]
+                    if key in ("denyRead", "protectedWrite"):
+                        if not isinstance(repo_config[key], list):
+                            raise ValueError(f"{key} precisa ser lista")
+                        policy[key] = list(dict.fromkeys(policy[key] + repo_config[key]))
+                    else:
+                        policy[key] = repo_config[key]
 
     # Ensure forbiddenAdded is a list of (label, compiled re.Pattern)
     if "forbiddenAdded" in policy:
