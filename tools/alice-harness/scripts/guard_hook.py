@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 """PreToolUse hook do Claude Code (e4-guardrails B, G, H). Nega, com exit 2:
 (a) Read/Grep/Glob/Bash que toque tools/alice-harness/runs/ fora de retro-*;
-(b) Write/Edit em arquivo de allowedPaths de cartão da Alice ainda não done (docs/plano/*.yaml);
+(b) Write/Edit em arquivo de allowedPaths de cartão da Alice ainda não done (docs/plano/*.yaml),
+    salvo casca de implement marcada com '// @stub <ID>' (ver stub_text_ok);
 (c) Bash com python3, node ou vitest que cite esses arquivos, exceto se a Alice já entregou o cartão
     (revisão: rodar a suíte uma vez é permitido; reescrever continua proibido);
-(d) git commit com arquivo de cartão da Alice sem 'Card-Done: <ID>', salvo novo placeholder staged
+(d) git commit com arquivo de cartão da Alice sem 'Card-Done: <ID>', salvo casca marcada staged
     de implement com 'Card-Stub: <ID>'; em test-author exige revisão staged completa (erro 11);
     Done com etiqueta 'stub <ID>' ainda no índice é recusado (erro 12);
 (e) git commit/push com --no-verify (never-no-verify).
@@ -97,40 +98,61 @@ def stub_marks(cid: str) -> list[str]:
     return [":".join(line.split(":", 2)[:2]) for line in out.splitlines() if line]
 
 
-# Subconjunto proposital de TS/TSX: todo token desconhecido falha fechado, não interpreta código.
-STUB_LINE = re.compile(
-    r'^\s*(?:(?:import\s+(?:type\s+)?(?:[\w{},*\s]+\s+from\s+)?[\x27\"][^\x27\"]+[\x27\"];?)'
-    r'|(?:(?:export\s+)?(?:interface|type)\s+\w+[^{}]*\{[^{}]*\};?)'
-    r'|(?:(?:export\s+)?type\s+\w+\s*=\s*[^;{}]+;)'
-    r'|(?:/\*\*?[^{}]*\*/|\*[^{}]*|//[^{}]*)'
-    r'|(?:\s*))\s*$'
-)
-STUB_SIGNATURE = re.compile(r'^\s*(?:export\s+)?(?:default\s+)?(?:async\s+)?function\s+\w+\s*\([^{};]*\)\s*(?::\s*[^{};]+)?\s*\{\s*$')
-STUB_THROW = re.compile(r'^\s*throw\s+new\s+Error\s*\(\s*([\x27\"])not implemented\1\s*\)\s*;\s*$')
+# Stub marcado (decisão do Joel, 17/11): a linha '// @stub <ID>' identifica a casca de um cartão de implement.
+# Com a marca, o Claude pode escrever e commitar (Card-Stub) a casca; sem ela, o arquivo é trabalho da Alice.
+# Rede contra solução escondida: placeholder obrigatório, nenhum 'return' e o expect-red dos testes da Bia.
+# Card-Done com a marca ainda no índice é recusado (stub_marks casa '@stub <ID>').
+STUB_THROW = re.compile(r'throw\s+new\s+Error\s*\(\s*([\x27\"])not implemented\1\s*\)')
+STUB_RETURN = re.compile(r'\breturn\b')
 
 
-def staged_stub(path: str) -> bool:
-    """Somente arquivo novo de código TS/TSX, com funções cuja única instrução lança o placeholder."""
-    if not re.fullmatch(r'[\w./-]+\.tsx?', path) or '..' in Path(path).parts:
+def stub_marker(cid: str) -> re.Pattern[str]:
+    return re.compile(rf'^\s*//\s*@stub\s+{re.escape(cid)}\s*$', re.M)
+
+
+def stub_text_ok(text: str, cid: str) -> bool:
+    """Casca TS/TSX marcada para o cartão: marca, ao menos um placeholder e nenhum return."""
+    return bool(stub_marker(cid).search(text)) and bool(STUB_THROW.search(text)) and not STUB_RETURN.search(text)
+
+
+def stub_path_ok(path: str) -> bool:
+    return bool(re.fullmatch(r'[\w./-]+\.tsx?', path)) and '..' not in Path(path).parts
+
+
+def staged_stub(path: str, cid: str) -> bool:
+    """Arquivo staged de código TS/TSX que é casca marcada do cartão."""
+    if not stub_path_ok(path):
         return False
-    old = subprocess.run(['git', '-C', str(REPO), 'cat-file', '-e', f'HEAD:{path}'], capture_output=True)
     blob = subprocess.run(['git', '-C', str(REPO), 'show', f':{path}'], capture_output=True, text=True)
-    if old.returncode == 0 or blob.returncode or not blob.stdout:
+    return not blob.returncode and stub_text_ok(blob.stdout, cid)
+
+
+def card_of(target: str) -> dict | None:
+    for c in open_cards():
+        if any(target == str(p) or fnmatch.fnmatch(target, str(p)) for p in c.get("allowedPaths") or []):
+            return c
+    return None
+
+
+def stub_write_ok(target: str, tool: str, inp: dict) -> bool:
+    """Write/Edit do Claude em arquivo de cartão só se o resultado continua casca marcada de implement."""
+    card = card_of(target)
+    if not card or card.get("kind") != "implement" or not stub_path_ok(target):
         return False
-    lines = blob.stdout.splitlines()
-    i, functions = 0, 0
-    while i < len(lines):
-        line = lines[i]
-        if STUB_SIGNATURE.fullmatch(line):
-            if i + 2 >= len(lines) or not STUB_THROW.fullmatch(lines[i + 1]) or not re.fullmatch(r'\s*}\s*;?\s*', lines[i + 2]):
-                return False
-            functions += 1
-            i += 3
-            continue
-        if not STUB_LINE.fullmatch(line):
+    if tool == "Write":
+        text = inp.get("content")
+    elif tool == "Edit":
+        try:
+            old = (REPO / target).read_text()
+        except OSError:
             return False
-        i += 1
-    return functions > 0
+        a, b = inp.get("old_string") or "", inp.get("new_string") or ""
+        if not a or a not in old:
+            return False
+        text = old.replace(a, b) if inp.get("replace_all") else old.replace(a, b, 1)
+    else:
+        return False
+    return isinstance(text, str) and stub_text_ok(text, card["id"])
 
 
 def has_trailer(cmd: str, kind: str, cid: str) -> bool:
@@ -147,11 +169,11 @@ def commit_problems(cmd: str) -> list[str]:
         stub = has_trailer(cmd, 'Stub', c['id'])
         if not mine and not tagged and not stub:
             continue
-        if stub and not tagged and (not mine or c.get('kind') != 'implement' or
-                                    not all(staged_stub(p) for p in mine)):
-            out.append(f"{c['id']}: Card-Stub exige arquivo novo de implement, staged e apenas placeholder")
-        if mine and not tagged and not (stub and c.get('kind') == 'implement' and
-                                       all(staged_stub(p) for p in mine)):
+        stub_ok = c.get('kind') == 'implement' and bool(mine) and all(staged_stub(p, c['id']) for p in mine)
+        if stub and not tagged and not stub_ok:
+            out.append(f"{c['id']}: Card-Stub exige arquivo de implement staged com '// @stub {c['id']}', "
+                       "placeholder 'not implemented' e nenhum return")
+        if mine and not tagged and not (stub and stub_ok):
             out.append(f"{', '.join(mine)} é de {c['id']}: o commit precisa do trailer 'Card-Done: {c['id']}'")
         if c.get("kind") == "test-author":
             out += review_problems(REPO, c, "staged")
@@ -202,7 +224,7 @@ def main() -> None:
     if tool in ("Write", "Edit", "NotebookEdit", "MultiEdit") and path:
         target = rel(path)
         for p in open_paths():
-            if target == p or fnmatch.fnmatch(target, p):
+            if (target == p or fnmatch.fnmatch(target, p)) and not stub_write_ok(target, tool, inp):
                 deny(f"{tool} em {target}: arquivo de cartão da Alice ainda não done. Erro 1 da lista (escrever a solução).")
     if tool == "Bash" and NO_VERIFY.search(cmd):
         deny("--no-verify é proibido: o verify é o portão de qualidade (never-no-verify).")
