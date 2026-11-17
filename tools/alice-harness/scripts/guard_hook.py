@@ -10,8 +10,8 @@
     Done com etiqueta 'stub <ID>' ainda no índice é recusado (erro 12);
 (e) git commit/push com --no-verify (never-no-verify).
 Done = trailer 'Card-Done: <ID>' num commit (Card-Reopen desfaz), ou ID citado em commit até LEGACY_UNTIL
-(cartões fechados antes do trailer existir). Entregue = status done no resumo plan-*.json da fila E arquivo do cartão
-alterado na árvore (entrega pendente de revisão; resumo antigo de entrega revertida não conta).
+(cartões fechados antes do trailer existir). Entregue = status done em plan-*.json ou no índice arquivado E arquivo do
+cartão alterado na árvore (entrega pendente de revisão; resumo antigo de entrega revertida não conta).
 Lê runs/ só aqui dentro; o bloqueio vale para as ferramentas do Claude."""
 from __future__ import annotations
 
@@ -65,6 +65,8 @@ def delivered_ids() -> set[str]:
             ids |= {r.get("task") for r in json.loads(f.read_text()) if r.get("status") == "done"}
         except (json.JSONDecodeError, OSError, AttributeError):
             continue
+    from run_store import delivered_ids as archived_deliveries
+    ids |= archived_deliveries(RUNS)
     return ids
 
 

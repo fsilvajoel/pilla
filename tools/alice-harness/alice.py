@@ -6,8 +6,10 @@ Usage:
   alice.py resume <run_dir> --answer "<text>"    continue after ask_claude
   alice.py chat "<prompt>" [--file <path>]...    one-shot question, no tools
   alice.py rule <ID>... [--repo <path>]          print rule definitions (RN-C03, T-13…) from docs
-  alice.py metrics                               summary of runs/metrics.jsonl
+  alice.py metrics                               summary of local run usage metrics
   alice.py evolution                             metrics grouped by harness version (is Alice improving?)
+  alice.py runs summarize                         refresh the compact operational context
+  alice.py runs compact [--apply]                 preview or archive closed run artifacts
   alice.py cards <plan.yaml>... [--repo <path>]  validate delivery plans (docs/plano/E*.yaml)
   alice.py review <plan.yaml> <ID> [--repo]      check the Bia review of a test-author delivery (bia.py test writes it; required before its implement card)
   alice.py plan-run <plan.yaml> <ID>... [--repo]  run Alice cards in order (skips dependents of failures)
@@ -44,6 +46,7 @@ import yaml
 
 import gates
 import metrics
+import run_store
 from cards import Size, feature_problems, output_tokens, quality_problems, size_model, validate_plan
 from edits import apply_edit_tolerant, replace_function
 from policy import load_policy
@@ -54,6 +57,12 @@ from review import blob_sha, rejection_notes, review_problems
 
 HERE = Path(__file__).resolve().parent
 RUNS = HERE / "runs"
+METRICS = run_store.metrics_path(RUNS)
+METRIC_TEST_TASK = "E9-X"
+
+
+def _load_run_metrics() -> list[dict]:
+    return [record for record in metrics.load(METRICS) if record.get("task") != METRIC_TEST_TASK]
 
 # ---------------------------------------------------------------- config
 
@@ -941,7 +950,7 @@ class Run:
         self.save(status, {"_question": (extra or {}).get("question", "")} if extra else None)
         rep = {**self.report(status, msg), **(extra or {})}
         print(json.dumps(rep, ensure_ascii=False, indent=1))
-        metrics.append(RUNS / "metrics.jsonl", {"task": self.card["id"], "kind": self.kind, "status": status,
+        metrics.append(METRICS, {"task": self.card["id"], "kind": self.kind, "status": status,
             "attempts": self.stats["attempts"], "toolCalls": self.stats["tool_calls"], "seconds": self.stats["seconds"],
             "promptTokens": self.stats["prompt_tokens"], "outputTokens": self.stats["output_tokens"], "think": chat_options(load_profile(PROFILE_NAME), self.card)[1],
             "profile": PROFILE_NAME, "model": load_profile(PROFILE_NAME).get("model", MODEL),
@@ -1260,18 +1269,29 @@ ACTIVE = RUNS / "ACTIVE.json"
 
 def lock(card_id: str, repo: Path) -> None:
     """LI-009: while Alice runs, nobody else edits the repo. Claude checks `alice.py status` first."""
-    RUNS.mkdir(exist_ok=True)
-    ACTIVE.write_text(json.dumps({"task": card_id, "repo": str(repo.resolve()), "pid": os.getpid(), "since": time.strftime("%H:%M:%S")}))
+    from run_store import begin_activity
+    begin_activity(RUNS, "ACTIVE.json",
+                   {"task": card_id, "repo": str(repo.resolve()), "pid": os.getpid(), "since": time.strftime("%H:%M:%S")})
 
 def unlock() -> None:
-    ACTIVE.unlink(missing_ok=True)
+    from run_store import end_activity
+    end_activity(ACTIVE)
 
 def cmd_status() -> int:
-    if not ACTIVE.exists():
+    markers = (ACTIVE, RUNS / "QUEUE_ACTIVE.json", RUNS / "FEATURE_ACTIVE.json", RUNS / "COMPACTING.json")
+    present = [marker for marker in markers if marker.exists()]
+    if not present:
         print("livre: nenhuma tarefa da Alice rodando")
         return 0
-    info = json.loads(ACTIVE.read_text())
+    current = present[0]
+    info = json.loads(current.read_text())
+    if current != ACTIVE:
+        print(f"OCUPADO: {current.name} {info}")
+        return 1
     alive = Path(f"/proc/{info.get('pid')}").exists()
+    if not alive and len(present) > 1:
+        print(f"OCUPADO: {', '.join(marker.name for marker in present)}")
+        return 1
     print(f"{'OCUPADO' if alive else 'trava órfã (processo morto)'}: {info}")
     return 1 if alive else 0
 
@@ -1504,7 +1524,19 @@ def cmd_plan_run(plan: Path, ids: list[str], repo: Path, rounds: int = 3, ops: P
     return 0 if all(r.get("status") == "done" or str(r.get("status")).startswith("skipped (assignee") for r in results) else 2
 
 def cmd_resume(run_dir: Path, answer: str) -> int:
-    state = json.loads((run_dir / "state.json").read_text())
+    if (RUNS / "COMPACTING.json").exists():
+        sys.exit("resume recusado: compactação de runs em andamento; tente novamente")
+    state_path = run_dir / "state.json"
+    if not state_path.is_file():
+        from run_store import restore_archived_tree
+        try:
+            relative = run_dir.resolve().relative_to(RUNS.resolve()).as_posix()
+            restored = restore_archived_tree(RUNS, relative)
+        except (OSError, ValueError) as error:
+            sys.exit(f"resume recusado: não foi possível restaurar a execução arquivada: {error}")
+        if not restored:
+            sys.exit(f"resume recusado: estado da execução não existe em {run_dir}")
+    state = json.loads(state_path.read_text())
     if state.get("_status") != "needs_input":
         sys.exit(f"execução não está aguardando resposta (status={state.get('_status')})")
     apply_policy(Path(state["_repo"]))
@@ -1592,6 +1624,16 @@ def main() -> int:
     sub.add_parser("metrics")
     sub.add_parser("evolution")
     sub.add_parser("status")
+    runs_cmd = sub.add_parser("runs")
+    runs_sub = runs_cmd.add_subparsers(dest="runs_action", required=True)
+    summarize = runs_sub.add_parser("summarize")
+    summarize.add_argument("--lessons", type=Path, default=HERE.parents[1] / "docs" / "memoria" / "licoes.md")
+    compact = runs_sub.add_parser("compact")
+    compact_mode = compact.add_mutually_exclusive_group()
+    compact_mode.add_argument("--apply", action="store_true", help="arquiva após verificar a cópia")
+    compact_mode.add_argument("--dry-run", action="store_true", help="simula sem modificar arquivos (padrão)")
+    compact.add_argument("--lessons", type=Path, default=HERE.parents[1] / "docs" / "memoria" / "licoes.md")
+    compact.add_argument("--archive-root", type=Path)
     k = sub.add_parser("cost"); k.add_argument("ids", nargs="+"); k.add_argument("--repo", type=Path, default=Path("."))
     k.add_argument("--since", default=""); k.add_argument("--until", default="~")
     u = sub.add_parser("claude-usage"); u.add_argument("--since", default=""); u.add_argument("--until", default="~")
@@ -1606,6 +1648,19 @@ def main() -> int:
     fi = sub.add_parser("fila"); fi.add_argument("agente", choices=("alice", "bia", "jorge")); fi.add_argument("itens"); fi.add_argument("--repo", type=Path)
     qu = sub.add_parser("quadro"); qu.add_argument("--repo", type=Path)
     ns = ap.parse_args()
+    if ns.cmd == "runs":
+        from run_store import compact_runs, summarize_context
+        try:
+            if ns.runs_action == "summarize":
+                text = summarize_context(ns.lessons.resolve(), RUNS / "contexto.md")
+                print(f"contexto atualizado: {RUNS / 'contexto.md'} ({len(text)} caracteres)")
+            else:
+                result = compact_runs(RUNS, ns.lessons.resolve(), ns.archive_root, ns.apply)
+                print(json.dumps(result, ensure_ascii=False, indent=1))
+        except (OSError, ValueError, RuntimeError, KeyError, TypeError) as error:
+            print(f"erro ao processar runs: {error}", file=sys.stderr)
+            return 1
+        return 0
     if ns.cmd in ("run", "resume", "chat", "plan-run") or ns.cmd == "feature" and ns.plan not in ("accept", "reset"):
         announce_profile()
     if ns.cmd in ("leva", "fila", "quadro"):
@@ -1634,34 +1689,56 @@ def main() -> int:
     if ns.cmd == "status":
         return cmd_status()
     if ns.cmd == "plan-run":
-        return cmd_plan_run(ns.plan, ns.ids, ns.repo.resolve(), ns.rounds)
+        from run_store import run_activity
+        try:
+            with run_activity(RUNS, "QUEUE_ACTIVE.json", {"pid": os.getpid(), "plan": str(ns.plan)}):
+                return cmd_plan_run(ns.plan, ns.ids, ns.repo.resolve(), ns.rounds)
+        except RuntimeError as error:
+            print(f"plan-run recusado: {error}", file=sys.stderr)
+            return 1
     if ns.cmd == "prompt":
         return cmd_prompt(ns.plan, ns.id, ns.repo.resolve())
     if ns.cmd == "feature":  # orquestração por feature (ADR-0014)
         from feature import cmd_feature, cmd_feature_accept, cmd_feature_reset
+        from run_store import run_activity
         if ns.plan == "reset":  # feature reset <plano.yaml> <F> --stage tests|implement [--cards ...] --motivo "..."
             if not ns.feature or not ns.extra:
                 ap.error("feature reset requer <plano.yaml> <F>")
             cards = [c.strip() for c in (ns.cards or "").split(",") if c.strip()] or None
-            return cmd_feature_reset(Path(ns.feature), ns.extra, ns.repo, ns.stage, cards, ns.motivo or "", RUNS)
+            try:
+                with run_activity(RUNS, "FEATURE_ACTIVE.json", {"pid": os.getpid(), "feature": ns.extra}):
+                    return cmd_feature_reset(Path(ns.feature), ns.extra, ns.repo, ns.stage, cards, ns.motivo or "", RUNS)
+            except RuntimeError as error:
+                print(f"feature reset recusado: {error}", file=sys.stderr)
+                return 1
         if ns.extra:
             ap.error(f"argumento inesperado: {ns.extra}")
         if ns.plan == "accept":
             if not ns.feature:
                 ap.error("feature accept requer <F>")
-            return cmd_feature_accept(ns.feature, ns.repo)
+            try:
+                with run_activity(RUNS, "FEATURE_ACTIVE.json", {"pid": os.getpid(), "feature": ns.feature}):
+                    return cmd_feature_accept(ns.feature, ns.repo)
+            except RuntimeError as error:
+                print(f"feature accept recusado: {error}", file=sys.stderr)
+                return 1
         if not ns.feature:
             ap.error("feature requer <plano.yaml> <F>")
-        return cmd_feature(Path(ns.plan), ns.feature, ns.repo, ns.stage, ns.rounds, RUNS)
+        try:
+            with run_activity(RUNS, "FEATURE_ACTIVE.json", {"pid": os.getpid(), "feature": ns.feature}):
+                return cmd_feature(Path(ns.plan), ns.feature, ns.repo, ns.stage, ns.rounds, RUNS)
+        except RuntimeError as error:
+            print(f"feature recusada: {error}", file=sys.stderr)
+            return 1
     if ns.cmd == "cards":
         return cmd_cards(ns.plans, ns.repo.resolve())
     if ns.cmd == "review":
         return cmd_review(ns.plan, ns.id, ns.repo.resolve())
     if ns.cmd == "evolution":
-        print(metrics.evolution_table(metrics.load(RUNS / "metrics.jsonl"), harness_history()))
+        print(metrics.evolution_table(_load_run_metrics(), harness_history()))
         return 0
     if ns.cmd == "metrics":
-        print(json.dumps(metrics.summary(metrics.load(RUNS / "metrics.jsonl")), ensure_ascii=False, indent=1))
+        print(json.dumps(metrics.summary(_load_run_metrics()), ensure_ascii=False, indent=1))
         return 0
     if ns.cmd == "run":
         return cmd_run(ns.task, ns.repo)

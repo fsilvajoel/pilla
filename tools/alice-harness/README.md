@@ -12,7 +12,10 @@ Ambiente de trabalho da Alice (modelo local no Ollama): executa as ferramentas q
 - `alice.py leva "<texto>" [--repo <path>]` / `alice.py fila <alice|bia|jorge> "<itens>" [--repo <path>]`: Claude registra leva e fila estruturadas, com gravação atômica em `docs/agents/quadro-entradas.json` (fila ausente é `?`; não use `vazia` por omissão).
 - `alice.py quadro [--repo <path>]`: gera manualmente [quadro.md](../../docs/agents/quadro.md), fotografia datada da leva, cartão da Alice, filas, último status Jorge e cota restante consultada na API do OpenRouter (reset 00:00 UTC = 21h BRT); fonte indisponível aparece como `?`. Uma consulta de quota por geração quando houver credencial; não é portão de autorização da Bia. Agentes leem o quadro para se orientar em vez de varrer logs; para evidência histórica e custos, consultam retros e relatórios. É fotografia manual, sem atualização automática: confira a data e gere de novo após registrar mudanças.
 - `alice.py rule <ID>... [--repo <path>]`: mostra a definição de uma regra (RN-C03, T-13) ou seção de documento.
-- `alice.py metrics` / `alice.py evolution`: resumo de `runs/metrics.jsonl`; evolução por versão do harness.
+- `alice.py metrics` / `alice.py evolution`: resumo de `~/.local/state/alice-harness/metrics.jsonl`; evolução por versão do harness. Registros de teste do cartão interno `E9-X` são excluídos.
+- `alice.py runs summarize`: gera `runs/contexto.md` com as 12 lições mais recentes de `docs/memoria/licoes.md`.
+- `runs/resumo-logs.md`: análise histórica dos logs arquivados até 2026-11-17, com padrões recorrentes, evidências, pendências dos planos e tokens de entrada/saída por execução/modelo com seu resultado. É um retrato manual desse conjunto; novas execuções não atualizam o arquivo automaticamente.
+- `alice.py runs compact`: simula a compactação. `--apply` arquiva em `~/.local/state/alice-harness/run-archives/` e mantém o índice em `~/.local/state/alice-harness/run-index.json`, fora do repositório. `metrics.jsonl` também fica em `~/.local/state/alice-harness/`; `runs/` conserva os resumos legíveis. Execuções `needs_input` são reidratadas automaticamente por `alice.py resume`; logs `running` recentes e estados desconhecidos ficam preservados; `running` sem atividade há mais de 24 horas é arquivado. Respostas Bia e snapshots têm leitura verificada no arquivo. O comando recusa compactar durante execução, fila ou feature.
 - `alice.py claude-usage [--since ISO] [--until ISO]`: tokens reais do Claude na sessão mais recente e subagentes. `alice.py cost <ID>... [--since ISO] [--until ISO]` soma todas as sessões do repositório desde antes da introdução dos cartões no git; sem cartão versionado, exige `--since` explícito. Datas ISO sem fuso são UTC; offsets são convertidos para UTC.
 - `alice.py chat "<pergunta>" [--file <path>]`: pergunta direta ao modelo, sem ferramentas (só resumo e rascunho).
 
@@ -58,7 +61,7 @@ São ideias do [harness-toolkit](https://github.com/tech-leads-club/harness-tool
 As restrições de segurança e limites são definidos em `policy.default.yaml`. Esta política pode ser sobrescrita por um arquivo localizado em `<repo>/.agents/policy.yaml`.
 
 ## Métricas
-O histórico de execuções e métricas de uso é armazenado em `runs/metrics.jsonl`.
+O histórico de execuções e métricas de uso é armazenado em `~/.local/state/alice-harness/metrics.jsonl`, fora de `runs/`.
 
 ## SSH Gate
 O script `scripts/alice-gate.sh` atua como um comando forçado para a chave SSH dedicada da Alice, permitindo apenas comandos do harness e inspeção de leitura. Em `~/.ssh/authorized_keys`:

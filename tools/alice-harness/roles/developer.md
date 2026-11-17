@@ -10,3 +10,8 @@ não muda entre as chamadas, então o Ollama já reaproveita o prefixo.
 
 Na feature, a Alice recebe o cartão implement com os testes da etapa 2 em `protectedTests` (o pré-voo aceita o
 sha gravado em `featureTests`) e itera pelos checks; as notas vêm dos checks, não da Bia.
+
+Para contexto operacional, consulte `runs/contexto.md` (gerado por `alice.py runs summarize`). Ele é uma seleção
+compacta de lições recentes, não substitui `docs/memoria/licoes.md` nem o plano e os critérios de pronto atuais.
+Use os IDs das lições para localizar a fonte canônica; não deduza o estado atual do projeto a partir de uma
+retrospectiva antiga.

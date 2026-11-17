@@ -9,9 +9,11 @@ Estado em docs/plano/<F>/estado.json; artefatos em docs/plano/<F>/ (testes.md, a
 from __future__ import annotations
 
 import json
+import hashlib
 import os
 import re
 import shutil
+import zipfile
 from contextlib import contextmanager
 import subprocess
 import time
@@ -206,18 +208,18 @@ def capture(repo: Path, paths: list[str], dest: Path, meta: dict) -> str:
     return file_sha(dest / "manifest.json")
 
 
-def load_snapshot(dest: Path, digest: str) -> dict | None:
+def load_snapshot(dest: Path, digest: str, runs: Path | None = None) -> dict | None:
     """Manifest íntegro (sha confere) e cópias íntegras; senão None (fail-closed)."""
     try:
-        man = dest / "manifest.json"
-        if not digest or file_sha(man) != digest:
+        manifest_bytes = _snapshot_bytes(dest / "manifest.json", runs)
+        if not digest or hashlib.sha256(manifest_bytes).hexdigest() != digest:
             return None
-        data = json.loads(man.read_text())
+        data = json.loads(manifest_bytes)
         for p, info in (data.get("files") or {}).items():
-            if info is not None and file_sha(dest / "files" / p) != info.get("sha256"):
+            if info is not None and hashlib.sha256(_snapshot_bytes(dest / "files" / p, runs)).hexdigest() != info.get("sha256"):
                 return None
         return data
-    except (OSError, ValueError, TypeError, AttributeError):
+    except (OSError, ValueError, TypeError, AttributeError, KeyError, zipfile.BadZipFile):
         return None
 
 
@@ -232,13 +234,27 @@ def worktree_matches(repo: Path, files: dict[str, dict | None]) -> bool:
     return True
 
 
-def rollback(repo: Path, dest: Path, keep: Path) -> list[str]:
+def _snapshot_bytes(path: Path, runs: Path | None) -> bytes:
+    if path.is_file():
+        return path.read_bytes()
+    if runs is not None:
+        from run_store import read_archived_file
+        archived = read_archived_file(runs, path.relative_to(runs).as_posix())
+        if archived is not None:
+            return archived
+    raise FileNotFoundError(path)
+
+
+def rollback(repo: Path, dest: Path, keep: Path, runs: Path | None = None) -> list[str]:
     """Volta os arquivos ao checkpoint; o que difere vai antes para keep/previous (nada se perde)."""
-    data = json.loads((dest / "manifest.json").read_text())
+    data = json.loads(_snapshot_bytes(dest / "manifest.json", runs))
     moved = []
     for p, info in data["files"].items():
+        saved = dest / "files" / p
         cur = repo / p
-        same = (info is None and not cur.exists()) or (info is not None and cur.is_file() and file_sha(cur) == info["sha256"])
+        same = (info is None and not cur.exists()) or (
+            info is not None and cur.is_file() and file_sha(cur) == info["sha256"]
+        )
         if same:
             continue
         if cur.is_file():
@@ -250,7 +266,7 @@ def rollback(repo: Path, dest: Path, keep: Path) -> list[str]:
                 cur.unlink()
         else:
             cur.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copy2(dest / "files" / p, cur)
+            cur.write_bytes(_snapshot_bytes(saved, runs))
             os.chmod(cur, int(info["mode"]))
         moved.append(p)
     return moved
@@ -598,7 +614,7 @@ class Orchestrator:
             info = snaps.get(cid)
             if done.get(cid) != "done" or not isinstance(info, dict):
                 break
-            data = load_snapshot(self.snap_dir(cid) / str(info.get("stamp", "")), str(info.get("sha256", "")))
+            data = load_snapshot(self.snap_dir(cid) / str(info.get("stamp", "")), str(info.get("sha256", "")), self.runs)
             if data is None or data.get("card") != card_digest(card) or data.get("testShas") != self.state["testShas"] \
                     or sorted(data.get("files") or {}) != self.impl_paths():
                 break
@@ -665,7 +681,7 @@ class Orchestrator:
                 failed.add(cid)
                 snaps.pop(cid, None)
                 try:
-                    rollback(self.repo, cp, self.log_dir)
+                    rollback(self.repo, cp, self.log_dir, self.runs)
                 except (OSError, ValueError, KeyError) as e:
                     statuses[cid] = status
                     return self.finish("implement", "error", t0, **extra(), message=f"rollback de {cid} falhou: {e}")
@@ -906,11 +922,11 @@ class Orchestrator:
             info = snaps.get(prev) if prev else None
             dest = self.snap_dir(prev) / str(info.get("stamp", "")) if prev and isinstance(info, dict) else None
             valid = dest is not None and statuses.get(prev) == "done" and self.impl_paths() is not None and \
-                load_snapshot(dest, str(info.get("sha256", ""))) is not None
+                load_snapshot(dest, str(info.get("sha256", "")), self.runs) is not None
             self.log_dir.mkdir(parents=True, exist_ok=True)
             if valid:
                 affected = ids[first:]  # os seguintes dependem dos arquivos que voltam: refazem também
-                moved = rollback(self.repo, dest, self.log_dir)
+                moved = rollback(self.repo, dest, self.log_dir, self.runs)
                 note = f"arquivos no checkpoint de {prev} ({len(moved)} restaurados)"
             else:
                 affected = ids  # sem checkpoint verificável: nada antes dá para provar, tudo volta ao HEAD

@@ -10,6 +10,6 @@ checks:
   - grep -q "alice.py metrics" README.md
   - grep -q alice-gate README.md
 done:
-  - "README in pt-BR, concise: keep existing content that is still true; add sections for: commands (run, resume, chat, rule, metrics), tools (incl. edit_file, view_diff, read_rule), card fields (kind, rules, refactor, think, maxOutputTokens, lessons in finish), policy (policy.default.yaml overridden by <repo>/.agents/policy.yaml), metrics (runs/metrics.jsonl), SSH gate (scripts/alice-gate.sh, forced command for a dedicated key)"
+  - "README in pt-BR, concise: keep existing content that is still true; add sections for: commands (run, resume, chat, rule, metrics), tools (incl. edit_file, view_diff, read_rule), card fields (kind, rules, refactor, think, maxOutputTokens, lessons in finish), policy (policy.default.yaml overridden by <repo>/.agents/policy.yaml), metrics (~/.local/state/alice-harness/metrics.jsonl), SSH gate (scripts/alice-gate.sh, forced command for a dedicated key)"
   - "Never include IPs, keys or the contents of .env"
 budget: {attempts: 3, toolCalls: 20}

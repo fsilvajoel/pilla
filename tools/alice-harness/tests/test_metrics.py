@@ -3,7 +3,9 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
+import alice
 from metrics import append, load, summary
 
 
@@ -53,6 +55,12 @@ class MetricsTest(unittest.TestCase):
         self.assertEqual(s["runs"], 0)
         self.assertEqual(s["successRate"], 0)
         self.assertEqual(s["byKind"], {})
+
+    def test_run_metrics_exclude_harness_fixture_records(self):
+        append(self.path, {"task": "E9-X", "status": "failed", "promptTokens": 0, "outputTokens": 0})
+        append(self.path, {"task": "E5-T01", "status": "done", "promptTokens": 120, "outputTokens": 20})
+        with mock.patch.object(alice, "METRICS", self.path):
+            self.assertEqual([r["task"] for r in alice._load_run_metrics()], ["E5-T01"])
 
 
 if __name__ == "__main__":

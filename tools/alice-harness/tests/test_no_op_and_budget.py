@@ -101,6 +101,7 @@ class RunBudgetLoopTest(unittest.TestCase):
             with mock.patch.object(run, "verify", return_value=verified or (False, f"check 0 falhou: {check_text}")), \
                  mock.patch.object(run, "compact"), mock.patch.object(run, "log"), \
                  mock.patch("alice.Tools.read_file", read_file), \
+                 mock.patch("alice.metrics.append"), \
                  contextlib.redirect_stdout(io.StringIO()) as stdout:
                 exit_code = run.loop()
             return exit_code, json.loads(stdout.getvalue()), seen, run.messages
