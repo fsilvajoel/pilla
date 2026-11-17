@@ -156,19 +156,20 @@ cards:
       - pnpm --filter @pilla/web exec vitest run lib/simulation.test.ts --coverage --coverage.include=lib/simulation.ts --coverage.exclude=none --coverage.thresholds.lines=100 --coverage.thresholds.branches=100
       - pnpm --filter @pilla/web typecheck
       - pnpm --filter @pilla/web lint
+      - node scripts/check-no-stub.mjs E6-T02 apps/web/lib/simulation.ts apps/web/vitest.config.ts
     done:
       - all tests in apps/web/lib/simulation.test.ts pass with 100% line and branch coverage of simulation.ts (run_check 0)
-      - simulation.ts has no '// @stub E6-T02' line and apps/web/vitest.config.ts has no line that excludes lib/simulation.ts
+      - simulation.ts has no '// @stub E6-T02' line and apps/web/vitest.config.ts has no line that excludes lib/simulation.ts (run_check 3)
       - 'import { bps, cents, generateSchedule, isoDate } from "@pilla/finance";'
       - frequencyOf and simulate keep the behavior E6-T02 and E6-T07 gave them, and every other line of the two files stays
     hints:
       - E6-T02 and E6-T07 already made the code, so this card only deletes two lines and runs the full check
       - the line of vitest.config.ts to delete is the one inside coverage.exclude with lib/simulation.ts and the comment stub E6-T02, and the line of lib/simulation-form.ts right below it stays
       - if run_check 0 shows a line or branch of simulation.ts not covered, fix that line in simulation.ts so it has no branch, because the test file is protected and never changes
-      - one edit_file of simulation.ts that deletes the line '// @stub E6-T02', one edit_file of apps/web/vitest.config.ts that deletes the line with stub E6-T02, then run_check 0, 1 and 2
+      - one edit_file of simulation.ts that deletes the line '// @stub E6-T02', one edit_file of apps/web/vitest.config.ts that deletes the line with stub E6-T02, then run_check 0, 1, 2 and 3
     budget:
       attempts: 4
-      toolCalls: 17
+      toolCalls: 20
       minutes: 8
     readFirst:
       - apps/web/lib/simulation.ts
@@ -237,6 +238,7 @@ cards:
       - pnpm --filter @pilla/web exec vitest run lib/simulation-form.test.ts --coverage --coverage.include=lib/simulation-form.ts --coverage.exclude=none --coverage.thresholds.lines=100 --coverage.thresholds.branches=100
       - pnpm --filter @pilla/web typecheck
       - pnpm --filter @pilla/web lint
+      - node scripts/check-no-stub.mjs E6-T04 apps/web/lib/simulation-form.ts apps/web/vitest.config.ts
     done:
       - all tests in apps/web/lib/simulation-form.test.ts pass with 100% line and branch coverage of simulation-form.ts (run_check 0)
       - 'import { parseReais } from "@pilla/finance";'
@@ -245,14 +247,14 @@ cards:
       - amount and monthlyRate go through parseReais, frequency through frequencyOf and the whole object through simulateLoanRequest.parse
       - principalCents, monthlyInterestRateBps and installmentCount reach simulateLoanRequest.parse as number, and firstDueDate as the text typed in the form
       - keep the interface, the signature and the /** */ comments unchanged, except that the parameter loses the leading underscore
-      - simulation-form.ts has no '// @stub E6-T04' line and apps/web/vitest.config.ts has no line that excludes lib/simulation-form.ts
+      - simulation-form.ts has no '// @stub E6-T04' line and apps/web/vitest.config.ts has no line that excludes lib/simulation-form.ts (run_check 3)
     hints:
       - the import type lines of simulation-form.ts stay as they are, next to the three import lines of the done
       - parseReais gives Cents, a bigint, and Number turns it into the number the request schema expects, and installmentCount is text that Number turns into a number too
-      - one write_file of simulation-form.ts, then one edit_file of apps/web/vitest.config.ts that deletes the line with stub E6-T04, then run_check 0, 1 and 2
+      - one write_file of simulation-form.ts, then one edit_file of apps/web/vitest.config.ts that deletes the line with stub E6-T04, then run_check 0, 1, 2 and 3
     budget:
       attempts: 4
-      toolCalls: 18
+      toolCalls: 20
       minutes: 8
     readFirst:
       - apps/web/lib/simulation-form.ts
@@ -372,21 +374,22 @@ cards:
       - pnpm --filter @pilla/web exec vitest run components/loan-simulation.test.tsx --coverage --coverage.include=components/loan-simulation.tsx --coverage.exclude=none
       - pnpm --filter @pilla/web typecheck
       - pnpm --filter @pilla/web lint
+      - node scripts/check-no-stub.mjs E6-T06 apps/web/components/loan-simulation.tsx apps/web/vitest.config.ts
     done:
       - all tests in apps/web/components/loan-simulation.test.tsx pass with at least 85% coverage of loan-simulation.tsx (run_check 0)
       - below the summary, the result has a table with the header cells Nº, Vencimento, Principal, Juros and Parcela of the /** */ comment
       - the table has one tr per schedule line, keyed by number, and each cell is the whole text of its own td
       - Vencimento shows the dueDate as dd/mm/aaaa, and Principal, Juros and Parcela show formatReais of principal, interest and total, without R$
       - the form, the submit, the summary and the alert of E6-T06 stay as they are, and no import line is added
-      - loan-simulation.tsx has no '// @stub E6-T06' line and apps/web/vitest.config.ts has no line that excludes components/loan-simulation.tsx
+      - loan-simulation.tsx has no '// @stub E6-T06' line and apps/web/vitest.config.ts has no line that excludes components/loan-simulation.tsx (run_check 3)
     hints:
       - the schedule lines are ScheduledInstallment of schedule.ts with the fields number, dueDate, principal, interest and total, all money as Cents
       - dueDate is IsoDate, the text aaaa-mm-dd, and the cell shows the same three parts in the order dd/mm/aaaa
       - the line number is a number, and the lint refuses a number inside a template literal, so it goes through String if it is joined to text
-      - one edit_file of loan-simulation.tsx that inserts the table after the summary, one edit_file that deletes the line with stub E6-T06, one edit_file of apps/web/vitest.config.ts that deletes the line with stub E6-T06, then run_check 0, 1 and 2
+      - one edit_file of loan-simulation.tsx that inserts the table after the summary, one edit_file that deletes the line with stub E6-T06, one edit_file of apps/web/vitest.config.ts that deletes the line with stub E6-T06, then run_check 0, 1, 2 and 3
     budget:
       attempts: 5
-      toolCalls: 18
+      toolCalls: 20
       minutes: 10
     readFirst:
       - apps/web/components/loan-simulation.tsx

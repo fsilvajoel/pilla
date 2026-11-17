@@ -325,9 +325,10 @@ cards:
       - pnpm --filter @pilla/api exec vitest run src/lending/domain/loan-status.test.ts --coverage --coverage.include=src/lending/domain/loan-status.ts --coverage.exclude=none --coverage.thresholds.lines=100 --coverage.thresholds.branches=100
       - pnpm --filter @pilla/api typecheck
       - pnpm --filter @pilla/api lint
+      - node scripts/check-no-stub.mjs E5-T08 apps/api/src/lending/domain/loan-status.ts apps/api/vitest.config.ts
     done:
       - all tests in apps/api/src/lending/domain/loan-status.test.ts pass with 100% line and branch coverage of loan-status.ts (run_check 0)
-      - loan-status.ts has no '// @stub E5-T08' line and apps/api/vitest.config.ts has no line that excludes src/lending/domain/loan-status.ts
+      - loan-status.ts has no '// @stub E5-T08' line and apps/api/vitest.config.ts has no line that excludes src/lending/domain/loan-status.ts (run_check 3)
       - isClosedForPayments gives true only for PAID_OFF, RENEWED, RENEGOTIATED and CANCELLED (RN-R09), so WRITTEN_OFF gives false (RN-C20)
       - the type LoanStatus, the comments and the signature stay, and the parameter loses the leading underscore
       - loan-status.ts gets no import line
@@ -336,10 +337,10 @@ cards:
       - above the function, a const CLOSED_FOR_PAYMENTS typed ReadonlySet of LoanStatus, a new Set with the four closed status
       - the body is one line that gives the has of that set for the status, with no if and no switch
       - the line of vitest.config.ts to delete is the one inside coverage.exclude with src/lending/domain/loan-status.ts and the comment stub E5-T08
-      - one edit_file of loan-status.ts that adds the const, replaces the body and deletes the stub line, one edit_file of apps/api/vitest.config.ts that deletes the line with stub E5-T08, then run_check 0, 1 and 2
+      - one edit_file of loan-status.ts that adds the const, replaces the body and deletes the stub line, one edit_file of apps/api/vitest.config.ts that deletes the line with stub E5-T08, then run_check 0, 1, 2 and 3
     budget:
       attempts: 4
-      toolCalls: 17
+      toolCalls: 20
       minutes: 8
     readFirst:
       - apps/api/src/lending/domain/loan-status.ts

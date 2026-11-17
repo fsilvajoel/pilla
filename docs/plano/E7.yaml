@@ -464,22 +464,23 @@ cards:
       - pnpm --filter @pilla/web exec vitest run components/loan-list.test.tsx --coverage --coverage.include=components/loan-list.tsx --coverage.exclude=none
       - pnpm --filter @pilla/web typecheck
       - pnpm --filter @pilla/web lint
+      - node scripts/check-no-stub.mjs E7-T09 apps/web/components/loan-list.tsx apps/web/vitest.config.ts
     done:
       - all tests in apps/web/components/loan-list.test.tsx pass with at least 85% coverage of loan-list.tsx (run_check 0)
       - with no loans, the text "Nenhum contrato." in place of the table, and the link Novo contrato stays
       - a null nextDueDate shows "—" and a loan not ACTIVE shows loanStatusLabel of its status
       - the imports, the props interface, the signature and the /** */ comment stay as E7-T09 left them
-      - loan-list.tsx has no '// @stub E7-T09' line and apps/web/vitest.config.ts has no line that excludes components/loan-list.tsx
+      - loan-list.tsx has no '// @stub E7-T09' line and apps/web/vitest.config.ts has no line that excludes components/loan-list.tsx (run_check 3)
     hints:
       - the component already renders the active loan, so only the empty list, the dash and the status label of a closed loan change
       - edit_file in loan-list.tsx, never a new write_file of the whole file
       - the table is not rendered at all when loans is empty, so queryByRole table is null
       - the dash is the single character of the done, the whole text of its td
       - one edit_file of apps/web/vitest.config.ts deletes the line with stub E7-T09, and one edit_file of loan-list.tsx deletes the stub line
-      - edit_file of loan-list.tsx, the two edit_file of the stub lines, then run_check 0, 1 and 2
+      - edit_file of loan-list.tsx, the two edit_file of the stub lines, then run_check 0, 1, 2 and 3
     budget:
       attempts: 4
-      toolCalls: 17
+      toolCalls: 20
       minutes: 10
     readFirst:
       - apps/web/components/loan-list.tsx
