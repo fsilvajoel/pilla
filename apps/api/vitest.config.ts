@@ -9,7 +9,14 @@ export default defineConfig({
     coverage: {
       provider: "v8",
       include: ["src/**/*.ts"],
-      exclude: ["src/**/*.test.ts", "src/**/infra/schema.ts"],
+      exclude: [
+        "src/**/*.test.ts",
+        "src/**/infra/schema.ts",
+        "src/core/public/ids.ts", // stub E5-T02: sai no commit Card-Done do cartão (e4-guardrails H)
+        "src/core/public/audit.ts", // stub E5-T04: sai no commit Card-Done do cartão (e4-guardrails H)
+        "src/lending/domain/loan-status.ts", // stub E5-T08: sai no commit Card-Done do cartão (e4-guardrails H)
+        "src/lending/domain/reversal.ts", // stub E5-T10: sai no commit Card-Done do cartão (e4-guardrails H)
+      ],
       thresholds: { lines: 100, branches: 100, functions: 100, statements: 100 },
     },
   },

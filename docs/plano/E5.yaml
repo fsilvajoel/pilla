@@ -162,8 +162,8 @@ cards:
       - all tests in apps/api/src/core/public/audit.test.ts pass with 100% line and branch coverage of audit.ts (run_check 0)
       - audit.ts has no '// @stub E5-T04' line and apps/api/vitest.config.ts has no line that excludes src/core/public/audit.ts
       - 'import { auditLog } from "../infra/schema";'
-      - recordAudit awaits the insert of the entry as it is into auditLog, with no if, no try and no catch, so a database error goes up untouched
-      - the types ActorType and AuditEntry, the /** */ comments and the signature stay, and the parameters lose the leading underscore
+      - recordAudit becomes an async function that awaits the insert of the entry as it is into auditLog, with no if, no try and no catch, so a database error goes up untouched
+      - the types ActorType and AuditEntry, the /** */ comments and the signature stay, except the async keyword added before function, and the parameters lose the leading underscore
     hints:
       - the only file read is apps/api/src/core/public/audit.ts, because the steps are in these hints
       - the fields of AuditEntry have the same names as the columns of auditLog, so the entry goes to values of db.insert with no mapping
@@ -273,12 +273,167 @@ cards:
       - apps/api/src/people/infra/person-repository.ts
       - apps/api/vitest.config.ts
     sizeNote: duas funções de 2 linhas e 2 linhas de import; vitest.config.ts perde 1 linha
+  - id: E5-T07
+    title: Write the tests for isClosedForPayments
+    kind: test-author
+    assignee: bia
+    rules: [RN-R09, RN-C20]
+    refs: [PRD-001 RN-R09, PRD-001 RN-C20, RFC-001 M2]
+    dependsOn: []
+    allowedPaths:
+      - apps/api/src/lending/domain/loan-status.test.ts
+    protectedTests: []
+    checks:
+      - node scripts/expect-red.mjs apps/api src/lending/domain/loan-status.test.ts
+      - node scripts/check-test-quality.mjs apps/api/src/lending/domain/loan-status.test.ts
+      - pnpm --filter @pilla/api typecheck
+      - pnpm --filter @pilla/api lint
+    done:
+      - every test fails now against the stub in HEAD and would pass with a correct implementation (run_check 0)
+      - 'import { describe, expect, it } from "vitest";'
+      - 'import { isClosedForPayments } from "./loan-status";'
+      - isClosedForPayments gives true for "PAID_OFF", "RENEWED", "RENEGOTIATED" and "CANCELLED" (RN-R09)
+      - isClosedForPayments gives false for "ACTIVE" (RN-R09) and for "WRITTEN_OFF" (RN-C20, a written-off loan still takes payments)
+      - never edit apps/api/src/lending/domain/loan-status.ts
+    hints:
+      - the import lines of the done are the only imports of the file, each name in them is used, and nothing else is imported
+      - isClosedForPayments takes one status text of the type LoanStatus and gives a boolean
+      - one it per status, each with one expect and toBe true or toBe false, six it in one describe isClosedForPayments
+      - the status in each it is a literal string, never taken from a list or a loop
+      - the status DRAFT gets no test, because RN-R09 does not name it
+      - one write_file of the whole test file, then run_check 0, 1, 2 and 3
+    budget:
+      attempts: 4
+      toolCalls: 16
+      minutes: 8
+    readFirst:
+      - apps/api/src/lending/domain/loan-status.ts
+    sizeNote: um describe, 6 testes, ~30 linhas
+  - id: E5-T08
+    title: Implement isClosedForPayments and remove the stub
+    kind: implement
+    assignee: alice
+    rules: [RN-R09, RN-C20]
+    refs: [PRD-001 RN-R09, PRD-001 RN-C20, RFC-001 M2]
+    dependsOn: [E5-T07]
+    allowedPaths:
+      - apps/api/src/lending/domain/loan-status.ts
+      - apps/api/vitest.config.ts
+    protectedTests:
+      - apps/api/src/lending/domain/loan-status.test.ts
+    checks:
+      - pnpm --filter @pilla/api exec vitest run src/lending/domain/loan-status.test.ts --coverage --coverage.include=src/lending/domain/loan-status.ts --coverage.exclude=none --coverage.thresholds.lines=100 --coverage.thresholds.branches=100
+      - pnpm --filter @pilla/api typecheck
+      - pnpm --filter @pilla/api lint
+    done:
+      - all tests in apps/api/src/lending/domain/loan-status.test.ts pass with 100% line and branch coverage of loan-status.ts (run_check 0)
+      - loan-status.ts has no '// @stub E5-T08' line and apps/api/vitest.config.ts has no line that excludes src/lending/domain/loan-status.ts
+      - isClosedForPayments gives true only for PAID_OFF, RENEWED, RENEGOTIATED and CANCELLED (RN-R09), so WRITTEN_OFF gives false (RN-C20)
+      - the type LoanStatus, the comments and the signature stay, and the parameter loses the leading underscore
+      - loan-status.ts gets no import line
+    hints:
+      - the only file read is apps/api/src/lending/domain/loan-status.ts, because the steps are in these hints
+      - above the function, a const CLOSED_FOR_PAYMENTS typed ReadonlySet of LoanStatus, a new Set with the four closed status
+      - the body is one line that gives the has of that set for the status, with no if and no switch
+      - the line of vitest.config.ts to delete is the one inside coverage.exclude with src/lending/domain/loan-status.ts and the comment stub E5-T08
+      - one edit_file of loan-status.ts that adds the const, replaces the body and deletes the stub line, one edit_file of apps/api/vitest.config.ts that deletes the line with stub E5-T08, then run_check 0, 1 and 2
+    budget:
+      attempts: 4
+      toolCalls: 17
+      minutes: 8
+    readFirst:
+      - apps/api/src/lending/domain/loan-status.ts
+      - apps/api/vitest.config.ts
+    sizeNote: uma const e um corpo de 1 linha; vitest.config.ts perde 1 linha
+  - id: E5-T09
+    title: Write the tests for isReversalBlocked and reopensOnReversal
+    kind: test-author
+    assignee: bia
+    rules: [RN-R10, RN-R11]
+    refs: [PRD-001 RN-R10, PRD-001 RN-R11, RFC-001 M2]
+    dependsOn: []
+    allowedPaths:
+      - apps/api/src/lending/domain/reversal.test.ts
+    protectedTests: []
+    checks:
+      - node scripts/expect-red.mjs apps/api src/lending/domain/reversal.test.ts
+      - node scripts/check-test-quality.mjs apps/api/src/lending/domain/reversal.test.ts
+      - pnpm --filter @pilla/api typecheck
+      - pnpm --filter @pilla/api lint
+    done:
+      - every test fails now against the stub in HEAD and would pass with a correct implementation (run_check 0)
+      - 'import { describe, expect, it } from "vitest";'
+      - 'import { isReversalBlocked, reopensOnReversal } from "./reversal";'
+      - isReversalBlocked gives true for "RENEWED" and "RENEGOTIATED" and false for "ACTIVE", "PAID_OFF" and "WRITTEN_OFF" (RN-R11)
+      - reopensOnReversal of "PAID_OFF" and 1n gives true, of "PAID_OFF" and 0n gives false, of "ACTIVE" and 500n gives false (RN-R10)
+      - never edit apps/api/src/lending/domain/reversal.ts
+    hints:
+      - the import lines of the done are the only imports of the file, each name in them is used, and nothing else is imported
+      - isReversalBlocked takes one status text of the type LoanStatus and gives a boolean
+      - reopensOnReversal takes the status and outstandingCents, the balance left after the reversal in cents as a bigint, and gives a boolean
+      - one it per case, each with one expect and toBe true or toBe false
+      - every status and every bigint is a literal written in the it, never taken from a list or a loop
+      - one describe isReversalBlocked with five it and one describe reopensOnReversal with three it
+      - one write_file of the whole test file, then run_check 0, 1, 2 and 3
+    budget:
+      attempts: 4
+      toolCalls: 16
+      minutes: 8
+    readFirst:
+      - apps/api/src/lending/domain/reversal.ts
+    sizeNote: dois describe, 8 testes, ~45 linhas
+  - id: E5-T10
+    title: Implement isReversalBlocked and reopensOnReversal and remove the stub
+    kind: implement
+    assignee: alice
+    rules: [RN-R10, RN-R11]
+    refs: [PRD-001 RN-R10, PRD-001 RN-R11, RFC-001 M2]
+    dependsOn: [E5-T09]
+    allowedPaths:
+      - apps/api/src/lending/domain/reversal.ts
+      - apps/api/vitest.config.ts
+    protectedTests:
+      - apps/api/src/lending/domain/reversal.test.ts
+    checks:
+      - pnpm --filter @pilla/api exec vitest run src/lending/domain/reversal.test.ts --coverage --coverage.include=src/lending/domain/reversal.ts --coverage.exclude=none --coverage.thresholds.lines=100 --coverage.thresholds.branches=100
+      - pnpm --filter @pilla/api typecheck
+      - pnpm --filter @pilla/api lint
+    done:
+      - all tests in apps/api/src/lending/domain/reversal.test.ts pass with 100% line and branch coverage of reversal.ts (run_check 0)
+      - reversal.ts has no '// @stub E5-T10' line and apps/api/vitest.config.ts has no line that excludes src/lending/domain/reversal.ts
+      - isReversalBlocked gives true only for RENEWED and RENEGOTIATED (RN-R11)
+      - reopensOnReversal gives true only when the status is PAID_OFF and outstandingCents is above zero (RN-R10)
+      - the import type line, the comments and the signatures stay, and the parameters lose the leading underscore
+    hints:
+      - the only file read is apps/api/src/lending/domain/reversal.ts, because the steps are in these hints
+      - isReversalBlocked is one line, the status equal to RENEWED or the status equal to RENEGOTIATED
+      - reopensOnReversal is one line, the status equal to PAID_OFF and outstandingCents greater than 0n, a bigint literal
+      - no if and no switch, the tests cover both sides of each comparison
+      - the line of vitest.config.ts to delete is the one inside coverage.exclude with src/lending/domain/reversal.ts and the comment stub E5-T10
+      - one edit_file of reversal.ts that replaces the two bodies and deletes the stub line, one edit_file of apps/api/vitest.config.ts that deletes the line with stub E5-T10, then run_check 0, 1 and 2
+    budget:
+      attempts: 4
+      toolCalls: 17
+      minutes: 8
+    readFirst:
+      - apps/api/src/lending/domain/reversal.ts
+      - apps/api/vitest.config.ts
+    sizeNote: duas funções de 1 linha; vitest.config.ts perde 1 linha
 features:
   - id: E5-F01
     title: Command foundation of the api (UUID v7 ids and audit record)
     cards: [E5-T01, E5-T02, E5-T03, E5-T04]
     biaBudget: 3
+  # E5-F02 bloqueada: o teste grava cpf null, e cpf obrigatório x nullable é decisão pendente do Joel.
   - id: E5-F02
     title: Person repository (insert and read by id)
     cards: [E5-T05, E5-T06]
+    biaBudget: 3
+  - id: E5-F03
+    title: Loan status closed for payments (RN-R09)
+    cards: [E5-T07, E5-T08]
+    biaBudget: 3
+  - id: E5-F04
+    title: Effect of a payment reversal on the loan status (RN-R10, RN-R11)
+    cards: [E5-T09, E5-T10]
     biaBudget: 3
