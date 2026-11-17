@@ -40,6 +40,18 @@ module.exports = {
       to: { path: "^apps/(api|worker)/" },
     },
     {
+      name: "web-no-database",
+      severity: "error",
+      comment: "apps/web não acessa banco: fala só com a API (RFC-003 §4.4)",
+      from: { path: "^apps/web/" },
+      to: {
+        path: [
+          "node_modules/(drizzle-orm|drizzle-kit|@electric-sql/pglite|pg|pg-boss|postgres)/",
+          "^(drizzle-orm|drizzle-kit|@electric-sql/pglite|pg|pg-boss|postgres)(/|$)",
+        ],
+      },
+    },
+    {
       name: "packages-not-apps",
       severity: "error",
       comment: "packages/* nunca importa de apps/*",
@@ -51,6 +63,6 @@ module.exports = {
     doNotFollow: { path: "node_modules" },
     tsPreCompilationDeps: true,
     tsConfig: { fileName: "tsconfig.depcruise.json" },
-    exclude: { path: ["dist/", "coverage/", "reports/", "\\.stryker-tmp/"] },
+    exclude: { path: ["dist/", "coverage/", "reports/", "\\.stryker-tmp/", "\\.next/"] },
   },
 };
