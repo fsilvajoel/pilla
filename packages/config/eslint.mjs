@@ -1,7 +1,7 @@
 // Proibições de docs/travas.md §3. Comentários de desligar regra são proibidos (noInlineConfig).
 import tseslint from "typescript-eslint";
 
-const testFiles = ["**/*.test.ts", "**/*.spec.ts", "**/*.test.tsx", "**/*.spec.tsx"];
+const testFiles = ["**/*.test.ts", "**/*.spec.ts", "**/*.test.tsx", "**/*.spec.tsx", "**/*.test.mts"];
 const pureCode = ["packages/finance/src/**/*.ts", "**/domain/**/*.ts"];
 
 const testBans = [
@@ -31,7 +31,7 @@ export const pillaEslint = tseslint.config(
   { linterOptions: { noInlineConfig: true, reportUnusedDisableDirectives: "error" } },
   ...tseslint.configs.strictTypeChecked,
   {
-    files: ["**/*.ts", "**/*.tsx"],
+    files: ["**/*.ts", "**/*.tsx", "**/*.mts"],
     languageOptions: { parserOptions: { projectService: true } },
     rules: {
       "no-console": "error",
