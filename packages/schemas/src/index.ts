@@ -24,3 +24,8 @@ export * from "./api/payments/allocation-preview";
 export * from "./api/payments/reverse-payment";
 export * from "./api/core/attachment-upload-url";
 export * from "./api/treasury/account-entry";
+export * from "./api/people/create-person";
+export * from "./api/lending/create-loan";
+export * from "./api/lending/loan-views";
+export * from "./api/payments/create-payment";
+export * from "./api/treasury/account-summary";

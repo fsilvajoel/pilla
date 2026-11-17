@@ -19,6 +19,16 @@ export default defineConfig({
         "lib/simulation.ts", // stub E6-T02: sai no commit Card-Done do cartão (e4-guardrails H)
         "lib/simulation-form.ts", // stub E6-T04: sai no commit Card-Done do cartão (e4-guardrails H)
         "components/loan-simulation.tsx", // stub E6-T06: sai no commit Card-Done do cartão (e4-guardrails H)
+        "app/(admin)/**/page.tsx", // casca de rota do ADMIN: só monta o componente com os dados de mentira
+        "lib/mock-data.ts", // dados de mentira das telas do ADMIN (decisões do Joel de 17/11), sem lógica
+        "lib/today.ts", // stub E7-T02: sai no commit Card-Done do cartão (e4-guardrails H)
+        "components/person-form.tsx", // stub E7-T03: sai no commit Card-Done do cartão (e4-guardrails H)
+        "lib/new-loan.ts", // stub E7-T05: sai no commit Card-Done do cartão (e4-guardrails H)
+        "components/new-loan-form.tsx", // stub E7-T07: sai no commit Card-Done do cartão (e4-guardrails H)
+        "components/loan-list.tsx", // stub E7-T09: sai no commit Card-Done do cartão (e4-guardrails H)
+        "components/loan-detail.tsx", // stub E7-T10: sai no commit Card-Done do cartão (e4-guardrails H)
+        "lib/payment-draft.ts", // stub E7-T12: sai no commit Card-Done do cartão (e4-guardrails H)
+        "components/payment-form.tsx", // stub E7-T14: sai no commit Card-Done do cartão (e4-guardrails H)
       ],
       thresholds: { lines: 85, branches: 85, functions: 85, statements: 85 },
     },

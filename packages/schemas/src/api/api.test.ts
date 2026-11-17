@@ -1,18 +1,23 @@
 import { describe, expect, it } from "vitest";
 import type { z } from "zod";
-import { cpfSchema } from "../common";
+import { cpfSchema, loanNumberSchema, phoneSchema } from "../common";
 import { adminLoginRequest } from "./access/admin-login";
 import { portalAccessRequest } from "./access/portal-access";
 import { portalSessionRequest } from "./access/portal-session";
 import { attachmentUploadUrlRequest } from "./core/attachment-upload-url";
 import { activateLoanRequest } from "./lending/activate-loan";
+import { createLoanRequest, defaultTermsResponse } from "./lending/create-loan";
+import { loanDetailResponse, loanListResponse } from "./lending/loan-views";
 import { payoffQuoteQuery } from "./lending/payoff-quote";
 import { simulateLoanRequest, simulateLoanResponse } from "./lending/simulate-loan";
 import { writeOffLoanRequest } from "./lending/write-off-loan";
 import { allocationPreviewRequest } from "./payments/allocation-preview";
+import { createPaymentRequest } from "./payments/create-payment";
 import { reversePaymentRequest } from "./payments/reverse-payment";
+import { createPersonRequest, personListResponse } from "./people/create-person";
 import { problemSchema } from "./problem";
 import { accountEntryRequest } from "./treasury/account-entry";
+import { accountListResponse } from "./treasury/account-summary";
 
 // RFC-004 §3–§6. Ids fictícios em UUID v7; CPFs fictícios com dígitos válidos.
 const id = (n: number): string => `01936f8e-7b2c-7cde-8f00-${String(n).padStart(12, "0")}`;
@@ -26,6 +31,30 @@ const simulation = {
   firstDueDate: "2026-12-14",
 };
 const line = { number: 1, dueDate: "2026-12-14", principalCents: 83333, interestCents: 31667, totalCents: 115000 };
+// RN-C12 e CA-05: multa 2%, mora 1% a.m., carência 0 (decisões do Joel de 17/11).
+const charges = { lateFeeBps: 200, lateInterestMonthlyBps: 100, gracePeriodDays: 0 };
+const loan = { personId: id(1), ...simulation, ...charges };
+const person = { id: id(1), fullName: "Maria da Silva", cpf: "52998224725", phone: "+5511987654321", active: true };
+// RFC-004 §5 (portal): contrato 2026-0012, 2 parcelas pagas, saldo 4.600,00.
+const listItem = {
+  id: id(2),
+  loanNumber: "2026-0012",
+  personName: "Maria da Silva",
+  principalCents: 500000,
+  outstandingCents: 460000,
+  status: "ACTIVE",
+  standing: "CURRENT",
+  nextDueDate: "2027-02-14",
+};
+const installment = {
+  number: 1,
+  dueDate: "2026-12-14",
+  totalCents: 115000,
+  paidCents: 115000,
+  lateChargesCents: 0,
+  status: "PAID",
+};
+const payment = { loanId: id(2), accountId: id(4), paidAt: "2026-12-13", amountCents: 115000, method: "PIX" };
 
 interface BodyCase {
   /** nome do esquema exportado (filtro do vitest -t) */
@@ -138,6 +167,86 @@ const cases: BodyCase[] = [
     optional: { justification: "aporte inicial" },
     invalid: { type: "DISBURSEMENT", amountCents: -100, entryDate: "02/01/2027", justification: "  " },
   },
+  {
+    name: "createPersonRequest",
+    schema: createPersonRequest,
+    body: { fullName: "Maria da Silva", cpf: "52998224725", phone: "+5511987654321" },
+    optional: { email: "maria@example.com", birthDate: "1980-05-20", referredById: id(3), notes: "indicada" },
+    invalid: {
+      fullName: " ",
+      cpf: "52998224726",
+      phone: "11987654321",
+      email: "maria",
+      birthDate: "20/05/1980",
+      referredById: uuidV4,
+      notes: "x".repeat(2001),
+    },
+  },
+  {
+    name: "personListResponse",
+    schema: personListResponse,
+    body: { items: [person], nextCursor: null },
+    invalid: { items: [{ ...person, phone: "+0511987654321" }], nextCursor: 1 },
+  },
+  {
+    name: "defaultTermsResponse",
+    schema: defaultTermsResponse,
+    body: { ...charges, suggestedMonthlyRateBps: 633, roundingStepCents: 500 },
+    invalid: { lateFeeBps: 2.5, gracePeriodDays: -1, suggestedMonthlyRateBps: -633, roundingStepCents: 0 },
+  },
+  {
+    name: "createLoanRequest",
+    schema: createLoanRequest,
+    body: loan,
+    optional: { internalNotes: "cliente antigo" },
+    invalid: { personId: "", principalCents: 0, lateFeeBps: -200, gracePeriodDays: 1.5, internalNotes: "  " },
+  },
+  {
+    name: "loanListResponse",
+    schema: loanListResponse,
+    body: { items: [listItem], nextCursor: "abc" },
+    invalid: { items: [{ ...listItem, loanNumber: "12" }], nextCursor: undefined },
+  },
+  {
+    name: "loanDetailResponse",
+    schema: loanDetailResponse,
+    body: {
+      ...simulation,
+      ...charges,
+      id: id(2),
+      loanNumber: "2026-0012",
+      personId: id(1),
+      personName: "Maria da Silva",
+      status: "ACTIVE",
+      standing: "CURRENT",
+      contractedAt: "2026-11-14",
+      disbursedAt: "2026-11-14",
+      roundingStepCents: 500,
+      totalCents: 690000,
+      interestCents: 190000,
+      paidCents: 230000,
+      outstandingCents: 460000,
+      installments: [installment],
+    },
+    invalid: {
+      status: "OPEN",
+      standing: "LATE",
+      disbursedAt: "2026-11-31",
+      installments: [{ ...installment, status: "DONE" }],
+    },
+  },
+  {
+    name: "createPaymentRequest",
+    schema: createPaymentRequest,
+    body: { ...payment, receiptAttachmentId: id(5) },
+    invalid: { method: "CHECK", amountCents: 0, paidAt: "2026-12-32", receiptAttachmentId: "x" },
+  },
+  {
+    name: "accountListResponse",
+    schema: accountListResponse,
+    body: { items: [{ id: id(4), name: "Conta principal", active: true }] },
+    invalid: { items: [{ id: id(4), name: "", active: true }] },
+  },
 ];
 
 describe.each(cases)("$name", ({ name, schema, body, optional, invalid }) => {
@@ -235,4 +344,40 @@ describe("cpfSchema (RN-P01)", () => {
       expect(cpfSchema.safeParse(cpf).success).toBe(false);
     },
   );
+});
+
+describe("createLoanRequest rules (RF-11)", () => {
+  it("SINGLE_PAYMENT has exactly one installment", () => {
+    const single = { ...loan, type: "SINGLE_PAYMENT" };
+    expect(createLoanRequest.safeParse({ ...single, installmentCount: 1 }).success).toBe(true);
+    expect(createLoanRequest.safeParse({ ...single, installmentCount: 2 }).success).toBe(false);
+  });
+});
+
+describe("createPaymentRequest rules (RN-R06)", () => {
+  it("cash needs no receipt; the other methods do", () => {
+    expect(createPaymentRequest.safeParse({ ...payment, method: "CASH" }).success).toBe(true);
+    expect(createPaymentRequest.safeParse(payment).success).toBe(false);
+  });
+});
+
+describe("phoneSchema and loanNumberSchema (RFC-005)", () => {
+  it.each(["+5511987654321", "+14155550123"])("accepts the phone %s", (phone) => {
+    expect(phoneSchema.safeParse(phone).success).toBe(true);
+  });
+
+  it.each(["5511987654321", "+05511987654321", "+55 11 98765-4321", "+5511987654321999"])(
+    "rejects the phone %s",
+    (phone) => {
+      expect(phoneSchema.safeParse(phone).success).toBe(false);
+    },
+  );
+
+  it.each([
+    ["2026-0012", true],
+    ["2026-12", false],
+    ["26-0012", false],
+  ])("loan number %s is valid: %s", (loanNumber, valid) => {
+    expect(loanNumberSchema.safeParse(loanNumber).success).toBe(valid);
+  });
 });

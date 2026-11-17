@@ -20,6 +20,11 @@ export const instantSchema = z.iso.datetime({ offset: true });
 /** Texto livre obrigatório (motivos de estorno, reabertura, baixa). */
 export const reasonSchema = z.string().trim().min(1).max(500);
 
+/** Telefone E.164 (RFC-005 `persons.phone`, decisões do Joel de 17/11): "+5511987654321". */
+export const phoneSchema = z.string().regex(/^[+][1-9][0-9]{7,14}$/);
+/** Número do contrato `AAAA-NNNN` (RFC-005 `loans.loan_number`): "2026-0012". */
+export const loanNumberSchema = z.string().regex(/^\d{4}-\d{4}$/);
+
 /** CPF só com dígitos (RFC-005 `persons.cpf`), com os dois dígitos verificadores válidos (RN-P01). */
 export const cpfSchema = z
   .string()
