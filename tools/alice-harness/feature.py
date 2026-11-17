@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import shutil
 from contextlib import contextmanager
 import subprocess
@@ -555,6 +556,13 @@ class Orchestrator:
         t0 = time.time()
         st = self.state["stages"]
         checks = self.test_checks(skip_expect_red=True) + self.impl_checks()
+        coverage = [(code, out) for cmd, code, out in checks if "--coverage" in cmd]
+        if not coverage or any(code != 0 or not re.search(
+                r"(?mi)^\s*All files\s*\|[^\n]*\b(?:[1-9]\d*/[1-9]\d*|[1-9]\d*%)[^\n]*$", out)
+                or re.search(r"\b(?:Unknown%\s*\(0/0\)|0/0)\b", out) for code, out in coverage):
+            return self.finish("review", "error", t0, message="erro 17: cobertura ausente, vazia (0/0) ou check vermelho")
+        if any(code != 0 for _, code, _ in checks):
+            return self.finish("review", "error", t0, message="checks vermelhos na revisão final")
         plano = (self.repo / feature_plan_path(self.f.fid)).read_text()
         criteria = [line for line in plano.split("## Critérios de aceite", 1)[-1].split("\n## ", 1)[0].splitlines() if line.startswith("- ")]
         lines = [f"# Revisão final da feature {self.f.fid}: {self.f.title}", "",
@@ -582,6 +590,19 @@ class Orchestrator:
         (self.dir / "revisao-final.md").write_text("\n".join(lines) + "\n")
         return self.finish("review", "ready", t0)
 
+    def accept(self) -> str:
+        """Aceite explícito do Claude; preparação `ready` não equivale a entrega."""
+        stages = self.state.get("stages", {})
+        if stages.get("review", {}).get("status") not in ("ready", "done"):
+            raise ValueError("review precisa estar ready para o aceite")
+        for name in STAGES[:-1]:
+            if stages.get(name, {}).get("status") != "done":
+                raise ValueError(f"{name} precisa estar done para o aceite")
+        if stages["review"]["status"] == "ready":
+            stages["review"]["status"] = "done"
+            self.save()
+        return "done"
+
     # --- condução
     rounds = 3
     results: list[dict] = []
@@ -594,7 +615,7 @@ class Orchestrator:
             return [f"{stage}: {steps[stage]()}"]
         out = []
         for s in STAGES:
-            if s != "plan" and s != "review" and self.state["stages"].get(s, {}).get("status") == "done":
+            if s != "plan" and self.state["stages"].get(s, {}).get("status") == "done":
                 out.append(f"{s}: done (já feito)")
                 continue
             status = steps[s]()
@@ -619,6 +640,34 @@ def retro_text(orc: Orchestrator, summary: list[str], runs: Path) -> str:
     if orc.results:  # o hook do Claude reconhece a entrega pelo plan-*.json (guard_hook.delivered_ids)
         (runs / f"plan-{stamp}.json").write_text(json.dumps(orc.results, ensure_ascii=False, indent=1))
     return text
+
+
+def cmd_feature_accept(fid: str, repo: Path) -> int:
+    """Aceita uma revisão preparada sem editar estado.json manualmente nem chamar agentes."""
+    from cards import FEATURE_ID
+    if not FEATURE_ID.fullmatch(fid):
+        raise SystemExit(f"feature inválida: {fid}")
+    state_file = repo.resolve() / "docs" / "plano" / fid / "estado.json"
+    if not state_file.is_file():
+        raise SystemExit(f"feature sem estado: {fid}")
+    try:
+        state = json.loads(state_file.read_text())
+        if state.get("feature") != fid or not isinstance(state.get("stages"), dict):
+            raise ValueError("estado da feature inválido")
+        stages = state["stages"]
+        if stages.get("review", {}).get("status") not in ("ready", "done"):
+            raise ValueError("review precisa estar ready para o aceite")
+        for name in STAGES[:-1]:
+            if stages.get(name, {}).get("status") != "done":
+                raise ValueError(f"{name} precisa estar done para o aceite")
+    except (ValueError, TypeError, AttributeError, KeyError) as e:
+        print(f"aceite recusado: {e}")
+        return 2
+    if stages["review"]["status"] == "ready":
+        stages["review"]["status"] = "done"
+        state_file.write_text(json.dumps(state, ensure_ascii=False, indent=1) + "\n")
+    print(f"{fid}: review done (aceita pelo Claude)")
+    return 0
 
 
 def cmd_feature(plan_path: Path, fid: str, repo: Path, stage: str, rounds: int, runs: Path, ops: FeatureOps | None = None) -> int:

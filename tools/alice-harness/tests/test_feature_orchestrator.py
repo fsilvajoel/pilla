@@ -6,7 +6,7 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
-from feature import FeatureOps, Orchestrator, audit_schema_problems, cmd_feature, tests_schema_problems
+from feature import FeatureOps, Orchestrator, audit_schema_problems, cmd_feature, cmd_feature_accept, tests_schema_problems
 
 PLANO = """# Plano
 ## Escopo
@@ -76,7 +76,7 @@ class FakeOps(FeatureOps):
                 code = 1 if "bad" in test else 0
             else:
                 code = 0 if "impl" in impl and ("extra" not in test or "impl2" in impl) else 1
-            out.append((c, code, f"saída de {c}"))
+            out.append((c, code, "All files | 90% (9/10)\n" if "--coverage" in c and code == 0 else f"saída de {c}"))
         return out
 
     def format(self, files: list[str]) -> None:
@@ -250,6 +250,48 @@ class OrchestratorTest(unittest.TestCase):
         orc = self.orc(ops)
         orc.run("all", 3)
         self.assertEqual((self.repo / "a.ts").read_text(), "impl2\n")
+
+    def test_review_refuses_missing_empty_or_failing_coverage(self):
+        ops = FakeOps(self.repo, [tests_json(), audit_json()])
+        orc = self.orc(ops)
+        original = ops.run_checks
+        def checks(card):
+            return [(cmd, code, "All files | Unknown% (0/0)" if "--coverage" in cmd else out)
+                    for cmd, code, out in original(card)]
+        ops.run_checks = checks
+        self.assertEqual(orc.run("all", 3)[-1], "review: error")
+        self.assertIn("erro 17", orc.stage("review")["message"])
+        self.assertFalse((orc.dir / "revisao-final.md").exists())
+        ops.run_checks = lambda card: [(cmd, code, "sem tabela" if "--coverage" in cmd else out)
+                                      for cmd, code, out in original(card)]
+        self.assertEqual(orc.run("review", 3), ["review: error"])
+        ops.run_checks = lambda card: [(cmd, 1 if "--coverage" in cmd else code,
+                                        "All files | 90% (9/10)" if "--coverage" in cmd else out)
+                                      for cmd, code, out in original(card)]
+        self.assertEqual(orc.run("review", 3), ["review: error"])
+        ops.run_checks = lambda card: [(cmd, code, "All files | 90% (9/10)" if "--coverage" in cmd else out)
+                                      for cmd, code, out in original(card)]
+        self.assertEqual(orc.run("review", 3), ["review: ready"])
+
+    def test_accept_only_ready_review_after_all_other_stages(self):
+        ops = FakeOps(self.repo, [tests_json(), audit_json()])
+        orc = self.orc(ops)
+        with self.assertRaisesRegex(ValueError, "review.*ready"):
+            orc.accept()
+        self.assertEqual(orc.run("all", 3)[-1], "review: ready")
+        orc.stage("audit")["status"] = "escalated"
+        with self.assertRaisesRegex(ValueError, "audit"):
+            orc.accept()
+        orc.stage("audit")["status"] = "done"
+        orc.save()
+        self.assertEqual(orc.accept(), "done")
+        self.assertEqual(self.orc(FakeOps(self.repo, [])).state["stages"]["review"]["status"], "done")
+        self.assertEqual(orc.accept(), "done")
+        self.assertEqual(cmd_feature_accept("E9-F01", self.repo), 0)
+        self.assertEqual(orc.run("all", 3)[-1], "review: done (já feito)")
+        (self.repo / "docs/plano/E9-F01/estado.json").write_text(json.dumps({"feature": "E9-F01", "stages": {"review": {"status": "ready"}}}))
+        self.assertEqual(cmd_feature_accept("E9-F01", self.repo), 2)
+        self.assertEqual(json.loads((self.repo / "docs/plano/E9-F01/estado.json").read_text())["stages"]["review"]["status"], "ready")
 
     def test_all_resumes_after_done_stages(self):
         ops = FakeOps(self.repo, [tests_json()])

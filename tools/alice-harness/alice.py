@@ -67,7 +67,24 @@ def load_env() -> dict[str, str]:
 ENV = load_env()
 OLLAMA_URL = ENV.get("OLLAMA_URL", "http://localhost:11434").rstrip("/")
 MODEL = ENV.get("OLLAMA_MODEL", "alice")
-PROFILE_NAME = os.environ.get("ALICE_PROFILE", ENV.get("ALICE_PROFILE", "gemma"))
+def resolve_profile(env: dict[str, str]) -> tuple[str, str]:
+    """Fonte única do padrão: models.yaml; processo prevalece sobre .env."""
+    if os.environ.get("ALICE_PROFILE"):
+        return os.environ["ALICE_PROFILE"], "ambiente:ALICE_PROFILE"
+    if env.get("ALICE_PROFILE"):
+        return env["ALICE_PROFILE"], ".env:ALICE_PROFILE"
+    config = yaml.safe_load((HERE / "models.yaml").read_text()) or {}
+    if not config.get("default"):
+        raise SystemExit("models.yaml sem default")
+    return str(config["default"]), "models.yaml:default"
+
+
+PROFILE_NAME, PROFILE_SOURCE = resolve_profile(ENV)
+
+
+def announce_profile() -> None:
+    prof = load_profile(PROFILE_NAME)
+    print(f"Alice: perfil={PROFILE_NAME} modelo={prof['model']} origem={PROFILE_SOURCE}", file=sys.stderr)
 
 
 def load_profile(name: str) -> dict:
@@ -1469,9 +1486,11 @@ def main() -> int:
     q = sub.add_parser("prompt"); q.add_argument("plan", type=Path); q.add_argument("id"); q.add_argument("--repo", type=Path, default=Path("."))
     v = sub.add_parser("review"); v.add_argument("plan", type=Path); v.add_argument("id"); v.add_argument("--repo", type=Path, default=Path("."))
     e = sub.add_parser("cards"); e.add_argument("plans", nargs="+", type=Path); e.add_argument("--repo", type=Path, default=Path("."))
-    f = sub.add_parser("feature"); f.add_argument("plan", type=Path); f.add_argument("feature"); f.add_argument("--repo", type=Path, default=Path("."))
+    f = sub.add_parser("feature"); f.add_argument("plan"); f.add_argument("feature", nargs="?"); f.add_argument("--repo", type=Path, default=Path("."))
     f.add_argument("--stage", choices=("plan", "tests", "implement", "audit", "review", "all"), default="all"); f.add_argument("--rounds", type=int, default=3)
     ns = ap.parse_args()
+    if ns.cmd in ("run", "resume", "chat", "plan-run") or ns.cmd == "feature" and ns.plan != "accept":
+        announce_profile()
     if ns.cmd == "rule":
         print(rules_text(ns.repo.resolve(), ns.ids))
         return 0
@@ -1486,8 +1505,14 @@ def main() -> int:
     if ns.cmd == "prompt":
         return cmd_prompt(ns.plan, ns.id, ns.repo.resolve())
     if ns.cmd == "feature":  # orquestração por feature (ADR-0014)
-        from feature import cmd_feature
-        return cmd_feature(ns.plan, ns.feature, ns.repo, ns.stage, ns.rounds, RUNS)
+        from feature import cmd_feature, cmd_feature_accept
+        if ns.plan == "accept":
+            if not ns.feature:
+                ap.error("feature accept requer <F>")
+            return cmd_feature_accept(ns.feature, ns.repo)
+        if not ns.feature:
+            ap.error("feature requer <plano.yaml> <F>")
+        return cmd_feature(Path(ns.plan), ns.feature, ns.repo, ns.stage, ns.rounds, RUNS)
     if ns.cmd == "cards":
         return cmd_cards(ns.plans, ns.repo.resolve())
     if ns.cmd == "review":

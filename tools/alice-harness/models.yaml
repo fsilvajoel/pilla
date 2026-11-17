@@ -1,6 +1,7 @@
-# Perfis de modelo do harness (ALICE_PROFILE=<nome>; padrão: gemma). Cada perfil leva os parâmetros que
+# Perfis de modelo do harness (ALICE_PROFILE=<nome> sobrescreve o default). Cada perfil leva os parâmetros que
 # o fabricante recomenda e um num_ctx medido para caber na GPU (ver docs/estudo/bancada-modelos.md).
 # O prompt de sistema é sempre o do harness: usar o modelo-base, não um wrapper com SYSTEM próprio.
+default: qwen35
 profiles:
   gemma:  # linha de base: o que rodou até a E2b-1
     model: alice

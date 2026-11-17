@@ -1,4 +1,5 @@
 """Spec for policy.py: guardrail policy = policy.default.yaml (harness) overridden by <repo>/.agents/policy.yaml."""
+import fnmatch
 import re
 import tempfile
 import unittest
@@ -40,6 +41,15 @@ class PolicyTest(unittest.TestCase):
         self.assertIn("TODO without id", hits("// TODO fix"))
         self.assertNotIn("TODO without id", hits("// TODO(RN-C03) fix"))
         self.assertEqual(hits("const total = 1"), [])
+
+    def test_harness_and_jorge_remain_protected_with_and_without_repo_override(self):
+        for override in (None, "protectedWrite: []\n", "protectedWrite: [custom/*]\n"):
+            if override is not None:
+                self.write(override)
+            p = load_policy(self.repo)
+            for path in ("tools/alice-harness/alice.py", "tools/jorge/agente/jorge.md"):
+                self.assertTrue(any(fnmatch.fnmatch(path, pattern)
+                                    for pattern in p["protectedWrite"]), path)
 
     def test_repo_file_replaces_lists(self):
         self.write("officialDomains: [example.org]\n")

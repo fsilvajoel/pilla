@@ -1,10 +1,20 @@
 """Model profiles (bench of models through the same harness)."""
 import unittest
+from unittest import mock
 
 import alice
 
 
 class ProfileTest(unittest.TestCase):
+    def test_default_and_origin_follow_yaml_environment_priority(self):
+        with mock.patch.dict(alice.os.environ, {}, clear=True):
+            self.assertEqual(alice.resolve_profile({}), ("qwen35", "models.yaml:default"))
+            self.assertEqual(alice.resolve_profile({"ALICE_PROFILE": "gemma"}), ("gemma", ".env:ALICE_PROFILE"))
+            with mock.patch.dict(alice.os.environ, {"ALICE_PROFILE": "qwen38"}):
+                self.assertEqual(alice.resolve_profile({"ALICE_PROFILE": "gemma"}), ("qwen38", "ambiente:ALICE_PROFILE"))
+        with self.assertRaises(SystemExit):
+            alice.load_profile("inexistente")
+
     def test_default_profile_keeps_the_baseline(self):
         prof = alice.load_profile("gemma")
         opts, think = alice.chat_options(prof, {})
