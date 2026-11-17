@@ -12,6 +12,9 @@ Usage:
   alice.py review <plan.yaml> <ID> [--repo]      check the Bia review of a test-author delivery (bia.py test writes it; required before its implement card)
   alice.py plan-run <plan.yaml> <ID>... [--repo]  run Alice cards in order (skips dependents of failures)
   alice.py status                                is Alice running? (lock: runs/ACTIVE.json)
+  alice.py feature <plan.yaml> <F> [--stage S]  run a feature (ADR-0014); feature accept <F> accepts a ready review
+  alice.py feature reset <plan.yaml> <F> --stage tests|implement [--cards ID,...] --motivo "<text>"
+                                                 reopen a stage and its dependents (history in estado.json)
   alice.py cost <ID>... [--repo] [--since ISO]   Claude cost of the cards, preparation included (the only number for retro/report)
   alice.py claude-usage [--since ISO] [--until ISO]  real Claude tokens of the latest session (subagents included)
 
@@ -21,6 +24,7 @@ Only the Python standard library + PyYAML. See docs/agents/travas.md (Ambiente d
 from __future__ import annotations
 
 import argparse
+import difflib
 import fnmatch
 import html
 import hashlib
@@ -44,7 +48,7 @@ from cards import Size, feature_problems, output_tokens, quality_problems, size_
 from edits import apply_edit_tolerant, replace_function
 from policy import load_policy
 from claude_usage import card_since, cost, latest_transcript, load as load_usage, load_all, session_files, window
-from retro import tool_error_summary, write_retro
+from retro import READ as READ_TOOLS, WRITE as WRITE_TOOLS, tool_error_summary, write_retro
 from rules import find_doc, find_rule, rules_text
 from review import blob_sha, rejection_notes, review_problems
 
@@ -204,7 +208,32 @@ class Guard:
             if match_any(r, self.protected) and r not in self.allowed:
                 raise PermissionError(f"arquivo protegido: {r}")
             return r
-        raise PermissionError(f"escrita fora de allowedPaths: {r} (permitidos: {self.allowed})")
+        raise PermissionError(f"escrita fora de allowedPaths: {r}. Permitidos: {', '.join(self.allowed)}. "
+                              f"Destino: {write_target(r, self.allowed)}")  # JV17-3
+
+TOOL_KINDS = ("read", "write", "run_check", "bloqueadas", "outras")
+
+
+def tools_by_kind(stats: dict) -> dict:
+    by = stats.get("by_kind") or {}
+    return {k: int(by.get(k, 0)) for k in TOOL_KINDS}
+
+
+def write_target(path: str, allowed: list[str]) -> str:
+    """JV17-3: para onde a escrita bloqueada deveria ir. Mesmo nome de arquivo primeiro, depois o caminho mais
+    parecido; sem candidato, diz para não escrever."""
+    concrete = [a for a in allowed if not any(ch in a for ch in "*?[")]
+    name = Path(path).name
+    same = [a for a in concrete if Path(a).name == name]
+    if same:
+        return f"escreva em {same[0]}"
+    near = difflib.get_close_matches(path, concrete, n=1, cutoff=0.5)
+    if near:
+        return f"escreva em {near[0]}"
+    if concrete or allowed:
+        return "escreva só nos permitidos; se o arquivo é necessário, use ask_claude"
+    return "este cartão não escreve arquivo; use ask_claude"
+
 
 def run_cmd(cmd: str, cwd: Path, timeout: int = 600) -> tuple[int, str]:
     try:
@@ -578,6 +607,7 @@ class Tools:
         out = []
         for i in idx:
             code, txt, cached = self.run.check(checks[i])
+            self.run.note_check(checks[i], code, txt)
             note = " (cache: nada mudou desde a última execução; não rode de novo)" if cached else ""
             out.append(f"$ {checks[i]}{note}\nexit={code}\n{truncate(txt, self.run.size.tool_output_chars // len(idx))}")
         return "\n\n".join(out)
@@ -742,6 +772,22 @@ class Run:
         self.check_cache[key] = (code, txt)
         return code, txt, False
 
+    LAST_RED_CHARS = 600
+
+    def note_check(self, cmd: str, code: int, txt: str) -> None:
+        """JV17-4: guarda a última saída vermelha (redigida, limitada); o mesmo check verde depois a apaga."""
+        if code != 0:
+            self.stats["last_red"] = {"check": cmd, "exit": code, "output": truncate(self.redact(str(txt)), self.LAST_RED_CHARS)}
+        elif (self.stats.get("last_red") or {}).get("check") == cmd:
+            self.stats.pop("last_red", None)
+
+    def count_tool(self, name: str, result: str) -> None:
+        """JV17-4: chamadas por tipo (read/write/run_check/bloqueadas/outras) para o relatório e a retro."""
+        kind = ("bloqueadas" if str(result).startswith("BLOQUEADO") else "read" if name in READ_TOOLS
+                else "write" if name in WRITE_TOOLS else "run_check" if name == "run_check" else "outras")
+        by = self.stats.setdefault("by_kind", {})
+        by[kind] = by.get(kind, 0) + 1
+
     def log(self, kind: str, data: dict) -> None:
         with (self.dir / "log.jsonl").open("a") as f:
             f.write(json.dumps({"t": time.time(), "kind": kind, **data}, ensure_ascii=False) + "\n")
@@ -861,6 +907,7 @@ class Run:
             if self.kind == "pre-review":  # LI-036: in a review a red check is a finding (evidence), not a gate
                 continue
             code, txt, _ = self.check(c)
+            self.note_check(c, code, txt)
             if code != 0:
                 problems.append(f"check {i} falhou (exit {code}): {c}\n{self.redact(truncate(txt, self.size.tool_output_chars // len(self.card['checks'])))}")
         return (not problems), "\n".join(problems)
@@ -916,7 +963,9 @@ class Run:
                 "diffStat": stat.strip().splitlines()[-1] if stat.strip() else "",
                 "attempts": self.stats["attempts"], "toolCalls": self.stats["tool_calls"],
                 "aliceTokens": {"prompt": self.stats["prompt_tokens"], "output": self.stats["output_tokens"]},
-                "seconds": self.stats.get("seconds", 0), "message": msg, "warnings": self.warnings(), "runDir": str(self.dir)}
+                "seconds": self.stats.get("seconds", 0), "message": msg, "warnings": self.warnings(), "runDir": str(self.dir),
+                "toolsByKind": tools_by_kind(self.stats),
+                "lastRedCheck": None if status == "done" else self.stats.get("last_red")}  # JV17-4: sucesso não herda saída antiga
 
     def warnings(self) -> list[str]:
         w = []
@@ -927,6 +976,7 @@ class Run:
     def loop(self) -> int:
         tools = Tools(self)
         stall = gates.StallDetector()
+        blocked: tuple[str, int] = ("", 0)  # JV17-3: (path, bloqueios seguidos nesse path)
         budget = gates.CallBudget(self.max_tools)
         while True:
             if self.stats.get("seconds", 0) + time.time() - self.t0 > self.max_seconds:
@@ -959,6 +1009,7 @@ class Run:
                 self.stats["tool_calls"] += 1
                 budget.tick()
                 state = budget.status()
+                closing = budget.warning()  # JV17-2: aviso a 70% do limite, anexado ao resultado desta chamada
                 if name == "ask_claude":
                     q = str(args.get("question", ""))
                     self.log("ask_claude", {"question": q})
@@ -1020,7 +1071,10 @@ class Run:
                     except AttributeError:
                         result = f"ERRO: ferramenta inexistente: {name}"
                     except PermissionError as e:
-                        result = f"BLOQUEADO: {e}"
+                        target = str(args.get("path", ""))
+                        blocked = (target, blocked[1] + 1 if target and blocked[0] == target else 1)
+                        self.stats["blocked"] = self.stats.get("blocked", 0) + 1
+                        result = (f"BLOQUEADO: pare de tentar {target}; {e}" if blocked[1] >= 2 else f"BLOQUEADO: {e}")
                     except ValueError as e:
                         if "idênticas" in str(e):  # LI-019: no-op edit during cleanup round
                             result = "Nada a mudar (old = new). Se não há melhoria, chame finish agora."
@@ -1028,11 +1082,16 @@ class Run:
                             result = str(e) if str(e).startswith("ERRO") else f"ERRO: {e}"
                     except Exception as e:  # noqa: BLE001 - report any tool failure back to the model
                         result = f"ERRO: {type(e).__name__}: {e}"
+                    if not str(result).startswith("BLOQUEADO"):
+                        blocked = ("", 0)  # bloqueio "seguido" só conta sem operação permitida no meio
                     if name in ("run_check", "web_search", "fetch_page"):
                         result = self.redact(str(result))
                     if repeats >= stall.warn_at:
                         self.stats["stalls"] = self.stats.get("stalls", 0) + 1
                         result = f"{result}\n\nAVISO: {stall.message()}"
+                if closing:
+                    result = f"{result}\n\nAVISO: {closing}"
+                self.count_tool(name, str(result))
                 self.log("tool", {"name": name, "args": {k: (v if len(str(v)) < 200 or name == "finish" else str(v)[:200] + "…") for k, v in args.items()}, "result": str(result)[:500]})
                 self.messages.append({"role": "tool", "tool_name": name, "content": truncate(str(result), self.size.tool_output_chars)})
             self.save("running")
@@ -1048,7 +1107,15 @@ class Run:
                 self.stats["attempts"] += 1
                 if self.stats["attempts"] >= self.max_attempts:
                     return self.end("failed", 2, "limite de chamadas de ferramenta")
-                self.messages.append({"role": "user", "content": "Limite de chamadas desta tentativa atingido. Rode run_check(-1) e chame finish agora; sem finish nas próximas chamadas a tarefa é encerrada."})
+                # JV17-2: check final automático no limite (não gasta chamada nem aumenta o teto)
+                try:
+                    ok, problems = self.verify()
+                    auto = "verde: chame finish agora" if ok else "vermelho:\n" + truncate(self.redact(problems), 1500)
+                except Exception as e:  # fail closed: sem check, o aviso diz que não deu para verificar
+                    auto = f"não rodou ({type(e).__name__}: {self.redact(str(e))})"
+                self.log("auto_check", {"ok": auto.startswith("verde")})
+                self.messages.append({"role": "user", "content": "Limite de chamadas desta tentativa atingido. Rode run_check(-1) e chame finish agora; sem finish nas próximas chamadas a tarefa é encerrada."
+                                      f"\n\nCheck final automático: {auto}"})
 
 # ---------------------------------------------------------------- cli
 
@@ -1166,7 +1233,10 @@ def cmd_run(task: Path, repo: Path) -> int:
         sys.exit(f"kind inválido: {card.get('kind')} (use {', '.join(KINDS)})")
     run_dir = RUNS / card["id"] / time.strftime("%Y%m%d-%H%M%S")
     run_dir.mkdir(parents=True)
-    restored = restore_allowed(repo, card, run_dir) if card.get("kind") in ("implement", "test-author") else []
+    # keepWorktree: o orquestrador da feature já cuida do checkpoint por cartão (JV17-1); voltar ao HEAD aqui apagaria
+    # o trabalho de um cartão done anterior que compartilha arquivo
+    keep = bool(card.get("keepWorktree")) and card.get("kind") == "implement"
+    restored = restore_allowed(repo, card, run_dir) if card.get("kind") in ("implement", "test-author") and not keep else []
     _, dirty = run_cmd("git status --porcelain --untracked-files=all", repo)
     card["_baseDirty"] = [l[3:].strip() for l in dirty.splitlines() if l.strip()]
     card["_repo"] = str(repo.resolve())
@@ -1245,7 +1315,8 @@ def cmd_claude_usage(since: str, until: str) -> int:
     print(json.dumps({**w, "cost": cost(w), "transcript": t.name, "subagents": len(session_files(t)) - 1}, indent=1))
     return 0
 
-REPORT_KEYS = ("status", "attempts", "toolCalls", "aliceTokens", "message", "lessons", "question", "runDir")
+REPORT_KEYS = ("status", "attempts", "toolCalls", "aliceTokens", "message", "lessons", "question", "runDir",
+               "toolsByKind", "lastRedCheck")
 STOP_STATUSES = ("needs_input", "card_error", "error", "quota")  # param o cartão sem nova rodada
 
 
@@ -1511,13 +1582,14 @@ def main() -> int:
     q = sub.add_parser("prompt"); q.add_argument("plan", type=Path); q.add_argument("id"); q.add_argument("--repo", type=Path, default=Path("."))
     v = sub.add_parser("review"); v.add_argument("plan", type=Path); v.add_argument("id"); v.add_argument("--repo", type=Path, default=Path("."))
     e = sub.add_parser("cards"); e.add_argument("plans", nargs="+", type=Path); e.add_argument("--repo", type=Path, default=Path("."))
-    f = sub.add_parser("feature"); f.add_argument("plan"); f.add_argument("feature", nargs="?"); f.add_argument("--repo", type=Path, default=Path("."))
+    f = sub.add_parser("feature"); f.add_argument("plan"); f.add_argument("feature", nargs="?"); f.add_argument("extra", nargs="?"); f.add_argument("--repo", type=Path, default=Path("."))
+    f.add_argument("--cards", help="reset: IDs separados por vírgula"); f.add_argument("--motivo", help="reset: obrigatório")
     f.add_argument("--stage", choices=("plan", "tests", "recheck-tests", "implement", "audit", "review", "all"), default="all"); f.add_argument("--rounds", type=int, default=3)
     l = sub.add_parser("leva"); l.add_argument("texto"); l.add_argument("--repo", type=Path)
     fi = sub.add_parser("fila"); fi.add_argument("agente", choices=("alice", "bia", "jorge")); fi.add_argument("itens"); fi.add_argument("--repo", type=Path)
     qu = sub.add_parser("quadro"); qu.add_argument("--repo", type=Path)
     ns = ap.parse_args()
-    if ns.cmd in ("run", "resume", "chat", "plan-run") or ns.cmd == "feature" and ns.plan != "accept":
+    if ns.cmd in ("run", "resume", "chat", "plan-run") or ns.cmd == "feature" and ns.plan not in ("accept", "reset"):
         announce_profile()
     if ns.cmd in ("leva", "fila", "quadro"):
         import quadro
@@ -1549,7 +1621,14 @@ def main() -> int:
     if ns.cmd == "prompt":
         return cmd_prompt(ns.plan, ns.id, ns.repo.resolve())
     if ns.cmd == "feature":  # orquestração por feature (ADR-0014)
-        from feature import cmd_feature, cmd_feature_accept
+        from feature import cmd_feature, cmd_feature_accept, cmd_feature_reset
+        if ns.plan == "reset":  # feature reset <plano.yaml> <F> --stage tests|implement [--cards ...] --motivo "..."
+            if not ns.feature or not ns.extra:
+                ap.error("feature reset requer <plano.yaml> <F>")
+            cards = [c.strip() for c in (ns.cards or "").split(",") if c.strip()] or None
+            return cmd_feature_reset(Path(ns.feature), ns.extra, ns.repo, ns.stage, cards, ns.motivo or "", RUNS)
+        if ns.extra:
+            ap.error(f"argumento inesperado: {ns.extra}")
         if ns.plan == "accept":
             if not ns.feature:
                 ap.error("feature accept requer <F>")

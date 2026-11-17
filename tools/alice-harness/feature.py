@@ -177,6 +177,85 @@ def numbered(src: str) -> str:
     return "\n".join(f"{i + 1:3d}  {line}" for i, line in enumerate(src.splitlines()))
 
 
+# --- checkpoint por cartão (JV17-1): cópia exata dos allowedPaths da implementação, com sha256 e mode
+def file_sha(path: Path) -> str:
+    import hashlib
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def card_digest(card: dict) -> str:
+    import hashlib
+    body = {k: v for k, v in card.items() if k != "featureTests"}
+    return hashlib.sha256(json.dumps(body, sort_keys=True, ensure_ascii=False, default=str).encode()).hexdigest()
+
+
+def capture(repo: Path, paths: list[str], dest: Path, meta: dict) -> str:
+    """Grava os arquivos (ou a ausência) em dest/files e o manifest.json; devolve o sha256 do manifest."""
+    files: dict[str, dict | None] = {}
+    for p in paths:
+        src = repo / p
+        if src.is_file():
+            out = dest / "files" / p
+            out.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(src, out)
+            files[p] = {"sha256": file_sha(src), "mode": src.stat().st_mode & 0o777}
+        else:
+            files[p] = None
+    dest.mkdir(parents=True, exist_ok=True)
+    (dest / "manifest.json").write_text(json.dumps({**meta, "files": files}, ensure_ascii=False, indent=1, sort_keys=True))
+    return file_sha(dest / "manifest.json")
+
+
+def load_snapshot(dest: Path, digest: str) -> dict | None:
+    """Manifest íntegro (sha confere) e cópias íntegras; senão None (fail-closed)."""
+    try:
+        man = dest / "manifest.json"
+        if not digest or file_sha(man) != digest:
+            return None
+        data = json.loads(man.read_text())
+        for p, info in (data.get("files") or {}).items():
+            if info is not None and file_sha(dest / "files" / p) != info.get("sha256"):
+                return None
+        return data
+    except (OSError, ValueError, TypeError, AttributeError):
+        return None
+
+
+def worktree_matches(repo: Path, files: dict[str, dict | None]) -> bool:
+    for p, info in files.items():
+        cur = repo / p
+        if info is None:
+            if cur.exists():
+                return False
+        elif not cur.is_file() or file_sha(cur) != info.get("sha256"):
+            return False
+    return True
+
+
+def rollback(repo: Path, dest: Path, keep: Path) -> list[str]:
+    """Volta os arquivos ao checkpoint; o que difere vai antes para keep/previous (nada se perde)."""
+    data = json.loads((dest / "manifest.json").read_text())
+    moved = []
+    for p, info in data["files"].items():
+        cur = repo / p
+        same = (info is None and not cur.exists()) or (info is not None and cur.is_file() and file_sha(cur) == info["sha256"])
+        if same:
+            continue
+        if cur.is_file():
+            k = keep / "previous" / p
+            k.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(cur, k)
+        if info is None:
+            if cur.exists():
+                cur.unlink()
+        else:
+            cur.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(dest / "files" / p, cur)
+            os.chmod(cur, int(info["mode"]))
+        moved.append(p)
+    return moved
+
+
 class Orchestrator:
     def __init__(self, repo: Path, plan: dict, fid: str, ops: FeatureOps, runs: Path) -> None:
         self.repo, self.plan, self.ops, self.runs = repo, plan, ops, runs
@@ -453,6 +532,10 @@ class Orchestrator:
         if self.state["stages"].get("tests", {}).get("status") != "done":
             return self.finish("implement", "skipped", t0, message="etapa de testes não está done")
         cards = {c["id"]: {**c, "featureTests": dict(self.state["testShas"])} for c in self.f.impls}
+        if self.impl_paths() is not None:
+            return self.implement_by_card(cards, t0)
+        # allowedPaths com glob: sem checkpoint exato possível → comportamento antigo (lote do HEAD, restore total)
+        self.stage("implement").pop("snapshots", None)
         results = self.ops.plan_run(cards, list(cards), self.rounds)
         tok = {"prompt": sum(int((r.get("aliceTokens") or {}).get("prompt", 0)) for r in results),
                "output": sum(int((r.get("aliceTokens") or {}).get("output", 0)) for r in results)}
@@ -471,6 +554,110 @@ class Orchestrator:
             except (OSError, RuntimeError, subprocess.SubprocessError) as e:
                 return self.finish("implement", "error", t0, **extra, message=f"restore da implementação falhou: {e}")
         return self.finish("implement", status, t0, **extra)
+
+    def impl_paths(self) -> list[str] | None:
+        """União exata dos allowedPaths da implementação; None se houver glob ou nenhum caminho (sem checkpoint)."""
+        paths = sorted({str(p) for c in self.f.impls for p in c.get("allowedPaths") or []})
+        return None if not paths or any(ch in p for p in paths for ch in "*?[") else paths
+
+    def impl_reusable(self) -> bool:
+        if self.impl_paths() is None:
+            return True  # glob: sem checkpoint, vale o mapa de cartões (comportamento antigo)
+        return self.reusable({c["id"]: {**c, "featureTests": dict(self.state["testShas"])} for c in self.f.impls}) == \
+            [c["id"] for c in self.f.impls]
+
+    def snap_dir(self, cid: str) -> Path:
+        return self.runs / "feature" / self.f.fid / "snapshots" / cid
+
+    def reusable(self, cards: dict[str, dict]) -> list[str]:
+        """Prefixo de cartões done com snapshot íntegro, mesmo cartão, mesmos testes, e o último snapshot igual ao
+        worktree. Qualquer dúvida (estado legado sem snapshot, código desfeito, plano ou teste mudado) → [] (refaz)."""
+        st = self.state["stages"].get("implement", {})
+        done, snaps = st.get("cards"), st.get("snapshots")
+        if not isinstance(done, dict) or not isinstance(snaps, dict) or self.impl_paths() is None:
+            return []
+        prefix: list[str] = []
+        last: dict | None = None
+        for cid, card in cards.items():
+            info = snaps.get(cid)
+            if done.get(cid) != "done" or not isinstance(info, dict):
+                break
+            data = load_snapshot(self.snap_dir(cid) / str(info.get("stamp", "")), str(info.get("sha256", "")))
+            if data is None or data.get("card") != card_digest(card) or data.get("testShas") != self.state["testShas"] \
+                    or sorted(data.get("files") or {}) != self.impl_paths():
+                break
+            prefix.append(cid)
+            last = data
+        if last is None or not worktree_matches(self.repo, last["files"]):
+            return []
+        return prefix
+
+    def implement_by_card(self, cards: dict[str, dict], t0: float) -> str:
+        """JV17-1: um cartão por vez. Antes de cada um, checkpoint dos arquivos; done → snapshot verificável;
+        falha → volta só ao checkpoint dele (o trabalho de um done anterior no mesmo arquivo fica)."""
+        paths = self.impl_paths() or []
+        st = self.stage("implement")
+        prev = st.get("aliceTokens") or {"prompt": 0, "output": 0}
+        reuse = self.reusable(cards)
+        old = st.get("snapshots") if isinstance(st.get("snapshots"), dict) else {}
+        snaps = {cid: old[cid] for cid in reuse}
+        statuses = {cid: ("done" if cid in reuse else "pending") for cid in cards}
+        tok = {"prompt": 0, "output": 0}
+        notes: list[str] = []
+        self.log_dir.mkdir(parents=True, exist_ok=True)
+
+        def extra() -> dict:
+            return {"aliceTokens": {k: prev[k] + tok[k] for k in tok}, "cards": dict(statuses), "snapshots": dict(snaps),
+                    "reused": list(reuse)}
+        try:
+            if not reuse:  # sem snapshot confiável: parte do HEAD (sobras vão para log_dir/previous)
+                for c in self.f.impls:
+                    self.ops.restore(c, self.log_dir)
+        except (OSError, RuntimeError, subprocess.SubprocessError) as e:
+            return self.finish("implement", "error", t0, **extra(), message=f"restore da implementação falhou: {e}")
+        failed: set[str] = set()
+        for cid, card in cards.items():
+            if cid in reuse:
+                continue
+            if set(card.get("dependsOn") or []) & failed:
+                statuses[cid] = "skipped (dependência falhou)"
+                failed.add(cid)
+                continue
+            cp = self.log_dir / "checkpoints" / cid
+            try:
+                capture(self.repo, paths, cp, {"card": cid})
+            except OSError as e:
+                statuses[cid] = "error"
+                return self.finish("implement", "error", t0, **extra(), message=f"checkpoint de {cid} falhou: {e}")
+            res = self.ops.plan_run({cid: {**card, "keepWorktree": True}}, [cid], self.rounds)
+            self.results += res
+            for r in res:
+                tok["prompt"] += int((r.get("aliceTokens") or {}).get("prompt", 0))
+                tok["output"] += int((r.get("aliceTokens") or {}).get("output", 0))
+            status = next((str(r.get("status")) for r in res if r.get("task") == cid), "error")
+            if status == "done":
+                try:
+                    stamp = time.strftime("%Y%m%d-%H%M%S") + f"-{len(self.results)}"
+                    sha = capture(self.repo, paths, self.snap_dir(cid) / stamp,
+                                  {"card": card_digest(card), "testShas": dict(self.state["testShas"])})
+                    snaps[cid] = {"stamp": stamp, "sha256": sha}
+                except OSError as e:
+                    status = "error"
+                    notes.append(f"snapshot de {cid} falhou: {e}")
+            if status != "done":
+                failed.add(cid)
+                snaps.pop(cid, None)
+                try:
+                    rollback(self.repo, cp, self.log_dir)
+                except (OSError, ValueError, KeyError) as e:
+                    statuses[cid] = status
+                    return self.finish("implement", "error", t0, **extra(), message=f"rollback de {cid} falhou: {e}")
+            statuses[cid] = status
+            st.update(extra())
+            self.save()  # progresso por cartão: um done já tem snapshot gravado antes de entrar no estado
+        status = "done" if all(s == "done" for s in statuses.values()) else \
+            next(s for s in statuses.values() if s != "done")
+        return self.finish("implement", status, t0, **extra(), **({"message": "; ".join(notes)} if notes else {}))
 
     # --- etapa 4
     def impl_checks(self) -> Checks:
@@ -659,6 +846,74 @@ class Orchestrator:
             self.save()
         return "done"
 
+    # --- reset (harness-v17)
+    RESET_STAGES = ("tests", "implement")
+    COST_KEYS = ("biaRequests", "biaIn", "biaOut", "aliceTokens")
+
+    def invalidate(self, name: str, why: str) -> None:
+        """Etapa volta a pending; custo já gasto (Bia/Alice) fica registrado."""
+        old = self.state["stages"].get(name) or {}
+        self.state["stages"][name] = {"status": "pending", "message": why,
+                                      **{k: old[k] for k in self.COST_KEYS if k in old}}
+
+    def reset(self, stage: str, cards: list[str] | None, motivo: str) -> str:
+        """Zera a etapa e as dependentes (tests → implement, audit, review; implement → audit, review).
+        biaRequests da feature não volta (orçamento gasto é gasto). Implement: os arquivos voltam ao checkpoint
+        válido do cartão anterior ao primeiro resetado; sem checkpoint válido, todos os cartões voltam ao HEAD."""
+        if not motivo or not motivo.strip():
+            raise ValueError("--motivo é obrigatório")
+        if stage not in self.RESET_STAGES:
+            raise ValueError(f"etapa inválida para reset: {stage} (use {' ou '.join(self.RESET_STAGES)})")
+        if not self.state_file.is_file():
+            raise ValueError(f"feature sem estado: {self.f.fid}")
+        why = f"reset de {stage}: {motivo.strip()}"
+        note = ""
+        if stage == "tests":
+            if cards:
+                raise ValueError("a etapa tests é da feature inteira: reset de tests não aceita --cards")
+            done = [c["id"] for c in self.f.tests]
+            self.invalidate("tests", why)
+            self.state["testShas"], self.state["expectRed"] = {}, False
+            for name in ("implement", "audit", "review"):
+                self.invalidate(name, why)
+        else:
+            ids = [c["id"] for c in self.f.impls]
+            chosen = list(cards or ids)
+            if bad := [c for c in chosen if c not in ids]:
+                raise ValueError(f"cartões fora da implementação de {self.f.fid}: {', '.join(bad)} (válidos: {', '.join(ids)})")
+            st = self.stage("implement")
+            statuses = st.get("cards") if isinstance(st.get("cards"), dict) else {}
+            snaps = st.get("snapshots") if isinstance(st.get("snapshots"), dict) else {}
+            first = min(ids.index(c) for c in chosen)
+            prev = ids[first - 1] if first else None
+            info = snaps.get(prev) if prev else None
+            dest = self.snap_dir(prev) / str(info.get("stamp", "")) if prev and isinstance(info, dict) else None
+            valid = dest is not None and statuses.get(prev) == "done" and self.impl_paths() is not None and \
+                load_snapshot(dest, str(info.get("sha256", ""))) is not None
+            self.log_dir.mkdir(parents=True, exist_ok=True)
+            if valid:
+                affected = ids[first:]  # os seguintes dependem dos arquivos que voltam: refazem também
+                moved = rollback(self.repo, dest, self.log_dir)
+                note = f"arquivos no checkpoint de {prev} ({len(moved)} restaurados)"
+            else:
+                affected = ids  # sem checkpoint verificável: nada antes dá para provar, tudo volta ao HEAD
+                for c in self.f.impls:
+                    self.ops.restore(c, self.log_dir)
+                note = "arquivos no HEAD" + (f" (sem checkpoint válido de {prev}: todos os cartões refazem)" if prev else "")
+            done = affected
+            keep = {k: v for k, v in st.items() if k in self.COST_KEYS}
+            self.state["stages"]["implement"] = {
+                **keep, "status": "pending", "message": f"{why}; {note}",
+                "cards": {cid: ("pending" if cid in affected else statuses.get(cid, "pending")) for cid in ids},
+                "snapshots": {cid: v for cid, v in snaps.items() if cid not in affected}}
+            for name in ("audit", "review"):
+                self.invalidate(name, why)
+        self.state.setdefault("resets", []).append(
+            {"quando": time.strftime("%Y-%m-%dT%H:%M:%S%z"), "etapa": stage, "cartões": done,
+             "motivo": motivo.strip(), **({"arquivos": note} if note else {})})
+        self.save()
+        return f"{self.f.fid}: reset de {stage} ({', '.join(done)})" + (f"; {note}" if note else "")
+
     # --- condução
     rounds = 3
     results: list[dict] = []
@@ -674,7 +929,8 @@ class Orchestrator:
         for s in STAGES:
             if s != "plan" and self.state["stages"].get(s, {}).get("status") == "done":
                 if s != "implement" or (isinstance(self.stage(s).get("cards"), dict) and
-                                        self.stage(s)["cards"] == {c["id"]: "done" for c in self.f.impls}):
+                                        self.stage(s)["cards"] == {c["id"]: "done" for c in self.f.impls} and
+                                        self.impl_reusable()):
                     out.append(f"{s}: done (já feito)")
                     continue
             status = steps[s]()
@@ -728,6 +984,25 @@ def cmd_feature_accept(fid: str, repo: Path) -> int:
     print(f"{fid}: review done (aceita pelo Claude)")
     return 0
 
+
+def cmd_feature_reset(plan_path: Path, fid: str, repo: Path, stage: str, cards: list[str] | None, motivo: str,
+                      runs: Path, ops: FeatureOps | None = None) -> int:
+    """Reabre uma etapa sem editar estado.json à mão (erro 16); não chama agente."""
+    from cards import FEATURE_ID
+    if not FEATURE_ID.fullmatch(fid):
+        print(f"reset recusado: feature inválida: {fid}")
+        return 2
+    if not motivo.strip():
+        print("reset recusado: --motivo é obrigatório")
+        return 2
+    try:
+        plan = yaml.safe_load(plan_path.read_text()) or {}
+        orc = Orchestrator(repo.resolve(), plan, fid, ops or FeatureOps(repo.resolve()), runs)
+        print(orc.reset(stage, cards, motivo))
+    except (ValueError, KeyError, TypeError, OSError, RuntimeError, subprocess.SubprocessError) as e:
+        print(f"reset recusado: {e}")
+        return 2
+    return 0
 
 def external_dependency_problems(plan: dict, fid: str, repo: Path) -> list[str]:
     """Dependências fora da feature exigem conclusão comprovada no estado do produtor."""

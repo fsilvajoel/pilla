@@ -1,4 +1,5 @@
 """Spec do orquestrador por feature (ADR-0014), sem rede nem GPU: Bia e Alice são dublês."""
+import io
 import json
 import subprocess
 import tempfile
@@ -6,7 +7,9 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
-from feature import FeatureOps, Orchestrator, audit_schema_problems, cmd_feature, cmd_feature_accept, tests_schema_problems
+import yaml
+
+from feature import FeatureOps, Orchestrator, audit_schema_problems, cmd_feature, cmd_feature_accept, cmd_feature_reset, tests_schema_problems
 
 PLANO = """# Plano
 ## Escopo
@@ -433,6 +436,14 @@ class OrchestratorTest(unittest.TestCase):
                                       for cmd, code, out in original(card)]
         self.assertEqual(orc.run("review", 3), ["review: ready"])
 
+    def test_review_refuses_filtered_checks_without_final_coverage(self):
+        # JV17-5: só checks não-finais (-t, sem --coverage) verdes não bastam: falta o check final.
+        ops = FakeOps(self.repo, [tests_json(), audit_json()])
+        orc = self.orc(ops)
+        ops.run_checks = lambda card: [("vitest run a.test.ts -t E9-T02", 0, "Tests 1 passed")]
+        self.assertEqual(orc.run("all", 3)[-1], "review: error")
+        self.assertIn("erro 17", orc.stage("review")["message"])
+
     def test_accept_only_ready_review_after_all_other_stages(self):
         ops = FakeOps(self.repo, [tests_json(), audit_json()])
         orc = self.orc(ops)
@@ -473,7 +484,7 @@ class OrchestratorTest(unittest.TestCase):
         resumed = self.orc(FakeOps(self.repo, [audit_json()]), plan)
         out = resumed.run("all", 3)
         self.assertIn("implement: done", out)
-        self.assertEqual(list(resumed.ops.runs[0]), ["E9-T02", "E9-T07"])
+        self.assertEqual([i for r in resumed.ops.runs for i in r], ["E9-T02", "E9-T07"])  # um cartão por vez (JV17-1)
         self.assertEqual(resumed.stage("implement")["cards"], {"E9-T02": "done", "E9-T07": "done"})
         self.assertEqual(resumed.run("all", 3)[2], "implement: done (já feito)")
         resumed.stage("tests")["status"] = "error"
@@ -483,6 +494,76 @@ class OrchestratorTest(unittest.TestCase):
         self.assertEqual(resumed.run("all", 3)[-1], "tests: error")
         self.assertEqual(len(resumed.ops.runs), calls)
 
+    # --- JV17-1: checkpoint e rollback por cartão
+    def shared_plan(self) -> dict:
+        b = {**IMPL, "id": "E9-T03", "dependsOn": ["E9-T02"]}
+        return {**PLAN, "cards": [TEST, IMPL, b],
+                "features": [{**PLAN["features"][0], "cards": ["E9-T01", "E9-T02", "E9-T03"]}]}
+
+    class SharedOps(FakeOps):
+        """A (E9-T02) escreve 'impl A'; B (E9-T03) sobrescreve o MESMO arquivo e falha, a menos que fail=False."""
+        fail = True
+
+        def plan_run(self, cards, ids, rounds):
+            self.runs.append(cards)
+            cid = ids[0]
+            if cid == "E9-T02":
+                (self.repo / "a.ts").write_text("impl A\n")
+                return [{"task": cid, "status": "done", "aliceTokens": {"prompt": 1, "output": 1}}]
+            (self.repo / "a.ts").write_text("impl A\nquebrado B\n")
+            return [{"task": cid, "status": "failed" if self.fail else "done"}]
+
+    def test_failed_card_rolls_back_to_previous_done_card_on_shared_file(self):
+        ops = self.SharedOps(self.repo, [tests_json()])
+        orc = self.orc(ops, self.shared_plan())
+        self.assertEqual(orc.run("tests", 3), ["tests: done"])
+        self.assertEqual(orc.run("implement", 3), ["implement: failed"])
+        self.assertEqual((self.repo / "a.ts").read_text(), "impl A\n")  # nunca HEAD: o trabalho de A fica
+        self.assertEqual((orc.log_dir / "previous/a.ts").read_text(), "impl A\nquebrado B\n")
+        self.assertEqual(orc.stage("implement")["cards"], {"E9-T02": "done", "E9-T03": "failed"})
+        self.assertTrue(all(c.get("keepWorktree") for r in ops.runs for c in r.values()))
+        ops2 = self.SharedOps(self.repo, [])
+        ops2.fail = False
+        again = self.orc(ops2, self.shared_plan())
+        self.assertEqual(again.run("implement", 3), ["implement: done"])
+        self.assertEqual([i for r in ops2.runs for i in r], ["E9-T03"])  # A pulado: snapshot confere
+        self.assertEqual(again.stage("implement")["reused"], ["E9-T02"])
+
+    def test_resume_without_valid_snapshot_reruns_done_card(self):
+        ops = self.SharedOps(self.repo, [tests_json()])
+        orc = self.orc(ops, self.shared_plan())
+        orc.run("tests", 3)
+        orc.run("implement", 3)
+        (self.repo / "a.ts").write_text("throw\n")  # código desfeito depois do done (caso E6-F01)
+        ops2 = self.SharedOps(self.repo, [])
+        self.orc(ops2, self.shared_plan()).run("implement", 3)
+        self.assertEqual([i for r in ops2.runs for i in r][0], "E9-T02")
+
+    def test_resume_rejects_tampered_snapshot_and_legacy_state(self):
+        ops = self.SharedOps(self.repo, [tests_json()])
+        orc = self.orc(ops, self.shared_plan())
+        orc.run("tests", 3)
+        orc.run("implement", 3)
+        info = orc.stage("implement")["snapshots"]["E9-T02"]
+        (orc.snap_dir("E9-T02") / info["stamp"] / "files/a.ts").write_text("adulterado\n")
+        ops2 = self.SharedOps(self.repo, [])
+        self.orc(ops2, self.shared_plan()).run("implement", 3)
+        self.assertEqual([i for r in ops2.runs for i in r][0], "E9-T02")
+        legacy = self.orc(self.SharedOps(self.repo, []), self.shared_plan())
+        legacy.stage("implement").pop("snapshots", None)
+        self.assertEqual(legacy.reusable({"E9-T02": IMPL}), [])
+
+    def test_resume_rejects_snapshot_when_tests_changed(self):
+        ops = self.SharedOps(self.repo, [tests_json()])
+        orc = self.orc(ops, self.shared_plan())
+        orc.run("tests", 3)
+        orc.run("implement", 3)
+        orc.state["testShas"] = {"a.test.ts": "outro"}
+        orc.save()
+        ops2 = self.SharedOps(self.repo, [])
+        self.orc(ops2, self.shared_plan()).run("implement", 3)
+        self.assertEqual([i for r in ops2.runs for i in r][0], "E9-T02")
+
     def test_all_does_not_skip_incomplete_implement_status(self):
         ops = FakeOps(self.repo, [tests_json()])
         orc = self.orc(ops)
@@ -490,6 +571,94 @@ class OrchestratorTest(unittest.TestCase):
         orc.stage("implement").update({"status": "done", "cards": {"E9-T02": "failed"}})
         self.assertEqual(orc.run("all", 3)[2], "implement: done")
         self.assertEqual(len(ops.runs), 1)
+
+    # --- harness-v17: feature reset
+    def test_reset_tests_reopens_tests_and_dependents_keeping_bia_requests(self):
+        orc = self.orc(FakeOps(self.repo, [tests_json(), audit_json()]))
+        self.assertEqual(orc.run("all", 3)[-1], "review: ready")
+        self.assertEqual(orc.state["biaRequests"], 2)
+        msg = orc.reset("tests", None, "cenário C2 errado")
+        self.assertIn("reset de tests", msg)
+        st = json.loads(orc.state_file.read_text())
+        self.assertEqual({s: st["stages"][s]["status"] for s in ("tests", "implement", "audit", "review")},
+                         dict.fromkeys(("tests", "implement", "audit", "review"), "pending"))
+        self.assertEqual(st["biaRequests"], 2)  # orçamento gasto não volta
+        self.assertEqual(st["stages"]["tests"]["biaRequests"], 1)  # custo por etapa fica no registro
+        self.assertEqual(st["testShas"], {})
+        self.assertEqual([(r["etapa"], r["cartões"], r["motivo"]) for r in st["resets"]],
+                         [("tests", ["E9-T01"], "cenário C2 errado")])
+        self.assertTrue(st["resets"][0]["quando"])
+        again = self.orc(FakeOps(self.repo, [tests_json()]))
+        self.assertEqual(again.run("tests", 3), ["tests: done"])
+        self.assertEqual(again.state["biaRequests"], 3)
+        self.assertEqual(again.run("all", 3)[2], "implement: done")  # implement refaz: não pula como "já feito"
+
+    def test_reset_requires_motivo_and_valid_stage_without_touching_state(self):
+        orc = self.orc(FakeOps(self.repo, [tests_json()]))
+        orc.run("tests", 3)
+        before = orc.state_file.read_text()
+        for stage, cards, motivo, err in (("tests", None, "", "motivo"), ("implement", None, "   ", "motivo"),
+                                          ("audit", None, "x", "etapa inválida"), ("all", None, "x", "etapa inválida"),
+                                          ("review", None, "x", "etapa inválida"),
+                                          ("implement", ["E9-T99"], "x", "fora da implementação"),
+                                          ("tests", ["E9-T01"], "x", "não aceita --cards")):
+            with self.subTest(stage=stage, cards=cards), self.assertRaisesRegex(ValueError, err):
+                orc.reset(stage, cards, motivo)
+        self.assertEqual(orc.state_file.read_text(), before)
+        plan_file = Path(self.tmp.name) / "plan.yaml"
+        plan_file.write_text(yaml.safe_dump(PLAN))
+        with mock.patch("sys.stdout", new_callable=io.StringIO) as out:
+            self.assertEqual(cmd_feature_reset(plan_file, "E9-F01", self.repo, "tests", None, "", self.out, FakeOps(self.repo, [])), 2)
+            self.assertEqual(cmd_feature_reset(plan_file, "E9-F01", self.repo, "audit", None, "x", self.out, FakeOps(self.repo, [])), 2)
+            self.assertEqual(cmd_feature_reset(plan_file, "E9-F01", self.repo, "tests", None, "refazer", self.out, FakeOps(self.repo, [])), 0)
+        self.assertIn("--motivo é obrigatório", out.getvalue())
+        self.assertIn("etapa inválida", out.getvalue())
+        self.assertEqual(json.loads(orc.state_file.read_text())["stages"]["tests"]["status"], "pending")
+
+    def test_reset_single_done_card_rolls_back_to_previous_checkpoint(self):
+        ops = self.SharedOps(self.repo, [tests_json()])
+        ops.fail = False
+        orc = self.orc(ops, self.shared_plan())
+        orc.run("tests", 3)
+        self.assertEqual(orc.run("implement", 3), ["implement: done"])
+        orc.stage("audit")["status"] = "done"
+        orc.save()
+        self.assertEqual((self.repo / "a.ts").read_text(), "impl A\nquebrado B\n")
+        orc.reset("implement", ["E9-T03"], "B quebrou o contrato")
+        st = json.loads(orc.state_file.read_text())
+        impl = st["stages"]["implement"]
+        self.assertEqual((self.repo / "a.ts").read_text(), "impl A\n")  # checkpoint de E9-T02, não HEAD
+        self.assertEqual((orc.log_dir / "previous/a.ts").read_text(), "impl A\nquebrado B\n")
+        self.assertEqual((impl["status"], impl["cards"], list(impl["snapshots"])),
+                         ("pending", {"E9-T02": "done", "E9-T03": "pending"}, ["E9-T02"]))
+        self.assertEqual(st["stages"]["audit"]["status"], "pending")
+        self.assertEqual(st["stages"]["tests"]["status"], "done")
+        self.assertEqual(st["resets"][-1]["cartões"], ["E9-T03"])
+        ops2 = self.SharedOps(self.repo, [])
+        ops2.fail = False
+        again = self.orc(ops2, self.shared_plan())
+        self.assertEqual(again.run("implement", 3), ["implement: done"])
+        self.assertEqual([i for r in ops2.runs for i in r], ["E9-T03"])
+
+    def test_reset_without_valid_checkpoint_restores_head_for_every_card(self):
+        class RestoreOps(self.SharedOps):
+            restored: list[str] = []
+
+            def restore(self, card, keep):
+                self.restored.append(card["id"])
+        ops = RestoreOps(self.repo, [tests_json()])
+        ops.fail, ops.restored = False, []
+        orc = self.orc(ops, self.shared_plan())
+        orc.run("tests", 3)
+        orc.run("implement", 3)
+        orc.stage("implement").pop("snapshots")  # estado legado (antes do v17)
+        orc.save()
+        ops.restored.clear()
+        msg = orc.reset("implement", ["E9-T03"], "legado")
+        self.assertIn("HEAD", msg)
+        self.assertEqual(ops.restored, ["E9-T02", "E9-T03"])
+        self.assertEqual(orc.stage("implement")["cards"], {"E9-T02": "pending", "E9-T03": "pending"})
+        self.assertEqual(orc.state["resets"][-1]["cartões"], ["E9-T02", "E9-T03"])
 
     def test_cross_feature_dependency_requires_done_card_before_agents(self):
         plan = {"cards": [

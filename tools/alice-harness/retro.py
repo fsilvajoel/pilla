@@ -5,6 +5,8 @@ import json
 from collections import Counter
 from pathlib import Path
 
+import gates
+
 LIMITS = {"seconds": 180, "attempts": 2, "toolCalls": 20}
 MAX_TOOL_ERROR_RATE = 0.25
 
@@ -21,6 +23,42 @@ def tool_error_summary(events: list[dict]) -> tuple[int, list[tuple[str, int]]]:
     errors = [f"{e.get('name')}: {str(e.get('result', ''))[:60]}" for e in events
               if e.get("kind") == "tool" and str(e.get("result", "")).startswith(("ERRO", "BLOQUEADO"))]
     return len(errors), Counter(errors).most_common(3)
+
+
+READ = ("list_files", "read_file", "search_code", "view", "view_diff", "read_rule", "web_search", "fetch_page")
+WRITE = ("write_file", "append_file", "edit_file", "replace_function")
+LAST_RED_CHARS = 600
+
+
+def kind_counts(rec: dict, events: list[dict]) -> dict:
+    """JV17-4: chamadas por tipo. Usa o que o relatório trouxe; sem ele (registro antigo), conta no log."""
+    if isinstance(rec.get("toolsByKind"), dict):
+        return {k: int(rec["toolsByKind"].get(k, 0)) for k in ("read", "write", "run_check", "bloqueadas")}
+    out = {"read": 0, "write": 0, "run_check": 0, "bloqueadas": 0}
+    for e in events:
+        if e.get("kind") != "tool":
+            continue
+        name, result = e.get("name"), str(e.get("result", ""))
+        key = ("bloqueadas" if result.startswith("BLOQUEADO") else "read" if name in READ else "write" if name in WRITE
+               else "run_check" if name == "run_check" else None)
+        if key:
+            out[key] += 1
+    return out
+
+
+def last_red_section(results: list[dict]) -> list[str]:
+    """JV17-4: última saída vermelha do check de cada cartão que não fechou (redigida de novo e limitada)."""
+    out: list[str] = []
+    for r in results:
+        red = r.get("lastRedCheck")
+        if r.get("status") == "done" or not isinstance(red, dict):
+            continue
+        text, _ = gates.redact(str(red.get("output", "")))
+        if len(text) > LAST_RED_CHARS:
+            text = text[:LAST_RED_CHARS] + "…"
+        out += ["", f"## Última saída vermelha de {r['task']}: `{red.get('check')}` (exit {red.get('exit')})", "",
+                "```", text.replace("```", "` ` `"), "```"]
+    return out
 
 
 def rounds_section(results: list[dict]) -> list[str]:
@@ -45,7 +83,7 @@ def rounds_section(results: list[dict]) -> list[str]:
 
 
 def write_retro(results: list[dict], runs: Path, out: Path) -> str:
-    lines = ["# Retrospectiva da fila", "", "| Cartão | Status | s | Tentativas | Chamadas | Erros de ferramenta | Sinais |", "|---|---|---|---|---|---|---|"]
+    lines = ["# Retrospectiva da fila", "", "| Cartão | Status | s | Tentativas | Chamadas | read/write/run_check/bloqueadas | Erros de ferramenta | Sinais |", "|---|---|---|---|---|---|---|---|"]
     repeated: Counter = Counter()
     for r in results:
         runs_of = sorted((runs / r["task"]).glob("*/log.jsonl")) if (runs / r["task"]).exists() else []
@@ -60,7 +98,9 @@ def write_retro(results: list[dict], runs: Path, out: Path) -> str:
             flags = [" ".join(str(r["message"]).split())[:200]]
         if r.get("status") == "card_error":  # the card writer's error, not the model's (LI-056)
             flags = [" · ".join(str(r.get("message", "")).splitlines())[:200]]
-        lines.append(f"| {r['task']} | {r.get('status')} | {r.get('seconds', '-')} | {r.get('attempts', '-')} | {r.get('toolCalls', '-')} | {total} | {'; '.join(flags) or 'ok'} |")
+        kinds = "/".join(str(v) for v in kind_counts(r, events).values())
+        lines.append(f"| {r['task']} | {r.get('status')} | {r.get('seconds', '-')} | {r.get('attempts', '-')} | {r.get('toolCalls', '-')} | {kinds} | {total} | {'; '.join(flags) or 'ok'} |")
+    lines += last_red_section(results)
     lines += rounds_section(results)
     if repeated:
         lines += ["", "## Erros de ferramenta mais repetidos", ""] + [f"- {n}× {msg}" for msg, n in repeated.most_common(5)]

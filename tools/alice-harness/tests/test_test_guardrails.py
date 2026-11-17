@@ -38,6 +38,16 @@ class CoverageCheckTest(unittest.TestCase):
             result.returncode = 1
             self.assertEqual(run_cmd("vitest run --coverage", Path(d))[0], 1)
 
+    def test_non_final_filtered_check_passes_only_when_green(self):
+        # JV17-5: check não-final (-t, sem --coverage) depende só do exit; 0/0 na saída não reprova.
+        from alice import run_cmd
+        cmd = "pnpm vitest run a.test.ts -t E9-T02"
+        result = subprocess.CompletedProcess([], 0, "Tests 3 passed\nAll files | Unknown% (0/0)\n", "")
+        with tempfile.TemporaryDirectory() as d, mock.patch("alice.subprocess.run", return_value=result):
+            self.assertEqual(run_cmd(cmd, Path(d))[0], 0)
+            result.returncode = 1
+            self.assertNotEqual(run_cmd(cmd, Path(d))[0], 0)
+
 
 class RepoCase(unittest.TestCase):
     def setUp(self):

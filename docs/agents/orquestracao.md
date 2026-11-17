@@ -47,7 +47,8 @@ A tabela abaixo descreve as etapas **internas** do comando `feature`, não os se
 | 4 | Auditoria | Bia, 1 chamada: plano, testes, diff, cobertura, expect-red; extraTests em lote → validador e checks → Alice de novo; ≤1 ciclo | `auditoria.md`, `docs/plano/revisao/<ID>.md` | 1 + ≤1 |
 | 5 | Revisão final | Claude: lê `revisao-final.md` e o diff, decide, commita com `Card-Done` | `revisao-final.md` | 0 |
 
-Comando: `alice.py feature <plano.yaml> <F> [--stage plan|tests|recheck-tests|implement|audit|review|all] [--rounds N]`.
+Comando: `alice.py feature <plano.yaml> <F> [--stage plan|tests|recheck-tests|implement|audit|review|all] [--rounds N]`
+(reabrir etapa: `alice.py feature reset ...`, abaixo).
 O estado fica em `docs/plano/<F>/estado.json` (etapa, status, chamadas declaradas e tokens por etapa);
 rodar de novo continua da etapa pendente. `--stage plan` só valida o plano (o plano é do Claude).
 Para respeitar a revisão dos testes antes da Alice, rode `--stage tests`, revise os testes e só então
@@ -62,11 +63,45 @@ Antes de qualquer etapa que execute agentes (exceto `plan`), dependências de ca
 exigem estado do produtor com `implement: done` e o cartão dependido em `implement.cards` como `done`;
 estado ausente, inválido ou ambíguo bloqueia a feature sem consumir Bia/Alice. Antes dos checks compartilhados
 de `tests`, entregas antigas de teste saem da árvore e ficam em `runs/feature/<F>/.../previous/`.
-Se `implement` falhar, o orquestrador preserva cópias e restaura ao HEAD os allowedPaths de implementação
-(inclusive diffs anteriores não commitados); testes da Bia não são restaurados nessa etapa.
-No `--stage all`, `implement: done` só é reaproveitado se o mapa de cartões concluídos corresponder
-exatamente aos cartões implement do plano atual; caso contrário, a etapa executa os cartões atuais,
-sem dispensar `tests: done` nem chamar a Bia automaticamente. `--stage implement` já usa o plano atual.
+**Checkpoint por cartão (harness-v17, JV17-1).** Quando os allowedPaths de implementação são caminhos exatos
+(sem glob), `implement` roda **um cartão por vez**: antes de cada um grava um checkpoint dos arquivos
+(`runs/feature/<F>/snapshots/<ID>/`, manifest com sha256); cartão `done` vira snapshot verificável; cartão que falha
+volta só ao checkpoint dele (o que difere vai antes para `previous/`), então o trabalho de um `done` anterior no
+mesmo arquivo fica na árvore. Os dependentes do que falhou ficam `skipped (dependência falhou)`. Na retomada
+(`--stage implement` ou `all`) só é pulado o **prefixo** de cartões `done` com snapshot íntegro, mesmo cartão,
+mesmos testes (`testShas`) e o último snapshot igual à árvore; qualquer dúvida (estado legado sem snapshot,
+código desfeito, plano ou teste mudado) refaz todos a partir do HEAD (fail-closed). Check vermelho, 0/0 ou erro de
+checkpoint/rollback nunca dão `done`. Com glob nos allowedPaths vale o comportamento antigo: lote a partir do HEAD
+e, se falhar, cópias preservadas e restore ao HEAD de todos os allowedPaths de implementação; `implement: done`
+só é reaproveitado se o mapa de cartões concluídos corresponder exatamente ao plano atual. Testes da Bia não são
+restaurados nessa etapa e a Bia não é chamada automaticamente.
+
+**Reabrir uma etapa (reset).** Nunca editar `estado.json` à mão (erro 16). Use:
+`alice.py feature reset <plano.yaml> <F> --stage tests|implement [--cards ID,...] --repo <repo> --motivo "<texto>"`.
+Não chama agente. `--motivo` é obrigatório; `--stage` só aceita `tests` ou `implement`.
+- `tests`: volta `tests` a `pending`, zera `testShas`/`expectRed` e invalida `implement`, `audit` e `review`
+  (não aceita `--cards`; os arquivos de teste ficam na árvore e o próximo `--stage tests` os substitui).
+- `implement` (sem `--cards`, todos): restaura ao HEAD os allowedPaths de implementação e volta todos os cartões a `pending`.
+  Com `--cards`, se o cartão anterior ao primeiro escolhido está `done` com snapshot íntegro, a árvore volta a esse
+  checkpoint e só os cartões dali em diante voltam a `pending`; sem checkpoint válido, restaura ao HEAD e todos voltam.
+  Em ambos, `audit` e `review` são invalidados; arquivos alterados vão antes para `previous/`.
+- O custo já gasto (requisições/tokens da Bia e da Alice) fica no estado; cada reset é registrado em
+  `estado.json` → `resets` (quando, etapa, cartões, motivo, arquivos).
+
+Exemplos: retomar E6-F01 (estado anterior ao v17, sem snapshot): `--stage implement` refaz T02 e os demais do HEAD;
+para refazer só a partir de um cartão, `reset --stage implement --cards <ID>` (precisa de snapshot do anterior).
+Reabrir os testes de E7-F03: `reset --stage tests --motivo "..."` e depois `--stage tests`.
+
+**Dentro do cartão (JV17-2..4).** A 70% do limite de chamadas, o resultado da ferramenta traz
+"restam N chamadas; feche: rode os checks e entregue" (uma vez por tentativa). No limite, o harness roda o check
+final sozinho (sem gastar chamada nem subir teto/grace) e manda o resultado junto do pedido de `finish`. Escrita
+bloqueada responde com os allowedPaths e o destino provável; no 2º bloqueio seguido no mesmo caminho, "pare de tentar X".
+O relatório do cartão traz `toolsByKind` (read/write/run_check/bloqueadas) e `lastRedCheck` (última saída vermelha,
+redigida e limitada; vazio em `done`); a retro mostra as duas coisas.
+
+**Cobertura em checks filtrados (JV17-5, caracterização).** Check não-final com `-t` e sem `--coverage` passa só
+se o comando sair verde e não impõe cobertura do arquivo; o check final precisa de cobertura real, e 0/0 é falha.
+Sem cobertura final, `review` termina em erro 17.
 O orquestrador nunca commita. O teto declarado não impede retries de rede nem substitui ledger externo.
 
 ## Formato das mensagens (JSON com esquema fixo, validado em `feature.py`)

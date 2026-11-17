@@ -110,11 +110,22 @@ class CallBudget:
     aviso e passa de `grace` chamadas sem chamar finish, para (stop). Antes o aviso só zerava o contador: o limite do
     cartão (20) virava piso de 20 em 20 (61 chamadas no E4-T05)."""
 
+
     def __init__(self, limit: int, grace: int = 4):
         self.limit, self.grace = limit, grace
         self.calls = 0
         self.nudged = False
         self.after = 0
+        self.warned = False
+        self.warn_at = -(-limit * 7 // 10)  # JV17-2: ceil(70% do limite), sem mudar limit nem grace
+
+    def warning(self) -> str | None:
+        """Uma vez por tentativa, ao chegar a 70% do limite: 'restam N chamadas; feche: rode os checks e entregue'.
+        Não avisa quando 70% já é o próprio limite (o nudge cobre esse caso)."""
+        if self.warned or self.nudged or self.calls < self.warn_at or self.warn_at >= self.limit:
+            return None
+        self.warned = True
+        return f"restam {self.limit - self.calls} chamadas; feche: rode os checks e entregue"
 
     def tick(self) -> None:
         self.calls += 1
@@ -131,7 +142,7 @@ class CallBudget:
         return "ok"
 
     def finished(self) -> None:
-        self.calls, self.after, self.nudged = 0, 0, False
+        self.calls, self.after, self.nudged, self.warned = 0, 0, False, False
 
 
 # ---------------------------------------------------------------- duplication
