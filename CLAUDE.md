@@ -9,7 +9,7 @@ Sistema de gestão de empréstimos (financeira), modular. Produto de estudo de a
 - Repositório **público**: nada de IP, senha, token ou detalhe da infraestrutura em arquivo versionado.
 - Commits pequenos; `main` sempre funcionando.
 - Idioma (ADR-0012): código, commits e títulos de PR em **inglês**; docs, comentários de código, corpo de PR e textos do sistema em **pt-BR**. Nomes do domínio: `docs/glossario.md`.
-- Processo dos agentes: harness único `../harness-ada/` (fora do repositório, em `~/code/harness-ada`), executado pelo Claude Code (agentes em `.claude/agents/`, gates em `scripts/gates.mts`, hook `scripts/guard-hook.mts`; ver `../harness-ada/workflow/feature.md` e ADR-0015). O harness antigo (cartões, `alice.py`) foi removido; a Alice segue só como ferramenta avulsa opcional.
+- Processo dos agentes: harness único `../harness-ada/` (fora do repositório), agnóstico ao modelo; adaptador atual: Claude Code (agentes em `.claude/agents/`, gates em `scripts/gates.mts`, hook `scripts/guard-hook.mts`; ver `../harness-ada/workflow/feature.md` e ADR-0015). O harness antigo (cartões, `alice.py`) foi removido; a Alice segue só como ferramenta avulsa opcional.
 
 ## Configuração e segredos (`.env`)
 - `.env`: valores reais (senhas, tokens, chaves, URLs internas). **Nunca vai para o git** (está no `.gitignore`), permissão `600`. Não exibir o conteúdo dele em respostas, logs ou commits, e não mandá-lo à Alice.
