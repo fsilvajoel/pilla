@@ -317,22 +317,81 @@ function testsReviewed(opts: GateOptions, state: JsonObject, files: readonly str
     : { gate: "tests-reviewed", pass: true, detail: `${String(files.length)} teste(s) com sha assinado`, problems: [] };
 }
 
-function coverageTotals(summaryFile: string, label: string): string[] {
-  if (!existsSync(summaryFile)) return [`${label}: cobertura não gerada (coverage-summary.json ausente)`];
-  const summary = parseJson(readFileSync(summaryFile, "utf8"));
-  const total = isJsonObject(summary) ? objectAt(summary, "total") : undefined;
-  const lines = total === undefined ? undefined : objectAt(total, "lines");
-  if (lines === undefined || numberAt(lines, "total") === 0) {
-    return [`${label}: cobertura vazia (0/0 linhas): o include do vitest.config não pega o código`];
-  }
-  return [];
+const METRICS = ["lines", "branches", "functions", "statements"] as const;
+
+/** Arquivo de produção medido por um teste: o mesmo caminho sem o `.test` (lib/a.test.ts → lib/a.ts). */
+export function productionFile(testFile: string): string | undefined {
+  const match = /^(.*)\.test(\.[^./\\]+)$/.exec(testFile);
+  return match === null ? undefined : `${match[1] ?? ""}${match[2] ?? ""}`;
 }
 
+/** Escapa os caracteres de glob para o `--coverage.include` casar só aquele arquivo (ex.: app/(admin)/...). */
+function literalGlob(file: string): string {
+  return file
+    .split(sep)
+    .join("/")
+    .replace(/[\\()[\]{}*?!+@]/g, "\\$&");
+}
+
+function fileCoverage(summary: Json, pkg: string, file: string, where: string): string[] {
+  const entry = isJsonObject(summary) ? objectAt(summary, resolve(pkg, file)) : undefined;
+  if (entry === undefined) {
+    return [`${where}: fora do relatório de cobertura (excluído ou não carregado pelos testes)`];
+  }
+  const lines = objectAt(entry, "lines");
+  if (lines === undefined || numberAt(lines, "total") === 0) return [`${where}: cobertura vazia (0/0 linhas)`];
+  const missing: string[] = [];
+  for (const metric of METRICS) {
+    const data = objectAt(entry, metric);
+    const total = data === undefined ? -1 : numberAt(data, "total");
+    const covered = data === undefined ? 0 : numberAt(data, "covered");
+    if (covered !== total) missing.push(`${metric} ${String(covered)}/${String(total)}`);
+  }
+  return missing.length > 0 ? [`${where}: cobertura abaixo de 100% (${missing.join(", ")})`] : [];
+}
+
+function coverageOfFiles(summaryFile: string, pkg: string, label: string, prodFiles: readonly string[]): string[] {
+  if (!existsSync(summaryFile)) return [`${label}: cobertura não gerada (coverage-summary.json ausente)`];
+  const summary = parseJson(readFileSync(summaryFile, "utf8"));
+  return prodFiles.flatMap((file) => fileCoverage(summary, pkg, file, join(label, file)));
+}
+
+/** Arquivos de produção da feature no pacote; os que faltam ou não seguem o padrão viram problema. */
+function productionFiles(
+  pkg: string,
+  label: string,
+  testFilesOfPkg: readonly string[],
+): {
+  files: string[];
+  problems: string[];
+} {
+  const files: string[] = [];
+  const problems: string[] = [];
+  for (const test of testFilesOfPkg) {
+    const prod = productionFile(test);
+    if (prod === undefined) problems.push(`${join(label, test)}: nome sem ".test.<ext>"; não há arquivo de produção`);
+    else if (!existsSync(join(pkg, prod))) problems.push(`${join(label, prod)}: arquivo de produção não existe`);
+    else if (!files.includes(prod)) files.push(prod);
+  }
+  return { files, problems };
+}
+
+/**
+ * Cobertura da feature: roda só os testes de `tests` do estado e mede só os arquivos de produção deles
+ * (cada teste sem o `.test`), exigindo 100% de linhas, ramos, funções e statements. O `coverage.exclude`
+ * do vitest.config é anulado para um arquivo da feature não sumir da medição; se mesmo assim ele faltar
+ * no relatório, é FAIL. A suíte inteira do pacote é do `pnpm verify`.
+ */
 function coverage(opts: GateOptions, files: readonly string[]): GateOutcome {
   const problems: string[] = [];
   const done: string[] = [];
   for (const [pkg, pkgFiles] of groupByPackage(opts.root, files)) {
     const label = relative(opts.root, pkg);
+    const prod = productionFiles(pkg, label, pkgFiles);
+    if (prod.problems.length > 0) {
+      problems.push(...prod.problems);
+      continue;
+    }
     withTempDir((dir) => {
       const out = join(dir, "report.json");
       const covDir = join(dir, "coverage");
@@ -342,9 +401,13 @@ function coverage(opts: GateOptions, files: readonly string[]): GateOutcome {
           "exec",
           "vitest",
           "run",
+          ...pkgFiles,
           "--coverage.enabled=true",
           "--coverage.reporter=json-summary",
           `--coverage.reportsDirectory=${covDir}`,
+          ...prod.files.map((file) => `--coverage.include=${literalGlob(file)}`),
+          "--coverage.exclude=",
+          ...METRICS.map((metric) => `--coverage.thresholds.${metric}=100`),
           "--reporter=json",
           `--outputFile=${out}`,
         ],
@@ -358,22 +421,22 @@ function coverage(opts: GateOptions, files: readonly string[]): GateOutcome {
       for (const file of pkgFiles) {
         const entry = fileEntry(report, pkg, file);
         if (entry === undefined || entry.assertions.length === 0) {
-          pkgProblems.push(`${join(label, file)}: teste da feature não rodou na suíte do pacote`);
+          pkgProblems.push(`${join(label, file)}: teste da feature não rodou (fora do relatório do vitest)`);
         }
       }
-      pkgProblems.push(...coverageTotals(join(covDir, "coverage-summary.json"), label));
+      pkgProblems.push(...coverageOfFiles(join(covDir, "coverage-summary.json"), pkg, label, prod.files));
       if (run.status !== 0 && pkgProblems.length === 0) {
         pkgProblems.push(
           `${label}: vitest saiu com código ${String(run.status)} (limite de cobertura?)\n${lastLines(run.stderr, 15)}`,
         );
       }
       problems.push(...pkgProblems);
-      if (pkgProblems.length === 0) done.push(label);
+      if (pkgProblems.length === 0) done.push(`${label} (${prod.files.join(", ")})`);
     });
   }
   return problems.length > 0
-    ? { gate: "coverage", pass: false, detail: "cobertura não atendida", problems }
-    : { gate: "coverage", pass: true, detail: `limites atendidos em ${done.join(", ")}`, problems: [] };
+    ? { gate: "coverage", pass: false, detail: "cobertura da feature não atendida", problems }
+    : { gate: "coverage", pass: true, detail: `100% nos arquivos da feature em ${done.join("; ")}`, problems: [] };
 }
 
 function record(state: JsonObject, outcome: GateOutcome, now: Date): void {

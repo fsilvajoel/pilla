@@ -2,10 +2,11 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "nod
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { main, packageOf, runGate, spawnRunner, type RunResult, type Runner } from "./gates.mts";
+import { main, packageOf, productionFile, runGate, spawnRunner, type RunResult, type Runner } from "./gates.mts";
 
 const FEATURE = "F1";
 const TEST_FILE = "pkg/src/a.test.ts";
+const PROD_FILE = "pkg/src/a.ts";
 const NOW = new Date("2026-11-17T12:00:00.000Z");
 
 interface FakeReport {
@@ -19,6 +20,8 @@ interface FakeVitest {
   readonly report?: FakeReport;
   readonly status?: number;
   readonly linesTotal?: number;
+  readonly branchesCovered?: number;
+  readonly summaryFiles?: readonly string[];
   readonly calls: { cmd: string; args: readonly string[]; cwd: string }[];
 }
 
@@ -56,10 +59,16 @@ function fakeRunner(fake: FakeVitest): Runner {
     const covDir = argValue(args, "--coverage.reportsDirectory=");
     if (covDir !== undefined && fake.linesTotal !== undefined) {
       mkdirSync(covDir, { recursive: true });
-      writeFileSync(
-        join(covDir, "coverage-summary.json"),
-        JSON.stringify({ total: { lines: { total: fake.linesTotal, covered: fake.linesTotal } } }),
-      );
+      const lines = { total: fake.linesTotal, covered: fake.linesTotal };
+      const entry = {
+        lines,
+        statements: lines,
+        functions: { total: 2, covered: 2 },
+        branches: { total: 4, covered: fake.branchesCovered ?? 4 },
+      };
+      const summary: Record<string, typeof entry> = { total: entry };
+      for (const file of fake.summaryFiles ?? [PROD_FILE]) summary[join(root, file)] = entry;
+      writeFileSync(join(covDir, "coverage-summary.json"), JSON.stringify(summary));
     }
     return { status: fake.status ?? 0, stdout: "", stderr: "limite de cobertura: lines 80% < 100%" };
   };
@@ -87,6 +96,7 @@ beforeEach(() => {
   mkdirSync(join(root, "pkg", "src"), { recursive: true });
   writeFileSync(join(root, "pkg", "package.json"), "{}");
   writeFileSync(join(root, TEST_FILE), "it('x', () => {});\n");
+  writeFileSync(join(root, PROD_FILE), "export const a = 1;\n");
   writeState({ feature: FEATURE, tests: [TEST_FILE] });
 });
 
@@ -207,12 +217,44 @@ describe("tests-reviewed", () => {
 });
 
 describe("coverage", () => {
-  it("passes when vitest exits 0 with tests run and non-empty coverage", () => {
+  it("runs only the feature tests, measures only their production files and passes at 100%", () => {
     const fake: FakeVitest = { report: { passed: 4, failed: 0 }, linesTotal: 50, calls: [] };
     const outcome = runGate("coverage", { root, feature: FEATURE, run: fakeRunner(fake) });
     expect(outcome.pass).toBe(true);
-    expect(outcome.detail).toBe("limites atendidos em pkg");
-    expect(fake.calls[0]?.args).toContain("--coverage.enabled=true");
+    expect(outcome.detail).toBe("100% nos arquivos da feature em pkg (src/a.ts)");
+    const args = fake.calls[0]?.args ?? [];
+    expect(args).toContain("src/a.test.ts");
+    expect(args).toContain("--coverage.enabled=true");
+    expect(args).toContain("--coverage.include=src/a.ts");
+    expect(args).toContain("--coverage.exclude=");
+    expect(args).toContain("--coverage.thresholds.branches=100");
+    expect(gateEntry("coverage").status).toBe("PASS");
+  });
+
+  it("escapes glob characters of the production file path", () => {
+    mkdirSync(join(root, "pkg", "app", "(admin)"), { recursive: true });
+    writeFileSync(join(root, "pkg", "app", "(admin)", "page.test.tsx"), "it('x', () => {});\n");
+    writeFileSync(join(root, "pkg", "app", "(admin)", "page.tsx"), "export {};\n");
+    writeState({ feature: FEATURE, tests: ["pkg/app/(admin)/page.test.tsx"] });
+    const fake: FakeVitest = {
+      report: {
+        passed: 1,
+        failed: 0,
+        files: [{ name: join(root, "pkg/app/(admin)/page.test.tsx"), statuses: ["passed"] }],
+      },
+      linesTotal: 5,
+      summaryFiles: ["pkg/app/(admin)/page.tsx"],
+      calls: [],
+    };
+    const outcome = runGate("coverage", { root, feature: FEATURE, run: fakeRunner(fake) });
+    expect(outcome.pass).toBe(true);
+    expect(fake.calls[0]?.args).toContain("--coverage.include=app/\\(admin\\)/page.tsx");
+  });
+
+  it("fails below 100% naming the file and the metric", () => {
+    const fake: FakeVitest = { report: { passed: 4, failed: 0 }, linesTotal: 50, branchesCovered: 3, calls: [] };
+    const outcome = runGate("coverage", { root, feature: FEATURE, run: fakeRunner(fake) });
+    expect(outcome.problems).toEqual(["pkg/src/a.ts: cobertura abaixo de 100% (branches 3/4)"]);
   });
 
   it("fails on empty coverage (0/0)", () => {
@@ -220,6 +262,28 @@ describe("coverage", () => {
     const outcome = runGate("coverage", { root, feature: FEATURE, run: fakeRunner(fake) });
     expect(outcome.pass).toBe(false);
     expect(outcome.problems[0]).toMatch(/0\/0/);
+  });
+
+  it("fails when a production file is missing from the coverage report (excluded)", () => {
+    const fake: FakeVitest = { report: { passed: 4, failed: 0 }, linesTotal: 50, summaryFiles: [], calls: [] };
+    const outcome = runGate("coverage", { root, feature: FEATURE, run: fakeRunner(fake) });
+    expect(outcome.problems).toEqual([
+      "pkg/src/a.ts: fora do relatório de cobertura (excluído ou não carregado pelos testes)",
+    ]);
+  });
+
+  it("fails without running vitest when the production file does not exist", () => {
+    rmSync(join(root, PROD_FILE));
+    const fake: FakeVitest = { report: { passed: 4, failed: 0 }, linesTotal: 50, calls: [] };
+    const outcome = runGate("coverage", { root, feature: FEATURE, run: fakeRunner(fake) });
+    expect(outcome.problems).toEqual(["pkg/src/a.ts: arquivo de produção não existe"]);
+    expect(fake.calls).toEqual([]);
+  });
+
+  it("fails when a feature test is not in the vitest report", () => {
+    const fake: FakeVitest = { report: { passed: 4, failed: 0, files: [] }, linesTotal: 50, calls: [] };
+    const outcome = runGate("coverage", { root, feature: FEATURE, run: fakeRunner(fake) });
+    expect(outcome.problems).toEqual(["pkg/src/a.test.ts: teste da feature não rodou (fora do relatório do vitest)"]);
   });
 
   it("fails when the threshold makes vitest exit non-zero", () => {
@@ -239,6 +303,14 @@ describe("coverage", () => {
     const fake: FakeVitest = { report: { passed: 4, failed: 0 }, calls: [] };
     const outcome = runGate("coverage", { root, feature: FEATURE, run: fakeRunner(fake) });
     expect(outcome.problems).toEqual(["pkg: cobertura não gerada (coverage-summary.json ausente)"]);
+  });
+});
+
+describe("productionFile", () => {
+  it("drops the .test segment and keeps the extension", () => {
+    expect(productionFile("lib/simulation.test.ts")).toBe("lib/simulation.ts");
+    expect(productionFile("components/x.test.tsx")).toBe("components/x.tsx");
+    expect(productionFile("lib/x.spec.ts")).toBeUndefined();
   });
 });
 
