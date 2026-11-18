@@ -1,0 +1,6 @@
+{"task": "TOY-T01", "kind": "implement", "status": "done", "attempts": 2, "toolCalls": 10, "seconds": 20.5, "promptTokens": 30540, "outputTokens": 2327, "think": false, "at": "2026-11-14T18:59:56"}
+{"task": "H-05", "kind": "docs", "status": "done", "attempts": 1, "toolCalls": 12, "seconds": 11.6, "promptTokens": 58586, "outputTokens": 778, "think": false, "at": "2026-11-14T19:00:32"}
+{"task": "H-01", "kind": "implement", "status": "done", "attempts": 3, "toolCalls": 23, "seconds": 536, "promptTokens": 762508, "outputTokens": 49112, "think": null, "at": "2026-11-14 (backfill)"}
+{"task": "H-02", "kind": "implement", "status": "failed", "attempts": 4, "toolCalls": 35, "seconds": 474, "promptTokens": 968597, "outputTokens": 43434, "think": null, "at": "2026-11-14 (backfill)"}
+{"task": "H-03", "kind": "implement", "status": "done", "attempts": 1, "toolCalls": 10, "seconds": 22, "promptTokens": 29449, "outputTokens": 1585, "think": null, "at": "2026-11-14 (backfill)"}
+{"task": "H-04", "kind": "implement", "status": "done", "attempts": 1, "toolCalls": 5, "seconds": 9, "promptTokens": 11222, "outputTokens": 884, "think": null, "at": "2026-11-14 (backfill)"}

@@ -1,0 +1,13 @@
+id: H-03
+title: "Implement edits.py: exact-string replacement for the edit_file tool"
+refs: [AUDIT-V1-06]
+readFirst: [tests/test_edits.py]
+allowedPaths: [edits.py]
+protectedTests: [tests/test_edits.py]
+checks:
+  - python3 -m unittest tests.test_edits -v
+  - python3 -m py_compile edits.py
+done:
+  - "edits.py exposes apply_edit(text, old, new, replace_all=False) -> str; error messages in pt-BR as the tests expect"
+  - "Standard library only; under 30 lines"
+budget: {attempts: 3, toolCalls: 15}

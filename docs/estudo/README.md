@@ -50,5 +50,6 @@ Material salvo das worktrees e branches antigas antes de apagá-las. A história
 | [harness-antigo/runs/jorge-harness-v17/](harness-antigo/runs/jorge-harness-v17/), [harness-antigo/runs/harness-bia-pacote/](harness-antigo/runs/harness-bia-pacote/) | `metrics.jsonl` de cada worktree | worktrees `.jorge-wt/harness-v17` e `.claude/worktrees/agent-…`, não rastreados |
 | [harness-antigo/harness-adav1-plano-inicial.md](harness-antigo/harness-adav1-plano-inicial.md) | primeiro plano de reestruturação que virou o Harness-adaV1 | worktree `.wt-harness-tools`, não rastreado (`docs/plano/harness-adav1.md`) |
 | [exp/e4-t01-a/E4-T01.md](exp/e4-t01-a/E4-T01.md), [exp/e4-t01-b/E4-T01.md](exp/e4-t01-b/E4-T01.md) | experimento A/B: revisão da Bia sobre o teste de `fakeCpf` em duas variantes | `exp/e4-t01-a`, `exp/e4-t01-b` |
+| [harness-antigo/alice-original/](harness-antigo/alice-original/) | cartões, relatórios, verificações e métricas das execuções H-01 a H-05 (14/11), a primeira leva da Alice | repositório antigo `alice-harness` (`runs/`, `tasks/`), já removido |
 
 As branches `bench/*` só tinham código gerado pelos modelos na bancada. Os resultados delas já estão em `bancada/` e `bancada-modelos.md`.

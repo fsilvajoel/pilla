@@ -1,0 +1,16 @@
+{
+ "task": "H-01",
+ "status": "done",
+ "files": [
+  "rules.py"
+ ],
+ "diffStat": "",
+ "attempts": 3,
+ "toolCalls": 23,
+ "aliceTokens": {
+  "prompt": 762508,
+  "output": 49112
+ },
+ "message": "Implemented `rules.py` to index and retrieve rule definitions from markdown files. Fixed table row indexing and capped bullet block content to 40 lines (41 total lines including header) to satisfy all tests.",
+ "runDir": "<harness>/runs/H-01/20261114-184108"
+}
