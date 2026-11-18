@@ -15,7 +15,9 @@ A chamada não cai em nenhuma regra abaixo e segue normalmente.
 - Bash com `--no-verify` (inclusive abreviado), `git commit -n` (também agrupado, como `-an`), troca de
   `core.hooksPath` ou `LEFTHOOK=`;
 - qualquer tool ou comando que cite `.env` ou variante (`.env.local`, `.env*`); `.env.example` é permitido;
-- Edit/Write/MultiEdit/NotebookEdit com caminho fora do repositório (symlinks resolvidos).
+- Edit/Write/MultiEdit/NotebookEdit com caminho fora do repositório (symlinks e `..` resolvidos), exceto a
+  memória do Claude (`~/.claude/projects/<projeto>/memory/**`) e o temp do Claude (`/tmp/claude-<uid>/**`);
+  `.env` continua bloqueado também nessas áreas.
 
 ## Limites
 Não analisa para onde um comando Bash escreve (redirecionamento, `cp`, `mv`); escopo do plano continua sendo

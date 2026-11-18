@@ -2,12 +2,28 @@
 // motivo no stderr):
 // - Bash que pula hooks do git (--no-verify, commit -n, core.hooksPath, LEFTHOOK=0);
 // - qualquer acesso a .env (exceto .env.example) por Read/Edit/Write/MultiEdit/NotebookEdit/Grep/Glob/Bash;
-// - escrita (Edit/Write/MultiEdit/NotebookEdit) fora do repositório.
+// - escrita (Edit/Write/MultiEdit/NotebookEdit) fora do repositório, exceto em duas áreas do próprio Claude:
+//   a memória (`~/.claude/projects/<projeto>/memory/**`) e o temp/scratchpad (`/tmp/claude-<uid>/**`).
 // Entrada inválida também bloqueia: o hook falha fechado.
 import { existsSync, readFileSync, realpathSync } from "node:fs";
-import { basename, dirname, isAbsolute, relative, resolve } from "node:path";
+import { homedir } from "node:os";
+import { basename, dirname, isAbsolute, relative, resolve, sep } from "node:path";
 
 export type Decision = { readonly allow: true } | { readonly allow: false; readonly reason: string };
+
+/** Raízes das áreas externas onde a escrita é liberada (injetáveis para teste). */
+export interface ExternalAreas {
+  /** Diretório home; a memória fica em `<home>/.claude/projects/<projeto>/memory/`. */
+  readonly home: string;
+  /** Diretório temporário base; o temp do Claude fica em `<tmp>/claude-<uid>/`. */
+  readonly tmp: string;
+  /** uid do processo; sem ele, aceita só `<tmp>/claude-<dígitos>/`. */
+  readonly uid: number | undefined;
+}
+
+export function defaultAreas(): ExternalAreas {
+  return { home: homedir(), tmp: "/tmp", uid: typeof process.getuid === "function" ? process.getuid() : undefined };
+}
 
 export interface HookInput {
   readonly toolName: string;
@@ -160,12 +176,30 @@ export function isInside(root: string, path: string): boolean {
   return rel === "" || (!rel.startsWith("..") && !isAbsolute(rel));
 }
 
+/** Segmentos de `path` abaixo de `root` (ambos reais), ou `undefined` se não estiver estritamente dentro. */
+function segmentsBelow(root: string, path: string): string[] | undefined {
+  const rel = relative(realPath(root), realPath(path));
+  if (rel === "" || rel.startsWith("..") || isAbsolute(rel)) return undefined;
+  return rel.split(sep);
+}
+
+/** Escrita liberada fora do repo: memória do Claude ou temp `/tmp/claude-<uid>/` (sempre abaixo da raiz). */
+export function isAllowedExternalWrite(path: string, areas: ExternalAreas): boolean {
+  const memory = segmentsBelow(resolve(areas.home, ".claude", "projects"), path);
+  if (memory !== undefined && memory.length >= 3 && memory[1] === "memory") return true;
+  if (areas.uid !== undefined) {
+    return segmentsBelow(resolve(areas.tmp, `claude-${String(areas.uid)}`), path) !== undefined;
+  }
+  const temp = segmentsBelow(resolve(areas.tmp), path);
+  return temp !== undefined && temp.length >= 2 && /^claude-\d+$/.test(temp[0] ?? "");
+}
+
 function stringField(input: Readonly<Record<string, unknown>>, key: string): string | undefined {
   const value = input[key];
   return typeof value === "string" ? value : undefined;
 }
 
-export function decide(input: HookInput, projectDir: string): Decision {
+export function decide(input: HookInput, projectDir: string, areas: ExternalAreas = defaultAreas()): Decision {
   const { toolName, toolInput, cwd } = input;
   if (toolName === "Bash") return checkBash(stringField(toolInput, "command") ?? "");
   for (const key of PATH_KEYS) {
@@ -173,7 +207,7 @@ export function decide(input: HookInput, projectDir: string): Decision {
     if (raw === undefined) continue;
     const path = resolve(cwd, raw);
     if (isEnvFile(path)) return deny(".env não pode ser lido nem alterado (use .env.example)");
-    if (WRITE_TOOLS.has(toolName) && !isInside(projectDir, path)) {
+    if (WRITE_TOOLS.has(toolName) && !isInside(projectDir, path) && !isAllowedExternalWrite(path, areas)) {
       return deny(`escrita fora do repositório: ${path}`);
     }
   }

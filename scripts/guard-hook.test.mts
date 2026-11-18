@@ -1,22 +1,25 @@
 import { spawnSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, rmSync, symlinkSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { homedir, tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { checkBash, decide, run, shellWords, type HookInput } from "./guard-hook.mts";
+import { checkBash, decide, defaultAreas, run, shellWords, type ExternalAreas, type HookInput } from "./guard-hook.mts";
 
 let repo = "";
 let outside = "";
+let home = "";
+let tmp = "";
 
 beforeEach(() => {
   repo = mkdtempSync(join(tmpdir(), "guard-repo-"));
   outside = mkdtempSync(join(tmpdir(), "guard-out-"));
+  home = mkdtempSync(join(tmpdir(), "guard-home-"));
+  tmp = mkdtempSync(join(tmpdir(), "guard-tmp-"));
   mkdirSync(join(repo, "src"));
 });
 
 afterEach(() => {
-  rmSync(repo, { recursive: true, force: true });
-  rmSync(outside, { recursive: true, force: true });
+  for (const dir of [repo, outside, home, tmp]) rmSync(dir, { recursive: true, force: true });
 });
 
 function tool(toolName: string, toolInput: Record<string, unknown>): HookInput {
@@ -116,6 +119,59 @@ describe("file tools", () => {
 
   it("reading outside the repo is not a write and is allowed", () => {
     expect(decide(tool("Read", { file_path: join(outside, "a.ts") }), repo)).toEqual({ allow: true });
+  });
+});
+
+describe("writes in Claude's external areas", () => {
+  const areas = (uid: number | undefined): ExternalAreas => ({ home, tmp, uid });
+  const write = (path: string): boolean => decide(tool("Write", { file_path: path }), repo, areas(1000)).allow;
+
+  it.each([
+    ["memory file", () => join(home, ".claude", "projects", "-home-x-code", "memory", "MEMORY.md")],
+    ["memory subdir", () => join(home, ".claude", "projects", "p", "memory", "sub", "a.md")],
+    ["temp of the uid", () => join(tmp, "claude-1000", "a.txt")],
+    ["scratchpad deep in temp", () => join(tmp, "claude-1000", "proj", "sess", "scratchpad", "x.json")],
+  ])("allows %s", (_label, path) => {
+    expect(write(path())).toBe(true);
+  });
+
+  it.each([
+    ["memory dir itself", () => join(home, ".claude", "projects", "p", "memory")],
+    ["memory-x prefix", () => join(home, ".claude", "projects", "p", "memory-x", "a.md")],
+    ["project root (not memory)", () => join(home, ".claude", "projects", "p", "a.md")],
+    ["memory without project", () => join(home, ".claude", "projects", "memory", "a.md")],
+    ["other ~/.claude file", () => join(home, ".claude", "settings.json")],
+    ["escape from memory via ..", () => join(home, ".claude", "projects", "p", "memory", "..", "..", "x.md")],
+    ["escape from temp via ..", () => join(tmp, "claude-1000", "..", "claude-1001", "a.txt")],
+    ["temp root itself", () => join(tmp, "claude-1000")],
+    ["similar prefix claude-1000-evil", () => join(tmp, "claude-1000-evil", "a.txt")],
+    ["other uid", () => join(tmp, "claude-1001", "a.txt")],
+    ["plain /tmp file", () => join(tmp, "a.txt")],
+  ])("blocks %s", (_label, path) => {
+    expect(write(path())).toBe(false);
+  });
+
+  it("without uid accepts only claude-<digits> in temp", () => {
+    const noUid = (path: string): boolean => decide(tool("Write", { file_path: path }), repo, areas(undefined)).allow;
+    expect(noUid(join(tmp, "claude-1234", "a.txt"))).toBe(true);
+    expect(noUid(join(tmp, "claude-1234-evil", "a.txt"))).toBe(false);
+    expect(noUid(join(tmp, "claude-", "a.txt"))).toBe(false);
+  });
+
+  it("a symlink inside memory pointing elsewhere does not allow the write", () => {
+    const memory = join(home, ".claude", "projects", "p", "memory");
+    mkdirSync(memory, { recursive: true });
+    symlinkSync(outside, join(memory, "link"));
+    expect(write(join(memory, "link", "a.md"))).toBe(false);
+  });
+
+  it(".env stays blocked inside the allowed areas", () => {
+    expect(write(join(home, ".claude", "projects", "p", "memory", ".env"))).toBe(false);
+    expect(write(join(tmp, "claude-1000", ".env.local"))).toBe(false);
+  });
+
+  it("defaultAreas uses the real home, /tmp and the process uid", () => {
+    expect(defaultAreas()).toEqual({ home: homedir(), tmp: "/tmp", uid: process.getuid?.() });
   });
 });
 
