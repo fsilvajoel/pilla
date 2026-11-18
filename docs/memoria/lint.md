@@ -1,7 +1,7 @@
 # Cola do lint (TypeScript)
 
 Regras do ESLint que valem no pilla (`packages/config/eslint.mjs`, travas §3), com o jeito errado e o certo.
-O harness põe no pedido da Alice as seções que valem para os arquivos do cartão. `scripts/check-lint-sheet.mjs`
+Os agentes leem as seções que valem para os arquivos da tarefa. `scripts/check-lint-sheet.mjs`
 roda o ESLint em cada exemplo: o "errado" tem de acusar a regra e o "certo" não. Não existe comentário para
 desligar regra (`noInlineConfig`): o código é que muda.
 

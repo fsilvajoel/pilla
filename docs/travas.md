@@ -31,13 +31,13 @@ Implementação da E0: configs na raiz, `packages/config/`, `scripts/` e `.githu
 |---|---|---|
 | `any`, `as` (exceto em testes), `!` (non-null) | burla os tipos | E0 |
 | `@ts-ignore`, `@ts-nocheck`, `eslint-disable` | burla as travas; comentário de desligar regra não tem efeito (`noInlineConfig`) | E0 |
-| `parseFloat`, `Number()`, `Math.*`, literal decimal em `packages/finance` e domínios | dinheiro em ponto flutuante ([ADR-0004](docs/adr/0004-dinheiro-em-centavos.md)) | E1 |
+| `parseFloat`, `Number()`, `Math.*`, literal decimal em `packages/finance` e domínios | dinheiro em ponto flutuante ([ADR-0004](adr/0004-dinheiro-em-centavos.md)) | E1 |
 | `new Date()`, `Date.now()` em `domain/` | relógio deve ser injetado | E0 |
 | `console.*` | usar o logger | E0 |
 | `.only`, `.skip`, `expect(true)` em testes | teste desligado/inútil | E0 |
 | SQL por concatenação de string | injeção | E2 |
 | `export default` | nomes estáveis para busca e refatoração | E0 |
-| textos pt-BR fora do arquivo de mensagens | [ADR-0012](docs/adr/0012-idioma-codigo-ingles-docs-portugues.md) | E2+ |
+| textos pt-BR fora do arquivo de mensagens | [ADR-0012](adr/0012-idioma-codigo-ingles-docs-portugues.md) | E2+ |
 
 ## 4.4 Arquitetura (dependency-cruiser + testes de arquitetura)
 | Regra | Quando |
@@ -53,7 +53,7 @@ Implementação da E0: configs na raiz, `packages/config/`, `scripts/` e `.githu
 ## 4.5 Banco
 | Trava | Quando |
 |---|---|
-| restrições da [RFC-005](docs/rfc/RFC-005-modelo-fisico-banco.md) (CHECK, UNIQUE, NOT NULL) — o banco recusa dado inválido mesmo se o código falhar | E2+ |
+| restrições da [RFC-005](rfc/RFC-005-modelo-fisico-banco.md) (CHECK, UNIQUE, NOT NULL) — o banco recusa dado inválido mesmo se o código falhar | E2+ |
 | migrações só para frente; CI verifica que o schema gerado bate com as migrações (`drizzle-kit check`) | E2 |
 | migração já mergeada é **imutável** (CI compara hash) | E2 |
 | tabelas append-only sem `UPDATE`/`DELETE` no código (lint/teste) | E4 |

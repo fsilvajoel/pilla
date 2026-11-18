@@ -319,9 +319,9 @@ Delegar
 
 ---
 
-# Papel do Jorge
+# Papel do especialista
 
-O Jorge representa o especialista da plataforma.
+O especialista representa quem domina a plataforma.
 
 Sua responsabilidade não é corrigir código comum.
 
@@ -340,7 +340,7 @@ Exemplos:
 
 Erros simples devem ser resolvidos pelo próprio agente executor.
 
-O sucesso da plataforma será medido pela redução gradual da necessidade de intervenção do Jorge.
+O sucesso da plataforma será medido pela redução gradual da necessidade de intervenção do especialista.
 
 ---
 

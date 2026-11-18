@@ -2,7 +2,7 @@
 
 | Campo | Valor |
 |---|---|
-| Status | Aceito |
+| Status | Substituída por [ADR-0015](0015-harness-adav1-no-claude-code.md) |
 | Data | 2026-11-16 |
 | Origem | Pedido do Joel (16/11); medições do E4-T03 em [docs/estudo/fatos.md](../estudo/fatos.md) |
 

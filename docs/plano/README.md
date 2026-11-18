@@ -1,6 +1,6 @@
 # Plano de entrega
 
-Fluxo de entrega: [workflow feature do Harness-adaV1](../../Harness-adaV1/workflow/feature.md). Registro histórico abaixo.
+Fluxo de entrega: [workflow feature do Harness-adaV1](../../Harness-adaV1/workflow/feature.md). Registro histórico abaixo: os "cartões", a Alice e o `alice.py` citados aqui são do harness antigo, removido em 17/11/2026 ([ADR-0015](../adr/0015-harness-adav1-no-claude-code.md)); as lições LI-xxx que não constam mais em [licoes.md](../memoria/licoes.md) foram podadas.
 
 | Entrega | Objetivo | Pronto quando |
 |---|---|---|

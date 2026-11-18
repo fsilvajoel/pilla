@@ -29,7 +29,7 @@ Os comandos do projeto (teste, cobertura, typecheck, lint, fronteiras, esquemas,
 
 ## 5. Contexto e memória
 
-- **Memória curada** em [docs/memoria/](docs/memoria/README.md): lições e decisões menores, com curadoria antes do commit.
+- **Memória curada** em [docs/memoria/](docs/memoria/README.md): lições, colas e fichas de módulo, com curadoria antes do commit.
 - Nada de IP, senha, token ou dado pessoal na memória (repositório público).
 
 ## 6. Estrutura e convenções

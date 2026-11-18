@@ -53,7 +53,8 @@ Fluxo: **PRD** define a necessidade → **RFC** propõe a solução → as decis
 | [0011](adr/0011-autenticacao-cpf-senha-sessao.md) | Acesso do cliente só por CPF (leitura) e do ADMIN por login e senha | Aceito |
 | [0012](adr/0012-idioma-codigo-ingles-docs-portugues.md) | Código em inglês, documentação em português | Aceito |
 | [0013](adr/0013-estado-no-frontend.md) | Gerenciamento de estado no frontend | Aceito |
-| [0014](adr/0014-orquestracao-por-feature.md) | Orquestração dos agentes por feature | Aceito |
+| [0014](adr/0014-orquestracao-por-feature.md) | Orquestração dos agentes por feature | Substituída por ADR-0015 |
+| [0015](adr/0015-harness-adav1-no-claude-code.md) | Harness-adaV1 executado pelo Claude Code | Aceito |
 
 ### Glossário
 - [Glossário português → código](glossario.md) — nomes obrigatórios no código
