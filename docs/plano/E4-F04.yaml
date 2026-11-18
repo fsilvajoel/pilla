@@ -12,7 +12,7 @@ cards:
       - apps/api/src/log/redact-prototype.test.ts
     protectedTests: []
     checks:
-      - node scripts/expect-red.mjs apps/api src/log/redact-prototype.test.ts
+      - '! pnpm --filter @pilla/api exec vitest run src/log/redact-prototype.test.ts'
       - node scripts/check-test-quality.mjs apps/api/src/log/redact-prototype.test.ts
       - pnpm --filter @pilla/api typecheck
       - pnpm --filter @pilla/api lint

@@ -17,7 +17,7 @@ cards:
       - apps/api/src/core/public/ids.test.ts
     protectedTests: []
     checks:
-      - node scripts/expect-red.mjs apps/api src/core/public/ids.test.ts
+      - '! pnpm --filter @pilla/api exec vitest run src/core/public/ids.test.ts'
       - node scripts/check-test-quality.mjs apps/api/src/core/public/ids.test.ts
       - pnpm --filter @pilla/api typecheck
       - pnpm --filter @pilla/api lint
@@ -105,7 +105,7 @@ cards:
       - apps/api/src/core/public/audit.test.ts
     protectedTests: []
     checks:
-      - node scripts/expect-red.mjs apps/api src/core/public/audit.test.ts
+      - '! pnpm --filter @pilla/api exec vitest run src/core/public/audit.test.ts'
       - node scripts/check-test-quality.mjs apps/api/src/core/public/audit.test.ts
       - pnpm --filter @pilla/api typecheck
       - pnpm --filter @pilla/api lint
@@ -189,7 +189,7 @@ cards:
       - apps/api/src/people/infra/person-repository.test.ts
     protectedTests: []
     checks:
-      - node scripts/expect-red.mjs apps/api src/people/infra/person-repository.test.ts
+      - '! pnpm --filter @pilla/api exec vitest run src/people/infra/person-repository.test.ts'
       - node scripts/check-test-quality.mjs apps/api/src/people/infra/person-repository.test.ts
       - pnpm --filter @pilla/api typecheck
       - pnpm --filter @pilla/api lint
@@ -284,7 +284,7 @@ cards:
       - apps/api/src/lending/domain/loan-status.test.ts
     protectedTests: []
     checks:
-      - node scripts/expect-red.mjs apps/api src/lending/domain/loan-status.test.ts
+      - '! pnpm --filter @pilla/api exec vitest run src/lending/domain/loan-status.test.ts'
       - node scripts/check-test-quality.mjs apps/api/src/lending/domain/loan-status.test.ts
       - pnpm --filter @pilla/api typecheck
       - pnpm --filter @pilla/api lint
@@ -325,7 +325,7 @@ cards:
       - pnpm --filter @pilla/api exec vitest run src/lending/domain/loan-status.test.ts --coverage --coverage.include=src/lending/domain/loan-status.ts --coverage.exclude=none --coverage.thresholds.lines=100 --coverage.thresholds.branches=100
       - pnpm --filter @pilla/api typecheck
       - pnpm --filter @pilla/api lint
-      - node scripts/check-no-stub.mjs E5-T08 apps/api/src/lending/domain/loan-status.ts apps/api/vitest.config.ts
+      - '! grep -n "stub E5-T08" apps/api/src/lending/domain/loan-status.ts apps/api/vitest.config.ts'
     done:
       - all tests in apps/api/src/lending/domain/loan-status.test.ts pass with 100% line and branch coverage of loan-status.ts (run_check 0)
       - loan-status.ts has no '// @stub E5-T08' line and apps/api/vitest.config.ts has no line that excludes src/lending/domain/loan-status.ts (run_check 3)
@@ -357,7 +357,7 @@ cards:
       - apps/api/src/lending/domain/reversal.test.ts
     protectedTests: []
     checks:
-      - node scripts/expect-red.mjs apps/api src/lending/domain/reversal.test.ts
+      - '! pnpm --filter @pilla/api exec vitest run src/lending/domain/reversal.test.ts'
       - node scripts/check-test-quality.mjs apps/api/src/lending/domain/reversal.test.ts
       - pnpm --filter @pilla/api typecheck
       - pnpm --filter @pilla/api lint

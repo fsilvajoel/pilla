@@ -12,7 +12,7 @@ cards:
       - packages/schemas/src/fake-cpf.test.ts
     protectedTests: []
     checks:
-      - node scripts/expect-red.mjs packages/schemas src/fake-cpf.test.ts
+      - '! pnpm --filter @pilla/schemas exec vitest run src/fake-cpf.test.ts'
       - node scripts/check-test-quality.mjs packages/schemas/src/fake-cpf.test.ts
       - pnpm --filter @pilla/schemas typecheck
       - pnpm --filter @pilla/schemas lint
@@ -81,7 +81,7 @@ cards:
       - apps/api/src/log/redact.test.ts
     protectedTests: []
     checks:
-      - node scripts/expect-red.mjs apps/api src/log/redact.test.ts
+      - '! pnpm --filter @pilla/api exec vitest run src/log/redact.test.ts'
       - node scripts/check-test-quality.mjs apps/api/src/log/redact.test.ts
       - pnpm --filter @pilla/api typecheck
       - pnpm --filter @pilla/api lint

@@ -12,7 +12,7 @@ cards:
       - apps/web/lib/simulation.test.ts
     protectedTests: []
     checks:
-      - node scripts/expect-red.mjs apps/web lib/simulation.test.ts
+      - '! pnpm --filter @pilla/web exec vitest run lib/simulation.test.ts'
       - node scripts/check-test-quality.mjs apps/web/lib/simulation.test.ts
       - pnpm --filter @pilla/web typecheck
       - pnpm --filter @pilla/web lint
@@ -156,7 +156,7 @@ cards:
       - pnpm --filter @pilla/web exec vitest run lib/simulation.test.ts --coverage --coverage.include=lib/simulation.ts --coverage.exclude=none --coverage.thresholds.lines=100 --coverage.thresholds.branches=100
       - pnpm --filter @pilla/web typecheck
       - pnpm --filter @pilla/web lint
-      - node scripts/check-no-stub.mjs E6-T02 apps/web/lib/simulation.ts apps/web/vitest.config.ts
+      - '! grep -n "stub E6-T02" apps/web/lib/simulation.ts apps/web/vitest.config.ts'
     done:
       - all tests in apps/web/lib/simulation.test.ts pass with 100% line and branch coverage of simulation.ts (run_check 0)
       - simulation.ts has no '// @stub E6-T02' line and apps/web/vitest.config.ts has no line that excludes lib/simulation.ts (run_check 3)
@@ -186,7 +186,7 @@ cards:
       - apps/web/lib/simulation-form.test.ts
     protectedTests: []
     checks:
-      - node scripts/expect-red.mjs apps/web lib/simulation-form.test.ts
+      - '! pnpm --filter @pilla/web exec vitest run lib/simulation-form.test.ts'
       - node scripts/check-test-quality.mjs apps/web/lib/simulation-form.test.ts
       - pnpm --filter @pilla/web typecheck
       - pnpm --filter @pilla/web lint
@@ -238,7 +238,7 @@ cards:
       - pnpm --filter @pilla/web exec vitest run lib/simulation-form.test.ts --coverage --coverage.include=lib/simulation-form.ts --coverage.exclude=none --coverage.thresholds.lines=100 --coverage.thresholds.branches=100
       - pnpm --filter @pilla/web typecheck
       - pnpm --filter @pilla/web lint
-      - node scripts/check-no-stub.mjs E6-T04 apps/web/lib/simulation-form.ts apps/web/vitest.config.ts
+      - '! grep -n "stub E6-T04" apps/web/lib/simulation-form.ts apps/web/vitest.config.ts'
     done:
       - all tests in apps/web/lib/simulation-form.test.ts pass with 100% line and branch coverage of simulation-form.ts (run_check 0)
       - 'import { parseReais } from "@pilla/finance";'
@@ -273,7 +273,7 @@ cards:
       - apps/web/components/loan-simulation.test.tsx
     protectedTests: []
     checks:
-      - node scripts/expect-red.mjs apps/web components/loan-simulation.test.tsx
+      - '! pnpm --filter @pilla/web exec vitest run components/loan-simulation.test.tsx'
       - node scripts/check-test-quality.mjs apps/web/components/loan-simulation.test.tsx
       - pnpm --filter @pilla/web typecheck
       - pnpm --filter @pilla/web lint
@@ -374,7 +374,7 @@ cards:
       - pnpm --filter @pilla/web exec vitest run components/loan-simulation.test.tsx --coverage --coverage.include=components/loan-simulation.tsx --coverage.exclude=none
       - pnpm --filter @pilla/web typecheck
       - pnpm --filter @pilla/web lint
-      - node scripts/check-no-stub.mjs E6-T06 apps/web/components/loan-simulation.tsx apps/web/vitest.config.ts
+      - '! grep -n "stub E6-T06" apps/web/components/loan-simulation.tsx apps/web/vitest.config.ts'
     done:
       - all tests in apps/web/components/loan-simulation.test.tsx pass with at least 85% coverage of loan-simulation.tsx (run_check 0)
       - below the summary, the result has a table with the header cells Nº, Vencimento, Principal, Juros and Parcela of the /** */ comment

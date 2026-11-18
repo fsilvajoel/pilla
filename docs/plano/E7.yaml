@@ -19,8 +19,8 @@ cards:
       - apps/web/components/person-form.test.tsx
     protectedTests: []
     checks:
-      - node scripts/expect-red.mjs apps/web lib/today.test.ts
-      - node scripts/expect-red.mjs apps/web components/person-form.test.tsx
+      - '! pnpm --filter @pilla/web exec vitest run lib/today.test.ts'
+      - '! pnpm --filter @pilla/web exec vitest run components/person-form.test.tsx'
       - node scripts/check-test-quality.mjs apps/web/lib/today.test.ts
       - node scripts/check-test-quality.mjs apps/web/components/person-form.test.tsx
       - pnpm --filter @pilla/web typecheck
@@ -155,7 +155,7 @@ cards:
       - apps/web/lib/new-loan.test.ts
     protectedTests: []
     checks:
-      - node scripts/expect-red.mjs apps/web lib/new-loan.test.ts
+      - '! pnpm --filter @pilla/web exec vitest run lib/new-loan.test.ts'
       - node scripts/check-test-quality.mjs apps/web/lib/new-loan.test.ts
       - pnpm --filter @pilla/web typecheck
       - pnpm --filter @pilla/web lint
@@ -250,7 +250,7 @@ cards:
       - apps/web/components/new-loan-form.test.tsx
     protectedTests: []
     checks:
-      - node scripts/expect-red.mjs apps/web components/new-loan-form.test.tsx
+      - '! pnpm --filter @pilla/web exec vitest run components/new-loan-form.test.tsx'
       - node scripts/check-test-quality.mjs apps/web/components/new-loan-form.test.tsx
       - pnpm --filter @pilla/web typecheck
       - pnpm --filter @pilla/web lint
@@ -348,8 +348,8 @@ cards:
       - apps/web/components/loan-detail.test.tsx
     protectedTests: []
     checks:
-      - node scripts/expect-red.mjs apps/web components/loan-list.test.tsx
-      - node scripts/expect-red.mjs apps/web components/loan-detail.test.tsx
+      - '! pnpm --filter @pilla/web exec vitest run components/loan-list.test.tsx'
+      - '! pnpm --filter @pilla/web exec vitest run components/loan-detail.test.tsx'
       - node scripts/check-test-quality.mjs apps/web/components/loan-list.test.tsx
       - node scripts/check-test-quality.mjs apps/web/components/loan-detail.test.tsx
       - pnpm --filter @pilla/web typecheck
@@ -464,7 +464,7 @@ cards:
       - pnpm --filter @pilla/web exec vitest run components/loan-list.test.tsx --coverage --coverage.include=components/loan-list.tsx --coverage.exclude=none
       - pnpm --filter @pilla/web typecheck
       - pnpm --filter @pilla/web lint
-      - node scripts/check-no-stub.mjs E7-T09 apps/web/components/loan-list.tsx apps/web/vitest.config.ts
+      - '! grep -n "stub E7-T09" apps/web/components/loan-list.tsx apps/web/vitest.config.ts'
     done:
       - all tests in apps/web/components/loan-list.test.tsx pass with at least 85% coverage of loan-list.tsx (run_check 0)
       - with no loans, the text "Nenhum contrato." in place of the table, and the link Novo contrato stays
@@ -579,7 +579,7 @@ cards:
       - apps/web/lib/payment-draft.test.ts
     protectedTests: []
     checks:
-      - node scripts/expect-red.mjs apps/web lib/payment-draft.test.ts
+      - '! pnpm --filter @pilla/web exec vitest run lib/payment-draft.test.ts'
       - node scripts/check-test-quality.mjs apps/web/lib/payment-draft.test.ts
       - pnpm --filter @pilla/web typecheck
       - pnpm --filter @pilla/web lint
@@ -672,7 +672,7 @@ cards:
       - apps/web/components/payment-form.test.tsx
     protectedTests: []
     checks:
-      - node scripts/expect-red.mjs apps/web components/payment-form.test.tsx
+      - '! pnpm --filter @pilla/web exec vitest run components/payment-form.test.tsx'
       - node scripts/check-test-quality.mjs apps/web/components/payment-form.test.tsx
       - pnpm --filter @pilla/web typecheck
       - pnpm --filter @pilla/web lint

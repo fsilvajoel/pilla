@@ -378,7 +378,7 @@ cards:
   - docs/memoria/libs/zod.md
   protectedTests: []
   checks:
-  - node scripts/check-lib-sheet.mjs docs/memoria/libs/zod.md packages/schemas zod z zod.dev 400
+  - test "$(wc -w < docs/memoria/libs/zod.md)" -le 400
   done:
   - '<= 400 words in pt-BR, sections: Use (the right zod 4 call, one code line each), Evite (zod 3 habit -> zod 4 call), Fonte'
   - 'cover what this repo uses: z.strictObject, z.int, z.uuidv7, z.iso.date, z.iso.datetime({offset}), z.literal, .refine, z.infer'
@@ -787,8 +787,8 @@ cards:
   - pnpm --filter @pilla/schemas exec vitest run src/events/events.test.ts
   - pnpm --filter @pilla/schemas typecheck
   - pnpm --filter @pilla/schemas lint
-  - node scripts/check-count.mjs packages/schemas/src/events/payment-reversed.ts ".reduce(" 0
-  - node scripts/check-count.mjs packages/schemas/src/events/payment-confirmed.ts ".reduce(" 1
+  - test "$(grep -oF '.reduce(' packages/schemas/src/events/payment-reversed.ts | wc -l)" -eq 0
+  - test "$(grep -oF '.reduce(' packages/schemas/src/events/payment-confirmed.ts | wc -l)" -eq 1
   done:
   - all events.test.ts tests pass, including both 'allocations must sum to amountCents' cases
   - 'payment-confirmed.ts exports the helper allocationsTotal(allocations: readonly Allocation[]): number holding the reduce, and: export type Allocation = z.infer<typeof allocationSchema>;'

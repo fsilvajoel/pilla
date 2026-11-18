@@ -82,7 +82,7 @@ export function formatDate({ year, month, day }: Civil): IsoDate {
   return text;
 }
 
-// ---------------------------------------------------------------- funções públicas (cartão E1-T21: Alice)
+// ---------------------------------------------------------------- funções públicas (E1-T21)
 
 /** Valida e marca "AAAA-MM-DD" (data real: 2027-02-29 é inválida; anos 1900..2999). Erro: DateError. */
 export function isoDate(_text: string): IsoDate {

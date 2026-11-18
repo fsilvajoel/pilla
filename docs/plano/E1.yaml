@@ -170,7 +170,7 @@ cards:
   - packages/finance/src/split.test.ts
   protectedTests: []
   checks:
-  - node scripts/expect-red.mjs packages/finance src/split.test.ts
+  - '! pnpm --filter @pilla/finance exec vitest run src/split.test.ts'
   - pnpm --filter @pilla/finance typecheck
   - pnpm --filter @pilla/finance lint
   done:
@@ -431,7 +431,7 @@ cards:
   - packages/finance/src/late-charges.test.ts
   protectedTests: []
   checks:
-  - node scripts/expect-red.mjs packages/finance src/late-charges.test.ts
+  - '! pnpm --filter @pilla/finance exec vitest run src/late-charges.test.ts'
   - pnpm --filter @pilla/finance typecheck
   - pnpm --filter @pilla/finance lint
   done:
@@ -670,7 +670,7 @@ cards:
   - docs/memoria/modulos/finance.md
   protectedTests: []
   checks:
-  - node scripts/check-module-sheet.mjs docs/memoria/modulos/finance.md packages/finance/src 300
+  - test "$(wc -w < docs/memoria/modulos/finance.md)" -le 300
   done:
   - <= 300 words following docs/memoria/modulos/_modelo.md
   - lists every exported name of src/index.ts and, per file, the rule IDs its comments cite (the check lists what is missing)

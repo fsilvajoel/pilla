@@ -5,7 +5,7 @@
 <!-- problema ou regra atendida -->
 
 ## IDs
-<!-- PRD/RFC/ADR e regras: RN-xx, CA-xx, T-xx, cartão E?-T?? -->
+<!-- PRD/RFC/ADR e regras: RN-xx, CA-xx, T-xx, tarefa E?-T?? -->
 
 ## Checklist
 - [ ] Testes citam os IDs das regras e passam (`pnpm verify`)
