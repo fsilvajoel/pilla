@@ -1,4 +1,3 @@
-// @stub E6-T02
 import { bps, cents, generateSchedule, isoDate } from "@pilla/finance";
 import type { Cents, Frequency, IsoDate, ScheduledInstallment } from "@pilla/finance";
 import type { SimulateLoanRequest } from "@pilla/schemas";
@@ -48,17 +47,14 @@ export function simulate(request: SimulateLoanRequest, disbursementDate: IsoDate
     firstDueDate: isoDate(request.firstDueDate),
     frequency: request.frequency,
     disbursementDate,
+    // RN-C03: arredondamento comercial em passos de R$ 5,00
     roundingStep: cents(500n),
   });
 
   const interest = cents(schedule.reduce((acc, line) => acc + line.interest, 0n));
   const total = cents(schedule.reduce((acc, line) => acc + line.total, 0n));
+  // RN-C03: todas as parcelas têm o mesmo valor
   const installmentAmount = cents(total / BigInt(request.installmentCount));
 
-  return {
-    interest,
-    total,
-    installmentAmount,
-    schedule,
-  };
+  return { interest, total, installmentAmount, schedule };
 }

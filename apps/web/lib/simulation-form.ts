@@ -1,5 +1,7 @@
-// @stub E6-T04
+import { parseReais } from "@pilla/finance";
+import { simulateLoanRequest } from "@pilla/schemas";
 import type { SimulateLoanRequest } from "@pilla/schemas";
+import { frequencyOf } from "./simulation";
 import type { FrequencyPreset } from "./simulation";
 
 /** Campos da tela de simulação como o ADMIN digita (esboço do PRD-001 RF-10). */
@@ -21,6 +23,14 @@ export interface SimulationFormValues {
  * periodicidade por `frequencyOf` de `./simulation`, e o resultado por `simulateLoanRequest.parse`. Texto fora
  * do formato lança o erro de `parseReais` (MoneyError) ou do Zod (ZodError).
  */
-export function toSimulateRequest(_values: SimulationFormValues): SimulateLoanRequest {
-  throw new Error("not implemented");
+export function toSimulateRequest(values: SimulationFormValues): SimulateLoanRequest {
+  return simulateLoanRequest.parse({
+    type: "INSTALLMENT",
+    principalCents: Number(parseReais(values.amount)),
+    // taxa em % com duas casas: "6,33" vira 633 bps
+    monthlyInterestRateBps: Number(parseReais(values.monthlyRate)),
+    installmentCount: Number(values.installmentCount),
+    frequency: frequencyOf(values.frequency),
+    firstDueDate: values.firstDueDate,
+  });
 }

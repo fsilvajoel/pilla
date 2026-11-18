@@ -67,6 +67,7 @@ formulário validado pelos esquemas de `packages/schemas`).
   parcelas (total menos principal), por isso não entra no teste.
 - A3: Semanal = 7 dias, Quinzenal = 15 dias, Mensal = 1 mês, Bimestral = 2 meses (exemplos da RN-C04).
 - A4: os textos "5.000,00" e "6,33" viram 500000 e 633 no corpo; texto fora do formato lança erro.
+- A6: 1º vencimento igual ou anterior ao desembolso lança `DueDateError` (RN-C04).
 - A5: 100% de linhas e ramos dos dois arquivos; typecheck e lint verdes.
 
 ## Cenários

@@ -16,8 +16,6 @@ export default defineConfig({
         "app/layout.tsx", // casca <html>/<body> do Next; não renderiza dentro do jsdom
         "components/ui/**", // código gerado pelo shadcn/ui; coberto pelos testes das telas que o usam
         "lib/utils.ts", // cn() do shadcn/ui: só repassa para clsx + tailwind-merge
-        "lib/simulation.ts", // stub E6-T02: sai quando a implementação real entrar
-        "lib/simulation-form.ts", // stub E6-T04: sai quando a implementação real entrar
         "components/loan-simulation.tsx", // stub E6-T06: sai quando a implementação real entrar
         "app/(admin)/**/page.tsx", // casca de rota do ADMIN: só monta o componente com os dados de mentira
         "lib/mock-data.ts", // dados de mentira das telas do ADMIN (decisões do Joel de 17/11), sem lógica

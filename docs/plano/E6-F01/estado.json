@@ -1,148 +1,109 @@
 {
- "feature": "E6-F01",
- "stages": {
-  "plan": {
-   "status": "done",
-   "seconds": 0,
-   "problems": []
-  },
-  "tests": {
-   "status": "done",
-   "biaRequests": 3,
-   "biaIn": 21978,
-   "biaOut": 14062,
-   "seconds": 200,
-   "repairs": 0
-  },
-  "implement": {
-   "aliceTokens": {
-    "prompt": 3484073,
-    "output": 54263
-   },
-   "status": "card_error",
-   "cards": {
-    "E6-T02": "done",
-    "E6-T07": "done",
-    "E6-T09": "card_error",
-    "E6-T04": "skipped (dependência falhou)"
-   },
-   "snapshots": {
-    "E6-T02": {
-     "stamp": "20261117-090621-1",
-     "sha256": "6a645237152e85969119e7277606f19cd11c86d2f9564fd1f5670561ea50ac72"
+  "feature": "E6-F01",
+  "stages": {
+    "plan": {
+      "status": "done"
     },
-    "E6-T07": {
-     "stamp": "20261117-094430-1",
-     "sha256": "9862c98bbf528f633cffd592af4908c494faff26fa7aaaff47a3b197ba2fc276"
+    "tests": {
+      "status": "done"
+    },
+    "testReview": {
+      "status": "done",
+      "verdict": "aprovado"
+    },
+    "implement": {
+      "status": "done"
+    },
+    "review": {
+      "status": "done",
+      "verdict": "aprovado"
     }
-   },
-   "reused": [
-    "E6-T02"
-   ],
-   "seconds": 239,
-   "biaRequests": 2
   },
-  "audit": {
-   "status": "pending",
-   "message": "reset de implement: E6-T02 done no estado mas codigo desfeito pelo rollback pre-v17; refazer com checkpoint v17"
+  "tests": [
+    "apps/web/lib/simulation.test.ts",
+    "apps/web/lib/simulation-form.test.ts"
+  ],
+  "scenarios": [
+    {
+      "id": "C1",
+      "criterio": "A3",
+      "teste": "C1 (A3): gives DAY 7 for WEEKLY"
+    },
+    {
+      "id": "C1",
+      "criterio": "A3",
+      "teste": "C1 (A3): gives DAY 15 for BIWEEKLY"
+    },
+    {
+      "id": "C1",
+      "criterio": "A3",
+      "teste": "C1 (A3): gives MONTH 1 for MONTHLY"
+    },
+    {
+      "id": "C1",
+      "criterio": "A3",
+      "teste": "C1 (A3): gives MONTH 2 for BIMONTHLY"
+    },
+    {
+      "id": "C2",
+      "criterio": "A1",
+      "teste": "C2 (A1): RFC-004 §5 example gives interest 190000n total 690000n installmentAmount 115000n"
+    },
+    {
+      "id": "C2",
+      "criterio": "A1",
+      "teste": "C2 (A1): RFC-004 §5 example schedule has length 6 and first line matches"
+    },
+    {
+      "id": "C3",
+      "criterio": "A2",
+      "teste": "C3 (A2): CA-11 gives installmentAmount 27500n and total 110000n"
+    },
+    {
+      "id": "C4",
+      "criterio": "A6",
+      "teste": "C4 (A6): throws DueDateError when firstDueDate equals disbursementDate"
+    },
+    {
+      "id": "C5",
+      "criterio": "A4",
+      "teste": "C5 (A4): RFC-004 §5 form gives expected SimulateLoanRequest"
+    },
+    {
+      "id": "C5",
+      "criterio": "A4",
+      "teste": "C5 (A4): CA-11 form gives expected SimulateLoanRequest"
+    },
+    {
+      "id": "C6",
+      "criterio": "A4",
+      "teste": "C6 (A4): amount without comma throws MoneyError"
+    },
+    {
+      "id": "C6",
+      "criterio": "A4",
+      "teste": "C6 (A4): installmentCount zero throws ZodError"
+    }
+  ],
+  "gates": {
+    "expect-red": {
+      "status": "PASS",
+      "at": "2026-11-18T20:48:38.992Z",
+      "detail": "12 teste(s), todos falhando"
+    },
+    "tests-reviewed": {
+      "status": "PASS",
+      "at": "2026-11-18T20:55:46.013Z",
+      "detail": "2 teste(s) com sha assinado"
+    },
+    "coverage": {
+      "status": "PASS",
+      "at": "2026-11-18T20:55:47.582Z",
+      "detail": "100% nos arquivos da feature em apps/web (lib/simulation.ts, lib/simulation-form.ts)"
+    }
   },
-  "review": {
-   "status": "pending",
-   "message": "reset de implement: E6-T02 done no estado mas codigo desfeito pelo rollback pre-v17; refazer com checkpoint v17"
+  "testShas": {
+    "apps/web/lib/simulation.test.ts": "01e4d34d627438824b4d89709448791b53964198",
+    "apps/web/lib/simulation-form.test.ts": "46cffa50156713f5a8d3072c154290e3267cb3a7"
   }
- },
- "biaRequests": 5,
- "testShas": {
-  "apps/web/lib/simulation-form.test.ts": "e9d4cc8df2777967043fd5a9241731c0e2b01493",
-  "apps/web/lib/simulation.test.ts": "3a6688e5d47668f003d91d5c1bdffadd098acc8a"
- },
- "expectRed": true,
- "scenarios": [
-  {
-   "id": "C1",
-   "descricao": "frequencyOf das quatro opções",
-   "card": "E6-T01",
-   "teste": "gives DAY 7 for WEEKLY"
-  },
-  {
-   "id": "C1",
-   "descricao": "frequencyOf das quatro opções",
-   "card": "E6-T01",
-   "teste": "gives DAY 15 for BIWEEKLY"
-  },
-  {
-   "id": "C1",
-   "descricao": "frequencyOf das quatro opções",
-   "card": "E6-T01",
-   "teste": "gives MONTH 1 for MONTHLY"
-  },
-  {
-   "id": "C1",
-   "descricao": "frequencyOf das quatro opções",
-   "card": "E6-T01",
-   "teste": "gives MONTH 2 for BIMONTHLY"
-  },
-  {
-   "id": "C2",
-   "descricao": "simulate do exemplo da RFC-004 §5 com desembolso em 2026-11-14",
-   "card": "E6-T01",
-   "teste": "RFC-004 §5 example gives interest 190000n total 690000n installmentAmount 115000n"
-  },
-  {
-   "id": "C2",
-   "descricao": "simulate do exemplo da RFC-004 §5 com desembolso em 2026-11-14",
-   "card": "E6-T01",
-   "teste": "RFC-004 §5 example schedule has length 6 and first line matches"
-  },
-  {
-   "id": "C3",
-   "descricao": "simulate do CA-11",
-   "card": "E6-T01",
-   "teste": "CA-11 gives installmentAmount 27500n and total 110000n"
-  },
-  {
-   "id": "C4",
-   "descricao": "simulate com 1º vencimento igual ao desembolso lança erro (RN-C04)",
-   "card": "E6-T01",
-   "teste": "throws DueDateError when firstDueDate equals disbursementDate"
-  },
-  {
-   "id": "C5",
-   "descricao": "toSimulateRequest do exemplo da RFC-004 §5 e do CA-11",
-   "card": "E6-T03",
-   "teste": "RFC-004 §5 form gives expected SimulateLoanRequest"
-  },
-  {
-   "id": "C5",
-   "descricao": "toSimulateRequest do exemplo da RFC-004 §5 e do CA-11",
-   "card": "E6-T03",
-   "teste": "CA-11 form gives monthlyInterestRateBps 1000 and frequency DAY 7"
-  },
-  {
-   "id": "C6",
-   "descricao": "toSimulateRequest com valor sem vírgula ou 0 parcelas lança erro",
-   "card": "E6-T03",
-   "teste": "amount without comma throws MoneyError"
-  },
-  {
-   "id": "C6",
-   "descricao": "toSimulateRequest com valor sem vírgula ou 0 parcelas lança erro",
-   "card": "E6-T03",
-   "teste": "installmentCount zero throws ZodError"
-  }
- ],
- "resets": [
-  {
-   "quando": "2026-11-17T09:05:28-0300",
-   "etapa": "implement",
-   "cartões": [
-    "E6-T02",
-    "E6-T07",
-    "E6-T09",
-    "E6-T04"
-   ],
-   "motivo": "E6-T02 done no estado mas codigo desfeito pelo rollback pre-v17; refazer com checkpoint v17",
-   "arquivos": "arquivos no HEAD"
-  }
- ]
 }

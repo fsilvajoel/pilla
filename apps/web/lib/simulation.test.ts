@@ -4,19 +4,19 @@ import type { SimulateLoanRequest } from "@pilla/schemas";
 import { frequencyOf, simulate } from "./simulation";
 
 describe("frequencyOf", () => {
-  it("gives DAY 7 for WEEKLY", () => {
+  it("C1 (A3): gives DAY 7 for WEEKLY", () => {
     expect(frequencyOf("WEEKLY")).toEqual({ unit: "DAY", interval: 7 });
   });
 
-  it("gives DAY 15 for BIWEEKLY", () => {
+  it("C1 (A3): gives DAY 15 for BIWEEKLY", () => {
     expect(frequencyOf("BIWEEKLY")).toEqual({ unit: "DAY", interval: 15 });
   });
 
-  it("gives MONTH 1 for MONTHLY", () => {
+  it("C1 (A3): gives MONTH 1 for MONTHLY", () => {
     expect(frequencyOf("MONTHLY")).toEqual({ unit: "MONTH", interval: 1 });
   });
 
-  it("gives MONTH 2 for BIMONTHLY", () => {
+  it("C1 (A3): gives MONTH 2 for BIMONTHLY", () => {
     expect(frequencyOf("BIMONTHLY")).toEqual({ unit: "MONTH", interval: 2 });
   });
 });
@@ -33,14 +33,14 @@ describe("simulate", () => {
     firstDueDate: "2026-12-14",
   };
 
-  it("RFC-004 §5 example gives interest 190000n total 690000n installmentAmount 115000n", () => {
+  it("C2 (A1): RFC-004 §5 example gives interest 190000n total 690000n installmentAmount 115000n", () => {
     const result = simulate(rfcRequest, disbursementDate);
     expect(result.interest).toBe(190000n);
     expect(result.total).toBe(690000n);
     expect(result.installmentAmount).toBe(115000n);
   });
 
-  it("RFC-004 §5 example schedule has length 6 and first line matches", () => {
+  it("C2 (A1): RFC-004 §5 example schedule has length 6 and first line matches", () => {
     const result = simulate(rfcRequest, disbursementDate);
     expect(result.schedule).toHaveLength(6);
     expect(result.schedule[0]).toEqual({
@@ -61,13 +61,13 @@ describe("simulate", () => {
     firstDueDate: "2026-11-21",
   };
 
-  it("CA-11 gives installmentAmount 27500n and total 110000n", () => {
+  it("C3 (A2): CA-11 gives installmentAmount 27500n and total 110000n", () => {
     const result = simulate(ca11Request, disbursementDate);
     expect(result.installmentAmount).toBe(27500n);
     expect(result.total).toBe(110000n);
   });
 
-  it("throws DueDateError when firstDueDate equals disbursementDate", () => {
+  it("C4 (A6): throws DueDateError when firstDueDate equals disbursementDate", () => {
     const badRequest: SimulateLoanRequest = {
       ...rfcRequest,
       firstDueDate: "2026-11-14",

@@ -13,7 +13,7 @@ describe("toSimulateRequest", () => {
     firstDueDate: "2026-12-14",
   };
 
-  it("RFC-004 §5 form gives expected SimulateLoanRequest", () => {
+  it("C5 (A4): RFC-004 §5 form gives expected SimulateLoanRequest", () => {
     const result = toSimulateRequest(rfcForm);
     expect(result).toEqual({
       type: "INSTALLMENT",
@@ -33,13 +33,19 @@ describe("toSimulateRequest", () => {
     firstDueDate: "2026-11-21",
   };
 
-  it("CA-11 form gives monthlyInterestRateBps 1000 and frequency DAY 7", () => {
+  it("C5 (A4): CA-11 form gives expected SimulateLoanRequest", () => {
     const result = toSimulateRequest(ca11Form);
-    expect(result.monthlyInterestRateBps).toBe(1000);
-    expect(result.frequency).toEqual({ unit: "DAY", interval: 7 });
+    expect(result).toEqual({
+      type: "INSTALLMENT",
+      principalCents: 100000,
+      monthlyInterestRateBps: 1000,
+      installmentCount: 4,
+      frequency: { unit: "DAY", interval: 7 },
+      firstDueDate: "2026-11-21",
+    });
   });
 
-  it("amount without comma throws MoneyError", () => {
+  it("C6 (A4): amount without comma throws MoneyError", () => {
     const badForm: SimulationFormValues = {
       ...rfcForm,
       amount: "5000",
@@ -47,7 +53,7 @@ describe("toSimulateRequest", () => {
     expect(() => toSimulateRequest(badForm)).toThrow(MoneyError);
   });
 
-  it("installmentCount zero throws ZodError", () => {
+  it("C6 (A4): installmentCount zero throws ZodError", () => {
     const badForm: SimulationFormValues = {
       ...rfcForm,
       installmentCount: "0",
