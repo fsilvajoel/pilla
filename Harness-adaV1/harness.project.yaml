@@ -1,12 +1,9 @@
 name: Harness-adaV1
-entrypoint: python3 script/ada.py --project .
 project_root: .
-output_dir: .harness/runs
 agent_dir: agent
 skill_dir: ../.claude/skills
 capability_dir: capability
 policy_dir: policy
-tool_dir: tools
 workflow_dir: workflow
 gate_dir: gate
 script_dir: script
@@ -27,7 +24,7 @@ roles:
   reviewer: {agent: ../.claude/agents/reviewer.md}
   implementer: {agent: ../.claude/agents/implementer.md}
 
-# Comandos de verificação do projeto alvo. Cartões, skills e gates citam a
+# Comandos de verificação do projeto alvo. Workflows, skills e gates citam a
 # chave (commands.test etc.), nunca o comando literal.
 commands:
   test: pnpm --filter <pkg> exec vitest run <arquivo>
@@ -54,7 +51,3 @@ portable:
 checks:
   - portable
   - skill-format
-  - tool-contract
-  - redact
-  - edit-guard
-  - ssh-gate

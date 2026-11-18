@@ -14,4 +14,4 @@ O próprio `harness.project.yaml` é o único arquivo autorizado a contê-los.
 
 ## Evidência esperada
 Saída de `python3 script/check_portable.py`: "Gate portable passou." ou uma linha por ocorrência
-(`<arquivo> contém texto proibido: <texto>`). O mesmo resultado aparece em `ada.py --status` (`legacy_matches`).
+(`<arquivo> contém texto proibido: <texto>`).
