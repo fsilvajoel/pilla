@@ -1,6 +1,6 @@
 # Skills
 
-Fonte única das skills do repositório: o Claude Code carrega daqui e o `Harness-adaV1` aponta para cá
+Fonte única das skills do repositório: o Claude Code carrega daqui e o harness Ada aponta para cá (`skill_dir` em `harness.project.yaml`)
 (`skill_dir: ../.claude/skills`). Formato verificado pelo gate `skill-format`
 (`python3 ../harness-ada/script/check_skill_format.py .claude/skills`): uma pasta por skill, `SKILL.md` com frontmatter, `name`
 igual ao nome da pasta e `description` não vazia.

@@ -1,7 +1,7 @@
 
 # PLATFORM_MODEL
 
-Este documento complementa o **Harness-adaV1**.
+Este documento complementa o **harness Ada**.
 
 Enquanto o plano principal define **onde cada componente vive**, este documento define **como os componentes se relacionam** e quais princípios arquiteturais devem ser preservados durante a evolução do harness.
 
@@ -9,7 +9,7 @@ Enquanto o plano principal define **onde cada componente vive**, este documento 
 
 # Objetivo
 
-O Harness-adaV1 não é apenas um conjunto de prompts.
+O harness Ada não é apenas um conjunto de prompts.
 
 Ele é uma plataforma para execução de agentes de IA.
 

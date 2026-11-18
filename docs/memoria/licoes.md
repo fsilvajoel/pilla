@@ -1,7 +1,7 @@
 # Lições
 
 Só as lições que ainda valem para o código e as travas do pilla. As do harness antigo (motor Python, cartões)
-saíram com ele em 17/11/2026 ([ADR-0015](../adr/0015-harness-adav1-no-claude-code.md)); os IDs não são reusados.
+saíram com ele em 17/11/2026 ([ADR-0015](../adr/0015-harness-ada-externo-agnostico.md)); os IDs não são reusados.
 
 | ID | Data | Lição | Origem |
 |---|---|---|---|

@@ -21,7 +21,7 @@ Documentação e comentários de código em pt-BR; código em inglês ([ADR-0012
 
 ## 3. Fluxo de trabalho
 
-O fluxo de uma feature (plano → testes → revisão dos testes → implementação → auditoria → revisão final), com gates e artefatos, é o [workflow feature do Harness-adaV1](../harness-ada/workflow/feature.md). Testes vêm **antes** do código, são escritos e revisados por quem **não** implementa, e quem implementa não altera teste.
+O fluxo de uma feature (plano → testes → revisão dos testes → implementação → auditoria → revisão final), com gates e artefatos, é o [workflow feature do harness Ada](../harness-ada/workflow/feature.md). Testes vêm **antes** do código, são escritos e revisados por quem **não** implementa, e quem implementa não altera teste.
 
 ## 4. Comandos de verificação
 

@@ -15,7 +15,7 @@ Fluxo: **PRD** define a necessidade → **RFC** propõe a solução → as decis
 
 ## Regras para agentes construtores de código
 
-> O guia completo (fluxo TDD, travas, papéis, definição de pronto) está em [AGENTS.md](../AGENTS.md); travas em [travas.md](travas.md), processo dos agentes em [Harness-adaV1/](../../harness-ada/README.md) e memória curada em [docs/memoria/](memoria/README.md).
+> O guia completo (fluxo TDD, travas, papéis, definição de pronto) está em [AGENTS.md](../AGENTS.md); travas em [travas.md](travas.md), processo dos agentes em [harness Ada](../../harness-ada/README.md) e memória curada em [docs/memoria/](memoria/README.md).
 
 1. **Antes de implementar, leia**: o PRD vigente, as RFCs relacionadas e **todas as ADRs com status `Aceito`**.
 2. Implemente só o que está em PRD/RFC com status `Aprovado` e ADR `Aceito`. Status `Proposto`/`Em discussão` = não implementar; perguntar.
@@ -54,7 +54,7 @@ Fluxo: **PRD** define a necessidade → **RFC** propõe a solução → as decis
 | [0012](adr/0012-idioma-codigo-ingles-docs-portugues.md) | Código em inglês, documentação em português | Aceito |
 | [0013](adr/0013-estado-no-frontend.md) | Gerenciamento de estado no frontend | Aceito |
 | [0014](adr/0014-orquestracao-por-feature.md) | Orquestração dos agentes por feature | Substituída por ADR-0015 |
-| [0015](adr/0015-harness-adav1-no-claude-code.md) | Harness Ada externo e agnóstico ao modelo | Aceito |
+| [0015](adr/0015-harness-ada-externo-agnostico.md) | Harness Ada externo e agnóstico ao modelo | Aceito |
 
 ### Glossário
 - [Glossário português → código](glossario.md) — nomes obrigatórios no código
