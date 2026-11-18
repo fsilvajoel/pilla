@@ -2,7 +2,7 @@
 
 Fonte única das skills do repositório: o Claude Code carrega daqui e o `Harness-adaV1` aponta para cá
 (`skill_dir: ../.claude/skills`). Formato verificado pelo gate `skill-format`
-(`python3 Harness-adaV1/script/check_skill_format.py`): uma pasta por skill, `SKILL.md` com frontmatter, `name`
+(`python3 ../harness-ada/script/check_skill_format.py .claude/skills`): uma pasta por skill, `SKILL.md` com frontmatter, `name`
 igual ao nome da pasta e `description` não vazia.
 
 ## Skills próprias (pt-BR, seções do [_modelo.md](_modelo.md))
@@ -15,7 +15,7 @@ igual ao nome da pasta e `description` não vazia.
 
 ## Skills de terceiros
 
-Copiadas de [tech-leads-club/agent-skills](https://github.com/tech-leads-club/agent-skills) (licença MIT, ver `LICENSE-tech-leads-club-agent-skills`), **fixadas no commit `e74dc8a`** (2026-11-10), em modo cópia, sem atualização automática. Scripts revisados antes da instalação. Toda skill nova de terceiro entra na lista `THIRD_PARTY` de `Harness-adaV1/script/check_skill_format.py`.
+Copiadas de [tech-leads-club/agent-skills](https://github.com/tech-leads-club/agent-skills) (licença MIT, ver `LICENSE-tech-leads-club-agent-skills`), **fixadas no commit `e74dc8a`** (2026-11-10), em modo cópia, sem atualização automática. Scripts revisados antes da instalação. Toda skill nova de terceiro entra na lista `THIRD_PARTY` de `../harness-ada/script/check_skill_format.py`.
 
 Ajustes locais sobre a cópia: a pasta `web-accessibility` virou `accessibility` (igual ao `name` do frontmatter) e o link para a skill `web-quality-audit`, que não foi instalada, virou texto; em `security-best-practices` saíram as referências de stacks que o pilla não usa (Go, Django, Flask, FastAPI, Vue, jQuery).
 

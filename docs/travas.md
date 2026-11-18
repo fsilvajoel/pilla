@@ -1,6 +1,6 @@
 # Travas (guardrails) por camada
 
-> Detalhe do [AGENTS.md](../AGENTS.md). Travas do processo dos agentes (papéis, gates, ferramentas): [Harness-adaV1/](../Harness-adaV1/README.md).
+> Detalhe do [AGENTS.md](../AGENTS.md). Travas do processo dos agentes (papéis, gates, ferramentas): [Harness-adaV1/](../../harness-ada/README.md).
 
 Implementação da E0: configs na raiz, `packages/config/`, `scripts/` e `.github/` (`pnpm verify` roda tudo). Coluna "Quando": `E0` = entra no esqueleto do projeto; `E1+` = entra junto com o primeiro código do tipo; `Futuro` = planejado.
 

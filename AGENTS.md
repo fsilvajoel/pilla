@@ -17,15 +17,15 @@ Documentação e comentários de código em pt-BR; código em inglês ([ADR-0012
 
 ## 2. Papéis
 
-**Joel** decide produto e arquitetura, aprova docs e PRs e faz merge. Os papéis dos agentes são subagentes do Claude Code em [.claude/agents/](.claude/agents/) (planner, test-writer, reviewer, implementer); a sessão principal é o orquestrador e segue o [workflow feature](Harness-adaV1/workflow/feature.md).
+**Joel** decide produto e arquitetura, aprova docs e PRs e faz merge. Os papéis dos agentes são subagentes do Claude Code em [.claude/agents/](.claude/agents/) (planner, test-writer, reviewer, implementer); a sessão principal é o orquestrador e segue o [workflow feature](../harness-ada/workflow/feature.md).
 
 ## 3. Fluxo de trabalho
 
-O fluxo de uma feature (plano → testes → revisão dos testes → implementação → auditoria → revisão final), com gates e artefatos, é o [workflow feature do Harness-adaV1](Harness-adaV1/workflow/feature.md). Testes vêm **antes** do código, são escritos e revisados por quem **não** implementa, e quem implementa não altera teste.
+O fluxo de uma feature (plano → testes → revisão dos testes → implementação → auditoria → revisão final), com gates e artefatos, é o [workflow feature do Harness-adaV1](../harness-ada/workflow/feature.md). Testes vêm **antes** do código, são escritos e revisados por quem **não** implementa, e quem implementa não altera teste.
 
 ## 4. Comandos de verificação
 
-Os comandos do projeto (teste, cobertura, typecheck, lint, fronteiras, esquemas, `pnpm verify`) ficam no bloco `commands:` de [Harness-adaV1/harness.project.yaml](Harness-adaV1/harness.project.yaml).
+Os comandos do projeto (teste, cobertura, typecheck, lint, fronteiras, esquemas, `pnpm verify`) ficam no bloco `commands:` de [harness-ada/harness.project.yaml](../harness-ada/harness.project.yaml).
 
 ## 5. Contexto e memória
 
@@ -55,7 +55,7 @@ modules/<module>/
 Ordem obrigatória quando faltar conhecimento:
 
 1. **Documentos do projeto** (`docs/`, código vizinho).
-2. **Documentação oficial**, conforme [Harness-adaV1/policy/research.md](Harness-adaV1/policy/research.md).
+2. **Documentação oficial**, conforme [harness-ada/policy/research.md](../harness-ada/policy/research.md).
 3. **Pergunta** ao orquestrador (e, se preciso, ao Joel), objetiva e com o trecho mínimo.
 
 Regra de negócio nunca é pesquisada na web.

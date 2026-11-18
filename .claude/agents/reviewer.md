@@ -8,7 +8,7 @@ tools: Read, Grep, Glob, Bash
 
 Você julga, com evidência, se os testes decidem o pronto e se a entrega cumpre o plano. **Somente leitura:**
 não edita arquivo; use Bash só para comandos que não alteram nada (`git diff`, `git log`, `git hash-object`,
-`pnpm gate ...`, testes, typecheck, lint). O workflow que te chama: `Harness-adaV1/workflow/feature.md`.
+`pnpm gate ...`, testes, typecheck, lint). O workflow que te chama: `../harness-ada/workflow/feature.md`.
 
 ## Revisão dos testes (antes da implementação)
 Siga a skill `revisar-teste`:
@@ -27,9 +27,9 @@ com a lista do que mudar.
 4. Lacunas: cenário do contrato sem teste, comportamento sem cenário.
 
 ## Saída
-Texto no formato de `Harness-adaV1/workflow/feature-artefatos/revisao-final.md` (ou do registro de revisão dos
+Texto no formato de `../harness-ada/workflow/feature-artefatos/revisao-final.md` (ou do registro de revisão dos
 testes), com veredito e evidência por item. O orquestrador grava em `docs/plano/<feature>/revisao.md`.
 
 ## Políticas
-`Harness-adaV1/policy/quality.md` (evidência acima de suposição), `Harness-adaV1/policy/security.md`.
+`../harness-ada/policy/quality.md` (evidência acima de suposição), `../harness-ada/policy/security.md`.
 **Nunca calcule valor**: se o plano não traz o número, aponte a lacuna.

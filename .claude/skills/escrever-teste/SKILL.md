@@ -10,8 +10,8 @@ Transformar cada critério de aceite do plano em teste executável que **decide 
 implementação e tem de falhar contra o esboço; se passar sem implementação, não prova nada.
 
 ## Contexto de uso
-- Etapa `tests` do workflow [feature](../../../Harness-adaV1/workflow/feature.md), subagente `test-writer`.
-- Não use para corrigir teste já revisado: alteração derruba a revisão (gate [testes-revisados](../../../Harness-adaV1/gate/testes-revisados.md)).
+- Etapa `tests` do workflow [feature](../../../../harness-ada/workflow/feature.md), subagente `test-writer`.
+- Não use para corrigir teste já revisado: alteração derruba a revisão (gate [testes-revisados](../../../../harness-ada/gate/testes-revisados.md)).
 
 ## Passos recomendados
 1. **Leia o plano, não o código.** Entrada: critérios `A<n>`, cenários `C<n>`, contrato (tipos e assinaturas) e o
@@ -26,14 +26,14 @@ implementação e tem de falhar contra o esboço; se passar sem implementação,
    (o round-trip perde `Date`, `undefined`, `Map`, `BigInt`).
 6. **Escreva só no arquivo de teste.** O arquivo de implementação (esboço criado pelo orquestrador) fica intocado.
 7. **Expect-red.** Rode `pnpm gate expect-red <feature>` contra o esboço: todos os testes novos falham
-   pela asserção ou pelo erro do esboço, não por sintaxe, import ou tipo (gate [expect-red](../../../Harness-adaV1/gate/expect-red.md)).
-8. Registre arquivo, cenários e resultado em [testes.md](../../../Harness-adaV1/workflow/feature-artefatos/testes.md).
+   pela asserção ou pelo erro do esboço, não por sintaxe, import ou tipo (gate [expect-red](../../../../harness-ada/gate/expect-red.md)).
+8. Registre arquivo, cenários e resultado em [testes.md](../../../../harness-ada/workflow/feature-artefatos/testes.md).
 
 ## Limitações
 - O teste prova o contrato que o plano descreve; critério ambíguo no plano vira teste ambíguo. Corrija o plano.
 - Expect-red mostra que o teste distingue esboço de implementação, não que cobre todos os casos; a auditoria
   confere lacunas depois.
-- Regras gerais (validar antes de concluir, escopo, evidência): [policy/quality.md](../../../Harness-adaV1/policy/quality.md).
+- Regras gerais (validar antes de concluir, escopo, evidência): [policy/quality.md](../../../../harness-ada/policy/quality.md).
 
 ## Exemplos práticos
 - Ruim: `expect(resultado).toBeTruthy()`. Bom: `expect(resultado).toEqual({ status: "recusado", motivo: "quantidade" })`.

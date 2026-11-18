@@ -15,7 +15,7 @@ Fluxo: **PRD** define a necessidade → **RFC** propõe a solução → as decis
 
 ## Regras para agentes construtores de código
 
-> O guia completo (fluxo TDD, travas, papéis, definição de pronto) está em [AGENTS.md](../AGENTS.md); travas em [travas.md](travas.md), processo dos agentes em [Harness-adaV1/](../Harness-adaV1/README.md) e memória curada em [docs/memoria/](memoria/README.md).
+> O guia completo (fluxo TDD, travas, papéis, definição de pronto) está em [AGENTS.md](../AGENTS.md); travas em [travas.md](travas.md), processo dos agentes em [Harness-adaV1/](../../harness-ada/README.md) e memória curada em [docs/memoria/](memoria/README.md).
 
 1. **Antes de implementar, leia**: o PRD vigente, as RFCs relacionadas e **todas as ADRs com status `Aceito`**.
 2. Implemente só o que está em PRD/RFC com status `Aprovado` e ADR `Aceito`. Status `Proposto`/`Em discussão` = não implementar; perguntar.

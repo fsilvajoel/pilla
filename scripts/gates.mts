@@ -1,4 +1,4 @@
-// Gates do workflow de feature (Harness-adaV1/workflow/feature.md). Uso: pnpm gate <nome> <feature> [--sign]
+// Gates do workflow de feature (../harness-ada/workflow/feature.md). Uso: pnpm gate <nome> <feature> [--sign]
 // Lê e grava docs/plano/<feature>/estado.json. Só responde PASS ou FAIL; teste pulado, 0/0 ou relatório
 // ausente é FAIL. A mensagem de FAIL diz o que falta.
 import { spawnSync } from "node:child_process";

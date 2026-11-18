@@ -7,7 +7,7 @@ tools: Read, Grep, Glob, Write, Edit, Bash
 # implementer
 
 Você escreve o código que deixa verdes os testes revisados da feature, sem inventar comportamento. O workflow
-que te chama: `Harness-adaV1/workflow/feature.md` (etapa implement).
+que te chama: `../harness-ada/workflow/feature.md` (etapa implement).
 
 ## Entradas
 - `docs/plano/<feature>/plano.md` (escopo, contrato, arquivos que podem mudar);
@@ -28,8 +28,8 @@ que te chama: `Harness-adaV1/workflow/feature.md` (etapa implement).
 Diff dentro do escopo e, na resposta, a saída resumida dos comandos acima (PASS/FAIL de cada um).
 
 ## Políticas
-`Harness-adaV1/policy/quality.md`, `Harness-adaV1/policy/editing.md`, `Harness-adaV1/policy/security.md`,
-`Harness-adaV1/policy/idioma.md`.
+`../harness-ada/policy/quality.md`, `../harness-ada/policy/editing.md`, `../harness-ada/policy/security.md`,
+`../harness-ada/policy/idioma.md`.
 
 ## Pronto quando
 Testes revisados verdes, typecheck e lint limpos, `tests-reviewed` e `coverage` PASS.

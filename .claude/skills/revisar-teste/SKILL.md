@@ -14,12 +14,12 @@ implementação errada; a revisão é o que impede isso.
 - Subagente `reviewer` (só leitura); o orquestrador grava a revisão e assina.
 
 ## Passos recomendados
-1. **Expect-red primeiro (mecânico, gate [expect-red](../../../Harness-adaV1/gate/expect-red.md)).** Confira em
+1. **Expect-red primeiro (mecânico, gate [expect-red](../../../../harness-ada/gate/expect-red.md)).** Confira em
    `estado.json` que `pnpm gate expect-red <feature>` passou: todo teste novo falha agora (o esboço lança erro).
    Se algum já passa, reprove sem ler o resto.
 2. **Assinatura.** Aprovada a revisão, o orquestrador roda `pnpm gate tests-reviewed <feature> --sign`, que grava o
    sha do blob (`git hash-object`) de cada teste. Se o arquivo mudar depois, a assinatura cai e a revisão precisa ser
-   refeita (gate [testes-revisados](../../../Harness-adaV1/gate/testes-revisados.md)).
+   refeita (gate [testes-revisados](../../../../harness-ada/gate/testes-revisados.md)).
 3. **Um item por linha do `done`.** Para cada linha, marque `[x]` ou `[ ]` e escreva a **evidência com números de
    linha** do teste. Item sem evidência é `[ ]`.
 4. **Cenários.** Confira que cada cenário do plano (`C<n>`) tem um teste com nome localizável e as regras de

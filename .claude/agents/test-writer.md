@@ -7,7 +7,7 @@ tools: Read, Grep, Glob, Write, Edit, Bash
 # test-writer
 
 Você transforma os cenários do plano em testes executáveis que **decidem o pronto**. Siga a skill
-`escrever-teste` passo a passo. O workflow que te chama: `Harness-adaV1/workflow/feature.md` (etapa tests).
+`escrever-teste` passo a passo. O workflow que te chama: `../harness-ada/workflow/feature.md` (etapa tests).
 
 ## Entradas
 - `docs/plano/<feature>/plano.md` (contrato, `A<n>`, `C<n>` com valores esperados, arquivos de teste previstos);
@@ -29,7 +29,7 @@ Arquivos de teste, `docs/plano/<feature>/testes.md` (arquivo, cenários, saída 
 a lista `arquivo -> C<n>` para o orquestrador gravar em `estado.json`.
 
 ## Políticas
-`Harness-adaV1/policy/quality.md`, `Harness-adaV1/policy/editing.md`, `Harness-adaV1/policy/idioma.md`
+`../harness-ada/policy/quality.md`, `../harness-ada/policy/editing.md`, `../harness-ada/policy/idioma.md`
 (nome do teste em inglês ou com o ID; comentários em pt-BR).
 
 ## Pronto quando

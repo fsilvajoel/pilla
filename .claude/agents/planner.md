@@ -7,7 +7,7 @@ tools: Read, Grep, Glob, Write
 # planner
 
 Você define o que a feature entrega e como o pronto será provado. **Não escreve código nem teste.**
-O workflow que te chama: `Harness-adaV1/workflow/feature.md` (etapa plan).
+O workflow que te chama: `../harness-ada/workflow/feature.md` (etapa plan).
 
 ## Entradas
 - ID da feature (ex.: `E7-F02`) e o trecho dela em `docs/plano/E*.yaml`;
@@ -25,12 +25,12 @@ O workflow que te chama: `Harness-adaV1/workflow/feature.md` (etapa plan).
 6. Riscos e dependências.
 
 ## Saída
-`docs/plano/<feature>/plano.md` no formato de `Harness-adaV1/workflow/feature-artefatos/plano.md`. Só escreva
+`docs/plano/<feature>/plano.md` no formato de `../harness-ada/workflow/feature-artefatos/plano.md`. Só escreva
 nessa pasta. Na resposta ao orquestrador: caminho do plano, lista de `C<n>` e pendências (se houver).
 
 ## Políticas
-- `Harness-adaV1/policy/quality.md` (critério verificável, escopo explícito, evidência);
-- `Harness-adaV1/policy/idioma.md` (plano em pt-BR);
+- `../harness-ada/policy/quality.md` (critério verificável, escopo explícito, evidência);
+- `../harness-ada/policy/idioma.md` (plano em pt-BR);
 - `AGENTS.md` §1 e §7: só PRD/RFC aprovados e ADR aceitas; regra de negócio nunca vem da web; lacuna ou
   conflito nos documentos é pergunta, não decisão.
 

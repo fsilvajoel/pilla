@@ -10,7 +10,7 @@ Fazer a menor edição correta que cumpre o plano, sem sair do escopo e sem deix
 para outra etapa.
 
 ## Contexto de uso
-- Etapa `implement` do workflow [feature](../../../Harness-adaV1/workflow/feature.md), subagente `implementer`.
+- Etapa `implement` do workflow [feature](../../../../harness-ada/workflow/feature.md), subagente `implementer`.
 - Qualquer alteração de arquivo existente pedida pelo plano da feature.
 
 ## Passos recomendados
@@ -21,7 +21,7 @@ para outra etapa.
 3. **`Write` só para arquivo novo ou pequeno.** Reescrever arquivo grande arrisca truncar o conteúdo; arquivo grande
    se edita por trecho.
 4. **Escreva só no escopo do plano.** Nunca em teste revisado (gate
-   [testes-revisados](../../../Harness-adaV1/gate/testes-revisados.md)), nunca em `.env` nem fora do repositório
+   [testes-revisados](../../../../harness-ada/gate/testes-revisados.md)), nunca em `.env` nem fora do repositório
    (bloqueado pelo hook de `.claude/settings.json`).
 5. **Sem marca de esboço.** Não deixe texto de esboço (`não implementado`, `TODO`, `@stub`) no código entregue.
 6. **Rode os checks a cada edição** (`commands` do `harness.project.yaml`: teste, typecheck, lint) e corrija o que for
@@ -31,8 +31,8 @@ para outra etapa.
 ## Limitações
 - `Edit` exige texto idêntico ao do arquivo, inclusive espaços; copie do que foi lido, não de memória.
 - Esta skill não decide o que mudar; isso vem do plano e dos testes revisados.
-- Regras gerais de edição e escopo: [policy/editing.md](../../../Harness-adaV1/policy/editing.md) e
-  [policy/quality.md](../../../Harness-adaV1/policy/quality.md).
+- Regras gerais de edição e escopo: [policy/editing.md](../../../../harness-ada/policy/editing.md) e
+  [policy/quality.md](../../../../harness-ada/policy/quality.md).
 
 ## Exemplos práticos
 - Ruim: `old_string` = `return null;` (aparece 3 vezes). Bom: a assinatura da função + `return null;`.
