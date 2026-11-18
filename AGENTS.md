@@ -25,7 +25,7 @@ O fluxo de uma feature (plano → testes → revisão dos testes → implementa�
 
 ## 4. Comandos de verificação
 
-Os comandos do projeto (teste, cobertura, typecheck, lint, fronteiras, esquemas, `pnpm verify`) ficam no bloco `commands:` de [harness-ada/harness.project.yaml](../harness-ada/harness.project.yaml).
+Os comandos do projeto (teste, cobertura, typecheck, lint, fronteiras, esquemas, `pnpm verify`) ficam no bloco `commands:` de [harness.project.yaml](harness.project.yaml) (config do projeto para o harness).
 
 ## 5. Contexto e memória
 
