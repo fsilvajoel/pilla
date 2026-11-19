@@ -1,104 +1,146 @@
 {
- "feature": "E7-F03",
- "stages": {
-  "plan": {
-   "status": "done",
-   "seconds": 0,
-   "problems": []
-  },
-  "tests": {
-   "status": "done",
-   "biaRequests": 3,
-   "biaIn": 27782,
-   "biaOut": 7493,
-   "seconds": 81,
-   "repairs": 1
-  },
-  "implement": {
-   "status": "card_error",
-   "aliceTokens": {
-    "prompt": 1626041,
-    "output": 24470
-   },
-   "cards": {
-    "E7-T09": "done",
-    "E7-T15": "card_error",
-    "E7-T10": "done",
-    "E7-T16": "done"
-   },
-   "snapshots": {
-    "E7-T09": {
-     "stamp": "20261117-094521-1",
-     "sha256": "8a09bd44bee3f8085eef376b47cbb5ddeca4913ac77f4d7fd4e779309bd76382"
+  "feature": "E7-F03",
+  "stages": {
+    "plan": {
+      "status": "done"
     },
-    "E7-T10": {
-     "stamp": "20261117-094622-3",
-     "sha256": "c7973a46095585dbd8b9400112173d78ae289f78e2ff5ad0ce638582a3890607"
+    "tests": {
+      "status": "done"
     },
-    "E7-T16": {
-     "stamp": "20261117-094723-4",
-     "sha256": "95c1e3c9c011123b0262f5d940d5fcbf1d04d003a3f139f20024acb79a59f80d"
+    "testReview": {
+      "status": "done",
+      "verdict": "aprovado"
+    },
+    "implement": {
+      "status": "done"
+    },
+    "review": {
+      "status": "done",
+      "verdict": "aprovado"
     }
-   },
-   "reused": [],
-   "seconds": 327,
-   "biaRequests": 2
   },
-  "audit": {
-   "status": "pending",
-   "message": "reset de tests: loan-detail.test.tsx defeituoso (getByText 0,00 ambiguo); cartoes refatiados em 49419c8"
+  "sources": [
+    "apps/web/components/loan-list.tsx",
+    "apps/web/components/loan-detail.tsx"
+  ],
+  "domainSources": [],
+  "criteria": [
+    {
+      "id": "A1",
+      "camadas": [
+        "unit"
+      ]
+    },
+    {
+      "id": "A2",
+      "camadas": [
+        "unit"
+      ]
+    },
+    {
+      "id": "A3",
+      "camadas": [
+        "unit"
+      ]
+    },
+    {
+      "id": "A4",
+      "camadas": [
+        "unit"
+      ]
+    },
+    {
+      "id": "A5",
+      "camadas": [
+        "unit"
+      ]
+    }
+  ],
+  "tests": [
+    "apps/web/components/loan-list.test.tsx",
+    "apps/web/components/loan-detail.test.tsx"
+  ],
+  "e2e": [],
+  "scenarios": [
+    {
+      "id": "C1",
+      "criterio": "A1",
+      "camada": "unit",
+      "arquivo": "apps/web/components/loan-list.test.tsx",
+      "teste": "shows the RFC-004 loan"
+    },
+    {
+      "id": "C2",
+      "criterio": "A2",
+      "camada": "unit",
+      "arquivo": "apps/web/components/loan-list.test.tsx",
+      "teste": "shows a closed loan"
+    },
+    {
+      "id": "C3",
+      "criterio": "A2",
+      "camada": "unit",
+      "arquivo": "apps/web/components/loan-list.test.tsx",
+      "teste": "shows an empty list"
+    },
+    {
+      "id": "C4",
+      "criterio": "A3",
+      "camada": "unit",
+      "arquivo": "apps/web/components/loan-detail.test.tsx",
+      "teste": "shows the summary"
+    },
+    {
+      "id": "C5",
+      "criterio": "A4",
+      "camada": "unit",
+      "arquivo": "apps/web/components/loan-detail.test.tsx",
+      "teste": "shows the installments"
+    },
+    {
+      "id": "C6",
+      "criterio": "A5",
+      "camada": "unit",
+      "arquivo": "apps/web/components/loan-detail.test.tsx",
+      "teste": "links the payment of an active loan"
+    },
+    {
+      "id": "C7",
+      "criterio": "A5",
+      "camada": "unit",
+      "arquivo": "apps/web/components/loan-detail.test.tsx",
+      "teste": "hides the payment link of a draft"
+    }
+  ],
+  "testShas": {
+    "apps/web/components/loan-list.test.tsx": "bf474e45e71869bb6d8ce5354c2be59693a68761",
+    "apps/web/components/loan-detail.test.tsx": "4f9349fcfcaf60446ed19264e1bfae093f13fb9c"
   },
-  "review": {
-   "status": "pending",
-   "message": "reset de tests: loan-detail.test.tsx defeituoso (getByText 0,00 ambiguo); cartoes refatiados em 49419c8"
+  "gates": {
+    "tests-reviewed": {
+      "status": "PASS",
+      "at": "2026-11-19T14:23:44.481Z",
+      "detail": "2 teste(s) assinado(s)"
+    },
+    "coverage": {
+      "status": "PASS",
+      "at": "2026-11-19T14:23:46.328Z",
+      "detail": "100% nos arquivos da feature em apps/web (components/loan-list.tsx, components/loan-detail.tsx)"
+    },
+    "expect-red": {
+      "status": "PASS",
+      "at": "2026-11-19T14:23:39.033Z",
+      "detail": "7 teste(s), todos falhando"
+    },
+    "mutation": {
+      "status": "PASS",
+      "at": "2026-11-19T14:23:46.445Z",
+      "detail": "nada a medir: `domainSources` vazio e nenhum critério mut"
+    },
+    "e2e": {
+      "status": "PASS",
+      "at": "2026-11-19T14:23:46.557Z",
+      "detail": "nenhum e2e na feature (nenhum critério e2e)"
+    }
   }
- },
- "biaRequests": 5,
- "testShas": {
-  "apps/web/components/loan-detail.test.tsx": "4f9349fcfcaf60446ed19264e1bfae093f13fb9c",
-  "apps/web/components/loan-list.test.tsx": "bf474e45e71869bb6d8ce5354c2be59693a68761"
- },
- "expectRed": true,
- "scenarios": [
-  {
-   "id": "C1",
-   "descricao": "lista com o contrato do exemplo",
-   "card": "E7-T08",
-   "teste": "shows the RFC-004 loan"
-  },
-  {
-   "id": "C2",
-   "descricao": "lista com contrato quitado e lista vazia",
-   "card": "E7-T08",
-   "teste": "shows a closed loan / shows an empty list"
-  },
-  {
-   "id": "C3",
-   "descricao": "resumo do detalhe",
-   "card": "E7-T08",
-   "teste": "shows the summary"
-  },
-  {
-   "id": "C4",
-   "descricao": "linhas das parcelas",
-   "card": "E7-T08",
-   "teste": "shows the installments"
-  },
-  {
-   "id": "C5",
-   "descricao": "link de pagamento no ACTIVE e ausente no DRAFT",
-   "card": "E7-T08",
-   "teste": "links the payment of an active loan / hides the payment link of a draft"
-  }
- ],
- "resets": [
-  {
-   "quando": "2026-11-17T09:05:28-0300",
-   "etapa": "tests",
-   "cartões": [
-    "E7-T08"
-   ],
-   "motivo": "loan-detail.test.tsx defeituoso (getByText 0,00 ambiguo); cartoes refatiados em 49419c8"
-  }
- ]
 }

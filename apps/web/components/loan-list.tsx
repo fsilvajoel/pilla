@@ -1,5 +1,3 @@
-// @stub E7-T09
-
 import type { LoanListItem } from "@pilla/schemas";
 import type { JSX } from "react";
 import { cents, formatReais } from "@pilla/finance";

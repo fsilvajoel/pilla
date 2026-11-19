@@ -20,7 +20,6 @@ export default defineConfig({
         "lib/mock-data.ts", // dados de mentira das telas do ADMIN (decisões do Joel de 17/11), sem lógica
         "lib/new-loan.ts", // stub E7-T05: sai quando a implementação real entrar
         "components/new-loan-form.tsx", // stub E7-T07: sai quando a implementação real entrar
-        "components/loan-list.tsx", // stub E7-T09: sai quando a implementação real entrar
         "lib/payment-draft.ts", // stub E7-T12: sai quando a implementação real entrar
         "components/payment-form.tsx", // stub E7-T14: sai quando a implementação real entrar
       ],
