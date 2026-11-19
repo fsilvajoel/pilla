@@ -52,12 +52,6 @@
       ]
     },
     {
-      "id": "A5",
-      "camadas": [
-        "unit"
-      ]
-    },
-    {
       "id": "A6",
       "camadas": [
         "unit"
@@ -162,13 +156,13 @@
       "detail": "12 teste(s), todos falhando"
     },
     "tests-reviewed": {
-      "status": "FAIL",
-      "at": "2026-11-19T01:26:33.926Z",
-      "detail": "camadas dos critérios não fecham; A5: sem scenario da camada unit com arquivo em `tests`"
+      "status": "PASS",
+      "at": "2026-11-19T01:53:38.233Z",
+      "detail": "2 teste(s) com sha assinado"
     },
     "coverage": {
       "status": "PASS",
-      "at": "2026-11-19T01:26:36.142Z",
+      "at": "2026-11-19T01:53:43.623Z",
       "detail": "100% nos arquivos da feature em apps/web (lib/simulation.ts, lib/simulation-form.ts)"
     },
     "mutation": {
@@ -178,7 +172,7 @@
     },
     "e2e": {
       "status": "PASS",
-      "at": "2026-11-19T01:28:05.080Z",
+      "at": "2026-11-19T01:53:43.737Z",
       "detail": "nenhum e2e na feature (nenhum critério e2e)"
     }
   },
