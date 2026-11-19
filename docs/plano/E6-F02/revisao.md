@@ -83,3 +83,63 @@ aprovado
 ## Lacunas
 - plano.md, Contrato (resumo): a frase "O resumo não é tabela" aparece duas vezes. É só redação e não muda o contrato.
 - C4 continua sem conferir os juros do CA-11. Está justificado no plano: a fonte só dá o valor intermediário 95.
+
+# Revisão final E6-F02
+
+revisor: reviewer
+diff: `a9b1817..d61ec19` (implementação). O `6f7a0b9` (chore: `.env.example` e glob `app/\(admin\)` da exclusão de
+cobertura) fica fora da feature e não foi auditado.
+
+## Critérios de aceite
+- [x] A1 — `loan-simulation.tsx:68-89`: rótulos "Valor emprestado", "Taxa ao mês (%)", "Nº de parcelas",
+  "Periodicidade" e "1º vencimento" ligados por `htmlFor`/`id`; select com as 4 opções de `frequencyOptions`
+  (`:23-28`, values WEEKLY/BIWEEKLY/MONTHLY/BIMONTHLY e textos Semanal/Quinzenal/Mensal/Bimestral); `type="date"` no
+  1º vencimento (`:87`); botão "Simular" (`:89`). C1 verde.
+- [x] A2 — `:56-59`: `toSimulateRequest(values)` e `simulate(request, disbursementDate)` (E6-F01, ADR-0013), sem API.
+  Resumo `:96-103`: um único `<dl>` com `dt`/`dd` na ordem "Total a receber", "Juros", "Parcela"; total e juros como
+  `R$ ` + `formatReais` (`reais`, `:46-48`); parcela `${String(count)} × R$ …` (`:102`). Cronograma `:104-125`:
+  cabeçalhos Nº, Vencimento, Principal, Juros, Parcela; data `dd/mm/aaaa` (`formatDate`, `:41-44`) e valores em
+  `formatReais` sem `R$`. RFC-004 §5 (conferida na fonte: juros 190000, total 690000, parcela 115000, linha 1
+  {1, 2026-12-14, 83333, 31667, 115000}) bate com C2/C3 verdes; CA-11 com C4 verde.
+- [x] A3 — `:60-62`: todo erro de `toSimulateRequest`/`simulate` (MoneyError, ZodError, DueDateError da RN-C04) vira
+  `outcome.kind = "invalid"`, que mostra só o `<p role="alert">Confira os campos da simulação.</p>` (`:92`); resumo e
+  tabela só existem em `kind = "result"` (`:94`), então somem juntos. Nada é lançado para fora. C5 a C9 verdes.
+- [ ] A4 — **pendência conhecida, não reprovação da implementação.** O componente não tem nada específico da rota;
+  o e2e cai antes de chegar nele: `page.tsx` chama `todayInBrt` (`apps/web/lib/today.ts`, `@stub E7-T02`, lança
+  `Error("not implemented")`) e a rota responde "This page couldn’t load" (`error-context.md` do Playwright, C10 e
+  C11 sem o heading "Simular empréstimo"). Já previsto no plano (Riscos, Dependências e Pendências). Fecha quando a
+  E7-F01 entregar `todayInBrt` e `pnpm gate e2e E6-F02` der PASS.
+
+Contrato: `LoanSimulationProps { readonly disbursementDate: IsoDate }` e
+`LoanSimulation({ disbursementDate }: LoanSimulationProps): JSX.Element` (`:14-17`, `:53`), iguais ao plano.
+
+## Gates
+| Gate | Resultado |
+|---|---|
+| `pnpm gate tests-reviewed E6-F02` | PASS (2 testes, sha assinado; `git hash-object` = 82cb856… e 939bb34…) |
+| `pnpm gate coverage E6-F02` | PASS (100% em `components/loan-simulation.tsx`) |
+| `pnpm gate mutation E6-F02` | PASS (nada a medir: `domainSources` vazio, tela não é domínio) |
+| `pnpm gate e2e E6-F02` | FAIL — C10 e C11, por `todayInBrt` esboço (E7-F01); pendência conhecida |
+| `pnpm verify` | vermelho só em `@pilla/api#test` (16 testes de `ids.ts` e `isClosedForPayments`, E5-F01/F03/F04, já falhavam antes); typecheck e lint verdes; `@pilla/web` 29/29 |
+
+## Diff
+- Escopo: `apps/web/components/loan-simulation.tsx` (do plano), `apps/web/vitest.config.ts` (só tira o esboço
+  E6-T06 da exclusão de cobertura, etapa 4 do workflow) e `estado.json`. `page.tsx`, `lib/` e os testes assinados
+  não mudaram. Nenhuma dependência nova (`react-hook-form` já era do web).
+- AGENTS.md §8 e `docs/memoria/lint.md`: sem `any`, `as`, `!`, `@ts-*`, `eslint-disable`, `console.` ou TODO;
+  número em template com `String()`; promessa do `handleSubmit` com `void`; `@stub E6-T06` removido; `tsc --noEmit` e
+  ESLint do arquivo limpos. Tipagem forte: `Outcome` como união discriminada, `frequencyOptions` com
+  `FrequencyPreset`, `defaultValues: SimulationFormValues`. IDs no código: PRD-001 RF-10, ADR-0013, RN-C04, RFC-002.
+  Nenhum segredo, IP ou dado real.
+- Achados: nenhum.
+
+## Lacunas
+- Nenhuma em A1 a A3. A4 aberta só pela dependência externa acima.
+- Observação (não é achado da feature): o campo "Nº de parcelas" é texto com `inputMode="numeric"`, então `"1e1"` e
+  `" 6 "` continuam aceitos pela tela. Já é o D1 (aberto, E6-F01), que o plano deixou fora do escopo.
+
+## Defeitos abertos
+- nenhum novo (D1 a D3 seguem abertos, da E6-F01).
+
+## Veredito
+aprovado (implementação de A1 a A3); feature **não fecha** até o gate e2e (A4) passar depois da E7-F01.

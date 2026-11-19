@@ -15,7 +15,9 @@
       "status": "done"
     },
     "review": {
-      "status": "pending"
+      "status": "running",
+      "verdict": "aprovado",
+      "message": "revisão final aprovada (A1-A3); aguarda gate e2e (A4), bloqueado por todayInBrt esboço até a E7-F01"
     }
   },
   "sources": [
@@ -141,18 +143,23 @@
     },
     "tests-reviewed": {
       "status": "PASS",
-      "at": "2026-11-19T03:07:08.676Z",
+      "at": "2026-11-19T03:10:27.284Z",
       "detail": "2 teste(s) com sha assinado"
     },
     "coverage": {
       "status": "PASS",
-      "at": "2026-11-19T03:07:10.656Z",
+      "at": "2026-11-19T03:10:29.208Z",
       "detail": "100% nos arquivos da feature em apps/web (components/loan-simulation.tsx)"
     },
     "mutation": {
       "status": "PASS",
-      "at": "2026-11-19T02:15:55.297Z",
+      "at": "2026-11-19T03:10:29.322Z",
       "detail": "nada a medir: `domainSources` vazio e nenhum critério mut"
+    },
+    "e2e": {
+      "status": "FAIL",
+      "at": "2026-11-19T03:10:40.281Z",
+      "detail": "2 teste(s) e2e, 2 problema(s); apps/web: \"C10 (A4): /emprestimos/simular shows the RFC-004 §5 summary\" falhou (unexpected); apps/web: \"C11 (A4): /emprestimos/simular shows the alert for a past first due date\" falhou (unexpected)"
     }
   },
   "testShas": {
