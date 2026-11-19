@@ -73,3 +73,15 @@ desligar regra (`noInlineConfig`): o código é que muda.
 - `no-restricted-syntax`: sem `.only` e `.skip`; sem `expect(true)`. Em teste o `as` é permitido.
   - errado: `declare const it: { only: (n: string) => void }; declare const expect: (v: unknown) => void; it.only("x"); expect(true);`
   - certo: `declare const expect: (v: unknown) => void; expect(1 + 1);`
+
+## Espiões em teste (`vi.fn`, `mock.calls`)
+<!-- scope: test | probe: packages/finance/src | suffix: .test.ts -->
+
+Em teste, não leia `mock.calls[0]` solto: confira com `toHaveBeenCalledWith` ou com `toEqual` de literais, sobre um espião tipado (`vi.fn<(...) => ...>()`).
+- `@typescript-eslint/no-non-null-assertion`: sem `!` em `mock.calls[0]`.
+  - errado: `import { vi } from "vitest"; const spy = vi.fn<(id: string) => void>(); spy("a"); export const first = spy.mock.calls[0]!;`
+  - certo: `import { expect, vi } from "vitest"; const spy = vi.fn<(id: string) => void>(); spy("a"); export const check = (): void => { expect(spy).toHaveBeenCalledWith("a"); };`
+- `@typescript-eslint/no-unsafe-assignment`: `vi.fn()` sem tipo devolve `any`; não desestruture `mock.calls`.
+  - errado: `import { vi } from "vitest"; const spy = vi.fn(); spy("a"); export const [first] = spy.mock.calls[0] ?? [];`
+  - certo: `import { expect, vi } from "vitest"; const spy = vi.fn<(id: string) => void>(); spy("a"); export const check = (): void => { expect(spy.mock.calls).toEqual([["a"]]); };`
+- Sem `!` e com espião tipado, o typecheck acusa `Object is possibly 'undefined'` (TS2532) em `spy.mock.calls[0][0]`; use um dos "certo" acima.
