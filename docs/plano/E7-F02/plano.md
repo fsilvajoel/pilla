@@ -9,7 +9,7 @@ CA-05; RFC-004 §2 e §5; ADR-0013; decisões do Joel de 17/11 (`docs/plano/deci
   textos da tela) e `toCreateLoanRequest` (textos → `CreateLoanRequest`, validado por `createLoanRequest`).
 - E7-T06 (Bia) e E7-T07 (Alice): `apps/web/components/new-loan-form.tsx`, tela "Novo contrato" (rota
   `/emprestimos/novo`) com os campos da simulação mais Cliente, Multa, Mora, Carência e Observações internas.
-- Fora: API de verdade, ativação do contrato e escolha da conta (pendente do Joel), SINGLE_PAYMENT na tela,
+- Fora: API de verdade, ativação do contrato e escolha da conta (decisão em `decisoes-2026-11-19.md` §4), SINGLE_PAYMENT na tela,
   prévia do cronograma.
 
 ## Tipos e imports (conferidos no código; valem para os testes e para a implementação)

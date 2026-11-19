@@ -6,7 +6,8 @@ Plano da feature (etapa 1, ADR-0014). Cartões em `docs/plano/E5.yaml`; referên
 
 - E5-T09 (Bia): `apps/api/src/lending/domain/reversal.test.ts`, os testes de `isReversalBlocked` e `reopensOnReversal`.
 - E5-T10 (Alice): `apps/api/src/lending/domain/reversal.ts` e a saída da trava do stub no `vitest.config.ts`.
-- Fora: o caso de uso do estorno (banco, auditoria, recálculo do saldo) e o status de destino ao reabrir.
+- Fora: o caso de uso do estorno (banco, auditoria, recálculo do saldo).
+- Status de destino ao reabrir: ACTIVE (`decisoes-2026-11-19.md` §4); fica no caso de uso, fora desta feature.
 
 ## Riscos
 

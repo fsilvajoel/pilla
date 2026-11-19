@@ -6,8 +6,8 @@ Plano da feature (etapa 1, ADR-0014). Cartões em `docs/plano/E5.yaml`; referên
 
 - E5-T07 (Bia): `apps/api/src/lending/domain/loan-status.test.ts`, os testes de `isClosedForPayments`.
 - E5-T08 (Alice): `apps/api/src/lending/domain/loan-status.ts` e a saída da trava do stub no `vitest.config.ts`.
-- `LoanStatus` é tipo local da api, com os 7 status do check `loans_status_check` (`@pilla/schemas` na api é decisão pendente; precedente: `LoanStanding` local em `@pilla/finance`).
-- Fora: transições de status (ativar e cancelar estão pendentes), status `DRAFT` (a RN-R09 não fala dele) e o uso da regra no caso de uso de pagamento.
+- `LoanStatus` é tipo local da api, com os 7 status do check `loans_status_check` (`@pilla/schemas` só na borda HTTP, `decisoes-2026-11-19.md` §4; precedente: `LoanStanding` local em `@pilla/finance`).
+- Fora: transições de status (ativar e cancelar: `decisoes-2026-11-19.md` §4), status `DRAFT` (a RN-R09 não fala dele) e o uso da regra no caso de uso de pagamento.
 
 ## Riscos
 

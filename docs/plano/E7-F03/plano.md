@@ -16,7 +16,7 @@ Plano da feature (etapa 1, ADR-0014). Cartões em `docs/plano/E7.yaml`; referên
   situação e o link "Registrar pagamento", tira o stub e roda o arquivo inteiro com cobertura.
 - Refatiamento de 17/11: E7-T09 e E7-T10 falharam no teto de 20 chamadas lendo cinco arquivos; cada cartão novo lê
   só o componente (e `labels.ts` no E7-T09), com os tipos e as assinaturas na dica.
-- Fora: filtros e paginação da lista, API de verdade, ações de ativar e cancelar (pendente do Joel).
+- Fora: filtros e paginação da lista, API de verdade, ações de ativar e cancelar (decisão em `decisoes-2026-11-19.md` §4).
 
 ## Tipos e imports (conferidos no código; valem para os testes e para a implementação)
 
