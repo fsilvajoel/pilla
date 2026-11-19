@@ -49,7 +49,7 @@ function searchCondition(search: string): SQL | undefined {
 
 /** Lista pessoas com busca por nome ou CPF, ordem por lower(full_name) e id, cursor opaco e filtro de ativas. */
 export async function listPersons(db: PgDatabase<PgQueryResultHKT>, query: PersonListQuery): Promise<PersonListPage> {
-  const sortName = sql`lower(${persons.fullName})`;
+  const sortName = sql<string>`lower(${persons.fullName})`;
   const conditions: (SQL | undefined)[] = [searchCondition(query.search)];
 
   // active null = só ativas (padrão); false = só inativas.
@@ -66,17 +66,19 @@ export async function listPersons(db: PgDatabase<PgQueryResultHKT>, query: Perso
       cpf: persons.cpf,
       phone: persons.phone,
       active: persons.active,
+      sortName,
     })
     .from(persons)
     .where(and(...conditions))
     .orderBy(asc(sortName), asc(persons.id))
     .limit(query.limit + 1);
 
-  const items = rows.slice(0, query.limit);
-  const last = items[items.length - 1];
+  const items = rows.slice(0, query.limit).map(({ sortName: _sortName, ...item }) => item);
+  const lastRow = rows[items.length - 1];
+  // O cursor leva a chave lower() calculada pelo próprio Postgres (D5), nunca toLowerCase() do JS.
   const nextCursor =
-    rows.length > query.limit && last !== undefined
-      ? encodeCursor({ fullName: last.fullName.toLowerCase(), id: last.id })
+    rows.length > query.limit && lastRow !== undefined
+      ? encodeCursor({ fullName: lastRow.sortName, id: lastRow.id })
       : null;
   return { items, nextCursor };
 }
