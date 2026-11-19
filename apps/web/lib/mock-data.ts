@@ -1,5 +1,4 @@
 import type {
-  AccountSummary,
   DefaultTermsResponse,
   LoanDetailResponse,
   LoanInstallment,
@@ -16,11 +15,6 @@ const id = (n: number): string => `01936f8e-7b2c-7cde-8f00-${String(n).padStart(
 export const mockPeople: readonly PersonSummary[] = [
   { id: id(1), fullName: "Maria da Silva", cpf: "52998224725", phone: "+5511987654321", active: true },
   { id: id(3), fullName: "João Pereira", cpf: "11144477735", phone: "+5511912345678", active: true },
-];
-
-export const mockAccounts: readonly AccountSummary[] = [
-  { id: id(4), name: "Conta principal", active: true },
-  { id: id(6), name: "Caixa em espécie", active: true },
 ];
 
 /** Padrões do RF-40: multa 2%, mora 1% a.m., carência 0 (CA-05), taxa 6,33% (CA-01), passo R$ 5,00 (RN-C03). */

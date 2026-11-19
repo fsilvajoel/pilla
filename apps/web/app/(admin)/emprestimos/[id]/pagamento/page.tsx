@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import type { JSX } from "react";
 import { PaymentForm } from "@/components/payment-form";
-import { mockAccounts, mockLoanDetails } from "@/lib/mock-data";
+import { mockLoanDetails } from "@/lib/mock-data";
 
 // Casca de rota (decisões do Joel de 17/11): pagamento a partir do detalhe, com dados de mentira.
 export default async function PaymentPage({
@@ -14,7 +14,7 @@ export default async function PaymentPage({
   if (loan === undefined) notFound();
   return (
     <main>
-      <PaymentForm loan={loan} accounts={mockAccounts} />
+      <PaymentForm loan={loan} />
     </main>
   );
 }
