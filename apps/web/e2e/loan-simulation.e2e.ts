@@ -19,13 +19,13 @@ test("C10 (A4): /emprestimos/simular shows the RFC-004 §5 summary", async ({ pa
   // Resumo em <dl>: cada <dt> seguido do seu <dd>, na ordem do plano.
   await expect(page.locator("dl > dt")).toHaveText(["Total a receber", "Juros", "Parcela"]);
   await expect(page.locator("dl > dt + dd")).toHaveText(["R$ 6.900,00", "R$ 1.900,00", "6 × R$ 1.150,00"]);
-  await expect(page.getByRole("alert")).toHaveCount(0);
+  await expect(page.getByRole("main").getByRole("alert")).toHaveCount(0);
 });
 
 test("C11 (A4): /emprestimos/simular shows the alert for a past first due date", async ({ page }) => {
   await simulate(page, "2000-01-14");
 
-  await expect(page.getByRole("alert")).toHaveText("Confira os campos da simulação.");
+  await expect(page.getByRole("main").getByRole("alert")).toHaveText("Confira os campos da simulação.");
   await expect(page.getByText("Total a receber")).toHaveCount(0);
   await expect(page.getByRole("table")).toHaveCount(0);
 });

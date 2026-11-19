@@ -143,3 +143,12 @@ Contrato: `LoanSimulationProps { readonly disbursementDate: IsoDate }` e
 
 ## Veredito
 aprovado (implementação de A1 a A3); feature **não fecha** até o gate e2e (A4) passar depois da E7-F01.
+
+## Revisão de teste: seletor de alerta no e2e (19/11)
+- Mudança: em `apps/web/e2e/loan-simulation.e2e.ts` (C10 e C11), `page.getByRole("alert")` virou
+  `page.getByRole("main").getByRole("alert")`.
+- Motivo: o Next injeta `<div role="alert" id="__next-route-announcer__">` em toda página; o seletor global casava
+  esse anunciador (C11: strict mode violation; C10: esperava 0 alertas e achava 1). A app não mudou.
+- Revisão: `/emprestimos/simular` renderiza o conteúdo dentro de `<main>`, então o escopo cobre o alerta real da
+  tela. A intenção dos cenários segue igual: C10 exige 0 alertas no conteúdo com dados válidos; C11 exige exatamente
+  1 alerta com o texto "Confira os campos da simulação." (`toHaveText` + strict mode), sem afrouxar. Aprovado.
