@@ -14,7 +14,19 @@ roles:
   planner: { agent: .claude/agents/planner.md }
   test-writer: { agent: .claude/agents/test-writer.md }
   reviewer: { agent: .claude/agents/reviewer.md }
-  implementer: { agent: .claude/agents/implementer.md }
+  implementer: { agent: .claude/agents/implementer.md, worker: bia }
+
+# Trabalhadores do harness (adapter/api-chat.md). Bia: modelo remoto na OpenRouter, por ora só como implementer.
+# A chave fica só no .env; o humano exporta apenas OPEN_ROUTER_API_KEY antes de abrir a sessão do orquestrador.
+# Cota do tier grátis: 1000 requisições/dia, reset 00:00 UTC (GET /key -> data.free_model_daily_requests).
+workers:
+  bia: { adapter: api-chat, base_url: "https://openrouter.ai/api/v1", model: "nvidia/nemotron-3-ultra-550b-a55b:free", key_env: OPEN_ROUTER_API_KEY, key_file: .env, quota_url: "https://openrouter.ai/api/v1/key", quota_remaining: ".data.free_model_daily_requests.remaining", quota_reserve: 20, max_attempts: 3, timeout_s: 300 }
+
+# Regras de tipagem e lint que entram no pedido do trabalhador, por papel.
+role_context:
+  implementer:
+    - AGENTS.md
+    - docs/memoria/lint.md
 
 # Comandos de verificação do projeto alvo. Workflows, skills e gates citam a
 # chave (commands.test etc.), nunca o comando literal.
@@ -44,6 +56,10 @@ portable:
     - tools/alice-harness
     - docs/regras
     - /apps/
+    - openrouter
+    - OpenRouter
+    - OPEN_ROUTER
+    - nemotron
 
 checks:
   - portable
