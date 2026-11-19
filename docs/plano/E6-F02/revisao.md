@@ -142,7 +142,7 @@ Contrato: `LoanSimulationProps { readonly disbursementDate: IsoDate }` e
 - nenhum novo (D1 a D3 seguem abertos, da E6-F01).
 
 ## Veredito
-aprovado (implementação de A1 a A3); feature **não fecha** até o gate e2e (A4) passar depois da E7-F01.
+aprovado (A1 a A3). O gate e2e (A4) passou em 19/11 (2 testes) depois da E7-F01; feature fechada.
 
 ## Revisão de teste: seletor de alerta no e2e (19/11)
 - Mudança: em `apps/web/e2e/loan-simulation.e2e.ts` (C10 e C11), `page.getByRole("alert")` virou

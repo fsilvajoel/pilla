@@ -15,9 +15,8 @@
       "status": "done"
     },
     "review": {
-      "status": "running",
-      "verdict": "aprovado",
-      "message": "revisão final aprovada (A1-A3); aguarda gate e2e (A4), bloqueado por todayInBrt esboço até a E7-F01"
+      "status": "done",
+      "verdict": "aprovado"
     }
   },
   "sources": [
@@ -143,12 +142,12 @@
     },
     "tests-reviewed": {
       "status": "PASS",
-      "at": "2026-11-19T13:17:38.540Z",
+      "at": "2026-11-19T14:03:54.764Z",
       "detail": "2 teste(s) com sha assinado"
     },
     "coverage": {
       "status": "PASS",
-      "at": "2026-11-19T03:10:29.208Z",
+      "at": "2026-11-19T14:03:57.201Z",
       "detail": "100% nos arquivos da feature em apps/web (components/loan-simulation.tsx)"
     },
     "mutation": {
@@ -158,7 +157,7 @@
     },
     "e2e": {
       "status": "PASS",
-      "at": "2026-11-19T13:17:31.606Z",
+      "at": "2026-11-19T14:04:03.111Z",
       "detail": "2 teste(s) e2e passaram"
     }
   },
