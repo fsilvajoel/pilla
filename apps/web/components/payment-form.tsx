@@ -1,8 +1,13 @@
 "use client";
-// @stub E7-T14
 
 import type { LoanDetailResponse, PaymentFields } from "@pilla/schemas";
 import type { JSX } from "react";
+import type { PaymentFormValues } from "@/lib/payment-draft";
+import { cents, formatReais } from "@pilla/finance";
+import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { paymentMethodLabel } from "@/lib/labels";
+import { toPaymentDraft } from "@/lib/payment-draft";
 
 export interface PaymentFormProps {
   /** contrato do pagamento (dados de mentira) */
@@ -10,6 +15,12 @@ export interface PaymentFormProps {
   /** recebe o pagamento pronto; sem API ainda */
   readonly onSubmit?: (payment: PaymentFields) => void;
 }
+
+type Outcome = "idle" | "ok" | "error";
+
+const closedStatuses: readonly LoanDetailResponse["status"][] = ["PAID_OFF", "RENEWED", "RENEGOTIATED", "CANCELLED"];
+
+const methods: readonly PaymentFormValues["method"][] = ["PIX", "BOLETO", "CASH", "BANK_TRANSFER"];
 
 /**
  * Registrar pagamento do ADMIN (PRD-001 RF-20). Título (h1) "Registrar pagamento", "Contrato " + `loanNumber` e
@@ -21,6 +32,69 @@ export interface PaymentFormProps {
  * `toPaymentDraft(loan.id, campos)`, depois `onSubmit` e mostra "Pagamento registrado para conferência." num
  * elemento role="status". Erro: "Confira os campos do pagamento." num elemento role="alert", sem chamar `onSubmit`.
  */
-export function PaymentForm({ loan: _loan, onSubmit: _onSubmit }: PaymentFormProps): JSX.Element {
-  throw new Error("not implemented");
+export function PaymentForm({ loan, onSubmit }: PaymentFormProps): JSX.Element {
+  const { register, handleSubmit } = useForm<PaymentFormValues>({
+    defaultValues: { destinationKey: "", paidAt: "", amount: "", method: "PIX" },
+  });
+  const [outcome, setOutcome] = useState<Outcome>("idle");
+
+  const header = (
+    <>
+      <h1>Registrar pagamento</h1>
+      <p>Contrato {loan.loanNumber}</p>
+      <p>Saldo devedor R$ {formatReais(cents(BigInt(loan.outstandingCents)))}</p>
+    </>
+  );
+
+  if (closedStatuses.includes(loan.status)) {
+    return (
+      <div>
+        {header}
+        <p role="alert">Este contrato não aceita pagamento.</p>
+      </div>
+    );
+  }
+
+  const submit = (values: PaymentFormValues): void => {
+    try {
+      const payment = toPaymentDraft(loan.id, values);
+      onSubmit?.(payment);
+      setOutcome("ok");
+    } catch {
+      setOutcome("error");
+    }
+  };
+
+  return (
+    <div>
+      {header}
+      <form onSubmit={(event) => void handleSubmit(submit)(event)} noValidate>
+        <label>
+          Chave Pix de destino
+          <input type="text" {...register("destinationKey")} />
+        </label>
+        <label>
+          Data do pagamento
+          <input type="date" {...register("paidAt")} />
+        </label>
+        <label>
+          Valor
+          <input type="text" {...register("amount")} />
+        </label>
+        <label>
+          Método
+          <select {...register("method")}>
+            {methods.map((method) => (
+              <option key={method} value={method}>
+                {paymentMethodLabel[method]}
+              </option>
+            ))}
+          </select>
+        </label>
+        <button type="submit">Registrar pagamento</button>
+      </form>
+      {outcome === "ok" ? <p role="status">Pagamento registrado para conferência.</p> : null}
+      {outcome === "error" ? <p role="alert">Confira os campos do pagamento.</p> : null}
+    </div>
+  );
 }

@@ -12,10 +12,11 @@
       "verdict": "aprovado"
     },
     "implement": {
-      "status": "pending"
+      "status": "done"
     },
     "review": {
-      "status": "pending"
+      "status": "done",
+      "verdict": "aprovado"
     }
   },
   "sources": [
@@ -205,8 +206,23 @@
     },
     "tests-reviewed": {
       "status": "PASS",
-      "at": "2026-11-19T15:49:56.367Z",
-      "detail": "2 teste(s) assinado(s)"
+      "at": "2026-11-19T15:51:38.234Z",
+      "detail": "2 teste(s) com sha assinado"
+    },
+    "coverage": {
+      "status": "PASS",
+      "at": "2026-11-19T15:51:28.824Z",
+      "detail": "100% nos arquivos da feature em apps/web (lib/payment-draft.ts, components/payment-form.tsx)"
+    },
+    "mutation": {
+      "status": "PASS",
+      "at": "2026-11-19T15:51:37.979Z",
+      "detail": "score >= 80%: apps/web/lib/payment-draft.ts 100.00% (2/2)"
+    },
+    "e2e": {
+      "status": "PASS",
+      "at": "2026-11-19T15:51:38.105Z",
+      "detail": "nenhum e2e na feature (nenhum critério e2e)"
     }
   }
 }

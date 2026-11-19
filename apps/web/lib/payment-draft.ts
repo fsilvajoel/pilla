@@ -1,5 +1,6 @@
-// @stub E7-T12
 import type { PaymentFields, PaymentMethod } from "@pilla/schemas";
+import { parseReais } from "@pilla/finance";
+import { paymentFieldsSchema } from "@pilla/schemas";
 
 /** Campos do pagamento como o ADMIN digita (RF-20). */
 export interface PaymentFormValues {
@@ -17,6 +18,12 @@ export interface PaymentFormValues {
  * vira 115000) e os campos por `paymentFieldsSchema.parse`. Texto fora do formato lança MoneyError ou ZodError,
  * sem tratamento.
  */
-export function toPaymentDraft(_loanId: string, _values: PaymentFormValues): PaymentFields {
-  throw new Error("not implemented");
+export function toPaymentDraft(loanId: string, values: PaymentFormValues): PaymentFields {
+  return paymentFieldsSchema.parse({
+    loanId,
+    destinationKey: values.destinationKey,
+    paidAt: values.paidAt,
+    amountCents: Number(parseReais(values.amount)),
+    method: values.method,
+  });
 }
