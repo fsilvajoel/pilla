@@ -1,21 +1,129 @@
 {
   "feature": "E5-F02",
   "stages": {
-    "plan": { "status": "done" },
-    "refinement": { "status": "done", "verdict": "ajustado", "round": 1 },
-    "tests": { "status": "pending" },
-    "testReview": { "status": "pending" },
-    "implement": { "status": "pending" },
-    "review": { "status": "pending" }
+    "plan": {
+      "status": "done"
+    },
+    "refinement": {
+      "status": "done",
+      "verdict": "ajustado",
+      "round": 1
+    },
+    "tests": {
+      "status": "done",
+      "worker": "bia",
+      "model": "nvidia/nemotron-3-ultra-550b-a55b:free"
+    },
+    "testReview": {
+      "status": "done",
+      "verdict": "aprovado"
+    },
+    "implement": {
+      "status": "done"
+    },
+    "review": {
+      "status": "pending"
+    }
   },
-  "sources": ["apps/api/src/people/infra/person-repository.ts"],
+  "sources": [
+    "apps/api/src/people/infra/person-repository.ts"
+  ],
   "domainSources": [],
   "criteria": [
-    { "id": "A1", "camadas": ["unit"] },
-    { "id": "A2", "camadas": ["unit"] },
-    { "id": "A3", "camadas": ["unit"] },
-    { "id": "A4", "camadas": ["unit"] },
-    { "id": "A5", "camadas": ["unit"] }
+    {
+      "id": "A1",
+      "camadas": [
+        "unit"
+      ]
+    },
+    {
+      "id": "A2",
+      "camadas": [
+        "unit"
+      ]
+    },
+    {
+      "id": "A3",
+      "camadas": [
+        "unit"
+      ]
+    },
+    {
+      "id": "A4",
+      "camadas": [
+        "unit"
+      ]
+    }
   ],
-  "e2e": []
+  "e2e": [],
+  "gates": {
+    "expect-red": {
+      "status": "PASS",
+      "at": "2026-11-19T19:12:38.733Z",
+      "detail": "5 teste(s), todos falhando"
+    },
+    "tests-reviewed": {
+      "status": "PASS",
+      "at": "2026-11-19T19:38:43.679Z",
+      "detail": "1 teste(s) com sha assinado"
+    },
+    "coverage": {
+      "status": "PASS",
+      "at": "2026-11-19T19:38:49.310Z",
+      "detail": "100% nos arquivos da feature em apps/api (src/people/infra/person-repository.ts)"
+    },
+    "mutation": {
+      "status": "PASS",
+      "at": "2026-11-19T19:21:01.245Z",
+      "detail": "nada a medir: `domainSources` vazio e nenhum critério mut"
+    },
+    "e2e": {
+      "status": "PASS",
+      "at": "2026-11-19T19:21:01.361Z",
+      "detail": "nenhum e2e na feature (nenhum critério e2e)"
+    }
+  },
+  "tests": [
+    "apps/api/src/people/infra/person-repository.test.ts"
+  ],
+  "scenarios": [
+    {
+      "id": "C1",
+      "criterio": "A1",
+      "camada": "unit",
+      "arquivo": "apps/api/src/people/infra/person-repository.test.ts",
+      "teste": "C1 (A1): Maria only with name, cpf and phone gets defaults for email, birth_date, referred_by_id, notes, active true and version 1"
+    },
+    {
+      "id": "C2",
+      "criterio": "A2",
+      "camada": "unit",
+      "arquivo": "apps/api/src/people/infra/person-repository.test.ts",
+      "teste": "C2 (A2): João with all fields and referredById of Ana stores every field, cpf null and referred_by_id equal to Ana id"
+    },
+    {
+      "id": "C3",
+      "criterio": "A3",
+      "camada": "unit",
+      "arquivo": "apps/api/src/people/infra/person-repository.test.ts",
+      "teste": "C3 (A3): Rui Filho with same cpf as Rui is rejected"
+    },
+    {
+      "id": "C4",
+      "criterio": "A4",
+      "camada": "unit",
+      "arquivo": "apps/api/src/people/infra/person-repository.test.ts",
+      "teste": "C4 (A4): Carla inserted by SQL is read with camelCase fields, defaults and createdAt as Date"
+    },
+    {
+      "id": "C5",
+      "criterio": "A4",
+      "camada": "unit",
+      "arquivo": "apps/api/src/people/infra/person-repository.test.ts",
+      "teste": "C5 (A4): unknown id returns null"
+    }
+  ],
+  "testShas": {
+    "apps/api/src/people/infra/person-repository.test.ts": "b78b1319d1e85282b19c11271ca4ebf1db8be927"
+  }
 }

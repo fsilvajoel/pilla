@@ -230,6 +230,7 @@ cards:
       toolCalls: 16
       minutes: 10
     readFirst:
+      - docs/plano/E5-F02/plano.md
       - apps/api/src/people/infra/person-repository.ts
       - apps/api/src/people/infra/persons.test.ts
     sizeNote: dois describe, 5 testes, ~100 linhas
@@ -257,6 +258,7 @@ cards:
       - insertPerson awaits the insert of the row into persons and gives nothing back, with no if, no try and no catch, so the unique cpf error of RN-P01 goes up untouched
       - findPersonById selects from persons where the id column equals id, and gives the first row or null when there is none
       - the type NewPersonRow, the /** */ comments and the signatures stay, and the parameters lose the leading underscore
+      - 'the signatures are insertPerson(db: PgDatabase<PgQueryResultHKT>, row: NewPersonRow): Promise<void> and findPersonById(db: PgDatabase<PgQueryResultHKT>, id: string): Promise<PersonRow | null> (the same db type as recordAudit in core/public/audit.ts)'
     hints:
       - the only file read is apps/api/src/people/infra/person-repository.ts, because the steps are in these hints
       - the import type line of ./schema in HEAD becomes the second import line of the done, which brings persons as a value, and the import type line of drizzle-orm/pg-core stays
@@ -270,6 +272,7 @@ cards:
       toolCalls: 17
       minutes: 8
     readFirst:
+      - docs/plano/E5-F02/plano.md
       - apps/api/src/people/infra/person-repository.ts
       - apps/api/vitest.config.ts
     sizeNote: duas funções de 2 linhas e 2 linhas de import; vitest.config.ts perde 1 linha

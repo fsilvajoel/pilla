@@ -9,11 +9,7 @@ export default defineConfig({
     coverage: {
       provider: "v8",
       include: ["src/**/*.ts"],
-      exclude: [
-        "src/**/*.test.ts",
-        "src/**/infra/schema.ts",
-        "src/people/infra/person-repository.ts", // stub E5-T06: sai quando a implementação real entrar
-      ],
+      exclude: ["src/**/*.test.ts", "src/**/infra/schema.ts"],
       thresholds: { lines: 100, branches: 100, functions: 100, statements: 100 },
     },
   },
