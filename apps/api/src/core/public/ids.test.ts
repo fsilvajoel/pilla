@@ -59,7 +59,7 @@ describe("newId", () => {
     const before = Date.now();
     const id = newId();
     const after = Date.now();
-    const hexTime = id.slice(0, 12);
+    const hexTime = id.replaceAll("-", "").slice(0, 12);
     const time = parseInt(hexTime, 16);
     expect(time).toBeGreaterThanOrEqual(before);
     expect(time).toBeLessThanOrEqual(after);
