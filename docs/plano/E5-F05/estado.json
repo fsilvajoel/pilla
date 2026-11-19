@@ -112,14 +112,153 @@
       "camadas": [
         "unit"
       ]
+    },
+    {
+      "id": "A16",
+      "camadas": [
+        "unit"
+      ]
     }
   ],
   "e2e": [],
-  "gates": {},
+  "gates": {
+    "expect-red": {
+      "status": "PASS",
+      "at": "2026-11-19T19:55:35.969Z",
+      "detail": "18 teste(s), todos falhando"
+    }
+  },
   "tests": [
     "apps/api/src/people/infra/person-update.test.ts",
     "apps/api/src/people/infra/person-write-error.test.ts",
     "apps/api/src/people/infra/person-list.test.ts"
   ],
-  "scenarios": []
+  "scenarios": [
+    {
+      "id": "C1",
+      "criterio": "A1",
+      "camada": "unit",
+      "arquivo": "apps/api/src/people/infra/person-update.test.ts",
+      "teste": "C1 (A1): resolves to UPDATED with all fields updated"
+    },
+    {
+      "id": "C2",
+      "criterio": "A2",
+      "camada": "unit",
+      "arquivo": "apps/api/src/people/infra/person-update.test.ts",
+      "teste": "C2 (A2): resolves to NOT_FOUND for non-existent id"
+    },
+    {
+      "id": "C3",
+      "criterio": "A3",
+      "camada": "unit",
+      "arquivo": "apps/api/src/people/infra/person-update.test.ts",
+      "teste": "C3 (A3): resolves to VERSION_CONFLICT and leaves row unchanged"
+    },
+    {
+      "id": "C4",
+      "criterio": "A4",
+      "camada": "unit",
+      "arquivo": "apps/api/src/people/infra/person-update.test.ts",
+      "teste": "C4 (A4): rejects with cause.code 23505 and cause.constraint persons_cpf_key"
+    },
+    {
+      "id": "C5",
+      "criterio": "A5",
+      "camada": "unit",
+      "arquivo": "apps/api/src/people/infra/person-write-error.test.ts",
+      "teste": "C5 (A5): duplicate CPF constraint gives DUPLICATE_CPF"
+    },
+    {
+      "id": "C5",
+      "criterio": "A5",
+      "camada": "unit",
+      "arquivo": "apps/api/src/people/infra/person-write-error.test.ts",
+      "teste": "C5 (A5): foreign key violation on referred_by_id gives NOT_FOUND"
+    },
+    {
+      "id": "C5",
+      "criterio": "A5",
+      "camada": "unit",
+      "arquivo": "apps/api/src/people/infra/person-write-error.test.ts",
+      "teste": "C5 (A5): different unique constraint gives null"
+    },
+    {
+      "id": "C5",
+      "criterio": "A5",
+      "camada": "unit",
+      "arquivo": "apps/api/src/people/infra/person-write-error.test.ts",
+      "teste": "C5 (A5): empty object gives null"
+    },
+    {
+      "id": "C6",
+      "criterio": "A6",
+      "camada": "unit",
+      "arquivo": "apps/api/src/people/infra/person-write-error.test.ts",
+      "teste": "C6 (A6): real self-reference error gives null"
+    },
+    {
+      "id": "C7",
+      "criterio": "A7",
+      "camada": "unit",
+      "arquivo": "apps/api/src/people/infra/person-list.test.ts",
+      "teste": "C7 (A7): returns exactly the item with null cpf"
+    },
+    {
+      "id": "C8",
+      "criterio": "A8",
+      "camada": "unit",
+      "arquivo": "apps/api/src/people/infra/person-list.test.ts",
+      "teste": "C8 (A8): empty database returns empty items and null nextCursor"
+    },
+    {
+      "id": "C9",
+      "criterio": "A9",
+      "camada": "unit",
+      "arquivo": "apps/api/src/people/infra/person-list.test.ts",
+      "teste": "C9 (A9): limit 2 returns two items with non-null nextCursor"
+    },
+    {
+      "id": "C10",
+      "criterio": "A1",
+      "camada": "unit",
+      "arquivo": "apps/api/src/people/infra/person-update.test.ts",
+      "teste": "C10 (A1): resolves to UPDATED and clears email, birthDate, notes while cpf remains"
+    },
+    {
+      "id": "C11",
+      "criterio": "A10",
+      "camada": "unit",
+      "arquivo": "apps/api/src/people/infra/person-list.test.ts",
+      "teste": "C11 (A10): search 'BIA' returns Bia Nunes and bia santos in lower-name order with null nextCursor"
+    },
+    {
+      "id": "C12",
+      "criterio": "A11",
+      "camada": "unit",
+      "arquivo": "apps/api/src/people/infra/person-list.test.ts",
+      "teste": "C12 (A11): search CPF '529.982.247-25' returns exactly Ana CPF with null nextCursor"
+    },
+    {
+      "id": "C13",
+      "criterio": "A12",
+      "camada": "unit",
+      "arquivo": "apps/api/src/people/infra/person-list.test.ts",
+      "teste": "C13 (A12): returns four people in name/id order with null nextCursor"
+    },
+    {
+      "id": "C14",
+      "criterio": "A13",
+      "camada": "unit",
+      "arquivo": "apps/api/src/people/infra/person-list.test.ts",
+      "teste": "C14 (A13): pagination with cursor returns first page with cursor, second page with null cursor"
+    },
+    {
+      "id": "C15",
+      "criterio": "A14",
+      "camada": "unit",
+      "arquivo": "apps/api/src/people/infra/person-list.test.ts",
+      "teste": "C15 (A14): active null and true return only active person; active false returns only inactive person"
+    }
+  ]
 }

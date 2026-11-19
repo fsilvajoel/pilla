@@ -617,32 +617,39 @@ cards:
       - C7 gives exactly the item { id "01970000-0000-7000-8000-000000000200", fullName "Caio Lima", cpf null, phone "+5511987654200", active true }
       - C8 gives exactly { items [], nextCursor null }
       - C9 gives two items with limit 2
-      - C11 gives exactly Bia Nunes and bia santos in lower-name order with nextCursor null
-      - C12 gives exactly Ana CPF for search "529.982.247-25" with nextCursor null
-      - C13 gives exactly Ana Souza 0210, Ana Souza 0211, Bruno Lima 0209 and Caio Lima 0212 in name/id order
+      - C11 gives exactly Bia Nunes and bia santos in lower-name order with nextCursor null, and a second search "SANTOS" gives only bia santos 0206
+      - C12 gives exactly Ana CPF for search "529.982.247-25" with nextCursor null, search "529982" gives only Ana CPF 0207 (not Bia CPF), and search "982247" gives { items [], nextCursor null }
+      - C13 inserts 0211 Ana Souza, 0210 Ana Souza, 0209 Bruno Lima and 0212 ana lima in this physical order and expects exactly ana lima 0212, Ana Souza 0210, Ana Souza 0211, Bruno Lima 0209 (lower(full_name) then id)
       - C14 gives Bia A for cursor null, then Bia B with the opaque nextCursor, and null on the final page
       - C15 gives only Ativa Silva for active null and true, and only Inativa Souza for active false
-      - C16 is a HTTP-only scenario: default limit 20, maximum 100, and 400 VALIDATION_FAILED outside 1..100
+      - C17 gives exactly Ana CPF 0218 and then Lote 529 Silva 0217 for search "529" with nextCursor null (name contains OR CPF prefix)
+      - 'C16 is a HTTP-only scenario: default limit 20, maximum 100, and 400 VALIDATION_FAILED outside 1..100; do not write a test for it'
       - never edit apps/api/src/people/infra/person-list.ts
     hints:
       - ids from 01970000-0000-7000-8000-000000000200 on; C9 rows are ...201 "Bia Nunes" cpf "52998224725", ...202 "Davi Melo" cpf "11144477735", ...203 "Eva Reis" cpf "39053344705", phones +5511987654201 to +5511987654203
-      - C11 uses ...204 to ...206, C12 uses ...207 and ...208, C13 uses ...209 to ...212
+      - C11 uses ...204 to ...206 and its second search is "SANTOS" (upper case on purpose, it must match "bia santos" in the middle of the name)
+      - C12 uses ...207 "Ana CPF" cpf "52998224725" and ...208 "Bia CPF" cpf "11144477735"; searches "529.982.247-25", "529982" (partial prefix) and "982247" (middle digits, no match)
+      - C13 uses ...209 "Bruno Lima" cpf "52998224725", ...210 "Ana Souza" cpf "11144477735", ...211 "Ana Souza" cpf "39053344705", ...212 "ana lima" cpf null, phones +5511987654209 to +5511987654212; insert in the order 0211, 0210, 0209, 0212 so that only ORDER BY lower(full_name), id gives the literal result (a plain ORDER BY full_name would put Bruno Lima before ana lima, and without id the two Ana Souza would come in physical order)
+      - C17 uses ...217 "Lote 529 Silva" cpf "11144477735" (inserted first) and ...218 "Ana CPF" cpf "52998224725", phones +5511987654217 and +5511987654218; search "529"
+      - each CPF is unique per test (persons_cpf_key), so never reuse the same CPF twice in one scenario
+      - type db as PgliteDatabase (import type from drizzle-orm/pglite), the same as person-repository.test.ts, never PgDatabase or PgQueryResultHKT
       - C14 uses ...213 "Bia A" and ...214 "Bia B"; C15 uses ...215 "Ativa Silva" and ...216 "Inativa Souza"
       - name search uses lower(full_name) contains; CPF search removes dots and dashes and uses prefix
+      - a search with only digits matches name (contains, no case) OR CPF (prefix); no scenario needs a name with digits
       - order by lower(full_name), then id; encode the opaque cursor as base64 UTF-8 JSON { fullName, id }
       - active null and true filter only active rows; false filters only inactive rows
       - limit default 20 belongs to HTTP; the infra receives an already validated limit from 1 to 100
       - every expected item is a literal, never derived from the inserted rows
       - open the database with migratedTestDb in beforeAll, delete from people.persons in beforeEach, close the client in afterAll
     budget:
-      attempts: 4
-      toolCalls: 16
-      minutes: 10
+      attempts: 8
+      toolCalls: 24
+      minutes: 15
     readFirst:
       - docs/plano/E5-F05/plano.md
       - apps/api/src/people/infra/person-list.ts
       - apps/api/src/people/infra/persons.test.ts
-    sizeNote: dez cenarios de lista C7-C16, um describe com testes literais em PGlite
+    sizeNote: onze cenarios de lista C7-C17, um describe com testes literais em PGlite
   - id: E5-T16
     title: Implement listPersons and remove the stub
     kind: implement
@@ -671,8 +678,10 @@ cards:
       - the limit is already validated by HTTP and the implementation never returns more than query.limit items
       - the types, the /** */ comment and the signature stay, and the parameters lose the leading underscore
     hints:
-      - implement C7-C16 against the contract in the plan; C16 is out of infra
+      - implement C7-C15 and C17 against the contract in the plan; C16 is out of infra
       - no unaccent in name search and no case-fold beyond lower(full_name)
+      - 'a search with only digits matches name (contains, no case) OR CPF (prefix), as C17 shows: "529" gives Ana CPF (CPF prefix) and Lote 529 Silva (name); strip dots and dashes from the search before the CPF prefix match'
+      - 'ties on lower(full_name) are broken by id and the order is never plain full_name (C13: "ana lima" comes before "Bruno Lima")'
       - return cpf null for imported rows without CPF
       - default limit 20 and max 100 are HTTP/Zod responsibilities; listPersons receives limit already validated
       - the line of vitest.config.ts to delete is the one inside coverage.exclude with src/people/infra/person-list.ts and the comment stub E5-T16
