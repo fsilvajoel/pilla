@@ -66,4 +66,9 @@ describe("personWriteErrorCode", () => {
   it("C18 (A5): object with non-object cause gives null", () => {
     expect(personWriteErrorCode({ cause: "x" })).toBe(null);
   });
+
+  it("C18 (A5): cause without code or without constraint gives null", () => {
+    expect(personWriteErrorCode({ cause: {} })).toBe(null);
+    expect(personWriteErrorCode({ cause: { code: "23505" } })).toBe(null);
+  });
 });

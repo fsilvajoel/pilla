@@ -56,7 +56,8 @@ describe("updatePerson", () => {
     );
 
     expect(rows).toHaveLength(1);
-    expect(rows[0]).toEqual({
+    const { updated_at: updatedAt, ...row } = rows[0] ?? { updated_at: "" };
+    expect(row).toEqual({
       full_name: "Ana Teixeira",
       cpf: "39053344705",
       phone: "+5511987654000",
@@ -67,7 +68,7 @@ describe("updatePerson", () => {
       active: true,
       referred_by_id: null,
     });
-    expect(rows[0]?.updated_at).not.toContain("2026-01-01");
+    expect(updatedAt).not.toContain("2026-01-01");
   });
 
   it("C2 (A2): resolves to NOT_FOUND for non-existent id", async () => {
