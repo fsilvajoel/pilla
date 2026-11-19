@@ -1,4 +1,4 @@
-import { defineConfig } from "vitest/config";
+import { configDefaults, defineConfig } from "vitest/config";
 
 // Telas e componentes do web: mínimo de 85% (módulos, docs/travas.md §4.1).
 export default defineConfig({
@@ -7,7 +7,7 @@ export default defineConfig({
     environment: "jsdom",
     setupFiles: ["./vitest.setup.ts"],
     include: ["**/*.test.{ts,tsx}"],
-    exclude: ["node_modules/**", ".next/**"],
+    exclude: [...configDefaults.exclude, ".next/**", "**/.stryker-tmp/**"],
     coverage: {
       provider: "v8",
       include: ["app/**/*.{ts,tsx}", "components/**/*.{ts,tsx}", "lib/**/*.{ts,tsx}"],
