@@ -13,8 +13,6 @@ export default defineConfig({
         "src/**/*.test.ts",
         "src/**/infra/schema.ts",
         "src/core/public/ids.ts", // stub E5-T02: sai quando a implementação real entrar
-        "src/lending/domain/loan-status.ts", // stub E5-T08: sai quando a implementação real entrar
-        "src/lending/domain/reversal.ts", // stub E5-T10: sai quando a implementação real entrar
       ],
       thresholds: { lines: 100, branches: 100, functions: 100, statements: 100 },
     },
