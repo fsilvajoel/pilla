@@ -29,6 +29,14 @@ function parseInstallmentCount(text: string): number {
   return Number(text);
 }
 
+const RATE = /^\d{1,2},\d{2}$/;
+
+/** "6,33" → 633 bps; duas casas, sem milhar, de 0,00 a 99,99 (D2). */
+function parseMonthlyRateBps(text: string): number {
+  if (!RATE.test(text)) throw new FormInputError("Taxa deve ser até 99,99%");
+  return Number(parseReais(text));
+}
+
 /**
  * Converte os campos da tela no corpo `SimulateLoanRequest` (RFC-004 §5, ADR-0013: Zod de `@pilla/schemas`),
  * com type INSTALLMENT. Valor e taxa passam por `parseReais` de `@pilla/finance` ("6,33" vira 633), a
@@ -40,7 +48,7 @@ export function toSimulateRequest(values: SimulationFormValues): SimulateLoanReq
     type: "INSTALLMENT",
     principalCents: Number(parseReais(values.amount)),
     // taxa em % com duas casas: "6,33" vira 633 bps
-    monthlyInterestRateBps: Number(parseReais(values.monthlyRate)),
+    monthlyInterestRateBps: parseMonthlyRateBps(values.monthlyRate),
     installmentCount: parseInstallmentCount(values.installmentCount),
     frequency: frequencyOf(values.frequency),
     firstDueDate: values.firstDueDate,
