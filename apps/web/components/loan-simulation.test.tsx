@@ -3,93 +3,157 @@ import { describe, expect, it } from "vitest";
 import { isoDate } from "@pilla/finance";
 import { LoanSimulation } from "./loan-simulation";
 
+// Contrato e valores: docs/plano/E6-F02/plano.md (A1 a A3, C1 a C9).
+interface SimulationInput {
+  readonly amount: string;
+  readonly monthlyRate: string;
+  readonly installmentCount: string;
+  readonly frequency: "WEEKLY" | "BIWEEKLY" | "MONTHLY" | "BIMONTHLY";
+  readonly firstDueDate: string;
+}
+
+const disbursementDate = isoDate("2026-11-14");
+
+// Exemplo da RFC-004 §5.
+const rfcExample: SimulationInput = {
+  amount: "5.000,00",
+  monthlyRate: "6,33",
+  installmentCount: "6",
+  frequency: "MONTHLY",
+  firstDueDate: "2026-12-14",
+};
+
+// PRD-001 CA-11.
+const ca11Example: SimulationInput = {
+  amount: "1.000,00",
+  monthlyRate: "10,00",
+  installmentCount: "4",
+  frequency: "WEEKLY",
+  firstDueDate: "2026-11-21",
+};
+
+const ALERT_TEXT = "Confira os campos da simulação.";
+
+function fillAndSubmit(input: SimulationInput): void {
+  fireEvent.change(screen.getByLabelText("Valor emprestado"), { target: { value: input.amount } });
+  fireEvent.change(screen.getByLabelText("Taxa ao mês (%)"), { target: { value: input.monthlyRate } });
+  fireEvent.change(screen.getByLabelText("Nº de parcelas"), { target: { value: input.installmentCount } });
+  fireEvent.change(screen.getByLabelText("Periodicidade"), { target: { value: input.frequency } });
+  fireEvent.change(screen.getByLabelText("1º vencimento"), { target: { value: input.firstDueDate } });
+  fireEvent.click(screen.getByRole("button", { name: "Simular" }));
+}
+
+function simulateWith(input: SimulationInput): void {
+  render(<LoanSimulation disbursementDate={disbursementDate} />);
+  fillAndSubmit(input);
+}
+
+function texts(elements: readonly HTMLElement[]): string[] {
+  return elements.map((element) => element.textContent);
+}
+
+/** Linhas com células de dados (exclui a linha de cabeçalho). */
+function dataRows(table: HTMLElement): HTMLElement[] {
+  return within(table)
+    .getAllByRole("row")
+    .filter((row) => within(row).queryAllByRole("cell").length > 0);
+}
+
+/** Texto do alerta e se sobrou algum resultado (resumo ou tabela) na tela. */
+async function alertOutcome(): Promise<{ alert: string; hasSummary: boolean; hasTable: boolean }> {
+  const alert = await screen.findByRole("alert");
+  return {
+    alert: alert.textContent,
+    hasSummary: screen.queryByText("Total a receber") !== null,
+    hasTable: screen.queryByRole("table") !== null,
+  };
+}
+
+const ALERT_ONLY = { alert: ALERT_TEXT, hasSummary: false, hasTable: false };
+
 describe("LoanSimulation", () => {
-  const disbursementDate = isoDate("2026-11-14");
-
-  function fillAndSubmit(values: {
-    amount: string;
-    monthlyRate: string;
-    installmentCount: string;
-    frequency: string;
-    firstDueDate: string;
-  }) {
-    fireEvent.change(screen.getByLabelText("Valor emprestado"), {
-      target: { value: values.amount },
-    });
-    fireEvent.change(screen.getByLabelText("Taxa ao mês (%)"), {
-      target: { value: values.monthlyRate },
-    });
-    fireEvent.change(screen.getByLabelText("Nº de parcelas"), {
-      target: { value: values.installmentCount },
-    });
-    fireEvent.change(screen.getByLabelText("Periodicidade"), {
-      target: { value: values.frequency },
-    });
-    fireEvent.change(screen.getByLabelText("1º vencimento"), {
-      target: { value: values.firstDueDate },
-    });
-    fireEvent.click(screen.getByRole("button", { name: "Simular" }));
-  }
-
-  it("shows inputs labelled Valor emprestado, Taxa ao mês (%), Nº de parcelas, Periodicidade, 1º vencimento and a button Simular", () => {
+  it("C1 (A1): shows the five labelled fields, the four frequency options and the Simular button", () => {
     render(<LoanSimulation disbursementDate={disbursementDate} />);
 
     expect(screen.getByLabelText("Valor emprestado")).toBeInTheDocument();
     expect(screen.getByLabelText("Taxa ao mês (%)")).toBeInTheDocument();
     expect(screen.getByLabelText("Nº de parcelas")).toBeInTheDocument();
-    expect(screen.getByLabelText("Periodicidade")).toBeInTheDocument();
-    expect(screen.getByLabelText("1º vencimento")).toBeInTheDocument();
+    expect(screen.getByLabelText("1º vencimento")).toHaveAttribute("type", "date");
+
+    const frequency = screen.getByLabelText("Periodicidade");
+    expect(frequency.tagName).toBe("SELECT");
+    const options = within(frequency).getAllByRole<HTMLOptionElement>("option");
+    expect(texts(options)).toEqual(["Semanal", "Quinzenal", "Mensal", "Bimestral"]);
+    expect(options.map((option) => option.value)).toEqual(["WEEKLY", "BIWEEKLY", "MONTHLY", "BIMONTHLY"]);
+
     expect(screen.getByRole("button", { name: "Simular" })).toBeInTheDocument();
   });
 
-  it("shows Total a receber, Juros and Parcela for the RFC-004 §5 example", async () => {
-    render(<LoanSimulation disbursementDate={disbursementDate} />);
+  it("C2 (A2): RFC-004 §5 example shows R$ 6.900,00, R$ 1.900,00 and 6 × R$ 1.150,00", async () => {
+    simulateWith(rfcExample);
 
-    fillAndSubmit({
-      amount: "5.000,00",
-      monthlyRate: "6,33",
-      installmentCount: "6",
-      frequency: "MONTHLY",
-      firstDueDate: "2026-12-14",
-    });
-
-    expect(await screen.findByText("R$ 6.900,00")).toBeInTheDocument();
-    expect(await screen.findByText("R$ 1.900,00")).toBeInTheDocument();
-    expect(await screen.findByText("6 × R$ 1.150,00")).toBeInTheDocument();
+    expect(await screen.findByText("Total a receber")).toBeInTheDocument();
+    expect(screen.getByText("Juros", { selector: ":not(th)" })).toBeInTheDocument();
+    expect(screen.getByText("R$ 6.900,00")).toBeInTheDocument();
+    expect(screen.getByText("R$ 1.900,00")).toBeInTheDocument();
+    expect(screen.getByText("6 × R$ 1.150,00")).toBeInTheDocument();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 
-  it("shows the first installment row with 14/12/2026, 833,33, 316,67 and 1.150,00", async () => {
-    render(<LoanSimulation disbursementDate={disbursementDate} />);
+  it("C3 (A2): RFC-004 §5 example shows 6 rows and the first is 1, 14/12/2026, 833,33, 316,67, 1.150,00", async () => {
+    simulateWith(rfcExample);
 
-    fillAndSubmit({
-      amount: "5.000,00",
-      monthlyRate: "6,33",
-      installmentCount: "6",
-      frequency: "MONTHLY",
-      firstDueDate: "2026-12-14",
-    });
+    const table = await screen.findByRole("table");
+    expect(texts(within(table).getAllByRole("columnheader"))).toEqual([
+      "Nº",
+      "Vencimento",
+      "Principal",
+      "Juros",
+      "Parcela",
+    ]);
 
-    const row = await screen.findByRole("row", { name: /14\/12\/2026/ });
-    const cells = within(row).getAllByRole("cell");
-    expect(cells[0]).toHaveTextContent("1");
-    expect(cells[1]).toHaveTextContent("14/12/2026");
-    expect(cells[2]).toHaveTextContent("833,33");
-    expect(cells[3]).toHaveTextContent("316,67");
-    expect(cells[4]).toHaveTextContent("1.150,00");
+    const rows = dataRows(table);
+    expect(rows).toHaveLength(6);
+    const [firstRow] = rows;
+    if (firstRow === undefined) throw new Error("tabela sem linhas");
+    expect(texts(within(firstRow).getAllByRole("cell"))).toEqual(["1", "14/12/2026", "833,33", "316,67", "1.150,00"]);
   });
 
-  it("shows an alert when amount 5000 without comma is submitted", async () => {
-    render(<LoanSimulation disbursementDate={disbursementDate} />);
+  it("C4 (A2): CA-11 shows 4 × R$ 275,00 and R$ 1.100,00", async () => {
+    simulateWith(ca11Example);
 
-    fillAndSubmit({
-      amount: "5000",
-      monthlyRate: "6,33",
-      installmentCount: "6",
-      frequency: "MONTHLY",
-      firstDueDate: "2026-12-14",
-    });
+    expect(await screen.findByText("4 × R$ 275,00")).toBeInTheDocument();
+    expect(screen.getByText("R$ 1.100,00")).toBeInTheDocument();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
 
-    const alert = await screen.findByRole("alert");
-    expect(alert).toHaveTextContent("Confira os campos da simulação.");
+  it("C5 (A3): amount 5000 without comma shows the alert and no result", async () => {
+    simulateWith({ ...rfcExample, amount: "5000" });
+
+    expect(await alertOutcome()).toEqual(ALERT_ONLY);
+  });
+
+  it("C6 (A3): rate 6 without comma shows the alert and no result", async () => {
+    simulateWith({ ...rfcExample, monthlyRate: "6" });
+
+    expect(await alertOutcome()).toEqual(ALERT_ONLY);
+  });
+
+  it("C7 (A3): installment count 0 shows the alert and no result", async () => {
+    simulateWith({ ...rfcExample, installmentCount: "0" });
+
+    expect(await alertOutcome()).toEqual(ALERT_ONLY);
+  });
+
+  it("C8 (A3): first due date equal to disbursement date shows the alert", async () => {
+    simulateWith({ ...rfcExample, firstDueDate: "2026-11-14" });
+
+    expect(await alertOutcome()).toEqual(ALERT_ONLY);
+  });
+
+  it("C9 (A3): empty first due date shows the alert", async () => {
+    simulateWith({ ...rfcExample, firstDueDate: "" });
+
+    expect(await alertOutcome()).toEqual(ALERT_ONLY);
   });
 });
