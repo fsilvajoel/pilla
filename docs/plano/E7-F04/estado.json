@@ -1,0 +1,212 @@
+{
+  "feature": "E7-F04",
+  "stages": {
+    "plan": {
+      "status": "done"
+    },
+    "tests": {
+      "status": "done"
+    },
+    "testReview": {
+      "status": "done",
+      "verdict": "aprovado"
+    },
+    "implement": {
+      "status": "pending"
+    },
+    "review": {
+      "status": "pending"
+    }
+  },
+  "sources": [
+    "apps/web/lib/payment-draft.ts",
+    "apps/web/components/payment-form.tsx"
+  ],
+  "domainSources": [
+    "apps/web/lib/payment-draft.ts"
+  ],
+  "criteria": [
+    {
+      "id": "A1",
+      "camadas": [
+        "unit"
+      ]
+    },
+    {
+      "id": "A2",
+      "camadas": [
+        "unit"
+      ]
+    },
+    {
+      "id": "A3",
+      "camadas": [
+        "unit"
+      ]
+    },
+    {
+      "id": "A4",
+      "camadas": [
+        "unit"
+      ]
+    },
+    {
+      "id": "A4b",
+      "camadas": [
+        "unit"
+      ]
+    },
+    {
+      "id": "A5",
+      "camadas": [
+        "unit"
+      ]
+    },
+    {
+      "id": "A6",
+      "camadas": [
+        "unit"
+      ]
+    },
+    {
+      "id": "A7",
+      "camadas": [
+        "unit"
+      ]
+    },
+    {
+      "id": "A8",
+      "camadas": [
+        "unit"
+      ]
+    }
+  ],
+  "tests": [
+    "apps/web/lib/payment-draft.test.ts",
+    "apps/web/components/payment-form.test.tsx"
+  ],
+  "e2e": [],
+  "scenarios": [
+    {
+      "id": "C1",
+      "criterio": "A1",
+      "camada": "unit",
+      "arquivo": "apps/web/lib/payment-draft.test.ts",
+      "teste": "builds the RFC-004 payment"
+    },
+    {
+      "id": "C2",
+      "criterio": "A2",
+      "camada": "unit",
+      "arquivo": "apps/web/lib/payment-draft.test.ts",
+      "teste": "accepts the four methods"
+    },
+    {
+      "id": "C3",
+      "criterio": "A3",
+      "camada": "unit",
+      "arquivo": "apps/web/lib/payment-draft.test.ts",
+      "teste": "rejects a bad amount"
+    },
+    {
+      "id": "C4",
+      "criterio": "A4",
+      "camada": "unit",
+      "arquivo": "apps/web/lib/payment-draft.test.ts",
+      "teste": "rejects a bad date, account and loan"
+    },
+    {
+      "id": "C4b",
+      "criterio": "A4b",
+      "camada": "unit",
+      "arquivo": "apps/web/lib/payment-draft.test.ts",
+      "teste": "does not limit the date nor the amount"
+    },
+    {
+      "id": "C5",
+      "criterio": "A5",
+      "camada": "unit",
+      "arquivo": "apps/web/components/payment-form.test.tsx",
+      "teste": "shows the loan and the fields"
+    },
+    {
+      "id": "C6",
+      "criterio": "A6",
+      "camada": "unit",
+      "arquivo": "apps/web/components/payment-form.test.tsx",
+      "teste": "registers the RFC-004 payment"
+    },
+    {
+      "id": "C6b",
+      "criterio": "A6",
+      "camada": "unit",
+      "arquivo": "apps/web/components/payment-form.test.tsx",
+      "teste": "accepts cash"
+    },
+    {
+      "id": "C7",
+      "criterio": "A7",
+      "camada": "unit",
+      "arquivo": "apps/web/components/payment-form.test.tsx",
+      "teste": "rejects a bad amount"
+    },
+    {
+      "id": "C7b",
+      "criterio": "A7",
+      "camada": "unit",
+      "arquivo": "apps/web/components/payment-form.test.tsx",
+      "teste": "rejects an empty Pix key"
+    },
+    {
+      "id": "C8",
+      "criterio": "A8",
+      "camada": "unit",
+      "arquivo": "apps/web/components/payment-form.test.tsx",
+      "teste": "blocks a paid off contract"
+    },
+    {
+      "id": "C8b",
+      "criterio": "A8",
+      "camada": "unit",
+      "arquivo": "apps/web/components/payment-form.test.tsx",
+      "teste": "blocks a renewed contract"
+    },
+    {
+      "id": "C8c",
+      "criterio": "A8",
+      "camada": "unit",
+      "arquivo": "apps/web/components/payment-form.test.tsx",
+      "teste": "blocks a renegotiated contract"
+    },
+    {
+      "id": "C8d",
+      "criterio": "A8",
+      "camada": "unit",
+      "arquivo": "apps/web/components/payment-form.test.tsx",
+      "teste": "blocks a cancelled contract"
+    },
+    {
+      "id": "C8e",
+      "criterio": "A8",
+      "camada": "unit",
+      "arquivo": "apps/web/components/payment-form.test.tsx",
+      "teste": "keeps the form for a written off contract"
+    }
+  ],
+  "testShas": {
+    "apps/web/lib/payment-draft.test.ts": "1a7e37f736b2a7a9257ef62388f3afa6219b3a32",
+    "apps/web/components/payment-form.test.tsx": "a4bfa34957cb7296b3d7ce46cc0a08f9263563d0"
+  },
+  "gates": {
+    "expect-red": {
+      "status": "PASS",
+      "at": "2026-11-19T15:49:35.401Z",
+      "detail": "15 teste(s), todos falhando"
+    },
+    "tests-reviewed": {
+      "status": "PASS",
+      "at": "2026-11-19T15:49:56.367Z",
+      "detail": "2 teste(s) assinado(s)"
+    }
+  }
+}
