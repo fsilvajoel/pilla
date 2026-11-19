@@ -9,6 +9,7 @@ RFC-004 §2, §5 e §6; ADR-0013; decisões do Joel de 17/11 (`docs/plano/deciso
   `PaymentFields` validado e pedido de upload do comprovante), com `ReceiptRequiredError` (RN-R06).
 - E7-T13 (Bia) e E7-T14 (Alice): `apps/web/components/payment-form.tsx`, rota `/emprestimos/[id]/pagamento`.
 - Fora: upload real do comprovante e chamada à API (pendente do Joel), conferência do pagamento, estorno.
+- Fora: tela de atualização de pagamento por contrato (v1.1, `docs/plano/decisoes-2026-11-19.md`).
 
 ## Tipos e imports (conferidos no código; valem para os testes e para a implementação)
 

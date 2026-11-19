@@ -62,6 +62,7 @@ O cliente não tem como consultar a própria situação sem perguntar.
 | Cliente enviar comprovante pelo portal | |
 | Um pagamento cobrindo vários contratos | |
 | Relatórios avançados | |
+| **v1.1** Tela do ADMIN "atualização de pagamento por contrato": dados do cliente, lista de pagamentos do contrato, check "assinado pelo admin", upload/visualização do comprovante e "atualizado em" automático exibido no portal | intenção e pendências em [decisoes-2026-11-19](../plano/decisoes-2026-11-19.md); no MVP vale a E7-F04 (form simples) |
 
 ## 5. Requisitos funcionais
 
@@ -226,6 +227,7 @@ IDs estáveis: agentes devem citá-los em commits/PRs.
 | 2026-11-14 | Idioma? | Código e termos técnicos em inglês; documentação em pt-BR ([ADR-0012](../adr/0012-idioma-codigo-ingles-docs-portugues.md)) |
 | 2026-11-14 | Arredondamento? | Múltiplo de R$ 5, para o mais próximo: juros e depois parcela (RN-C03) |
 | 2026-11-14 | Backend? | Node + TypeScript, desde que suporte o futuro módulo de WhatsApp (ver RFC-003 §5) |
+| 2026-11-19 | Tela de atualização de pagamento por contrato? | Fica para a v1.1; no MVP, E7-F04 como planejada ([decisoes-2026-11-19](../plano/decisoes-2026-11-19.md)) |
 
 ## 11. Pendências
 
