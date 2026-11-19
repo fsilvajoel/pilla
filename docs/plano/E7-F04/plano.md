@@ -23,14 +23,14 @@ chave Pix e contrato fechado (seção Decisões).
 
 - `apps/web/lib/payment-draft.ts`: `toPaymentDraft(loanId: string, values: PaymentFormValues): PaymentFields`
   (muda: perde o 3º parâmetro e o tipo `PaymentDraft`; `PaymentFields` vem de `@pilla/schemas`).
-- `PaymentFormValues` (inalterado): `accountId`, `paidAt`, `amount` texto e `method: PaymentMethod`
+- `PaymentFormValues` (inalterado): `destinationKey`, `paidAt`, `amount` texto e `method: PaymentMethod`
   ("PIX" | "BOLETO" | "CASH" | "BANK_TRANSFER").
 - `apps/web/components/payment-form.tsx`: `PaymentForm({ loan, onSubmit? })`, com
   `onSubmit?: (payment: PaymentFields) => void`. Sem select de contas, a prop `accounts` não é mais usada (some do
   contrato; ajuste de preparo da casca, ver Riscos).
 
 Esperado do exemplo (1.150,00 em 2026-12-13, PIX, conta principal): `{ loanId: "01936f8e-7b2c-7cde-8f00-000000000002",
-accountId: "chave-pix@exemplo.com", paidAt: "2026-12-13", amountCents: 115000, method: "PIX" }`
+destinationKey: "chave-pix@exemplo.com", paidAt: "2026-12-13", amountCents: 115000, method: "PIX" }`
 (número comum, nunca bigint; comparar com `toStrictEqual`).
 
 ## Decisões do Joel (19/11)
@@ -89,7 +89,7 @@ accountId: "chave-pix@exemplo.com", paidAt: "2026-12-13", amountCents: 115000, m
 |---|---|---|---|---|---|---|
 | `amount` (Valor) | reais com vírgula e exatamente 2 casas, milhar com ponto opcional: `1.150,00`, `50,00` | 0,01 (`amountCents` inteiro > 0) | só o limite técnico de inteiro seguro do `z.int()`; sem limite de negócio no MVP (decisão 1; pendência futura pós-MVP) | `""`, `"1150"`, `"1150.00"`, `"1.150,5"`, `"abc"`, `"0,00"`, `"-5,00"` | formato: `MoneyError`; zero e negativo: `ZodError` em `amountCents`; tela: alerta "Confira os campos do pagamento." e não chama `onSubmit` | `parseReais` (`@pilla/finance`); `positiveCentsSchema` (`common.ts`); RFC-004 §2; RF-20 |
 | `paidAt` (Data do pagamento) | `AAAA-MM-DD` válido no calendário (input `type="date"`) | sem restrição (decisão 2) | sem restrição (decisão 2; data futura ou anterior ao desembolso passa) | `""`, `"2026-13-01"`, `"2026-02-30"`, `"13/12/2026"`, `"2026-1-1"` | `ZodError` em `paidAt`; alerta "Confira os campos do pagamento." | `common.ts` `isoDateSchema` (`z.iso.date()`); RF-20; RFC-004 §2 |
-| `accountId` (Chave Pix de destino) | texto livre digitado no campo (decisão 3), sem lista de contas; `paymentFieldsSchema.accountId` é `z.string().trim().min(1)` | 1 caractere após trim | sem limite definido (pendência) | `""`, `"   "` | `ZodError` em `accountId`; alerta "Confira os campos do pagamento." | `create-payment.ts` `paymentFieldsSchema`; RF-20; decisão 3 |
+| `destinationKey` (Chave Pix de destino) | texto livre digitado no campo (decisão 3), sem lista de contas; `paymentFieldsSchema.destinationKey` é `z.string().trim().min(1)` | 1 caractere após trim | sem limite definido (pendência) | `""`, `"   "` | `ZodError` em `destinationKey`; alerta "Confira os campos do pagamento." | `create-payment.ts` `paymentFieldsSchema`; RF-20; decisão 3 |
 | `method` (Método) | um de `PIX`, `BOLETO`, `CASH`, `BANK_TRANSFER` (select; começa em PIX) | 1 valor | 1 valor | `""`, `"pix"`, `"CARD"` | `ZodError` em `method`. **Exceção sem cenário de teste:** o tipo `PaymentMethod` e o select impedem o valor inválido (sem `as` no lint); a regra fica coberta pelo `paymentMethodSchema` em `@pilla/schemas` | `create-payment.ts` `paymentMethodSchema`; RF-20 |
 | `loanId` (do `loan.id`, não digitado) | id (UUID v7) do contrato exibido | 1 id | 1 id | `""`, `"abc"` | `ZodError` em `loanId` (chamada direta de `toPaymentDraft`) | `common.ts` `idSchema`; RFC-004 §2 |
 
@@ -118,10 +118,10 @@ o formulário (decisão 4).
 ## Critérios de aceite
 
 ### A1: monta o pagamento do exemplo
-- entrada: `loanId` 01936f8e-...-000000000002, `accountId` "chave-pix@exemplo.com", `paidAt` "2026-12-13",
+- entrada: `loanId` 01936f8e-...-000000000002, `destinationKey` "chave-pix@exemplo.com", `paidAt` "2026-12-13",
   `amount` "1.150,00", `method` "PIX"
-- domínio: `amount`, `paidAt`, `accountId`, `method`, `loanId`
-- saída: `{ loanId, accountId, paidAt: "2026-12-13", amountCents: 115000, method: "PIX" }`, sem chave `receipt`
+- domínio: `amount`, `paidAt`, `destinationKey`, `method`, `loanId`
+- saída: `{ loanId, destinationKey, paidAt: "2026-12-13", amountCents: 115000, method: "PIX" }`, sem chave `receipt`
 - erro: nenhum
 - fonte: RF-20; RFC-004 §5
 - camada: unit
@@ -143,8 +143,8 @@ o formulário (decisão 4).
 - camada: unit
 
 ### A4: rejeita data, conta e contrato inválidos
-- entrada: `paidAt` "2026-02-30"; `accountId` ""; `loanId` "abc"
-- domínio: `paidAt`, `accountId`, `loanId`
+- entrada: `paidAt` "2026-02-30"; `destinationKey` ""; `loanId` "abc"
+- domínio: `paidAt`, `destinationKey`, `loanId`
 - saída: nenhuma
 - erro: `ZodError`
 - fonte: `isoDateSchema`; `paymentFieldsSchema`; `idSchema`; RF-20
@@ -169,7 +169,7 @@ o formulário (decisão 4).
 
 ### A6: tela registra o exemplo sem arquivo
 - entrada: Chave Pix de destino `chave-pix@exemplo.com`, "2026-12-13", "1.150,00", PIX, clique em "Registrar pagamento"
-- domínio: `amount`, `paidAt`, `accountId`, `method`
+- domínio: `amount`, `paidAt`, `destinationKey`, `method`
 - saída: status "Pagamento registrado para conferência."; `onSubmit` chamado uma vez com o pagamento do A1
 - erro: nenhum
 - fonte: RF-20; RFC-004 §5
@@ -185,7 +185,7 @@ o formulário (decisão 4).
 
 ### A7: tela recusa entrada inválida
 - entrada: o exemplo com Valor "1150", e o exemplo com a Chave Pix de destino vazia
-- domínio: `amount`, `accountId`
+- domínio: `amount`, `destinationKey`
 - saída: `onSubmit` não é chamado
 - erro: alerta "Confira os campos do pagamento." (nunca mensagem de comprovante)
 - fonte: decisões do Joel de 17/11; RF-20
@@ -196,7 +196,7 @@ o formulário (decisão 4).
 - C1 (A1, unit): exemplo → `amountCents` 115000, PIX, sem `receipt` (RF-20, RFC-004 §5).
 - C2 (A2, unit): o exemplo com BOLETO, CASH e BANK_TRANSFER, sem arquivo, dá o pagamento com o método certo (decisão 19/11 §3).
 - C3 (A3, unit): `amount` "1150" e "1.150,5" → `MoneyError`; "0,00" e "-5,00" → `ZodError` (RFC-004 §2).
-- C4 (A4, unit): `paidAt` "2026-02-30", `accountId` "" e `loanId` "abc" → `ZodError` (RF-20).
+- C4 (A4, unit): `paidAt` "2026-02-30", `destinationKey` "" e `loanId` "abc" → `ZodError` (RF-20).
 - C4b (A4b, unit): `paidAt` "2099-01-01" e "2000-01-01" e `amount` "90.000.000,00" passam sem erro (decisões 1 e 2).
 - C5 (A5, unit): tela: título, contrato, saldo, quatro rótulos (Chave Pix de destino como texto), Método em PIX, ausência de "Comprovante".
 - C6 (A6, unit): tela: envio do exemplo → status e `onSubmit` com o pagamento; Método CASH também envia.
@@ -215,7 +215,7 @@ Metas de cobertura (cobradas pelos checks do `done`, não são critério): 100% 
 ## Pendências
 
 - Valor máximo do pagamento: pendência futura (pós-MVP); sem regra de negócio agora (decisão 1).
-- Tamanho máximo da chave Pix de destino (`accountId`): não definido; o schema só exige texto não vazio após trim. Joel define
+- Tamanho máximo da chave Pix de destino (`destinationKey`): não definido; o schema só exige texto não vazio após trim. Joel define
   o limite (e se o nome do campo muda) em outra feature.
 - Texto do aviso de contrato fechado e status `DRAFT` (a RN-R09 não fala dele; hoje a tela o deixa aceitar): Joel
   confirma.

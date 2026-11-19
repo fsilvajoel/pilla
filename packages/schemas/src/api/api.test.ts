@@ -54,7 +54,13 @@ const installment = {
   lateChargesCents: 0,
   status: "PAID",
 };
-const payment = { loanId: id(2), accountId: id(4), paidAt: "2026-12-13", amountCents: 115000, method: "PIX" };
+const payment = {
+  loanId: id(2),
+  destinationKey: "chave-pix@exemplo.com",
+  paidAt: "2026-12-13",
+  amountCents: 115000,
+  method: "PIX",
+};
 
 interface BodyCase {
   /** nome do esquema exportado (filtro do vitest -t) */

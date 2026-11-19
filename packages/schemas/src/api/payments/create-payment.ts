@@ -8,7 +8,7 @@ export type PaymentMethod = z.infer<typeof paymentMethodSchema>;
 /** Campos do pagamento sem o anexo: o navegador sobe o comprovante antes (decisões do Joel de 17/11). */
 export const paymentFieldsSchema = z.strictObject({
   loanId: idSchema,
-  accountId: idSchema,
+  destinationKey: z.string().trim().min(1),
   paidAt: isoDateSchema,
   amountCents: positiveCentsSchema,
   method: paymentMethodSchema,

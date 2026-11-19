@@ -640,15 +640,15 @@ cards:
       - 'test "builds the RFC-004 payment": the example gives the payment of the hints, amountCents 115000, method "PIX", with no receipt key (RFC-004 §5, PRD-001 RF-20)'
       - 'test "accepts the four methods": the example with "PIX", "BOLETO", "CASH" and "BANK_TRANSFER" gives the same payment with each method and never throws (decisão do Joel de 19/11: sem comprovante)'
       - 'test "rejects a bad amount": amount "1150" and "1.150,5" throw MoneyError, and "0,00" and "-5,00" throw ZodError (RFC-004 §2)'
-      - 'test "rejects a bad date, account and loan": paidAt "2026-02-30", accountId "" and loanId "abc" throw ZodError (PRD-001 RF-20)'
+      - 'test "rejects a bad date, account and loan": paidAt "2026-02-30", destinationKey "" and loanId "abc" throw ZodError (PRD-001 RF-20)'
       - 'test "does not limit the date nor the amount": paidAt "2099-01-01" and "2000-01-01" and amount "90.000.000,00" give the payment, no error (decisões do Joel de 19/11: sem restrição de data nem valor máximo no MVP)'
       - never edit apps/web/lib/payment-draft.ts
     hints:
       - the import lines of the done are the only imports of the file, each name in them is used, and nothing else is imported
       - one write_file of the whole test file, then run_check 0, 1, 2 and 3
-      - 'at the top of the describe, two consts: loanId "01936f8e-7b2c-7cde-8f00-000000000002" and example typed PaymentFormValues with accountId "chave-pix@exemplo.com", paidAt "2026-12-13", amount "1.150,00" and method "PIX"'
+      - 'at the top of the describe, two consts: loanId "01936f8e-7b2c-7cde-8f00-000000000002" and example typed PaymentFormValues with destinationKey "chave-pix@exemplo.com", paidAt "2026-12-13", amount "1.150,00" and method "PIX"'
       - 'the call is toPaymentDraft(loanId, values) with two arguments and no file; it returns PaymentFields directly, not an object with payment and receipt'
-      - 'the payment of the first test, checked with toStrictEqual, is { loanId: "01936f8e-7b2c-7cde-8f00-000000000002", accountId: "chave-pix@exemplo.com", paidAt: "2026-12-13", amountCents: 115000, method: "PIX" }'
+      - 'the payment of the first test, checked with toStrictEqual, is { loanId: "01936f8e-7b2c-7cde-8f00-000000000002", destinationKey: "chave-pix@exemplo.com", paidAt: "2026-12-13", amountCents: 115000, method: "PIX" }'
       - the type annotation keeps method PIX from widening to string, and PaymentMethod is PIX, BOLETO, CASH or BANK_TRANSFER
       - PaymentFields is inferred from zod, see common.ts, so amountCents is a plain number literal, never bigint
       - 'in the no-limit test the amount "90.000.000,00" gives amountCents 9000000000, a plain number literal'
@@ -694,7 +694,7 @@ cards:
       - payment-draft.ts has no '// @stub E7-T12' line and apps/web/vitest.config.ts has no line that excludes lib/payment-draft.ts
     hints:
       - parseReais gives Cents, a bigint, and Number turns it into the number the schema expects
-      - the result is the object { loanId, accountId, paidAt, amountCents, method } passed through paymentFieldsSchema.parse, which returns it
+      - the result is the object { loanId, destinationKey, paidAt, amountCents, method } passed through paymentFieldsSchema.parse, which returns it
       - add no rule of date or of maximum amount, only what paymentFieldsSchema already does
       - one write_file of payment-draft.ts, then one edit_file of apps/web/vitest.config.ts that deletes the line with stub E7-T12, then run_check 0, 1 and 2
     budget:
@@ -745,7 +745,7 @@ cards:
       - render PaymentForm with loan exampleLoanDetail and onSubmit a const made with vi.fn, once per test; there is no accounts prop and no mockAccounts
       - the four labels are Chave Pix de destino, Data do pagamento, Valor and Método, each found with getByLabelText; Comprovante is checked with queryByLabelText and is null
       - 'a helper fills the example with fireEvent.change on screen.getByLabelText: Chave Pix de destino gets chave-pix@exemplo.com typed as text, Data do pagamento gets 2026-12-13 and Valor gets 1.150,00, and Método already starts at PIX'
-      - 'the expected payment is { loanId: "01936f8e-7b2c-7cde-8f00-000000000002", accountId: "chave-pix@exemplo.com", paidAt: "2026-12-13", amountCents: 115000, method: "PIX" }, a PaymentFields with no receipt'
+      - 'the expected payment is { loanId: "01936f8e-7b2c-7cde-8f00-000000000002", destinationKey: "chave-pix@exemplo.com", paidAt: "2026-12-13", amountCents: 115000, method: "PIX" }, a PaymentFields with no receipt'
       - 'a closed loan is { ...exampleLoanDetail, status: "PAID_OFF" } and so on, with the literal status; write the four renders out one after the other, one it per status'
       - the Método select uses the keys of paymentMethodLabel as option values, so the cash test changes it to CASH, whose option text is Espécie
       - Registrar pagamento is both the h1 and the button, so the heading is getByRole heading with level 1 and that name, the click is fireEvent.click on getByRole button with that name, never getByText

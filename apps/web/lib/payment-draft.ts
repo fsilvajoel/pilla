@@ -4,7 +4,7 @@ import type { PaymentFields, PaymentMethod } from "@pilla/schemas";
 /** Campos do pagamento como o ADMIN digita (RF-20). */
 export interface PaymentFormValues {
   /** chave Pix / conta de destino, texto livre */
-  readonly accountId: string;
+  readonly destinationKey: string;
   /** data do pagamento "AAAA-MM-DD" (input type="date") */
   readonly paidAt: string;
   /** valor em reais, ex.: "1.150,00" */
