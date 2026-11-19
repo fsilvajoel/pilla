@@ -52,6 +52,16 @@ lista de `C<n>` e pendências (se houver). Pendência, inclusive no domínio, pa
 - `AGENTS.md` §1 e §7: só PRD/RFC aprovados e ADR aceitas; regra de negócio nunca vem da web; lacuna ou
   conflito nos documentos é pergunta, não decisão.
 
+## Skills obrigatórias
+
+**Antes de começar, leia estas skills inteiras** (não é opcional, não depende do orquestrador pedir):
+
+- `../harness-ada/skill/escrever-teste/SKILL.md`
+
+Depois leia as do campo `skills` do cartão da tarefa (cada item é `nome` = `../harness-ada/skill/<nome>/SKILL.md`, ou
+`nome#regra` = esse `SKILL.md` mais `../harness-ada/skill/<nome>/rules/<regra>.md`). Não abra o `AGENTS.md` compilado
+de uma skill. A lista deve ficar igual a `role_skills.planner` do `harness.project.yaml`.
+
 ## Recursos compartilhados
 
 Todas as skills do harness ficam em `../harness-ada/skill/<nome>/SKILL.md` (no Claude Code, também em

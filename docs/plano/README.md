@@ -104,3 +104,10 @@ como registro e como molde. Em 2026-11-15 as regras de escrita viraram validaç�
 antigos da Alice acusaram 26 problemas (20 dicas de técnica dentro do `done`, 3 arquivos citados sem caminho, 2 checks
 sem mensagem, 1 orçamento curto), todos corrigidos; a dica de técnica passou para o campo `hints`. O próximo lote (E2b)
 nasce já sob essas regras e começa por um cartão só.
+
+## Campo `skills` do cartão
+
+Cada tarefa pode declarar `skills:` (lista de `nome` ou `nome#regra`), as skills extras que quem a executa precisa
+ler além das obrigatórias do papel (`role_skills` em `harness.project.yaml`). Formato e resolução:
+`../harness-ada/workflow/feature-artefatos/cartao.md`. O executor injeta o conteúdo no pedido da Bia e do Copilot; o
+agente Claude lê pelo molde do papel. Exemplo, tarefa de frontend: `skills: [react-best-practices#rerender-memo]`.

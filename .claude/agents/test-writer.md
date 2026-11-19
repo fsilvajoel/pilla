@@ -45,6 +45,17 @@ a lista `C<n> -> critério, camada, arquivo, nome do teste` para o orquestrador 
 `../harness-ada/policy/quality.md`, `../harness-ada/policy/editing.md`, `../harness-ada/policy/idioma.md`
 (nome do teste em inglês ou com o ID; comentários em pt-BR).
 
+## Skills obrigatórias
+
+**Antes de começar, leia estas skills inteiras** (não é opcional, não depende do orquestrador pedir):
+
+- `../harness-ada/skill/escrever-teste/SKILL.md`
+- `../harness-ada/skill/revisar-teste/SKILL.md`
+
+Depois leia as do campo `skills` do cartão da tarefa (cada item é `nome` = `../harness-ada/skill/<nome>/SKILL.md`, ou
+`nome#regra` = esse `SKILL.md` mais `../harness-ada/skill/<nome>/rules/<regra>.md`). Não abra o `AGENTS.md` compilado
+de uma skill. A lista deve ficar igual a `role_skills.test-writer` do `harness.project.yaml`.
+
 ## Recursos compartilhados
 
 Todas as skills do harness ficam em `../harness-ada/skill/<nome>/SKILL.md` (no Claude Code, também em

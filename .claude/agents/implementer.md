@@ -31,6 +31,17 @@ que te chama: `../harness-ada/workflow/feature.md` (etapa implement).
 
 Diff dentro do escopo e, na resposta, a saída resumida dos comandos acima (PASS/FAIL de cada um).
 
+## Skills obrigatórias
+
+**Antes de começar, leia estas skills inteiras** (não é opcional, não depende do orquestrador pedir):
+
+- `../harness-ada/skill/editar-arquivo/SKILL.md`
+- `../harness-ada/skill/coding-guidelines/SKILL.md`
+
+Depois leia as do campo `skills` do cartão da tarefa (cada item é `nome` = `../harness-ada/skill/<nome>/SKILL.md`, ou
+`nome#regra` = esse `SKILL.md` mais `../harness-ada/skill/<nome>/rules/<regra>.md`). Não abra o `AGENTS.md` compilado
+de uma skill. A lista deve ficar igual a `role_skills.implementer` do `harness.project.yaml`.
+
 ## Recursos compartilhados
 
 Todas as skills do harness ficam em `../harness-ada/skill/<nome>/SKILL.md` (no Claude Code, também em

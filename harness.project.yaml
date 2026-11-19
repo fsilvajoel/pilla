@@ -41,6 +41,29 @@ role_context:
     - docs/memoria/lint.md
     - docs/plano/README.md
 
+# Skills que cada papel lê SEMPRE, antes de começar (nomes em skill_dir). Quem não tem ferramentas (Bia, Copilot) as
+# recebe no pedido, injetadas pelo executor; o molde do agente Claude manda ler as mesmas (manter as duas listas iguais).
+# Skills extras por tarefa vêm do campo `skills` do cartão (harness: workflow/feature-artefatos/cartao.md).
+role_skills:
+  planner:
+    - escrever-teste
+  refiner:
+    - escrever-teste
+    - revisar-teste
+  test-writer:
+    - escrever-teste
+    - revisar-teste
+  reviewer:
+    - revisar-teste
+    - escrever-teste
+    - coding-guidelines
+  implementer:
+    - editar-arquivo
+    - coding-guidelines
+
+# Teto (bytes) do que o executor injeta no pedido como skills e regras; acima dele o executor falha, sem truncar.
+skills_max_bytes: 40000
+
 # Fila de pendências de PM do refinamento funcional (workflow feature, etapa 1b).
 pm_queue: docs/plano/pendencias-pm.md
 
