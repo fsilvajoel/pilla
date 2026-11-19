@@ -26,8 +26,9 @@
     "gate": "node scripts/gates.mts",
     "check:role-skills": "python3 ../harness-ada/script/check_role_skills.py .",
     "check:card-skills": "python3 ../harness-ada/script/check_card_skills.py .",
+    "check:status": "python3 ../harness-ada/script/check_status_consistency.py .",
     "check:tests": "node scripts/check-test-quality.mjs $(git ls-files '*.test.ts' '*.test.tsx' '*.test.mts')",
-    "verify": "pnpm check:deps && pnpm check:env && pnpm check:tests && pnpm check:schemas && pnpm check:lint-sheet && pnpm check:role-skills && pnpm check:card-skills && pnpm test:scripts && pnpm check:harness && pnpm test:harness && pnpm lint && pnpm typecheck && pnpm depcruise && pnpm test",
+    "verify": "pnpm check:deps && pnpm check:env && pnpm check:tests && pnpm check:schemas && pnpm check:lint-sheet && pnpm check:role-skills && pnpm check:card-skills && pnpm check:status && pnpm test:scripts && pnpm check:harness && pnpm test:harness && pnpm lint && pnpm typecheck && pnpm depcruise && pnpm test",
     "prepare": "lefthook install"
   },
   "devDependencies": {
