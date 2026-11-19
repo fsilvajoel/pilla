@@ -62,7 +62,7 @@ O cliente não tem como consultar a própria situação sem perguntar.
 | Cliente enviar comprovante pelo portal | |
 | Um pagamento cobrindo vários contratos | |
 | Relatórios avançados | |
-| **v1.1** Tela do ADMIN "atualização de pagamento por contrato": dados do cliente, lista de pagamentos do contrato, check "assinado pelo admin", upload/visualização do comprovante e "atualizado em" automático exibido no portal | intenção e pendências em [decisoes-2026-11-19](../plano/decisoes-2026-11-19.md); no MVP vale a E7-F04 (form simples) |
+| **v1.1** Tela do ADMIN "atualização de pagamento por contrato": dados do cliente, lista de pagamentos do contrato, check "assinado pelo admin", upload/visualização do comprovante (com a RN-R06) e "atualizado em" automático exibido no portal | intenção e pendências em [decisoes-2026-11-19](../plano/decisoes-2026-11-19.md); no MVP vale a E7-F04 (form simples, **sem comprovante**, §3) |
 
 ## 5. Requisitos funcionais
 
@@ -87,7 +87,7 @@ IDs estáveis: agentes devem citá-los em commits/PRs.
 - **RF-18** ADMIN vê cronograma com situação de cada parcela e encargos calculados.
 
 ### Recebimentos
-- **RF-20** ADMIN registra pagamento: contrato, data, valor, método (PIX, BOLETO, ESPÉCIE, TRANSFERÊNCIA), comprovante, conta de destino.
+- **RF-20** ADMIN registra pagamento: contrato, data, valor, método (PIX, BOLETO, ESPÉCIE, TRANSFERÊNCIA), conta de destino. Comprovante (arquivo): **v1.1**, fora do MVP ([decisoes-2026-11-19](../plano/decisoes-2026-11-19.md) §3).
 - **RF-21** ADMIN confere e confirma pagamento pendente.
 - **RF-22** ADMIN estorna pagamento confirmado (com justificativa).
 - **RF-23** Ao registrar, o sistema mostra como o valor será distribuído (encargos, juros, principal, por parcela) antes de confirmar.
@@ -157,7 +157,7 @@ IDs estáveis: agentes devem citá-los em commits/PRs.
 - **RN-R03** Excedente segue para a próxima parcela; pagamento acima do saldo total é recusado.
 - **RN-R04** Pagamento parcial permitido (parcela fica PARCIAL).
 - **RN-R05** Pagamento antes do vencimento é normal, sem desconto.
-- **RN-R06** Comprovante obrigatório para PIX, BOLETO e TRANSFERÊNCIA; opcional para ESPÉCIE.
+- **RN-R06** (**v1.1**, fora do MVP; [decisoes-2026-11-19](../plano/decisoes-2026-11-19.md) §3) Comprovante obrigatório para PIX, BOLETO e TRANSFERÊNCIA; opcional para ESPÉCIE.
 - **RN-R07** Estorno não apaga: marca ESTORNADO e desfaz a distribuição ([ADR-0006](../adr/0006-registros-imutaveis-e-auditoria.md)).
 - **RN-R08** Atraso **não é campo do pagamento**: é calculado por parcela.
 
@@ -228,6 +228,7 @@ IDs estáveis: agentes devem citá-los em commits/PRs.
 | 2026-11-14 | Arredondamento? | Múltiplo de R$ 5, para o mais próximo: juros e depois parcela (RN-C03) |
 | 2026-11-14 | Backend? | Node + TypeScript, desde que suporte o futuro módulo de WhatsApp (ver RFC-003 §5) |
 | 2026-11-19 | Tela de atualização de pagamento por contrato? | Fica para a v1.1; no MVP, E7-F04 como planejada ([decisoes-2026-11-19](../plano/decisoes-2026-11-19.md)) |
+| 2026-11-19 | Upload de comprovante no MVP? | Não. Pagamento registrado sem arquivo; upload, visualização e RN-R06 ficam para a v1.1 ([decisoes-2026-11-19](../plano/decisoes-2026-11-19.md) §3) |
 
 ## 11. Pendências
 

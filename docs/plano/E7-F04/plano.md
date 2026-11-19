@@ -1,5 +1,7 @@
 # E7-F04: registrar pagamento com comprovante e conta de destino
 
+> **Revisar:** decisão 2026-11-19 §3 tira comprovante/upload do MVP; o plano precisa ser refeito antes dos testes.
+
 Plano da feature (etapa 1, ADR-0014). Cartões em `docs/plano/E7.yaml`; referências: PRD-001 RF-20 e RN-R06;
 RFC-004 §2, §5 e §6; ADR-0013; decisões do Joel de 17/11 (`docs/plano/decisoes-2026-11-17.md`).
 
@@ -8,7 +10,8 @@ RFC-004 §2, §5 e §6; ADR-0013; decisões do Joel de 17/11 (`docs/plano/deciso
 - E7-T11 (Bia) e E7-T12 (Alice): `apps/web/lib/payment-draft.ts`, `toPaymentDraft` (textos e arquivo →
   `PaymentFields` validado e pedido de upload do comprovante), com `ReceiptRequiredError` (RN-R06).
 - E7-T13 (Bia) e E7-T14 (Alice): `apps/web/components/payment-form.tsx`, rota `/emprestimos/[id]/pagamento`.
-- Fora: upload real do comprovante e chamada à API (pendente do Joel), conferência do pagamento, estorno.
+- Fora: comprovante (campo, upload, visualização e RN-R06; v1.1, `docs/plano/decisoes-2026-11-19.md` §3),
+  chamada à API, conferência do pagamento, estorno.
 - Fora: tela de atualização de pagamento por contrato (v1.1, `docs/plano/decisoes-2026-11-19.md`).
 
 ## Tipos e imports (conferidos no código; valem para os testes e para a implementação)
