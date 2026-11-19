@@ -1,60 +1,135 @@
 {
- "feature": "E6-F02",
- "stages": {
-  "plan": {
-   "status": "done",
-   "seconds": 0,
-   "problems": []
+  "feature": "E6-F02",
+  "stages": {
+    "plan": {
+      "status": "done"
+    },
+    "tests": {
+      "status": "pending"
+    },
+    "testReview": {
+      "status": "pending"
+    },
+    "implement": {
+      "status": "pending"
+    },
+    "review": {
+      "status": "pending"
+    }
   },
-  "tests": {
-   "status": "done",
-   "biaRequests": 3,
-   "biaIn": 11443,
-   "biaOut": 10758,
-   "seconds": 174,
-   "repairs": 0
-  },
-  "implement": {
-   "status": "failed",
-   "seconds": 125,
-   "aliceTokens": {
-    "prompt": 304750,
-    "output": 9297
-   },
-   "cards": {
-    "E6-T06": "failed"
-   }
-  }
- },
- "biaRequests": 3,
- "testShas": {
-  "apps/web/components/loan-simulation.test.tsx": "8b9d5dc4f9fd8d655249da2231a073a636a807ad"
- },
- "expectRed": true,
- "scenarios": [
-  {
-   "id": "C1",
-   "descricao": "render mostra os campos e o botão",
-   "card": "E6-T05",
-   "teste": "shows inputs labelled Valor emprestado, Taxa ao mês (%), Nº de parcelas, Periodicidade, 1º vencimento and a button Simular"
-  },
-  {
-   "id": "C2",
-   "descricao": "preencher o exemplo da RFC-004 §5 e clicar em Simular mostra o resumo",
-   "card": "E6-T05",
-   "teste": "shows Total a receber, Juros and Parcela for the RFC-004 §5 example"
-  },
-  {
-   "id": "C3",
-   "descricao": "no mesmo resultado, a tabela tem a linha da 1ª parcela",
-   "card": "E6-T05",
-   "teste": "shows the first installment row with 14/12/2026, 833,33, 316,67 and 1.150,00"
-  },
-  {
-   "id": "C4",
-   "descricao": "valor 5000 sem vírgula e Simular mostra um elemento com role alert",
-   "card": "E6-T05",
-   "teste": "shows an alert when amount 5000 without comma is submitted"
-  }
- ]
+  "sources": [
+    "apps/web/components/loan-simulation.tsx"
+  ],
+  "domainSources": [],
+  "criteria": [
+    {
+      "id": "A1",
+      "camadas": [
+        "unit"
+      ]
+    },
+    {
+      "id": "A2",
+      "camadas": [
+        "unit"
+      ]
+    },
+    {
+      "id": "A3",
+      "camadas": [
+        "unit"
+      ]
+    },
+    {
+      "id": "A4",
+      "camadas": [
+        "e2e"
+      ]
+    }
+  ],
+  "tests": [
+    "apps/web/components/loan-simulation.test.tsx"
+  ],
+  "e2e": [
+    "apps/web/e2e/loan-simulation.e2e.ts"
+  ],
+  "scenarios": [
+    {
+      "id": "C1",
+      "criterio": "A1",
+      "camada": "unit",
+      "arquivo": "apps/web/components/loan-simulation.test.tsx",
+      "teste": "C1 (A1): shows the five labelled fields, the four frequency options and the Simular button"
+    },
+    {
+      "id": "C2",
+      "criterio": "A2",
+      "camada": "unit",
+      "arquivo": "apps/web/components/loan-simulation.test.tsx",
+      "teste": "C2 (A2): RFC-004 §5 example shows R$ 6.900,00, R$ 1.900,00 and 6 × R$ 1.150,00"
+    },
+    {
+      "id": "C3",
+      "criterio": "A2",
+      "camada": "unit",
+      "arquivo": "apps/web/components/loan-simulation.test.tsx",
+      "teste": "C3 (A2): RFC-004 §5 example shows 6 rows and the first is 1, 14/12/2026, 833,33, 316,67, 1.150,00"
+    },
+    {
+      "id": "C4",
+      "criterio": "A2",
+      "camada": "unit",
+      "arquivo": "apps/web/components/loan-simulation.test.tsx",
+      "teste": "C4 (A2): CA-11 shows 4 × R$ 275,00 and R$ 1.100,00"
+    },
+    {
+      "id": "C5",
+      "criterio": "A3",
+      "camada": "unit",
+      "arquivo": "apps/web/components/loan-simulation.test.tsx",
+      "teste": "C5 (A3): amount 5000 without comma shows the alert and no result"
+    },
+    {
+      "id": "C6",
+      "criterio": "A3",
+      "camada": "unit",
+      "arquivo": "apps/web/components/loan-simulation.test.tsx",
+      "teste": "C6 (A3): rate 6 without comma shows the alert and no result"
+    },
+    {
+      "id": "C7",
+      "criterio": "A3",
+      "camada": "unit",
+      "arquivo": "apps/web/components/loan-simulation.test.tsx",
+      "teste": "C7 (A3): installment count 0 shows the alert and no result"
+    },
+    {
+      "id": "C8",
+      "criterio": "A3",
+      "camada": "unit",
+      "arquivo": "apps/web/components/loan-simulation.test.tsx",
+      "teste": "C8 (A3): first due date equal to disbursement date shows the alert"
+    },
+    {
+      "id": "C9",
+      "criterio": "A3",
+      "camada": "unit",
+      "arquivo": "apps/web/components/loan-simulation.test.tsx",
+      "teste": "C9 (A3): empty first due date shows the alert"
+    },
+    {
+      "id": "C10",
+      "criterio": "A4",
+      "camada": "e2e",
+      "arquivo": "apps/web/e2e/loan-simulation.e2e.ts",
+      "teste": "C10 (A4): /emprestimos/simular shows the RFC-004 §5 summary"
+    },
+    {
+      "id": "C11",
+      "criterio": "A4",
+      "camada": "e2e",
+      "arquivo": "apps/web/e2e/loan-simulation.e2e.ts",
+      "teste": "C11 (A4): /emprestimos/simular shows the alert for a past first due date"
+    }
+  ]
 }
