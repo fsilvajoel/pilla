@@ -12,6 +12,9 @@ cards:
     kind: test-author
     assignee: bia
     rules: []
+    skills:
+      - escrever-teste
+      - accessibility
     refs: [PRD-001 RF-01, PRD-001 RF-03, PRD-001 RN-P01, RFC-005 persons, docs/plano/decisoes-2026-11-17.md]
     dependsOn: []
     allowedPaths:
@@ -76,6 +79,9 @@ cards:
     kind: implement
     assignee: alice
     rules: []
+    skills:
+      - editar-arquivo
+      - coding-guidelines
     refs: [docs/plano/decisoes-2026-11-17.md, RFC-002]
     dependsOn: [E7-T01]
     allowedPaths:
@@ -110,6 +116,10 @@ cards:
     kind: implement
     assignee: alice
     rules: []
+    skills:
+      - editar-arquivo
+      - react-best-practices
+      - react-best-practices#rerender-derived-state-no-effect
     refs: [PRD-001 RF-01, PRD-001 RF-03, ADR-0013, docs/plano/decisoes-2026-11-17.md]
     dependsOn: [E7-T01]
     allowedPaths:
@@ -153,6 +163,8 @@ cards:
     kind: test-author
     assignee: bia
     rules: []
+    skills:
+      - escrever-teste
     refs: [PRD-001 RF-11, PRD-001 RF-41, PRD-001 CA-05, RFC-004 §5, docs/plano/decisoes-2026-11-17.md]
     dependsOn: [E6-T04]
     allowedPaths:
@@ -206,6 +218,9 @@ cards:
     kind: implement
     assignee: alice
     rules: []
+    skills:
+      - editar-arquivo
+      - coding-guidelines
     refs: [PRD-001 RF-11, PRD-001 RF-41, RFC-004 §5, ADR-0013]
     dependsOn: [E7-T04]
     allowedPaths:
@@ -248,6 +263,9 @@ cards:
     kind: test-author
     assignee: bia
     rules: []
+    skills:
+      - escrever-teste
+      - accessibility
     refs: [PRD-001 RF-11, PRD-001 RF-41, PRD-001 CA-05, RFC-004 §5, docs/plano/decisoes-2026-11-17.md]
     dependsOn: [E7-T05]
     allowedPaths:
@@ -302,6 +320,10 @@ cards:
     kind: implement
     assignee: alice
     rules: []
+    skills:
+      - editar-arquivo
+      - react-best-practices
+      - react-best-practices#rerender-derived-state-no-effect
     refs: [PRD-001 RF-11, PRD-001 RF-41, ADR-0013]
     dependsOn: [E7-T06]
     allowedPaths:
@@ -345,6 +367,9 @@ cards:
     kind: test-author
     assignee: bia
     rules: []
+    skills:
+      - escrever-teste
+      - accessibility
     refs: [PRD-001 RF-18, RFC-004 §5, docs/glossario.md, docs/plano/decisoes-2026-11-17.md]
     dependsOn: []
     allowedPaths:
@@ -415,6 +440,10 @@ cards:
     exceptionReason: "estourou 20 toolCalls 2x mesmo refatiado; decisão do Joel 17/11"
     exceptionApprovedBy: "Joel 2026-11-17"
     rules: []
+    skills:
+      - editar-arquivo
+      - react-best-practices
+      - react-best-practices#rendering-conditional-render
     refs: [RFC-004 §5, docs/plano/decisoes-2026-11-17.md]
     dependsOn: [E7-T08]
     allowedPaths:
@@ -457,6 +486,10 @@ cards:
     kind: implement
     assignee: alice
     rules: []
+    skills:
+      - editar-arquivo
+      - react-best-practices
+      - react-best-practices#rendering-conditional-render
     refs: [RFC-004 §5, docs/plano/decisoes-2026-11-17.md]
     dependsOn: [E7-T09]
     allowedPaths:
@@ -497,6 +530,10 @@ cards:
     exceptionReason: "estourou 20 toolCalls 2x mesmo refatiado; decisão do Joel 17/11"
     exceptionApprovedBy: "Joel 2026-11-17"
     rules: []
+    skills:
+      - editar-arquivo
+      - react-best-practices
+      - react-best-practices#rendering-conditional-render
     refs: [PRD-001 RF-18, RFC-004 §5, docs/plano/decisoes-2026-11-17.md]
     dependsOn: [E7-T08]
     allowedPaths:
@@ -536,6 +573,10 @@ cards:
     kind: implement
     assignee: alice
     rules: []
+    skills:
+      - editar-arquivo
+      - react-best-practices
+      - react-best-practices#rendering-conditional-render
     refs: [PRD-001 RF-18, RFC-004 §5, docs/plano/decisoes-2026-11-17.md]
     dependsOn: [E7-T10]
     allowedPaths:
@@ -577,6 +618,8 @@ cards:
     kind: test-author
     assignee: bia
     rules: []
+    skills:
+      - escrever-teste
     refs: [PRD-001 RF-20, PRD-001 RN-R06, RFC-004 §5, RFC-004 §6, docs/plano/decisoes-2026-11-17.md]
     dependsOn: []
     allowedPaths:
@@ -631,6 +674,9 @@ cards:
     kind: implement
     assignee: alice
     rules: [RN-R06]
+    skills:
+      - editar-arquivo
+      - coding-guidelines
     refs: [PRD-001 RF-20, PRD-001 RN-R06, RFC-004 §6, ADR-0013]
     dependsOn: [E7-T11]
     allowedPaths:
@@ -670,6 +716,9 @@ cards:
     kind: test-author
     assignee: bia
     rules: []
+    skills:
+      - escrever-teste
+      - accessibility
     refs: [PRD-001 RF-20, PRD-001 RN-R06, RFC-004 §5, docs/plano/decisoes-2026-11-17.md]
     dependsOn: [E7-T12]
     allowedPaths:
@@ -725,6 +774,10 @@ cards:
     kind: implement
     assignee: alice
     rules: [RN-R06]
+    skills:
+      - editar-arquivo
+      - react-best-practices
+      - react-best-practices#rerender-derived-state-no-effect
     refs: [PRD-001 RF-20, PRD-001 RN-R06, ADR-0013]
     dependsOn: [E7-T13]
     allowedPaths:

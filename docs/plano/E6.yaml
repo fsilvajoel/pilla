@@ -6,6 +6,8 @@ cards:
     kind: test-author
     assignee: bia
     rules: []
+    skills:
+      - escrever-teste
     refs: [PRD-001 RF-10, RFC-004 §5, RFC-002 §3.4, ADR-0013]
     dependsOn: []
     allowedPaths:
@@ -57,6 +59,9 @@ cards:
     kind: implement
     assignee: alice
     rules: [RN-C04]
+    skills:
+      - editar-arquivo
+      - coding-guidelines
     refs: [PRD-001 RF-10, ADR-0013]
     dependsOn: [E6-T01]
     allowedPaths:
@@ -99,6 +104,9 @@ cards:
     exceptionReason: "estourou 20 toolCalls 2x mesmo refatiado; decisão do Joel 17/11"
     exceptionApprovedBy: "Joel 2026-11-17"
     rules: [RN-C03, RN-C04]
+    skills:
+      - editar-arquivo
+      - coding-guidelines
     refs: [PRD-001 RF-10, RFC-002 §3.4, RFC-004 §5, PRD-001 CA-11, ADR-0013]
     dependsOn: [E6-T02]
     allowedPaths:
@@ -145,6 +153,9 @@ cards:
     kind: implement
     assignee: alice
     rules: []
+    skills:
+      - editar-arquivo
+      - coding-guidelines
     refs: [PRD-001 RF-10, ADR-0013]
     dependsOn: [E6-T07]
     allowedPaths:
@@ -180,6 +191,8 @@ cards:
     kind: test-author
     assignee: bia
     rules: []
+    skills:
+      - escrever-teste
     refs: [PRD-001 RF-10, RFC-004 §5, ADR-0013]
     dependsOn: []
     allowedPaths:
@@ -226,6 +239,9 @@ cards:
     kind: implement
     assignee: alice
     rules: []
+    skills:
+      - editar-arquivo
+      - coding-guidelines
     refs: [PRD-001 RF-10, RFC-004 §5, ADR-0013]
     # E6-T09 explícito: na v13 o T04 gastou as 18 chamadas no typecheck do simulation.ts ainda parcial.
     dependsOn: [E6-T03, E6-T09]
@@ -267,6 +283,9 @@ cards:
     kind: test-author
     assignee: bia
     rules: []
+    skills:
+      - escrever-teste
+      - accessibility
     refs: [PRD-001 RF-10, RFC-004 §5, ADR-0013]
     dependsOn: [E6-T04]
     allowedPaths:
@@ -315,6 +334,10 @@ cards:
     kind: implement
     assignee: alice
     rules: []
+    skills:
+      - editar-arquivo
+      - react-best-practices
+      - react-best-practices#rerender-derived-state-no-effect
     refs: [PRD-001 RF-10, RFC-004 §5, ADR-0013]
     dependsOn: [E6-T05, E6-T04, E6-T09]
     allowedPaths:
@@ -363,6 +386,10 @@ cards:
     kind: implement
     assignee: alice
     rules: []
+    skills:
+      - editar-arquivo
+      - react-best-practices
+      - react-best-practices#rendering-conditional-render
     refs: [PRD-001 RF-10, RFC-004 §5, ADR-0013]
     dependsOn: [E6-T06]
     allowedPaths:
