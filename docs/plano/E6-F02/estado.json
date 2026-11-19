@@ -12,7 +12,7 @@
       "verdict": "aprovado"
     },
     "implement": {
-      "status": "pending"
+      "status": "done"
     },
     "review": {
       "status": "pending"
@@ -141,8 +141,18 @@
     },
     "tests-reviewed": {
       "status": "PASS",
-      "at": "2026-11-19T02:14:20.850Z",
+      "at": "2026-11-19T03:07:08.676Z",
       "detail": "2 teste(s) com sha assinado"
+    },
+    "coverage": {
+      "status": "PASS",
+      "at": "2026-11-19T03:07:10.656Z",
+      "detail": "100% nos arquivos da feature em apps/web (components/loan-simulation.tsx)"
+    },
+    "mutation": {
+      "status": "PASS",
+      "at": "2026-11-19T02:15:55.297Z",
+      "detail": "nada a medir: `domainSources` vazio e nenhum critério mut"
     }
   },
   "testShas": {
