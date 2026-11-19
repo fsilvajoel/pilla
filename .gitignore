@@ -24,3 +24,6 @@ apps/web/AGENTS.md
 
 # worktrees temporários dos agentes do Claude Code
 .claude/worktrees/
+
+# status gerado pelo harness Ada (não versionar)
+status.json
