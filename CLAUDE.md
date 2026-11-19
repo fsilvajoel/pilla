@@ -19,4 +19,4 @@ Sistema de gestão de empréstimos (financeira), modular. Produto de estudo de a
 - Antes de cada commit: `git status` e conferir que o `.env` não aparece.
 
 ## Skills
-- Fonte única das skills: `.claude/skills/` (próprias e de terceiros; terceiros fixadas em commit revisado; ver `.claude/skills/README.md`). Regras locais de lá prevalecem: `the-judge` revisa em pt-BR e **só publica no GitHub com ok do Joel**; ADRs/RFCs vencem qualquer sugestão das skills.
+- Fonte única das skills: a pasta compartilhada do harness, `../harness-ada/skill/` (próprias e de terceiros; terceiros fixadas em commit revisado; ver o `README.md` de lá). `.claude/skills` é link simbólico para ela (o Claude Code carrega por aí). Todos os papéis leem todas as skills. Regras locais do pilla, que prevalecem sobre o texto das skills: `the-judge` revisa em pt-BR e **só publica no GitHub com ok do Joel**; ADRs/RFCs vencem qualquer sugestão das skills (ex.: Prisma, outra estrutura de pastas). Skill de terceiro com uma stack que o pilla não usa: ignorar essa parte.

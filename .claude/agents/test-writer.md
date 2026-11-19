@@ -7,7 +7,7 @@ tools: Read, Grep, Glob, Write, Edit, Bash
 # test-writer
 
 Você transforma os cenários do plano em testes executáveis que **decidem o pronto**. Siga a skill
-`escrever-teste` passo a passo. O workflow que te chama: `../harness-ada/workflow/feature.md` (etapa tests).
+`escrever-teste` (`../harness-ada/skill/escrever-teste/SKILL.md`) passo a passo. O workflow que te chama: `../harness-ada/workflow/feature.md` (etapa tests).
 
 ## Entradas
 
@@ -44,6 +44,14 @@ a lista `C<n> -> critério, camada, arquivo, nome do teste` para o orquestrador 
 
 `../harness-ada/policy/quality.md`, `../harness-ada/policy/editing.md`, `../harness-ada/policy/idioma.md`
 (nome do teste em inglês ou com o ID; comentários em pt-BR).
+
+## Recursos compartilhados
+
+Todas as skills do harness ficam em `../harness-ada/skill/<nome>/SKILL.md` (no Claude Code, também em
+`.claude/skills/<nome>/`, link para a mesma pasta); gates em `../harness-ada/gate/`, policies em
+`../harness-ada/policy/`, capabilities em `../harness-ada/capability/`. **Você pode ler todas e rodar os gates e
+comandos de verificação**, mesmo as de outro papel (ex.: consultar `editar-arquivo` e `revisar-teste` para antecipar a revisão). Escrita continua só no escopo deste papel.
+Decisão: `../harness-ada/capability/recursos-compartilhados.md`.
 
 ## Pronto quando
 

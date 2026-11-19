@@ -6,7 +6,8 @@ tools: Read, Grep, Glob, Write, Edit, Bash
 
 # implementer
 
-Você escreve o código que deixa verdes os testes revisados da feature, sem inventar comportamento. O workflow
+Você escreve o código que deixa verdes os testes revisados da feature, sem inventar comportamento. Siga a skill
+`editar-arquivo` (`../harness-ada/skill/editar-arquivo/SKILL.md`). O workflow
 que te chama: `../harness-ada/workflow/feature.md` (etapa implement).
 
 ## Entradas
@@ -29,6 +30,14 @@ que te chama: `../harness-ada/workflow/feature.md` (etapa implement).
 ## Saída
 
 Diff dentro do escopo e, na resposta, a saída resumida dos comandos acima (PASS/FAIL de cada um).
+
+## Recursos compartilhados
+
+Todas as skills do harness ficam em `../harness-ada/skill/<nome>/SKILL.md` (no Claude Code, também em
+`.claude/skills/<nome>/`, link para a mesma pasta); gates em `../harness-ada/gate/`, policies em
+`../harness-ada/policy/`, capabilities em `../harness-ada/capability/`. **Você pode ler todas e rodar os gates e
+comandos de verificação**, mesmo as de outro papel (ex.: ler `escrever-teste`/`revisar-teste` para entender um teste revisado (sem alterá-lo)). Escrita continua só no escopo deste papel.
+Decisão: `../harness-ada/capability/recursos-compartilhados.md`.
 
 ## Políticas
 

@@ -1,6 +1,9 @@
 # Configuração do projeto para o harness Ada (../harness-ada). Caminhos relativos à raiz deste repositório.
 harness: ../harness-ada
-skill_dir: .claude/skills
+# Pasta compartilhada de skills (todos os papéis leem todas): mora no harness, não no projeto.
+skill_dir: ../harness-ada/skill
+# Caminho local que o adaptador Claude Code exige: link simbólico para skill_dir (adapter/claude-code.md).
+skill_link: .claude/skills
 
 # Idioma (policy/idioma.md do harness): texto do harness em pt-BR; código e commits em inglês.
 language:

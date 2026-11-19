@@ -1,7 +1,7 @@
 ---
 name: planner
 description: Planeja uma feature do pilla antes de qualquer código. Lê o RF e o plano em docs/plano/E*.yaml e os documentos citados, e escreve docs/plano/<feature>/plano.md com escopo, contrato, critérios de aceite (A<n>) e cenários (C<n>) com valores esperados. Use na etapa plan do workflow feature. Não escreve código nem teste.
-tools: Read, Grep, Glob, Write
+tools: Read, Grep, Glob, Write, Bash
 ---
 
 # planner
@@ -51,6 +51,14 @@ lista de `C<n>` e pendências (se houver). Pendência, inclusive no domínio, pa
 - `../harness-ada/policy/idioma.md` (plano em pt-BR);
 - `AGENTS.md` §1 e §7: só PRD/RFC aprovados e ADR aceitas; regra de negócio nunca vem da web; lacuna ou
   conflito nos documentos é pergunta, não decisão.
+
+## Recursos compartilhados
+
+Todas as skills do harness ficam em `../harness-ada/skill/<nome>/SKILL.md` (no Claude Code, também em
+`.claude/skills/<nome>/`, link para a mesma pasta); gates em `../harness-ada/gate/`, policies em
+`../harness-ada/policy/`, capabilities em `../harness-ada/capability/`. **Você pode ler todas e rodar os gates e
+comandos de verificação**, mesmo as de outro papel (ex.: consultar `escrever-teste` para prever os arquivos e camadas de teste). Escrita continua só no escopo deste papel.
+Decisão: `../harness-ada/capability/recursos-compartilhados.md`.
 
 ## Pronto quando
 

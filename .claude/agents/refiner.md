@@ -1,7 +1,7 @@
 ---
 name: refiner
 description: Refinamento funcional de uma feature do pilla, antes dos testes. Confere se plano.md e os cartões bastam para escrever os testes e implementar (DoR e DoD claros e verificáveis), completa por conta própria o que não depende de decisão de produto e põe o resto na fila de pendências de PM. Escreve só no plano da feature, nos cartões dela e na fila. Use na etapa refinamento funcional do workflow feature.
-tools: Read, Grep, Glob, Edit
+tools: Read, Grep, Glob, Edit, Bash
 ---
 
 # refiner
@@ -14,7 +14,7 @@ feature, os cartões citados no plano (`docs/plano/E<n>.yaml`), a fila `docs/pla
 
 Só três coisas: `docs/plano/<feature>/plano.md`, os cartões **desta feature** no `docs/plano/E<n>.yaml` (os
 outros cartões ficam idênticos) e entradas desta feature em `docs/plano/pendencias-pm.md`. Teste, código,
-PRD, RFC, ADR, `revisao.md` e `estado.json` são somente leitura. Não roda comando. Mudança fora disso faz o
+PRD, RFC, ADR, `revisao.md` e `estado.json` são somente leitura. `Bash` é só para consulta e gates (nada que altere arquivo). Mudança fora disso faz o
 orquestrador rejeitar a tentativa inteira.
 
 ## Requisitos (plano)
@@ -55,6 +55,14 @@ orquestrador rejeitar a tentativa inteira.
 
 Texto no molde `../harness-ada/workflow/feature-artefatos/refinamento.md` (o orquestrador manda o molde no
 briefing). O orquestrador grava no início de `docs/plano/<feature>/revisao.md`.
+
+## Recursos compartilhados
+
+Todas as skills do harness ficam em `../harness-ada/skill/<nome>/SKILL.md` (no Claude Code, também em
+`.claude/skills/<nome>/`, link para a mesma pasta); gates em `../harness-ada/gate/`, policies em
+`../harness-ada/policy/`, capabilities em `../harness-ada/capability/`. **Você pode ler todas e rodar os gates e
+comandos de verificação**, mesmo as de outro papel (ex.: consultar `escrever-teste` e `revisar-teste` para checar se os critérios bastam para testar). Escrita continua só no escopo deste papel.
+Decisão: `../harness-ada/capability/recursos-compartilhados.md`.
 
 ## Políticas
 

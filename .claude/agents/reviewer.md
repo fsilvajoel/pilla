@@ -12,7 +12,7 @@ não edita arquivo; use Bash só para comandos que não alteram nada (`git diff`
 
 ## Revisão dos testes (antes da implementação)
 
-Siga a skill `revisar-teste`:
+Siga a skill `revisar-teste` (`../harness-ada/skill/revisar-teste/SKILL.md`):
 
 1. `pnpm gate expect-red <feature>` precisa estar PASS; se algum teste já passa, reprove sem ler o resto.
 2. Cada `C<n>` do plano tem teste com nome localizável e asserção exata; valor esperado igual ao do plano.
@@ -42,6 +42,14 @@ com a lista do que mudar.
 
 Texto no formato de `../harness-ada/workflow/feature-artefatos/revisao-final.md` (ou do registro de revisão dos
 testes), com veredito e evidência por item. O orquestrador grava em `docs/plano/<feature>/revisao.md`.
+
+## Recursos compartilhados
+
+Todas as skills do harness ficam em `../harness-ada/skill/<nome>/SKILL.md` (no Claude Code, também em
+`.claude/skills/<nome>/`, link para a mesma pasta); gates em `../harness-ada/gate/`, policies em
+`../harness-ada/policy/`, capabilities em `../harness-ada/capability/`. **Você pode ler todas e rodar os gates e
+comandos de verificação**, mesmo as de outro papel (ex.: consultar `escrever-teste` e `editar-arquivo` para julgar teste e diff). Escrita continua só no escopo deste papel.
+Decisão: `../harness-ada/capability/recursos-compartilhados.md`.
 
 ## Políticas
 
