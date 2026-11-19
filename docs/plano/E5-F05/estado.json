@@ -10,10 +10,12 @@
       "round": 2
     },
     "tests": {
-      "status": "pending"
+      "status": "done",
+      "worker": "bia"
     },
     "testReview": {
-      "status": "pending"
+      "status": "done",
+      "verdict": "aprovado"
     },
     "implement": {
       "status": "pending"
@@ -130,8 +132,13 @@
   "gates": {
     "expect-red": {
       "status": "PASS",
-      "at": "2026-11-19T20:16:21.698Z",
+      "at": "2026-11-19T21:24:37.235Z",
       "detail": "23 teste(s), todos falhando"
+    },
+    "tests-reviewed": {
+      "status": "PASS",
+      "at": "2026-11-19T21:25:16.923Z",
+      "detail": "3 teste(s) assinado(s)"
     }
   },
   "tests": [
@@ -232,6 +239,13 @@
       "teste": "C18 (A5): object with non-object cause gives null"
     },
     {
+      "id": "C10",
+      "criterio": "A1",
+      "camada": "unit",
+      "arquivo": "apps/api/src/people/infra/person-update.test.ts",
+      "teste": "C10 (A1): resolves to UPDATED and clears email, birthDate, notes while cpf remains"
+    },
+    {
       "id": "C7",
       "criterio": "A7",
       "camada": "unit",
@@ -246,32 +260,18 @@
       "teste": "C8 (A8): empty database returns empty items and null nextCursor"
     },
     {
-      "id": "C9",
-      "criterio": "A9",
-      "camada": "unit",
-      "arquivo": "apps/api/src/people/infra/person-list.test.ts",
-      "teste": "C9 (A9): limit 2 returns two items with non-null nextCursor"
-    },
-    {
-      "id": "C10",
-      "criterio": "A1",
-      "camada": "unit",
-      "arquivo": "apps/api/src/people/infra/person-update.test.ts",
-      "teste": "C10 (A1): resolves to UPDATED and clears email, birthDate, notes while cpf remains"
-    },
-    {
       "id": "C11",
       "criterio": "A10",
       "camada": "unit",
       "arquivo": "apps/api/src/people/infra/person-list.test.ts",
-      "teste": "C11 (A10): search 'BIA' returns Bia Nunes and bia santos in lower-name order with null nextCursor"
+      "teste": "C11 (A10): search 'BIA' returns Bia Nunes and bia santos in lower-name order with null nextCursor; second search 'SANTOS' returns only bia santos"
     },
     {
       "id": "C12",
       "criterio": "A11",
       "camada": "unit",
       "arquivo": "apps/api/src/people/infra/person-list.test.ts",
-      "teste": "C12 (A11): search CPF '529.982.247-25' returns exactly Ana CPF with null nextCursor"
+      "teste": "C12 (A11): search CPF '529.982.247-25' returns exactly Ana CPF with null nextCursor; partial prefix '529982' gives only Ana CPF; middle digits '982247' gives empty"
     },
     {
       "id": "C13",
@@ -282,10 +282,17 @@
     },
     {
       "id": "C14",
+      "criterio": "A9",
+      "camada": "unit",
+      "arquivo": "apps/api/src/people/infra/person-list.test.ts",
+      "teste": "C14 (A9, A13): pagination with limit 1 follows cursor through three pages with name order disagreeing with id order"
+    },
+    {
+      "id": "C14",
       "criterio": "A13",
       "camada": "unit",
       "arquivo": "apps/api/src/people/infra/person-list.test.ts",
-      "teste": "C14 (A13): pagination with cursor returns first page with cursor, second page with null cursor"
+      "teste": "C14 (A9, A13): pagination with limit 1 follows cursor through three pages with name order disagreeing with id order"
     },
     {
       "id": "C15",
@@ -300,6 +307,18 @@
       "camada": "unit",
       "arquivo": "apps/api/src/people/infra/person-list.test.ts",
       "teste": "C17 (A16): search '529' returns Ana CPF 0218 then Lote 529 Silva 0217 (name contains OR CPF prefix)"
+    },
+    {
+      "id": "C19",
+      "criterio": "A17",
+      "camada": "unit",
+      "arquivo": "apps/api/src/people/infra/person-list.test.ts",
+      "teste": "C19 (A17): each malformed cursor rejects with exact message 'invalid cursor'"
     }
-  ]
+  ],
+  "testShas": {
+    "apps/api/src/people/infra/person-update.test.ts": "805b26058464281703c8ff7b1a90858fe63bb837",
+    "apps/api/src/people/infra/person-write-error.test.ts": "51c6a4995457d4a2358b2bfa0daaff6399393a69",
+    "apps/api/src/people/infra/person-list.test.ts": "dd582dc214888791ee13c86679f7860a978dc7fd"
+  }
 }

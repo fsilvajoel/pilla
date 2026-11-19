@@ -1,3 +1,25 @@
+# Revisão dos testes E5-F05, rodada 2: aprovada (assinatura pendente de correção de estado)
+
+revisor: reviewer
+testes: `person-update.test.ts` (C1-C4, C10), `person-write-error.test.ts` (C5, C6, C18), `person-list.test.ts` (C7, C8, C11-C15, C17, C19)
+
+Gates: `expect-red` PASS (23 testes, todos falhando contra o stub); `typecheck` PASS; `lint` PASS; `check-test-quality` ok nos 3 arquivos. Imports e `done` de T11, T13 e T15 batem; nada fora de `allowedPaths`; CPFs distintos em cada cenário; esperados literais; só banco (PGlite) e API pública.
+
+## Cobertura por cenário
+- C1: version 3 a 4, `updated_at` sem `2026-01-01`, `active` true, `referred_by_id` null. C10: `null` limpa email/birth_date/notes, CPF e nome intactos. C2 NOT_FOUND. C3 VERSION_CONFLICT com linha intacta. C4 rejeita com `cause.code`/`cause.constraint`.
+- C5 (4 casos), C6 (erro real 23514 com metadata conferida antes do `null`), C18 (4 ramos do narrowing).
+- C7 item exato com cpf null; C8 vazio; C11 `BIA` e `SANTOS` (Ana Costa tem CPF, então impl que trata busca sem dígito como prefixo vazio de CPF reprova); C12 `529.982.247-25`, `529982`, `982247`; C13 ordem física oposta e collation C; C14 três linhas com ordem por nome oposta à ordem por id, limit 1, três páginas, última `nextCursor: null`; C15; C17 OU; C19 quatro cursores.
+
+## Bloqueante
+- B1 (estado, não de teste): `pnpm gate tests-reviewed E5-F05` falha com "A13: sem scenario da camada unit com arquivo em `tests`". Em `estado.json` o cenário C14 aponta só `criterio: "A9"`; o A13 (keyset) está em `criteria` sem cenário. Correção: acrescentar ao `scenarios` uma entrada `{ id: "C14", criterio: "A13", camada: "unit", arquivo: ".../person-list.test.ts", teste: <mesmo nome do C14> }` (ou mapear o C14 aos dois critérios). Feito isso, rodar `pnpm gate tests-reviewed E5-F05 --sign`. A15 já está fora de `criteria`.
+
+## Não bloqueantes
+- N1 (`person-write-error.test.ts:25-33`): sem caso com `code` trocado e `constraint` certo (ex.: `{code:"23503", constraint:"persons_cpf_key"}`); uma impl que olhe só `constraint` passa. O plano não pede.
+- N2 (`person-list.test.ts` C14): nenhum empate de `lower(full_name)` cruza a fronteira de página; keyset só por `lower(full_name) > nome` (sem `id`) passa. O desempate só é provado numa página (C13). Idem cursor combinado com `search`/`active`.
+- N3 (C19): cursor de JSON válido que não é objeto (`null`, `"123"`) e `id` não string não estão; impl que lance TypeError para `null` passaria no `toThrow` apenas se a mensagem contiver "invalid cursor" (não passa), mas o ramo fica sem prova. "Sem consultar o banco" não é assertado.
+- N4 (C1): `updated_at` só prova "mudou", não "now()"; aceitável pelo plano.
+- N5: o cursor é opaco no teste, então um cursor por OFFSET passaria; o plano proíbe decodificar.
+
 # Refinamento funcional E5-F05
 
 refinador: refiner (copilot)
