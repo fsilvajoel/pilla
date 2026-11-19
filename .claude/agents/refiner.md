@@ -37,6 +37,8 @@ orquestrador rejeitar a tentativa inteira.
 - **`skills:`** em todo cartão cujo `allowedPaths` toca `apps/web`: preencha com as skills extras pertinentes à
   tarefa (`nome` ou `nome#regra`, ex.: `react-best-practices#<regra>` que existe em
   `../harness-ada/skill/react-best-practices/rules/`), conforme `../harness-ada/workflow/feature-artefatos/cartao.md`.
+  Use a tabela padrão tipo de cartão → extras dessa página como ponto de partida, sem repetir skill que o papel já
+  lê (`role_skills`: `escrever-teste`, `revisar-teste`, `editar-arquivo`, `coding-guidelines` já entram pelo papel).
   Cartão web sem `skills:` ou com item inexistente reprova no gate `pnpm check:card-skills`.
 
 ## Lacuna: completar ou perguntar

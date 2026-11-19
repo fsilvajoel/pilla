@@ -423,6 +423,249 @@ cards:
       - apps/api/src/lending/domain/reversal.ts
       - apps/api/vitest.config.ts
     sizeNote: duas funções de 1 linha; vitest.config.ts perde 1 linha
+  # E5-F05 (plano em docs/plano/E5-F05/plano.md): só infra; HTTP, desativação e referredById ficam fora.
+  # Começa depois que a E5-F02 fechar: o orquestrador cria as cascas // @stub E5-T12/T14/T16 e as exclusões no vitest.config.
+  - id: E5-T11
+    title: Write the tests for updatePerson
+    kind: test-author
+    assignee: bia
+    rules: [RN-P01]
+    refs: [PRD-001 RF-01, RFC-004 §2, RFC-005 §3]
+    dependsOn: [E5-T06]
+    allowedPaths:
+      - apps/api/src/people/infra/person-update.test.ts
+    protectedTests: []
+    checks:
+      - '! pnpm --filter @pilla/api exec vitest run src/people/infra/person-update.test.ts'
+      - node scripts/check-test-quality.mjs apps/api/src/people/infra/person-update.test.ts
+      - pnpm --filter @pilla/api typecheck
+      - pnpm --filter @pilla/api lint
+    done:
+      - every test fails now against the stub in HEAD and would pass with a correct implementation
+      - 'import type { PGlite } from "@electric-sql/pglite";'
+      - 'import type { PgliteDatabase } from "drizzle-orm/pglite";'
+      - 'import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";'
+      - 'import { migratedTestDb } from "../../db/test-db";'
+      - 'import { updatePerson } from "./person-update";'
+      - C1 resolves to "UPDATED"; the SQL readback gives full_name "Ana Teixeira", cpf "39053344705", phone "+5511987654000", email "ana@example.com", birth_date "1990-04-15", notes "dados revisados", version 2, active true, referred_by_id null, and updated_at different from 2026-01-01
+      - C2 resolves to "NOT_FOUND"
+      - C3 resolves to "VERSION_CONFLICT" and the readback still gives "Bruno Dias" and version 1
+      - C4 rejects with cause.code "23505" and cause.constraint "persons_cpf_key"
+      - C10 resolves to "UPDATED" and clearing email, birthDate and notes gives null while cpf remains "39053344705"; PersonChanges has no referredById, active or cpf null
+      - never edit apps/api/src/people/infra/person-update.ts
+    hints:
+      - the imports listed in done are the only imports; each imported name is used
+      - open the database with migratedTestDb in beforeAll, delete from people.persons in beforeEach, close the client in afterAll, as persons.test.ts does
+      - insert the base rows with client.query and literal SQL; C1 base row is id 01970000-0000-7000-8000-000000000100, "Ana Costa", cpf "52998224725", phone "+5511987654321", updated_at '2026-01-01 00:00:00+00'
+      - C3 base row is id 01970000-0000-7000-8000-000000000101, "Bruno Dias", phone "+5511987654101"; C4 uses 01970000-0000-7000-8000-000000000100 with cpf "52998224725" and 01970000-0000-7000-8000-000000000101 with cpf "11144477735"
+      - C2 id is 01970000-0000-7000-8000-000000000199, version 1, changes { fullName "Pessoa Nova" }
+      - C10 base row is id 01970000-0000-7000-8000-000000000103, fullName "Carla Mendes", cpf "39053344705", phone "+5511987654103", email "carla@example.com", birthDate "1988-05-20", notes "dados antigos"; changes { email null, birthDate null, notes null } leaves cpf unchanged
+      - read back with select ..., birth_date::text, updated_at::text; every expected value is a literal, never derived from the changes object
+      - one test per scenario C1 to C4 and C10, named with its A number
+    budget:
+      attempts: 4
+      toolCalls: 16
+      minutes: 10
+    readFirst:
+      - docs/plano/E5-F05/plano.md
+      - apps/api/src/people/infra/person-update.ts
+      - apps/api/src/people/infra/persons.test.ts
+    sizeNote: um describe, quatro testes, ~90 linhas
+  - id: E5-T12
+    title: Implement updatePerson and remove the stub
+    kind: implement
+    assignee: alice
+    rules: [RN-P01]
+    refs: [PRD-001 RF-01, RFC-004 §2, RFC-005 §3]
+    dependsOn: [E5-T11]
+    allowedPaths:
+      - apps/api/src/people/infra/person-update.ts
+      - apps/api/vitest.config.ts
+    protectedTests:
+      - apps/api/src/people/infra/person-update.test.ts
+    checks:
+      - pnpm --filter @pilla/api exec vitest run src/people/infra/person-update.test.ts --coverage --coverage.include=src/people/infra/person-update.ts --coverage.exclude=none --coverage.thresholds.lines=100 --coverage.thresholds.branches=100
+      - pnpm --filter @pilla/api typecheck
+      - pnpm --filter @pilla/api lint
+    done:
+      - all tests in apps/api/src/people/infra/person-update.test.ts pass with 100% line and branch coverage of person-update.ts (run_check 0)
+      - person-update.ts has no '// @stub E5-T12' line and apps/api/vitest.config.ts has no line that excludes src/people/infra/person-update.ts
+      - 'import { and, eq, sql } from "drizzle-orm";'
+      - 'import { persons } from "./schema";'
+      - updatePerson runs one update of persons set changes, version = version + 1 and updatedAt = now() where id and version match, returning version
+      - when the update returns a row the result is "UPDATED"; when it returns none, a select by id tells "VERSION_CONFLICT" (row exists) from "NOT_FOUND" (no row)
+      - database errors, duplicate CPF included, propagate without catch or translation
+      - the import type lines, the types, the /** */ comment and the signature stay, and the parameters lose the leading underscore
+    hints:
+      - the plan and these hints are enough; do not edit person-repository.ts and do not add fields or active to PersonChanges
+      - 'the update is db.update(persons).set({ ...changes, version: sql`${persons.version} + 1`, updatedAt: sql`now()` }).where(and(eq(persons.id, id), eq(persons.version, expectedVersion))).returning({ version: persons.version })'
+      - 'the fallback select is db.select({ id: persons.id }).from(persons).where(eq(persons.id, id))'
+      - the line of vitest.config.ts to delete is the one inside coverage.exclude with src/people/infra/person-update.ts and the comment stub E5-T12
+      - one edit_file of person-update.ts, one edit_file of apps/api/vitest.config.ts, then run_check 0, 1 and 2
+    budget:
+      attempts: 4
+      toolCalls: 17
+      minutes: 8
+    readFirst:
+      - apps/api/src/people/infra/person-update.ts
+      - apps/api/vitest.config.ts
+    sizeNote: uma função de ~15 linhas; vitest.config.ts perde 1 linha
+  - id: E5-T13
+    title: Write the tests for personWriteErrorCode
+    kind: test-author
+    assignee: bia
+    rules: [RN-P01, RN-P02]
+    refs: [RFC-004 §6, RFC-005 §3, docs/plano/pendencias-pm.md]
+    dependsOn: [E5-T06]
+    allowedPaths:
+      - apps/api/src/people/infra/person-write-error.test.ts
+    protectedTests: []
+    checks:
+      - '! pnpm --filter @pilla/api exec vitest run src/people/infra/person-write-error.test.ts'
+      - node scripts/check-test-quality.mjs apps/api/src/people/infra/person-write-error.test.ts
+      - pnpm --filter @pilla/api typecheck
+      - pnpm --filter @pilla/api lint
+    done:
+      - every test fails now against the stub in HEAD and would pass with a correct implementation
+      - 'import type { PGlite } from "@electric-sql/pglite";'
+      - 'import { sql } from "drizzle-orm";'
+      - 'import type { PgliteDatabase } from "drizzle-orm/pglite";'
+      - 'import { afterAll, beforeAll, describe, expect, it } from "vitest";'
+      - 'import { migratedTestDb } from "../../db/test-db";'
+      - 'import { personWriteErrorCode } from "./person-write-error";'
+      - '{ cause: { code: "23505", constraint: "persons_cpf_key" } } gives "DUPLICATE_CPF"'
+      - '{ cause: { code: "23503", constraint: "persons_referred_by_id_fkey" } } gives "NOT_FOUND"'
+      - '{ cause: { code: "23505", constraint: "outra_constraint" } } gives null and {} gives null'
+      - the real self-reference error has cause.code "23514" and cause.constraint "persons_referred_by_id_check" and gives null
+      - never edit apps/api/src/people/infra/person-write-error.ts
+    hints:
+      - the imports listed in done are the only imports; each imported name is used
+      - literal objects for the C5 cases; never build a DrizzleQueryError by hand
+      - 'the real error comes from db.execute(sql`insert into people.persons (id, full_name, phone, referred_by_id) values (''01970000-0000-7000-8000-000000000102'', ''Caio Lima'', ''+5511987654102'', ''01970000-0000-7000-8000-000000000102'')`); capture it with .catch((e: unknown) => e)'
+      - assert the cause metadata of the real error before asserting the null result; use toBe for every result
+      - open the database with migratedTestDb in beforeAll and close the client in afterAll
+      - one test per expectation of C5 and C6, named with its A number
+    budget:
+      attempts: 4
+      toolCalls: 16
+      minutes: 10
+    readFirst:
+      - docs/plano/E5-F05/plano.md
+      - apps/api/src/people/infra/person-write-error.ts
+    sizeNote: um describe, cinco testes, ~60 linhas
+  - id: E5-T14
+    title: Implement personWriteErrorCode and remove the stub
+    kind: implement
+    assignee: alice
+    rules: [RN-P01, RN-P02]
+    refs: [RFC-004 §6, RFC-005 §3, docs/plano/pendencias-pm.md]
+    dependsOn: [E5-T13]
+    allowedPaths:
+      - apps/api/src/people/infra/person-write-error.ts
+      - apps/api/vitest.config.ts
+    protectedTests:
+      - apps/api/src/people/infra/person-write-error.test.ts
+    checks:
+      - pnpm --filter @pilla/api exec vitest run src/people/infra/person-write-error.test.ts --coverage --coverage.include=src/people/infra/person-write-error.ts --coverage.exclude=none --coverage.thresholds.lines=100 --coverage.thresholds.branches=100
+      - pnpm --filter @pilla/api typecheck
+      - pnpm --filter @pilla/api lint
+    done:
+      - all tests in apps/api/src/people/infra/person-write-error.test.ts pass with 100% line and branch coverage of person-write-error.ts (run_check 0)
+      - person-write-error.ts has no '// @stub E5-T14' line and apps/api/vitest.config.ts has no line that excludes src/people/infra/person-write-error.ts
+      - only 23505 with persons_cpf_key gives DUPLICATE_CPF and only 23503 with persons_referred_by_id_fkey gives NOT_FOUND; everything else gives null
+      - the function is pure, has no import, and does not use any or a cast to any
+      - the types, the /** */ comment and the signature stay, and the parameter loses the leading underscore
+    hints:
+      - the only file read is person-write-error.ts, because the steps are in these hints
+      - 'narrow structurally: typeof error === "object" && error !== null && "cause" in error, then the same for cause, then read code and constraint'
+      - compare the pair code/constraint with two ifs and return null at the end
+      - the line of vitest.config.ts to delete is the one inside coverage.exclude with src/people/infra/person-write-error.ts and the comment stub E5-T14
+      - one edit_file of person-write-error.ts, one edit_file of apps/api/vitest.config.ts, then run_check 0, 1 and 2
+    budget:
+      attempts: 4
+      toolCalls: 17
+      minutes: 8
+    readFirst:
+      - apps/api/src/people/infra/person-write-error.ts
+      - apps/api/vitest.config.ts
+    sizeNote: uma função pura de ~12 linhas; vitest.config.ts perde 1 linha
+  # E5-T15 e E5-T16 bloqueados: busca, ordenação, paginação e inativos aguardam o PM (docs/plano/pendencias-pm.md).
+  - id: E5-T15
+    title: Write the tests for listPersons
+    kind: test-author
+    assignee: bia
+    rules: [RN-P01]
+    refs: [PRD-001 RF-04, RFC-004 §2, RFC-004 §3, RFC-005 §3, docs/plano/decisoes-2026-11-17.md]
+    dependsOn: [E5-T06]
+    allowedPaths:
+      - apps/api/src/people/infra/person-list.test.ts
+    protectedTests: []
+    checks:
+      - '! pnpm --filter @pilla/api exec vitest run src/people/infra/person-list.test.ts'
+      - node scripts/check-test-quality.mjs apps/api/src/people/infra/person-list.test.ts
+      - pnpm --filter @pilla/api typecheck
+      - pnpm --filter @pilla/api lint
+    done:
+      - BLOCKED until the PM answers on search, ordering, paging and inactive persons are written into docs/plano/E5-F05/plano.md
+      - every test fails now against the stub in HEAD and would pass with a correct implementation
+      - 'import type { PGlite } from "@electric-sql/pglite";'
+      - 'import type { PgliteDatabase } from "drizzle-orm/pglite";'
+      - 'import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";'
+      - 'import { migratedTestDb } from "../../db/test-db";'
+      - 'import { listPersons } from "./person-list";'
+      - C7 gives exactly the item { id "01970000-0000-7000-8000-000000000200", fullName "Caio Lima", cpf null, phone "+5511987654200", active true }
+      - C8 gives exactly { items [], nextCursor null }
+      - C9 gives two items with limit 2
+      - the scenarios added to the plan after the PM answers are covered, one test each
+      - never edit apps/api/src/people/infra/person-list.ts
+    hints:
+      - do not start while the card is blocked
+      - ids from 01970000-0000-7000-8000-000000000200 on; C9 rows are ...201 "Bia Nunes" cpf "52998224725", ...202 "Davi Melo" cpf "11144477735", ...203 "Eva Reis" cpf "39053344705", phones +5511987654201 to +5511987654203
+      - every expected item is a literal, never derived from the inserted rows
+      - open the database with migratedTestDb in beforeAll, delete from people.persons in beforeEach, close the client in afterAll
+    budget:
+      attempts: 4
+      toolCalls: 16
+      minutes: 10
+    readFirst:
+      - docs/plano/E5-F05/plano.md
+      - apps/api/src/people/infra/person-list.ts
+      - apps/api/src/people/infra/persons.test.ts
+    sizeNote: bloqueado; tamanho final depende das respostas do PM
+  - id: E5-T16
+    title: Implement listPersons and remove the stub
+    kind: implement
+    assignee: alice
+    rules: [RN-P01]
+    refs: [PRD-001 RF-04, RFC-004 §2, RFC-004 §3, RFC-005 §3, docs/plano/decisoes-2026-11-17.md]
+    dependsOn: [E5-T15]
+    allowedPaths:
+      - apps/api/src/people/infra/person-list.ts
+      - apps/api/vitest.config.ts
+    protectedTests:
+      - apps/api/src/people/infra/person-list.test.ts
+    checks:
+      - pnpm --filter @pilla/api exec vitest run src/people/infra/person-list.test.ts --coverage --coverage.include=src/people/infra/person-list.ts --coverage.exclude=none --coverage.thresholds.lines=100 --coverage.thresholds.branches=100
+      - pnpm --filter @pilla/api typecheck
+      - pnpm --filter @pilla/api lint
+    done:
+      - BLOCKED until the PM answers are in the plan and E5-T15 is done
+      - all tests in apps/api/src/people/infra/person-list.test.ts pass with 100% line and branch coverage of person-list.ts (run_check 0)
+      - person-list.ts has no '// @stub E5-T16' line and apps/api/vitest.config.ts has no line that excludes src/people/infra/person-list.ts
+      - listPersons returns { items, nextCursor } with items shaped { id, fullName, cpf, phone, active } and never more than limit items
+      - search, ordering, cursor and inactive persons follow only what the plan records from the PM
+      - the types, the /** */ comment and the signature stay, and the parameters lose the leading underscore
+    hints:
+      - do not start while the card is blocked; the hints are completed with the PM answers
+      - the line of vitest.config.ts to delete is the one inside coverage.exclude with src/people/infra/person-list.ts and the comment stub E5-T16
+    budget:
+      attempts: 4
+      toolCalls: 17
+      minutes: 8
+    readFirst:
+      - apps/api/src/people/infra/person-list.ts
+      - apps/api/vitest.config.ts
+    sizeNote: bloqueado; tamanho final depende das respostas do PM
 features:
   - id: E5-F01
     title: Command foundation of the api (UUID v7 ids and audit record)
@@ -440,4 +683,9 @@ features:
   - id: E5-F04
     title: Effect of a payment reversal on the loan status (RN-R10, RN-R11)
     cards: [E5-T09, E5-T10]
+    biaBudget: 3
+  # E5-F05: E5-T15/T16 bloqueados pelo PM (busca, ordenação, paginação, inativos); T11 a T14 seguem depois da E5-F02.
+  - id: E5-F05
+    title: Person editing, search and listing (infra)
+    cards: [E5-T11, E5-T12, E5-T13, E5-T14, E5-T15, E5-T16]
     biaBudget: 3

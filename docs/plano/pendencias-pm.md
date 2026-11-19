@@ -42,3 +42,74 @@ Formato de cada entrada:
 - opções: a) CPF obrigatório e válido (dígito verificador) no cadastro; nulo só na importação; b) CPF opcional também no cadastro
 - sugestão padrão: a) obrigatório, igual a RN-P01 e à decisão de 17/11
 - resposta: a) CPF obrigatório e válido (dígito verificador) no cadastro; nulo só na importação
+
+## E5-T11 (E5-F05)
+- status: resolvida
+- data: 2026-11-19
+- pergunta: quais campos o `PATCH /people/{id}` edita? RF-01 lista nome, CPF, telefone, e-mail, nascimento e observações; o indicador (`referredById`) não aparece. A E5-F05 implementa só esses seis no `updatePerson` (não bloqueia).
+- opções: a) só os seis de RF-01; indicador fica fixo após o cadastro; b) os seis mais `referredById` (com 404 `NOT_FOUND` se não existir e erro de autorreferência)
+- sugestão padrão: a) só os seis de RF-01
+- resposta: a) só os seis de RF-01
+- aplicada como dependência de implementação separada
+
+## E5-T11 (E5-F05)
+- status: resolvida
+- data: 2026-11-19
+- pergunta: na edição, enviar `null` limpa um campo opcional? Em especial o CPF: RN-P01 só admite CPF vazio em registro importado. O `updatePerson` aceita o que o banco aceita (não bloqueia).
+- opções: a) `null` limpa e-mail, nascimento e observações; CPF não pode ser limpo na edição; b) `null` limpa qualquer campo opcional, CPF incluído; c) `null` não limpa nada (campo ausente e `null` têm o mesmo efeito)
+- sugestão padrão: a) limpa os opcionais, menos o CPF (RN-P01)
+- resposta: a) limpa os opcionais, menos o CPF (RN-P01)
+- aplicada como dependência de implementação separada
+
+## E5-T13 (E5-F05)
+- status: resolvida
+- data: 2026-11-19
+- pergunta: qual `code` e HTTP a borda devolve quando a pessoa é indicada por ela mesma (`persons_referred_by_id_check`, RN-P02)? O catálogo da RFC-004 §6 não trata disso. Até a resposta, `personWriteErrorCode` devolve `null` (não bloqueia).
+- opções: a) 400 `VALIDATION_FAILED` (o Zod da borda barra antes do banco); b) 422 com código próprio, ex. `SELF_REFERRAL`
+- sugestão padrão: a) 400 `VALIDATION_FAILED`, é entrada inválida e o código já existe
+- resposta: sem código na API por enquanto; revisar se a edição passar a aceitar `referredById`
+
+## E5-T15 (E5-F05)
+- status: resolvida
+- data: 2026-11-19
+- pergunta: como funciona o `search` de `GET /people` (RF-04: nome ou CPF)? Bloqueia E5-T15/E5-T16.
+- opções: a) nome por trecho, sem distinguir maiúsculas; CPF por prefixo dos dígitos, ignorando ponto e traço; b) a), e o nome também ignora acentos (exige `unaccent`, extensão nova); c) nome por início da palavra; CPF só exato
+- sugestão padrão: a) trecho no nome sem caixa (índice `lower(full_name)` da RFC-005 §3) e prefixo no CPF
+- resposta: a) trecho no nome sem caixa (índice `lower(full_name)` da RFC-005 §3) e prefixo no CPF
+- aplicada como dependência de implementação separada
+
+## E5-T15 (E5-F05)
+- status: resolvida
+- data: 2026-11-19
+- pergunta: qual a ordem da lista de pessoas? O cursor depende dela. Bloqueia E5-T15/E5-T16.
+- opções: a) nome (`lower(full_name)`) e, no empate, `id`; b) mais recentes primeiro (`created_at` desc, `id`)
+- sugestão padrão: a) por nome com desempate por id
+- resposta: a) por nome com desempate por id
+- aplicada como dependência de implementação separada
+
+## E5-T15 (E5-F05)
+- status: resolvida
+- data: 2026-11-19
+- pergunta: qual o `limit` padrão e o máximo da lista de pessoas, e o que fazer com valor fora da faixa? A RFC-004 §2 mostra `limit=50` só como exemplo. Bloqueia E5-T15/E5-T16.
+- opções: a) padrão 50, máximo 100, fora de 1..100 dá 400 `VALIDATION_FAILED`; b) padrão 50, máximo 100, valor acima é reduzido a 100 sem erro
+- sugestão padrão: a) 50/100 com 400 fora da faixa; o cursor é opaco (base64 do último nome e id)
+- resposta: padrão 20 (decisão do Joel, 19/11, no lugar do 50 sugerido), máximo 100, fora de 1..100 dá 400 `VALIDATION_FAILED`; o cursor é opaco (base64 do último nome e id)
+- aplicada como dependência de implementação separada
+
+## E5-T15 (E5-F05)
+- status: resolvida
+- data: 2026-11-19
+- pergunta: a lista de pessoas traz as inativas? Bloqueia E5-T15/E5-T16.
+- opções: a) traz todas; o `active` do resumo mostra a situação; b) só ativas por padrão, com filtro `?active=` para ver as outras; c) só ativas, sem filtro
+- sugestão padrão: b) só ativas por padrão, com filtro opcional
+- resposta: b) só ativas por padrão, com filtro opcional
+- aplicada como dependência de implementação separada
+
+## E5-T15 (E5-F05)
+- status: resolvida
+- data: 2026-11-19
+- pergunta: no `personSummary`, pessoa importada sem CPF (RN-P01) vem com `cpf: null` ou sem o campo? A infra devolve `null` (não bloqueia).
+- opções: a) `cpf: null`; b) campo omitido
+- sugestão padrão: a) `cpf: null`, forma fixa para o front
+- resposta: a) `cpf: null`, forma fixa para o front
+- aplicada como dependência de implementação separada
