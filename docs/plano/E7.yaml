@@ -620,7 +620,7 @@ cards:
     rules: []
     skills:
       - escrever-teste
-    refs: [PRD-001 RF-20, PRD-001 RN-R06, RFC-004 §5, RFC-004 §6, docs/plano/decisoes-2026-11-17.md]
+    refs: [PRD-001 RF-20, RFC-004 §2, RFC-004 §5, docs/plano/decisoes-2026-11-17.md, docs/plano/decisoes-2026-11-19.md]
     dependsOn: []
     allowedPaths:
       - apps/web/lib/payment-draft.test.ts
@@ -634,29 +634,26 @@ cards:
       - every test fails now against the stub in HEAD and would pass with a correct implementation (run_check 0)
       - 'import { describe, expect, it } from "vitest";'
       - 'import { MoneyError } from "@pilla/finance";'
-      - 'import { maxAttachmentBytes } from "@pilla/schemas";'
       - 'import { ZodError } from "zod";'
       - 'import type { PaymentFormValues } from "./payment-draft";'
-      - 'import { ReceiptRequiredError, toPaymentDraft } from "./payment-draft";'
-      - 'test "builds the RFC-004 payment": example with pdf gives the draft of the hints, amountCents 115000, method "PIX", receipt sizeBytes 204800 (RFC-004 §5, PRD-001 RF-20)'
-      - 'test "accepts cash without a receipt": example with method "CASH" and no file gives the same payment with method "CASH" and receipt null (PRD-001 RN-R06)'
-      - 'test "asks for the receipt": "PIX", "BOLETO" and "BANK_TRANSFER" without a file throw ReceiptRequiredError, whose code is "RECEIPT_REQUIRED" (PRD-001 RN-R06, RFC-004 §6)'
-      - 'test "rejects a bad amount": amount "1150" without the comma, with pdf, throws MoneyError (RFC-004 §2)'
-      - 'test "rejects a bad receipt": the file "foto.gif" of type "image/gif" and a pdf one byte over maxAttachmentBytes throw ZodError (decisão do Joel de 15/11 no RFC-004)'
+      - 'import { toPaymentDraft } from "./payment-draft";'
+      - 'test "builds the RFC-004 payment": the example gives the payment of the hints, amountCents 115000, method "PIX", with no receipt key (RFC-004 §5, PRD-001 RF-20)'
+      - 'test "accepts the four methods": the example with "PIX", "BOLETO", "CASH" and "BANK_TRANSFER" gives the same payment with each method and never throws (decisão do Joel de 19/11: sem comprovante)'
+      - 'test "rejects a bad amount": amount "1150" and "1.150,5" throw MoneyError, and "0,00" and "-5,00" throw ZodError (RFC-004 §2)'
+      - 'test "rejects a bad date, account and loan": paidAt "2026-02-30", accountId "" and loanId "abc" throw ZodError (PRD-001 RF-20)'
+      - 'test "does not limit the date nor the amount": paidAt "2099-01-01" and "2000-01-01" and amount "90.000.000,00" give the payment, no error (decisões do Joel de 19/11: sem restrição de data nem valor máximo no MVP)'
       - never edit apps/web/lib/payment-draft.ts
     hints:
       - the import lines of the done are the only imports of the file, each name in them is used, and nothing else is imported
       - one write_file of the whole test file, then run_check 0, 1, 2 and 3
-      - 'at the top of the describe, three consts: loanId "01936f8e-7b2c-7cde-8f00-000000000002", example typed PaymentFormValues with accountId "01936f8e-7b2c-7cde-8f00-000000000004", paidAt "2026-12-13", amount "1.150,00" and method "PIX", and pdf with name "comprovante.pdf", size 204800 and type "application/pdf"'
-      - 'the draft of the first test, checked with toEqual, is { payment: { loanId: "01936f8e-7b2c-7cde-8f00-000000000002", accountId: "01936f8e-7b2c-7cde-8f00-000000000004", paidAt: "2026-12-13", amountCents: 115000, method: "PIX" }, receipt: { fileName: "comprovante.pdf", contentType: "application/pdf", sizeBytes: 204800 } }'
-      - the cash test spreads example with method CASH, passes null as the file and expects the same payment with method CASH and receipt null
-      - 'the bad files are { name: "foto.gif", size: 1000, type: "image/gif" } and { name: "grande.pdf", size: maxAttachmentBytes + 1, type: "application/pdf" }, both with example'
+      - 'at the top of the describe, two consts: loanId "01936f8e-7b2c-7cde-8f00-000000000002" and example typed PaymentFormValues with accountId "chave-pix@exemplo.com", paidAt "2026-12-13", amount "1.150,00" and method "PIX"'
+      - 'the call is toPaymentDraft(loanId, values) with two arguments and no file; it returns PaymentFields directly, not an object with payment and receipt'
+      - 'the payment of the first test, checked with toStrictEqual, is { loanId: "01936f8e-7b2c-7cde-8f00-000000000002", accountId: "chave-pix@exemplo.com", paidAt: "2026-12-13", amountCents: 115000, method: "PIX" }'
       - the type annotation keeps method PIX from widening to string, and PaymentMethod is PIX, BOLETO, CASH or BANK_TRANSFER
-      - ReceiptFile is just name, size and type, so a plain object literal is the file and no File is needed
       - PaymentFields is inferred from zod, see common.ts, so amountCents is a plain number literal, never bigint
-      - each bad call sits inside a function given to expect, and toThrow takes the class only, ReceiptRequiredError, MoneyError or ZodError, never an object
-      - the code is checked on a new ReceiptRequiredError in the same test, after the three toThrow lines
-      - maxAttachmentBytes is a value exported by @pilla/schemas, from packages/schemas/src/api/core/attachment-upload-url.ts
+      - 'in the no-limit test the amount "90.000.000,00" gives amountCents 9000000000, a plain number literal'
+      - each bad call sits inside a function given to expect, and toThrow takes the class only, MoneyError or ZodError, never an object
+      - the method test may use one it with the four methods written out as four calls (no loop), each checked with toStrictEqual
     budget:
       attempts: 4
       toolCalls: 20
@@ -664,20 +661,19 @@ cards:
     readFirst:
       - apps/web/lib/payment-draft.ts
       - packages/schemas/src/api/payments/create-payment.ts
-      - packages/schemas/src/api/core/attachment-upload-url.ts
       - packages/schemas/src/common.ts
       - packages/finance/src/index.ts
       - packages/finance/src/money.ts
-    sizeNote: um describe com 5 testes, ~70 linhas
+    sizeNote: um describe com 5 testes, ~65 linhas
   - id: E7-T12
     title: Implement toPaymentDraft
     kind: implement
     assignee: alice
-    rules: [RN-R06]
+    rules: []
     skills:
       - editar-arquivo
       - coding-guidelines
-    refs: [PRD-001 RF-20, PRD-001 RN-R06, RFC-004 §6, ADR-0013]
+    refs: [PRD-001 RF-20, RFC-004 §2, ADR-0013, docs/plano/decisoes-2026-11-19.md]
     dependsOn: [E7-T11]
     allowedPaths:
       - apps/web/lib/payment-draft.ts
@@ -692,13 +688,14 @@ cards:
       - all tests in apps/web/lib/payment-draft.test.ts pass with 100% line and branch coverage of payment-draft.ts (run_check 0)
       - the import type line of payment-draft.ts stays, and the only value imports are these two lines
       - 'import { parseReais } from "@pilla/finance";'
-      - 'import { attachmentUploadUrlRequest, paymentFieldsSchema } from "@pilla/schemas";'
-      - the RN-R06 check comes first, then amount goes through parseReais, the fields through paymentFieldsSchema.parse and the receipt through attachmentUploadUrlRequest.parse
-      - keep the types, the ReceiptRequiredError class, the signature and the /** */ comments unchanged, except that the parameters lose the leading underscore
+      - 'import { paymentFieldsSchema } from "@pilla/schemas";'
+      - 'toPaymentDraft(loanId: string, values: PaymentFormValues): PaymentFields sends amount through parseReais and the fields through paymentFieldsSchema.parse, with no check of the date and no maximum amount'
+      - keep the types, the signature and the /** */ comments unchanged, except that the parameters lose the leading underscore
       - payment-draft.ts has no '// @stub E7-T12' line and apps/web/vitest.config.ts has no line that excludes lib/payment-draft.ts
     hints:
       - parseReais gives Cents, a bigint, and Number turns it into the number the schema expects
-      - the receipt becomes null when there is no file, and the upload request takes fileName, contentType and sizeBytes from name, type and size
+      - the result is the object { loanId, accountId, paidAt, amountCents, method } passed through paymentFieldsSchema.parse, which returns it
+      - add no rule of date or of maximum amount, only what paymentFieldsSchema already does
       - one write_file of payment-draft.ts, then one edit_file of apps/web/vitest.config.ts that deletes the line with stub E7-T12, then run_check 0, 1 and 2
     budget:
       attempts: 4
@@ -708,9 +705,8 @@ cards:
       - apps/web/lib/payment-draft.ts
       - apps/web/lib/payment-draft.test.ts
       - packages/schemas/src/api/payments/create-payment.ts
-      - packages/schemas/src/api/core/attachment-upload-url.ts
       - packages/finance/src/index.ts
-    sizeNote: payment-draft.ts com ~55 linhas
+    sizeNote: payment-draft.ts com ~35 linhas
   - id: E7-T13
     title: Write the tests for the PaymentForm component
     kind: test-author
@@ -719,7 +715,7 @@ cards:
     skills:
       - escrever-teste
       - accessibility
-    refs: [PRD-001 RF-20, PRD-001 RN-R06, RFC-004 §5, docs/plano/decisoes-2026-11-17.md]
+    refs: [PRD-001 RF-20, PRD-001 RN-R09, RFC-004 §5, docs/plano/decisoes-2026-11-17.md, docs/plano/decisoes-2026-11-19.md]
     dependsOn: [E7-T12]
     allowedPaths:
       - apps/web/components/payment-form.test.tsx
@@ -734,31 +730,33 @@ cards:
       - 'import { fireEvent, render, screen } from "@testing-library/react";'
       - 'import { describe, expect, it } from "vitest";'
       - 'import { vi } from "vitest";'
-      - 'import { exampleLoanDetail, mockAccounts } from "@/lib/mock-data";'
+      - 'import { exampleLoanDetail } from "@/lib/mock-data";'
       - 'import { PaymentForm } from "./payment-form";'
-      - 'test "shows the loan and the fields": h1 and button "Registrar pagamento", "Contrato 2026-0012", "Saldo devedor R$ 4.600,00" and the 5 labels of the hints (RFC-004 §5, PRD-001 RF-20)'
-      - 'test "registers the RFC-004 payment": the example with the pdf gives the status "Pagamento registrado para conferência." and onSubmit gets the draft of the hints (RFC-004 §5, PRD-001 RF-20)'
-      - 'test "asks for the receipt": the example without a file gives the alert "Anexe o comprovante (obrigatório exceto em espécie)." and onSubmit is not called (PRD-001 RN-R06)'
-      - 'test "accepts cash without a receipt": the example with Método "CASH" and no file gives onSubmit the same payment with method "CASH" and receipt null (PRD-001 RN-R06)'
-      - 'test "rejects a bad amount": the example with Valor "1150" and the pdf gives the alert "Confira os campos do pagamento." and onSubmit is not called (decisões do Joel de 17/11)'
+      - 'test "shows the loan and the fields": h1 and button "Registrar pagamento", "Contrato 2026-0012", "Saldo devedor R$ 4.600,00" and the 4 labels of the hints, the "Chave Pix de destino" being a text field, with no "Comprovante" (RFC-004 §5, PRD-001 RF-20)'
+      - 'test "registers the RFC-004 payment": the example gives the status "Pagamento registrado para conferência." and onSubmit gets the payment of the hints (RFC-004 §5, PRD-001 RF-20)'
+      - 'test "accepts cash": the example with Método "CASH" gives onSubmit the same payment with method "CASH", with no receipt asked (decisão do Joel de 19/11: sem comprovante)'
+      - 'test "rejects a bad amount or an empty Pix key": Valor "1150", and the Chave Pix de destino empty, each give the alert "Confira os campos do pagamento." and onSubmit is not called (decisões do Joel de 17/11)'
+      - 'test "blocks a closed contract": with status "PAID_OFF", "RENEWED", "RENEGOTIATED" and "CANCELLED" the screen shows the alert "Este contrato não aceita pagamento." and has no field Valor and no button "Registrar pagamento", and onSubmit is not called (PRD-001 RN-R09, decisão do Joel de 19/11: a tela bloqueia o formulário)'
+      - 'test "keeps the form for an open contract": with status "WRITTEN_OFF" the field Valor and the button "Registrar pagamento" are on screen and there is no such alert (PRD-001 RN-C20)'
       - never edit apps/web/components/payment-form.tsx
     hints:
       - the import lines of the done are the only imports of the file, each name in them is used, and nothing else is imported
       - one write_file of the whole test file, then run_check 0, 1, 2 and 3
-      - render PaymentForm with loan exampleLoanDetail, accounts mockAccounts and onSubmit a const made with vi.fn, once per test
-      - the five labels are Conta de destino, Data do pagamento, Valor, Método and Comprovante, each found with getByLabelText
-      - 'a helper fills the example with fireEvent.change on screen.getByLabelText: Conta de destino gets 01936f8e-7b2c-7cde-8f00-000000000004, the option value of Conta principal, Data do pagamento gets 2026-12-13 and Valor gets 1.150,00, and Método already starts at PIX'
-      - the pdf is a new File with one text part, the name comprovante.pdf and the type application/pdf, attached with fireEvent.change on getByLabelText Comprovante with a target whose files list holds only that file
-      - 'the expected draft is { payment: { loanId: "01936f8e-7b2c-7cde-8f00-000000000002", accountId: "01936f8e-7b2c-7cde-8f00-000000000004", paidAt: "2026-12-13", amountCents: 115000, method: "PIX" }, receipt: { fileName: "comprovante.pdf", contentType: "application/pdf", sizeBytes: file.size } }, with file the pdf of the test'
+      - render PaymentForm with loan exampleLoanDetail and onSubmit a const made with vi.fn, once per test; there is no accounts prop and no mockAccounts
+      - the four labels are Chave Pix de destino, Data do pagamento, Valor and Método, each found with getByLabelText; Comprovante is checked with queryByLabelText and is null
+      - 'a helper fills the example with fireEvent.change on screen.getByLabelText: Chave Pix de destino gets chave-pix@exemplo.com typed as text, Data do pagamento gets 2026-12-13 and Valor gets 1.150,00, and Método already starts at PIX'
+      - 'the expected payment is { loanId: "01936f8e-7b2c-7cde-8f00-000000000002", accountId: "chave-pix@exemplo.com", paidAt: "2026-12-13", amountCents: 115000, method: "PIX" }, a PaymentFields with no receipt'
+      - 'a closed loan is { ...exampleLoanDetail, status: "PAID_OFF" } and so on, with the literal status; write the four renders out one after the other, one it per status'
       - the Método select uses the keys of paymentMethodLabel as option values, so the cash test changes it to CASH, whose option text is Espécie
       - Registrar pagamento is both the h1 and the button, so the heading is getByRole heading with level 1 and that name, the click is fireEvent.click on getByRole button with that name, never getByText
       - the expected numbers are plain number, never bigint
       - the submit is async, so await screen.findByRole with role status or alert, keep that element and check it with toHaveTextContent, never await expect of a findBy promise, and the onSubmit checks come after it
+      - the blocked screen is not async, so getByRole alert is enough there
       - apps/web/app/page.test.tsx is the model, and there is no userEvent in the project, only @testing-library/react
     budget:
       attempts: 4
-      toolCalls: 22
-      minutes: 12
+      toolCalls: 24
+      minutes: 14
     readFirst:
       - apps/web/components/payment-form.tsx
       - apps/web/lib/payment-draft.ts
@@ -768,17 +766,17 @@ cards:
       - packages/schemas/src/common.ts
       - apps/web/app/page.test.tsx
       - apps/web/vitest.setup.ts
-    sizeNote: um describe com 5 testes e uma função de preencher o exemplo, ~95 linhas
+    sizeNote: um describe com 6 testes e uma função de preencher o exemplo, ~110 linhas
   - id: E7-T14
     title: Implement the PaymentForm component
     kind: implement
     assignee: alice
-    rules: [RN-R06]
+    rules: []
     skills:
       - editar-arquivo
       - react-best-practices
       - react-best-practices#rerender-derived-state-no-effect
-    refs: [PRD-001 RF-20, PRD-001 RN-R06, ADR-0013]
+    refs: [PRD-001 RF-20, PRD-001 RN-R09, ADR-0013, docs/plano/decisoes-2026-11-19.md]
     dependsOn: [E7-T13]
     allowedPaths:
       - apps/web/components/payment-form.tsx
@@ -791,22 +789,22 @@ cards:
       - pnpm --filter @pilla/web lint
     done:
       - all tests in apps/web/components/payment-form.test.tsx pass with at least 85% coverage of payment-form.tsx (run_check 0)
-      - the import type lines of @pilla/schemas and react stay, the import type line of @/lib/payment-draft becomes the first line below, and the only value imports are the other five
-      - 'import type { PaymentDraft, PaymentFormValues } from "@/lib/payment-draft";'
+      - the import type lines of @pilla/schemas and react stay, the import type line of @/lib/payment-draft is 'import type { PaymentFormValues } from "@/lib/payment-draft";', and the only value imports are the other four
       - 'import { cents, formatReais } from "@pilla/finance";'
       - 'import { useState } from "react";'
       - 'import { useForm } from "react-hook-form";'
       - 'import { paymentMethodLabel } from "@/lib/labels";'
-      - 'import { ReceiptRequiredError, toPaymentDraft } from "@/lib/payment-draft";'
-      - the form uses useForm of react-hook-form typed with PaymentFormValues and register on each field except Comprovante, whose File lives in useState
-      - the submit calls toPaymentDraft inside try and catch; the catch tells ReceiptRequiredError apart with instanceof and shows the alerts of the /** */ comment (RN-R06)
-      - keep "use client", the props interface, the signature and the /** */ comment unchanged, except that the props are destructured without the underscore aliases
+      - 'import { toPaymentDraft } from "@/lib/payment-draft";'
+      - the form uses useForm of react-hook-form typed with PaymentFormValues and register on each of the four fields; Chave Pix de destino is a text input, not a select, and there is no Comprovante field
+      - the submit calls toPaymentDraft(loan.id, values) inside try and catch; any error shows the alert "Confira os campos do pagamento." and onSubmit is not called
+      - when loan.status is PAID_OFF, RENEWED, RENEGOTIATED or CANCELLED (PRD-001 RN-R09) the component returns the heading, the contract and the balance lines and the alert "Este contrato não aceita pagamento." with no form and no button; ACTIVE, WRITTEN_OFF and DRAFT show the form
+      - keep "use client", the props interface (loan and optional onSubmit, no accounts), the signature and the /** */ comment unchanged, except that the props are destructured without the underscore aliases
       - payment-form.tsx has no '// @stub E7-T14' line and apps/web/vitest.config.ts has no line that excludes components/payment-form.tsx
     hints:
-      - the labels, the select options, the button and the messages are written in the /** */ comment of payment-form.tsx, copy them from there
+      - the labels, the text field, the select options, the button and the messages are written in the /** */ comment of payment-form.tsx, copy them from there
       - '"Contrato 2026-0012" and "Saldo devedor R$ 4.600,00" are each the whole text of one element, because the test finds them with getByText'
       - cents takes a bigint and formatReais takes Cents, so outstandingCents goes through BigInt and cents first
-      - the file input onChange reads the first item of the files list, or null when empty
+      - the closed check is a const list of the four closed statuses and loan.status tested against it, derived while rendering, no effect and no state
       - the Método options come from the keys of paymentMethodLabel of @/lib/labels
       - keep the outcome in useState and call the optional onSubmit with optional chaining
       - one write_file of payment-form.tsx, then one edit_file of apps/web/vitest.config.ts that deletes the line with stub E7-T14, then run_check 0, 1 and 2
@@ -820,7 +818,7 @@ cards:
       - apps/web/lib/payment-draft.ts
       - apps/web/lib/labels.ts
       - packages/finance/src/index.ts
-    sizeNote: payment-form.tsx com ~120 linhas (grande para a Alice; fatiar fica para decisão do Joel)
+    sizeNote: payment-form.tsx com ~100 linhas (grande para a Alice; fatiar fica para decisão do Joel)
 # Features (ADR-0014): planos em docs/plano/E7-F0<n>/plano.md. biaBudget entre 4 e 7 (teto liberado pelo Joel só
 # nesta madrugada, commit 85328f5): telas pequenas agrupadas num cartão da Bia com mais cenários. E7-F03 em 7: a Bia
 # também implementa E7-T09 e E7-T10 (exceção nao-compensa-alice, Joel 17/11).
@@ -838,6 +836,6 @@ features:
     cards: [E7-T08, E7-T09, E7-T15, E7-T10, E7-T16]
     biaBudget: 7
   - id: E7-F04
-    title: Register a payment with receipt and destination account
+    title: Register a payment with a destination Pix key
     cards: [E7-T11, E7-T12, E7-T13, E7-T14]
     biaBudget: 6
