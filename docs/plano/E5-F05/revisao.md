@@ -84,3 +84,7 @@ Decisões aplicadas
 - Q3: os testes tratam o cursor como opaco (só repassam o `nextCursor` recebido).
 
 Estado: os testes serão refeitos pela Bia; `scenarios`/`expect-red` do `estado.json` serão regerados após a nova rodada (T11, T13 com C18, T15 com C14 novo). Nenhuma entrada de teste foi inventada; as existentes ficam como estão (a entrada do C9 deixa de valer).
+
+## Decisão do Joel (19/11): Q2 = a
+
+Cursor malformado lança `Error("invalid cursor")` na infra; a borda HTTP traduz para 400 `VALIDATION_FAILED` depois (fora desta feature). Mudou: critério A17 e cenário C19 no plano (quatro cursores literais: `"abc"`, `"bm90IGpzb24="`, `"eyJmdWxsTmFtZSI6ImFuYSJ9"`, `"eyJmdWxsTmFtZSI6MSwiaWQiOiJ4In0="`); linha do cursor na tabela de domínio; T15 com o C19 no `done` (nove cenários, nove testes); T16 com a validação do cursor no `done` e hint de narrowing sem `any`; A17 em `estado.json`; pergunta resolvida em `pendencias-pm.md`. O T15 precisa ser refeito pela Bia.

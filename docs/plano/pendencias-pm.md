@@ -113,3 +113,12 @@ Formato de cada entrada:
 - sugestão padrão: a) `cpf: null`, forma fixa para o front
 - resposta: a) `cpf: null`, forma fixa para o front
 - aplicada como dependência de implementação separada
+
+## E5-T15 (E5-F05)
+- status: resolvida
+- data: 2026-11-19
+- pergunta: cursor malformado na listagem (base64 inválido, JSON inválido ou forma errada): erro na infra, tratar como sem cursor ou resolver na borda? Q2 da revisão.
+- opções: a) erro na infra; b) tratar como sem cursor; c) borda HTTP
+- sugestão padrão: a) erro na infra com cenário novo no T15
+- resposta: a) erro na infra com `Error("invalid cursor")`; a borda HTTP traduz para 400 `VALIDATION_FAILED` depois
+- aplicada no critério A17 e no cenário C19 (cartões E5-T15 e E5-T16)

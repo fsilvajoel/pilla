@@ -90,7 +90,7 @@ O banco é o juiz do formato (CHECKs e índices da RFC-005 §3); a validação d
 | `personWriteErrorCode(error)` | qualquer valor (`unknown`) | sem as duas chaves reconhecidas → `null` | RFC-004 §6; respostas PM E5-F02 |
 | `listPersons.search` | string; nome usa trecho sem caixa; CPF usa prefixo dos dígitos depois de ignorar ponto e traço | não há rejeição específica na infra; validações de query são da borda | RF-04; respostas PM E5-F05 |
 | `listPersons.limit` | inteiro já validado pela borda em `1..100`; padrão da borda `20`; máximo `100` | `0`, negativo, `101`, decimal, texto ou demais valores fora de `1..100` → `400 VALIDATION_FAILED` na borda; a infra não valida nem converte | RFC-004 §2 e §6; respostas PM E5-F05 |
-| `listPersons.cursor` | `string \| null`; base64 opaco do último nome normalizado e id | cursor malformado é responsabilidade da borda/caso de uso fora desta infra | RFC-004 §2; respostas PM E5-F05 |
+| `listPersons.cursor` | `string \| null`; base64 opaco do último nome normalizado e id | cursor que não é base64 de JSON `{ fullName: string, id: string }` → `Error("invalid cursor")` lançado na infra antes da consulta; a borda traduz para `400 VALIDATION_FAILED` em feature própria | RFC-004 §2; decisão do Joel, 19/11 (Q2) |
 | `listPersons.active` | `boolean \| null`; `null` só ativas, `true` só ativas, `false` só inativas | ausente na query da borda chega como `null`; valores não booleanos são recusados pelo Zod da borda | respostas PM E5-F05 |
 
 ## Dependências
@@ -119,6 +119,7 @@ Molde: entrada, domínio, saída, erro, fonte, camada.
 - **A14:** `active: null` ou `active: true` lista somente ativas; `active: false` lista somente inativas. A borda passa `null` quando `?active=` está ausente. Fonte: resposta PM E5-T15. Camada: unit (PGlite).
 - **A15:** na borda HTTP, `limit` ausente vira `20`, máximo `100`, e `0`, negativo, `101`, decimal ou texto fora de `1..100` devolve `400 VALIDATION_FAILED`; esta validação fica fora da infra. Fonte: RFC-004 §2 e §6, resposta PM E5-T15. Camada: HTTP fora desta feature.
 - **A16:** busca só de dígitos trata nome OU CPF: devolve a união de quem tem o trecho no nome (sem caixa) e de quem tem o CPF começando pelos dígitos, na ordem de A12; `"529"` devolve `"Ana CPF"` (CPF `52998224725`, pelo prefixo) e `"Lote 529 Silva"` (CPF `11144477735`, pelo trecho do nome). Fonte: RF-04, Decisões do PM (19/11). Camada: unit (PGlite).
+- **A17:** cursor malformado: `listPersons` rejeita com `Error` de mensagem exata `invalid cursor`, sem consultar o banco; vale para texto que não é base64 de JSON, base64 de texto que não é JSON e JSON sem `fullName` string e `id` string. Fonte: decisão do Joel, 19/11 (Q2). Camada: unit (PGlite não é necessário para a falha, mas o teste segue o mesmo molde dos outros cenários da lista).
 
 ## Cenários
 
@@ -142,11 +143,19 @@ Ids na faixa `01970000-0000-7000-8000-0000000001NN` (update/erros) e `...0000000
 - **C15 (A14):** linhas `01970000-0000-7000-8000-000000000215` `"Ativa Silva"` com `active: true` e `01970000-0000-7000-8000-000000000216` `"Inativa Souza"` com `active: false`; `listPersons(db, { search: "", limit: 20, cursor: null, active: null })` ou `active: true` → somente `{ id: "01970000-0000-7000-8000-000000000215", fullName: "Ativa Silva", cpf: "52998224725", phone: "+5511987654215", active: true }`; `active: false` → somente `{ id: "01970000-0000-7000-8000-000000000216", fullName: "Inativa Souza", cpf: "39053344705", phone: "+5511987654216", active: false }`; ambos com `nextCursor: null`.
 - **C16 (A15, fora da infra):** `GET /people` sem `limit` passa `limit: 20`; `limit: 100` passa `100`; `limit: 0`, `limit: 101`, `limit: 1.5` e `limit: "abc"` devolvem `400` com `code: "VALIDATION_FAILED"`. Esta validação é da borda HTTP/Zod.
 - **C17 (A16):** linhas `01970000-0000-7000-8000-000000000217` `"Lote 529 Silva"` CPF `"11144477735"` telefone `"+5511987654217"` e `01970000-0000-7000-8000-000000000218` `"Ana CPF"` CPF `"52998224725"` telefone `"+5511987654218"`, ambas ativas, inseridas nessa ordem; `listPersons(db, { search: "529", limit: 20, cursor: null, active: null })` → `{ id: "01970000-0000-7000-8000-000000000218", fullName: "Ana CPF", cpf: "52998224725", phone: "+5511987654218", active: true }` e `{ id: "01970000-0000-7000-8000-000000000217", fullName: "Lote 529 Silva", cpf: "11144477735", phone: "+5511987654217", active: true }`, nesta ordem, `nextCursor: null`.
+- **C19 (A17):** cada cursor malformado abaixo, passado em `listPersons(db, { search: "", limit: 20, cursor, active: null })`, rejeita com `invalid cursor` (um `await expect(...).rejects.toThrow("invalid cursor")` por cursor):
+  - `"abc"` (não é base64 de JSON);
+  - `"bm90IGpzb24="` (base64 de `not json`, não é JSON);
+  - `"eyJmdWxsTmFtZSI6ImFuYSJ9"` (base64 de `{"fullName":"ana"}`, sem `id`);
+  - `"eyJmdWxsTmFtZSI6MSwiaWQiOiJ4In0="` (base64 de `{"fullName":1,"id":"x"}`, `fullName` não é string).
+  Cobre os ramos de validação do cursor no E5-T16 (100% sem `v8 ignore`).
 
 ## Decisões do PM (Joel, 19/11)
 
 - `active: null` e `active: true` fazem a mesma coisa (só ativas); não existe valor para "todas".
 - Busca com entrada só de dígitos trata nome OU CPF (RF-04): casa nome por trecho ou CPF por prefixo (cenário C17, critério A16).
+
+- Q2 (cursor malformado): erro na infra, `Error("invalid cursor")` (cenário C19, critério A17); a borda HTTP traduz para `400 VALIDATION_FAILED` depois.
 
 ## Fora do plano
 

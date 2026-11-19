@@ -626,9 +626,11 @@ cards:
       - C14 (merges C9) inserts Bia Nunes 0219, Davi Melo 0214 and Eva Reis 0213 (name order disagrees with id order), uses limit 1, follows every page by passing only the received nextCursor (never decodes it) until nextCursor is null, and expects exactly Bia Nunes, Davi Melo, Eva Reis, one item per page, no repeat and no gap, with nextCursor null on the third and last page
       - C15 gives only Ativa Silva for active null and true, and only Inativa Souza for active false
       - C17 gives exactly Ana CPF 0218 and then Lote 529 Silva 0217 for search "529" with nextCursor null (name contains OR CPF prefix)
+      - 'C19 gives, for each malformed cursor, a rejection with the exact message invalid cursor, one await expect(listPersons(db, { search: "", limit: 20, cursor, active: null })).rejects.toThrow("invalid cursor") per cursor, with the literal cursors "abc", "bm90IGpzb24=" (base64 of not json), "eyJmdWxsTmFtZSI6ImFuYSJ9" (base64 of {"fullName":"ana"}, no id) and "eyJmdWxsTmFtZSI6MSwiaWQiOiJ4In0=" (base64 of {"fullName":1,"id":"x"})'
       - 'C16 is a HTTP-only scenario: default limit 20, maximum 100, and 400 VALIDATION_FAILED outside 1..100; do not write a test for it'
       - never edit apps/api/src/people/infra/person-list.ts
     hints:
+      - C19 needs no rows and no ids; the four cursors are literals copied from the done line, never built with Buffer or btoa in the test
       - ids from 01970000-0000-7000-8000-000000000200 on; C9 no longer exists, it is merged into C14
       - C11 uses ...204 to ...206 and its second search is "SANTOS" (upper case on purpose, it must match "bia santos" in the middle of the name)
       - C12 uses ...207 "Ana CPF" cpf "52998224725" and ...208 "Bia CPF" cpf "11144477735"; searches "529.982.247-25", "529982" (partial prefix) and "982247" (middle digits, no match)
@@ -652,7 +654,7 @@ cards:
       - docs/plano/E5-F05/plano.md
       - apps/api/src/people/infra/person-list.ts
       - apps/api/src/people/infra/persons.test.ts
-    sizeNote: oito cenarios de lista (C7, C8, C11 a C15 e C17, com o C14 reescrito absorvendo o C9), um describe com testes literais em PGlite
+    sizeNote: nove cenarios de lista (C7, C8, C11 a C15, C17 e C19, com o C14 reescrito absorvendo o C9), nove testes (um it por cenario; o C19 tem quatro rejects.toThrow), um describe com testes literais em PGlite
   - id: E5-T16
     title: Implement listPersons and remove the stub
     kind: implement
@@ -678,6 +680,7 @@ cards:
       - the LIKE patterns escape %, _ and \ in the search text
       - result order is lower(full_name) ascending with id ascending as the tiebreaker
       - cursor is base64 of the UTF-8 JSON { fullName, id } with fullName already normalized to lower case (the same lower(full_name) used in the order); decoding has no any and validates the shape (fullName and id are strings)
+      - a cursor that is not base64 of JSON with fullName string and id string throws Error("invalid cursor") before querying the database
       - the keyset condition is (lower(full_name), id) > ($nome, $id), written as or(gt(lower(full_name), nome), and(eq(lower(full_name), nome), gt(id, id))), with nome taken from the cursor already in lower case
       - limit + 1 rows are read to know whether a next page exists; the result returns limit items and nextCursor built from the last returned item (not the extra row), null when there are no more rows
       - listPersons is declared async and imports and, or, sql, asc and gt from "drizzle-orm" and persons from "./schema"
@@ -685,10 +688,11 @@ cards:
       - the limit is already validated by HTTP and the implementation never returns more than query.limit items
       - the types, the /** */ comment and the signature stay, and the parameters lose the leading underscore
     hints:
-      - implement C7-C15 and C17 against the contract in the plan; C16 is out of infra
+      - implement C7-C15, C17 and C19 against the contract in the plan; C16 is out of infra
       - no unaccent in name search and no case-fold beyond lower(full_name)
       - read schema.ts for the persons columns and person-repository.ts for the drizzle style (select, where, returning) used in this module
       - 'build the cursor as Buffer.from(JSON.stringify({ fullName: last.fullName.toLowerCase(), id: last.id })).toString("base64"); decode with JSON.parse into unknown and check typeof of both fields, never any or a cast to any'
+      - 'validate the decoded cursor without any: JSON.parse into unknown (inside try/catch, rethrow Error("invalid cursor")), then narrow with typeof value === "object", value !== null, "fullName" in value, "id" in value and typeof of each field being "string"; throw new Error("invalid cursor") on any failure, before building the query'
       - the escape for LIKE is text.replace(/[\\%_]/g, "\\$&"); with no digit in the search (digits === "") skip the CPF condition so an empty CPF prefix never matches everything
       - the order is orderBy(sql`lower(${persons.fullName})`, asc(persons.id)) and the limit is query.limit + 1
       - 'a search with only digits matches name (contains, no case) OR CPF (prefix), as C17 shows: "529" gives Ana CPF (CPF prefix) and Lote 529 Silva (name); strip dots and dashes from the search before the CPF prefix match'

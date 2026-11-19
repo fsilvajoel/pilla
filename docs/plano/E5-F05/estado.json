@@ -118,14 +118,20 @@
       "camadas": [
         "unit"
       ]
+    },
+    {
+      "id": "A17",
+      "camadas": [
+        "unit"
+      ]
     }
   ],
   "e2e": [],
   "gates": {
     "expect-red": {
       "status": "PASS",
-      "at": "2026-11-19T20:01:45.081Z",
-      "detail": "19 teste(s), todos falhando"
+      "at": "2026-11-19T20:16:21.698Z",
+      "detail": "23 teste(s), todos falhando"
     }
   },
   "tests": [
@@ -196,6 +202,34 @@
       "camada": "unit",
       "arquivo": "apps/api/src/people/infra/person-write-error.test.ts",
       "teste": "C6 (A6): real self-reference error gives null"
+    },
+    {
+      "id": "C18",
+      "criterio": "A5",
+      "camada": "unit",
+      "arquivo": "apps/api/src/people/infra/person-write-error.test.ts",
+      "teste": "C18 (A5): null argument gives null"
+    },
+    {
+      "id": "C18",
+      "criterio": "A5",
+      "camada": "unit",
+      "arquivo": "apps/api/src/people/infra/person-write-error.test.ts",
+      "teste": "C18 (A5): string argument gives null"
+    },
+    {
+      "id": "C18",
+      "criterio": "A5",
+      "camada": "unit",
+      "arquivo": "apps/api/src/people/infra/person-write-error.test.ts",
+      "teste": "C18 (A5): object with null cause gives null"
+    },
+    {
+      "id": "C18",
+      "criterio": "A5",
+      "camada": "unit",
+      "arquivo": "apps/api/src/people/infra/person-write-error.test.ts",
+      "teste": "C18 (A5): object with non-object cause gives null"
     },
     {
       "id": "C7",
