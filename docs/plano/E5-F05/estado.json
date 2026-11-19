@@ -124,8 +124,8 @@
   "gates": {
     "expect-red": {
       "status": "PASS",
-      "at": "2026-11-19T19:55:35.969Z",
-      "detail": "18 teste(s), todos falhando"
+      "at": "2026-11-19T20:01:45.081Z",
+      "detail": "19 teste(s), todos falhando"
     }
   },
   "tests": [
@@ -244,7 +244,7 @@
       "criterio": "A12",
       "camada": "unit",
       "arquivo": "apps/api/src/people/infra/person-list.test.ts",
-      "teste": "C13 (A12): returns four people in name/id order with null nextCursor"
+      "teste": "C13 (A12): returns four people in lower(full_name), id order with null nextCursor"
     },
     {
       "id": "C14",
@@ -259,6 +259,13 @@
       "camada": "unit",
       "arquivo": "apps/api/src/people/infra/person-list.test.ts",
       "teste": "C15 (A14): active null and true return only active person; active false returns only inactive person"
+    },
+    {
+      "id": "C17",
+      "criterio": "A16",
+      "camada": "unit",
+      "arquivo": "apps/api/src/people/infra/person-list.test.ts",
+      "teste": "C17 (A16): search '529' returns Ana CPF 0218 then Lote 529 Silva 0217 (name contains OR CPF prefix)"
     }
   ]
 }

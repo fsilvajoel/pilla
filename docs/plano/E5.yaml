@@ -447,22 +447,24 @@ cards:
       - 'import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";'
       - 'import { migratedTestDb } from "../../db/test-db";'
       - 'import { updatePerson } from "./person-update";'
-      - C1 resolves to "UPDATED"; the SQL readback gives full_name "Ana Teixeira", cpf "39053344705", phone "+5511987654000", email "ana@example.com", birth_date "1990-04-15", notes "dados revisados", version 2, active true, referred_by_id null, and updated_at different from 2026-01-01
+      - C1 resolves to "UPDATED"; the SQL readback gives full_name "Ana Teixeira", cpf "39053344705", phone "+5511987654000", email "ana@example.com", birth_date "1990-04-15", notes "dados revisados", version 4 (base row version 3, called with 3), active true, referred_by_id null, and updated_at different from 2026-01-01
       - C2 resolves to "NOT_FOUND"
       - C3 resolves to "VERSION_CONFLICT" and the readback still gives "Bruno Dias" and version 1
       - C4 rejects with cause.code "23505" and cause.constraint "persons_cpf_key"
-      - C10 resolves to "UPDATED" and clearing email, birthDate and notes gives null while cpf remains "39053344705"; PersonChanges has no referredById, active or cpf null
+      - C10 resolves to "UPDATED" (base row version 3, called with 3) and clearing email, birthDate and notes gives null while cpf remains "39053344705" and version is 4
       - PersonChanges contains only fullName, cpf, phone, email, birthDate and notes; referredById and active are excluded
       - never edit apps/api/src/people/infra/person-update.ts
     hints:
       - the imports listed in done are the only imports; each imported name is used
       - open the database with migratedTestDb in beforeAll, delete from people.persons in beforeEach, close the client in afterAll, as persons.test.ts does
-      - insert the base rows with client.query and literal SQL; C1 base row is id 01970000-0000-7000-8000-000000000100, "Ana Costa", cpf "52998224725", phone "+5511987654321", updated_at '2026-01-01 00:00:00+00'
+      - insert the base rows with client.query and literal SQL; C1 base row is id 01970000-0000-7000-8000-000000000100, "Ana Costa", cpf "52998224725", phone "+5511987654321", updated_at '2026-01-01 00:00:00+00', version 3
       - C3 base row is id 01970000-0000-7000-8000-000000000101, "Bruno Dias", phone "+5511987654101"; C4 uses 01970000-0000-7000-8000-000000000100 with cpf "52998224725" and 01970000-0000-7000-8000-000000000101 with cpf "11144477735"
       - C2 id is 01970000-0000-7000-8000-000000000199, version 1, changes { fullName "Pessoa Nova" }
-      - C10 base row is id 01970000-0000-7000-8000-000000000103, fullName "Carla Mendes", cpf "39053344705", phone "+5511987654103", email "carla@example.com", birthDate "1988-05-20", notes "dados antigos"; changes { email null, birthDate null, notes null } leaves cpf unchanged
+      - C10 base row is id 01970000-0000-7000-8000-000000000103, fullName "Carla Mendes", cpf "39053344705", phone "+5511987654103", email "carla@example.com", birthDate "1988-05-20", notes "dados antigos", version 3; changes { email null, birthDate null, notes null } leaves cpf unchanged
       - read back with select ..., birth_date::text, updated_at::text; every expected value is a literal, never derived from the changes object
       - one test per scenario C1 to C4 and C10, named with its A number
+      - PersonChanges has no cpf null, referredById or active; the types are checked by typecheck, never write a test for them
+      - C1 and C10 insert the base row with version 3, call updatePerson with expectedVersion 3 and expect version 4 (never the fixed 2)
     budget:
       attempts: 4
       toolCalls: 16
@@ -471,7 +473,7 @@ cards:
       - docs/plano/E5-F05/plano.md
       - apps/api/src/people/infra/person-update.ts
       - apps/api/src/people/infra/persons.test.ts
-    sizeNote: um describe, quatro testes, ~90 linhas
+    sizeNote: um describe, cinco testes (C1 a C4 e C10), ~100 linhas
   - id: E5-T12
     title: Implement updatePerson and remove the stub
     kind: implement
@@ -497,6 +499,7 @@ cards:
       - when the update returns a row the result is "UPDATED"; when it returns none, a select by id tells "VERSION_CONFLICT" (row exists) from "NOT_FOUND" (no row)
       - database errors, duplicate CPF included, propagate without catch or translation
       - the import type lines, the types, the /** */ comment and the signature stay, and the parameters lose the leading underscore
+      - updatePerson is declared async (the stub is not); import { persons } from "./schema" sits next to the existing import type { NewPersonRow } from "./person-repository"
     hints:
       - the plan and these hints are enough; do not edit person-repository.ts and do not add fields or active to PersonChanges
       - 'the update is db.update(persons).set({ ...changes, version: sql`${persons.version} + 1`, updatedAt: sql`now()` }).where(and(eq(persons.id, id), eq(persons.version, expectedVersion))).returning({ version: persons.version })'
@@ -537,6 +540,7 @@ cards:
       - '{ cause: { code: "23505", constraint: "persons_cpf_key" } } gives "DUPLICATE_CPF"'
       - '{ cause: { code: "23503", constraint: "persons_referred_by_id_fkey" } } gives "NOT_FOUND"'
       - '{ cause: { code: "23505", constraint: "outra_constraint" } } gives null and {} gives null'
+      - 'one case per false branch of the narrowing, all giving null: personWriteErrorCode(null), personWriteErrorCode("texto"), personWriteErrorCode({ cause: null }) and personWriteErrorCode({ cause: "x" }) (C18)'
       - the real self-reference error has cause.code "23514" and cause.constraint "persons_referred_by_id_check" and gives null
       - no API status or error code is added for self-reference; it is not in the update contract
       - never edit apps/api/src/people/infra/person-write-error.ts
@@ -546,7 +550,7 @@ cards:
       - 'the real error comes from db.execute(sql`insert into people.persons (id, full_name, phone, referred_by_id) values (''01970000-0000-7000-8000-000000000102'', ''Caio Lima'', ''+5511987654102'', ''01970000-0000-7000-8000-000000000102'')`); capture it with .catch((e: unknown) => e)'
       - assert the cause metadata of the real error before asserting the null result; use toBe for every result
       - open the database with migratedTestDb in beforeAll and close the client in afterAll
-      - one test per expectation of C5 and C6, named with its A number
+      - one test per expectation of C5, C6 and C18, named with its A number; the four C18 cases are literal arguments, each toBe(null)
     budget:
       attempts: 4
       toolCalls: 16
@@ -554,7 +558,7 @@ cards:
     readFirst:
       - docs/plano/E5-F05/plano.md
       - apps/api/src/people/infra/person-write-error.ts
-    sizeNote: um describe, cinco testes, ~60 linhas
+    sizeNote: um describe, nove testes (quatro de C5, um de C6, quatro de C18), ~90 linhas
   - id: E5-T14
     title: Implement personWriteErrorCode and remove the stub
     kind: implement
@@ -579,7 +583,7 @@ cards:
       - the types, the /** */ comment and the signature stay, and the parameter loses the leading underscore
     hints:
       - the only file read is person-write-error.ts, because the steps are in these hints
-      - 'narrow structurally: typeof error === "object" && error !== null && "cause" in error, then the same for cause, then read code and constraint'
+      - 'narrow structurally without any: error must pass typeof error === "object" && error !== null && "cause" in error, then cause must pass typeof cause === "object" && cause !== null, then read code and constraint with "code" in cause and "constraint" in cause; each failed test gives null, which covers null, "texto", { cause: null }, { cause: "x" } and {} (C18 and C5)'
       - compare the pair code/constraint with two ifs and return null at the end
       - the line of vitest.config.ts to delete is the one inside coverage.exclude with src/people/infra/person-write-error.ts and the comment stub E5-T14
       - one edit_file of person-write-error.ts, one edit_file of apps/api/vitest.config.ts, then run_check 0, 1 and 2
@@ -616,25 +620,24 @@ cards:
       - 'import { listPersons } from "./person-list";'
       - C7 gives exactly the item { id "01970000-0000-7000-8000-000000000200", fullName "Caio Lima", cpf null, phone "+5511987654200", active true }
       - C8 gives exactly { items [], nextCursor null }
-      - C9 gives two items with limit 2
       - C11 gives exactly Bia Nunes and bia santos in lower-name order with nextCursor null, and a second search "SANTOS" gives only bia santos 0206
       - C12 gives exactly Ana CPF for search "529.982.247-25" with nextCursor null, search "529982" gives only Ana CPF 0207 (not Bia CPF), and search "982247" gives { items [], nextCursor null }
       - C13 inserts 0211 Ana Souza, 0210 Ana Souza, 0209 Bruno Lima and 0212 ana lima in this physical order and expects exactly ana lima 0212, Ana Souza 0210, Ana Souza 0211, Bruno Lima 0209 (lower(full_name) then id)
-      - C14 gives Bia A for cursor null, then Bia B with the opaque nextCursor, and null on the final page
+      - C14 (merges C9) inserts Bia Nunes 0219, Davi Melo 0214 and Eva Reis 0213 (name order disagrees with id order), uses limit 1, follows every page by passing only the received nextCursor (never decodes it) until nextCursor is null, and expects exactly Bia Nunes, Davi Melo, Eva Reis, one item per page, no repeat and no gap, with nextCursor null on the third and last page
       - C15 gives only Ativa Silva for active null and true, and only Inativa Souza for active false
       - C17 gives exactly Ana CPF 0218 and then Lote 529 Silva 0217 for search "529" with nextCursor null (name contains OR CPF prefix)
       - 'C16 is a HTTP-only scenario: default limit 20, maximum 100, and 400 VALIDATION_FAILED outside 1..100; do not write a test for it'
       - never edit apps/api/src/people/infra/person-list.ts
     hints:
-      - ids from 01970000-0000-7000-8000-000000000200 on; C9 rows are ...201 "Bia Nunes" cpf "52998224725", ...202 "Davi Melo" cpf "11144477735", ...203 "Eva Reis" cpf "39053344705", phones +5511987654201 to +5511987654203
+      - ids from 01970000-0000-7000-8000-000000000200 on; C9 no longer exists, it is merged into C14
       - C11 uses ...204 to ...206 and its second search is "SANTOS" (upper case on purpose, it must match "bia santos" in the middle of the name)
       - C12 uses ...207 "Ana CPF" cpf "52998224725" and ...208 "Bia CPF" cpf "11144477735"; searches "529.982.247-25", "529982" (partial prefix) and "982247" (middle digits, no match)
       - C13 uses ...209 "Bruno Lima" cpf "52998224725", ...210 "Ana Souza" cpf "11144477735", ...211 "Ana Souza" cpf "39053344705", ...212 "ana lima" cpf null, phones +5511987654209 to +5511987654212; insert in the order 0211, 0210, 0209, 0212 so that only ORDER BY lower(full_name), id gives the literal result (a plain ORDER BY full_name would put Bruno Lima before ana lima, and without id the two Ana Souza would come in physical order)
       - C17 uses ...217 "Lote 529 Silva" cpf "11144477735" (inserted first) and ...218 "Ana CPF" cpf "52998224725", phones +5511987654217 and +5511987654218; search "529"
       - each CPF is unique per test (persons_cpf_key), so never reuse the same CPF twice in one scenario
       - type db as PgliteDatabase (import type from drizzle-orm/pglite), the same as person-repository.test.ts, never PgDatabase or PgQueryResultHKT
-      - C14 uses ...213 "Bia A" and ...214 "Bia B"; C15 uses ...215 "Ativa Silva" and ...216 "Inativa Souza"
-      - name search uses lower(full_name) contains; CPF search removes dots and dashes and uses prefix
+      - 'C14 rows: ...219 "Bia Nunes" cpf "52998224725" phone +5511987654219, ...214 "Davi Melo" cpf "11144477735" phone +5511987654214, ...213 "Eva Reis" cpf "39053344705" phone +5511987654213; by id the order would be Eva, Davi, Bia, by name it is Bia, Davi, Eva; loop with limit 1 collecting the pages and checking each page and the final sequence; the cursor is opaque in the test, only passed back as received; C15 uses ...215 "Ativa Silva" and ...216 "Inativa Souza"'
+      - name search uses lower(full_name) contains; CPF search removes everything that is not a digit and uses prefix
       - a search with only digits matches name (contains, no case) OR CPF (prefix); no scenario needs a name with digits
       - order by lower(full_name), then id; encode the opaque cursor as base64 UTF-8 JSON { fullName, id }
       - active null and true filter only active rows; false filters only inactive rows
@@ -649,7 +652,7 @@ cards:
       - docs/plano/E5-F05/plano.md
       - apps/api/src/people/infra/person-list.ts
       - apps/api/src/people/infra/persons.test.ts
-    sizeNote: onze cenarios de lista C7-C17, um describe com testes literais em PGlite
+    sizeNote: oito cenarios de lista (C7, C8, C11 a C15 e C17, com o C14 reescrito absorvendo o C9), um describe com testes literais em PGlite
   - id: E5-T16
     title: Implement listPersons and remove the stub
     kind: implement
@@ -671,26 +674,36 @@ cards:
       - person-list.ts has no '// @stub E5-T16' line and apps/api/vitest.config.ts has no line that excludes src/people/infra/person-list.ts
       - listPersons returns { items, nextCursor } with items shaped { id, fullName, cpf, phone, active } and never more than limit items
       - search, ordering, cursor and inactive persons follow only what the plan records from the PM
-      - search matches name substrings case-insensitively via lower(full_name) and CPF digits by prefix after removing dots and dashes
+      - search matches name substrings case-insensitively via lower(full_name) and CPF digits by prefix after removing every non-digit character; when the search has no digit (digits === "") no CPF condition is generated
+      - the LIKE patterns escape %, _ and \ in the search text
       - result order is lower(full_name) ascending with id ascending as the tiebreaker
-      - cursor is opaque base64 UTF-8 JSON { fullName, id }; nextCursor is null on the final page
+      - cursor is base64 of the UTF-8 JSON { fullName, id } with fullName already normalized to lower case (the same lower(full_name) used in the order); decoding has no any and validates the shape (fullName and id are strings)
+      - the keyset condition is (lower(full_name), id) > ($nome, $id), written as or(gt(lower(full_name), nome), and(eq(lower(full_name), nome), gt(id, id))), with nome taken from the cursor already in lower case
+      - limit + 1 rows are read to know whether a next page exists; the result returns limit items and nextCursor built from the last returned item (not the extra row), null when there are no more rows
+      - listPersons is declared async and imports and, or, sql, asc and gt from "drizzle-orm" and persons from "./schema"
       - PersonListQuery.active is boolean | null; null and true select active only, false selects inactive only
       - the limit is already validated by HTTP and the implementation never returns more than query.limit items
       - the types, the /** */ comment and the signature stay, and the parameters lose the leading underscore
     hints:
       - implement C7-C15 and C17 against the contract in the plan; C16 is out of infra
       - no unaccent in name search and no case-fold beyond lower(full_name)
+      - read schema.ts for the persons columns and person-repository.ts for the drizzle style (select, where, returning) used in this module
+      - 'build the cursor as Buffer.from(JSON.stringify({ fullName: last.fullName.toLowerCase(), id: last.id })).toString("base64"); decode with JSON.parse into unknown and check typeof of both fields, never any or a cast to any'
+      - the escape for LIKE is text.replace(/[\\%_]/g, "\\$&"); with no digit in the search (digits === "") skip the CPF condition so an empty CPF prefix never matches everything
+      - the order is orderBy(sql`lower(${persons.fullName})`, asc(persons.id)) and the limit is query.limit + 1
       - 'a search with only digits matches name (contains, no case) OR CPF (prefix), as C17 shows: "529" gives Ana CPF (CPF prefix) and Lote 529 Silva (name); strip dots and dashes from the search before the CPF prefix match'
       - 'ties on lower(full_name) are broken by id and the order is never plain full_name (C13: "ana lima" comes before "Bruno Lima")'
       - return cpf null for imported rows without CPF
       - default limit 20 and max 100 are HTTP/Zod responsibilities; listPersons receives limit already validated
       - the line of vitest.config.ts to delete is the one inside coverage.exclude with src/people/infra/person-list.ts and the comment stub E5-T16
     budget:
-      attempts: 4
+      attempts: 8
       toolCalls: 17
       minutes: 8
     readFirst:
       - apps/api/src/people/infra/person-list.ts
+      - apps/api/src/people/infra/schema.ts
+      - apps/api/src/people/infra/person-repository.ts
       - apps/api/vitest.config.ts
     sizeNote: uma funcao de lista com busca, filtro, ordenacao e paginacao em PGlite
 features:

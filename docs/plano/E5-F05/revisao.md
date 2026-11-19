@@ -60,3 +60,27 @@ Não bloqueantes
 - N4: o orquestrador atualiza no fim.
 
 Cartões: E5-T15 com `done`/`hints` novos (C11, C12, C13, C17), `attempts` 8 (toolCalls 24, minutes 15); E5-T16 só com hints alinhados (C7-C15 e C17, OU dos dígitos, ordem `lower` com `id`).
+
+## Revisão dos cartões (Opus), rodada 1
+
+Veredito por cartão: T11 aprovado com ajustes (não bloqueantes); T12 aprovado com ajuste; T13 reprovado (B1); T14 ajustado junto com T13; T15 reprovado (B2); T16 reprovado (B3, B4).
+
+Bloqueantes
+- B1 (T13/T14, ramos falsos do narrowing sem teste): cenário novo C18 (A5) e `done` do T13 com `personWriteErrorCode(null)`, `("texto")`, `({ cause: null })` e `({ cause: "x" })`, todos `null`, além do `{}` e dos erros reais; `sizeNote` do T13 passa a nove testes; hint do T14 alinhado a esses casos, sem `any`.
+- B2 (T15/C14, keyset não provado): C14 reescrito e fundido com o C9: três linhas em que a ordem por `lower(full_name)` discorda da ordem por `id` (Bia Nunes 0219, Davi Melo 0214, Eva Reis 0213), `limit` 1, todas as páginas até `nextCursor` nulo, sequência completa sem repetição nem falta, cursor opaco (só repassado, nunca decodificado). C9 removido (A9 provado no C14).
+- B3 (T16, `done` vago): `done` e hints com a comparação `(lower(full_name), id) > ($nome, $id)` com o nome já em minúsculas, cursor base64 de JSON `{fullName, id}` com `fullName` em minúsculas, `limit + 1` linhas lidas, `digits === ""` sem condição de CPF, escape de `%`, `_` e `\` no `LIKE`, decodificação sem `any` com validação de forma, `async` e imports de `drizzle-orm` e `./schema`.
+- B4 (T16, contexto): `schema.ts` e `person-repository.ts` no `readFirst`; `budget.attempts` 8.
+
+Não bloqueantes (aplicados)
+- T11: C1 e C10 com `version` 3 na linha inicial, chamada com 3 e resultado 4 (plano e cartão); `sizeNote` com cinco testes (C1 a C4 e C10); "`PersonChanges` sem `cpf` null" saiu do `done` e foi para os hints.
+- T12: `done` diz `async` e que `import { persons } from "./schema"` convive com o `import type { NewPersonRow }`.
+- T15: hint do C12 diz "remove tudo que não é dígito"; `sizeNote` com oito cenários (C7, C8, C11 a C15 e C17; o C14 reescrito absorve o C9); `attempts` 8 mantido.
+
+Pendente de decisão do Joel
+- Q2: cursor malformado (base64 inválido, JSON inválido ou forma errada). Opções: (a) erro na infra, com cenário novo no T15; (b) tratar como sem cursor; (c) borda HTTP. Recomendação: (a) erro na infra com cenário novo no T15. Nada disso está escrito nos cartões; o T16 só exige validação de forma na decodificação.
+
+Decisões aplicadas
+- Q1: o cursor guarda o nome já em minúsculas; a comparação do keyset usa esse valor contra `lower(full_name)`.
+- Q3: os testes tratam o cursor como opaco (só repassam o `nextCursor` recebido).
+
+Estado: os testes serão refeitos pela Bia; `scenarios`/`expect-red` do `estado.json` serão regerados após a nova rodada (T11, T13 com C18, T15 com C14 novo). Nenhuma entrada de teste foi inventada; as existentes ficam como estão (a entrada do C9 deixa de valer).
