@@ -8,6 +8,7 @@
     "typecheck": "tsc -p tsconfig.json",
     "lint": "eslint src",
     "test": "vitest run --coverage",
+    "mutation": "stryker run",
     "db:generate": "drizzle-kit generate --config drizzle-kit/core.config.ts",
     "db:regen": "node scripts/db-regen.mjs"
   },
@@ -17,6 +18,8 @@
   "devDependencies": {
     "@electric-sql/pglite": "0.5.14",
     "@pilla/config": "workspace:*",
+    "@stryker-mutator/core": "^10.1.1",
+    "@stryker-mutator/vitest-runner": "^10.1.1",
     "@types/node": "~26.6.6",
     "@vitest/coverage-v8": "^5.1.0",
     "drizzle-kit": "^0.31.11",
