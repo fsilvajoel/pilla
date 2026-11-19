@@ -8,8 +8,8 @@
       "status": "done"
     },
     "testReview": {
-      "status": "pending",
-      "verdict": "reprovado"
+      "status": "done",
+      "verdict": "aprovado"
     },
     "implement": {
       "status": "pending"
@@ -136,8 +136,17 @@
   "gates": {
     "expect-red": {
       "status": "PASS",
-      "at": "2026-11-19T02:12:16.071Z",
+      "at": "2026-11-19T02:13:53.574Z",
       "detail": "9 teste(s), todos falhando"
+    },
+    "tests-reviewed": {
+      "status": "PASS",
+      "at": "2026-11-19T02:14:20.850Z",
+      "detail": "2 teste(s) com sha assinado"
     }
+  },
+  "testShas": {
+    "apps/web/components/loan-simulation.test.tsx": "82cb8569dd6b9dc4ef5176ec6eaa6a464d432c6a",
+    "apps/web/e2e/loan-simulation.e2e.ts": "939bb341419d1448748dd834d2aba1d2ac5e241b"
   }
 }

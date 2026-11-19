@@ -52,3 +52,34 @@ reprovado
 - C2 usa `selector: ":not(th)"` para "Juros" e C3 usa `findByRole("table")` (uma só tabela): ambos supõem que o
   resumo não é tabela. Com o achado 1 resolvido no contrato isso some.
 - C4 não confere os juros do CA-11 (`R$ 100,00`); o A2 não pede. Opcional.
+
+# Revisão dos testes E6-F02 (rodada 2)
+
+revisor: reviewer
+arquivo: apps/web/components/loan-simulation.test.tsx 82cb8569dd6b9dc4ef5176ec6eaa6a464d432c6a
+arquivo: apps/web/e2e/loan-simulation.e2e.ts 939bb341419d1448748dd834d2aba1d2ac5e241b
+
+Diff revisado: 3fd6e8d..51e4125. `pnpm gate expect-red E6-F02`: PASS (9 teste(s), todos falhando), rodado de novo
+nesta revisão; no vitest os 9 caem em `Error: not implemented` (relatório JSON, 9 de 9), `tsc --noEmit` limpo.
+
+- [x] Achado 1 (contrato) — plano.md, Contrato: o resumo vira um único `<dl>` com pares `<dt>`/`<dd>` na ordem
+  "Total a receber", "Juros", "Parcela", e não é tabela. C2, C4 e C10 do plano citam os pares.
+- [x] C2 — test.tsx:63-71 (`summaryPairs`: cada `term` com o `<dd>` irmão seguinte, dentro de `<dl>`; senão `null`) e
+  test.tsx:106-110: toEqual dos 3 pares exatos. Trocar total e juros, ou tirar um `<dd>`, falha. No jsdom `dt`/`dd`
+  têm papéis `term`/`definition` (aria-query conferido).
+- [x] C4 — test.tsx:136-140: o Map vem de `summaryPairs`, então `get("Total a receber")` é o `<dd>` daquele `<dt>`:
+  liga rótulo a valor, não só confere presença. Ordem dos 3 rótulos com toEqual; total `R$ 1.100,00` e parcela
+  `4 × R$ 275,00` com toBe. Trocar total e juros dá `R$ 100,00` no total e falha.
+- [x] C10 — e2e.ts:19-22: `dl > dt` e `dl > dt + dd` com toHaveText em lista (ordem e quantidade exatas). Cada `dd`
+  precisa vir logo depois de um `dt`, e as duas listas têm de bater posição a posição: trocar valores ou faltar um
+  `dd` falha.
+- [x] Resto sem mudança — C1, C3, C5 a C9 e C11 iguais à rodada 1 (só entrou o helper); nomes iguais aos do
+  `estado.json`; camadas, bordas e fragilidade como na rodada 1.
+- [x] Proteções — 51e4125 não toca `loan-simulation.tsx`, `page.tsx` nem `lib/`.
+
+## Veredito
+aprovado
+
+## Lacunas
+- plano.md, Contrato (resumo): a frase "O resumo não é tabela" aparece duas vezes. É só redação e não muda o contrato.
+- C4 continua sem conferir os juros do CA-11. Está justificado no plano: a fonte só dá o valor intermediário 95.
