@@ -1,7 +1,7 @@
 // Proibições de docs/travas.md §3. Comentários de desligar regra são proibidos (noInlineConfig).
 import tseslint from "typescript-eslint";
 
-const testFiles = ["**/*.test.ts", "**/*.spec.ts", "**/*.test.tsx", "**/*.spec.tsx", "**/*.test.mts"];
+const testFiles = ["**/*.test.ts", "**/*.spec.ts", "**/*.test.tsx", "**/*.spec.tsx", "**/*.test.mts", "**/*.e2e.ts"];
 const pureCode = ["packages/finance/src/**/*.ts", "**/domain/**/*.ts"];
 
 const testBans = [

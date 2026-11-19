@@ -13,6 +13,8 @@ coverage/
 .turbo/
 reports/
 .stryker-tmp/
+test-results/
+playwright-report/
 *.tsbuildinfo
 .vitest/
 .next/

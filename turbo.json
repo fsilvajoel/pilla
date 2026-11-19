@@ -6,6 +6,7 @@
     "lint": {},
     "typecheck": { "dependsOn": ["^build"] },
     "test": { "outputs": ["coverage/**"] },
-    "mutation": { "outputs": ["reports/**"], "cache": false }
+    "mutation": { "outputs": ["reports/**"], "cache": false },
+    "e2e": { "outputs": ["playwright-report/**", "test-results/**"], "cache": false }
   }
 }
