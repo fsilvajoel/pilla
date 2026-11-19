@@ -74,7 +74,7 @@ destinationKey: "chave-pix@exemplo.com", paidAt: "2026-12-13", amountCents: 1150
   `chave-pix@exemplo.com`; Método começa em PIX e CASH
   aparece como "Espécie".
 - Contrato fechado: com `{ ...exampleLoanDetail, status: "PAID_OFF" }` (e RENEWED, RENEGOTIATED, CANCELLED) a tela
-  mostra o alerta "Este contrato não aceita pagamento.", e `queryByLabelText("Valor")` e
+  mostra o alerta "Contrato encerrado" com o aviso do status (ex.: "Este contrato já foi quitado e não aceita novos pagamentos."), e `queryByLabelText("Valor")` e
   `queryByRole("button", { name: "Registrar pagamento" })` são null; `onSubmit` não é chamado.
 - Sucesso: status "Pagamento registrado para conferência."; qualquer erro: alerta "Confira os campos do
   pagamento.".
@@ -178,7 +178,7 @@ o formulário (decisão 4).
 ### A8: tela bloqueia contrato fechado
 - entrada: `PaymentForm` com `{ ...exampleLoanDetail, status }` para `PAID_OFF`, `RENEWED`, `RENEGOTIATED` e `CANCELLED`; e com `WRITTEN_OFF` e `ACTIVE`
 - domínio: `loan.status`
-- saída: nos quatro fechados, alerta "Este contrato não aceita pagamento." e nenhum campo nem botão de envio; `onSubmit` não é chamado; em `WRITTEN_OFF` e `ACTIVE` o formulário aparece
+- saída: nos quatro fechados, alerta "Contrato encerrado" com o aviso do status e nenhum campo nem botão de envio; `onSubmit` não é chamado; em `WRITTEN_OFF` e `ACTIVE` o formulário aparece
 - erro: nenhum
 - fonte: RN-R09; RN-C20; decisão 4 do Joel de 19/11
 - camada: unit
