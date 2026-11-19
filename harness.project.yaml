@@ -13,18 +13,24 @@ roles:
   orchestrator: { agent: null }
   planner: { agent: .claude/agents/planner.md }
   test-writer: { agent: .claude/agents/test-writer.md }
-  reviewer: { agent: .claude/agents/reviewer.md }
+  reviewer: { agent: .claude/agents/reviewer.md, second_opinion: copilot }
   implementer: { agent: .claude/agents/implementer.md, worker: bia }
 
-# Trabalhadores do harness (adapter/api-chat.md). Bia: modelo remoto na OpenRouter, por ora só como implementer.
+# Trabalhadores do harness (adapter/api-chat.md, adapter/cli-agent.md). Bia: modelo remoto na OpenRouter, por ora só como implementer.
 # A chave fica só no .env; o humano exporta apenas OPEN_ROUTER_API_KEY antes de abrir a sessão do orquestrador.
 # Cota do tier grátis: 1000 requisições/dia, reset 00:00 UTC (GET /key -> data.free_model_daily_requests).
 workers:
   bia: { adapter: api-chat, base_url: "https://openrouter.ai/api/v1", model: "nvidia/nemotron-3-ultra-550b-a55b:free", key_env: OPEN_ROUTER_API_KEY, key_file: .env, quota_url: "https://openrouter.ai/api/v1/key", quota_remaining: ".data.free_model_daily_requests.remaining", quota_reserve: 20, max_attempts: 6, timeout_s: 300 }
+  # Copilot CLI (adapter/cli-agent.md), já autenticado na VM: segunda opinião do reviewer e implementer de reserva.
+  # O plano só tem o modelo automático (sem --model); cada execução consome 1 premium request.
+  copilot: { adapter: cli-agent, command: copilot, read_args: "--output-format json --stream off --no-ask-user --no-auto-update --disable-builtin-mcps --disallow-temp-dir --deny-tool=write --deny-tool=shell --deny-tool=memory", write_args: "--output-format json --stream off --no-ask-user --no-auto-update --disable-builtin-mcps --disallow-temp-dir --allow-tool=write --deny-tool=shell --deny-tool=memory", output_jq: '[.[] | select(.type == "assistant.message" and .data.phase == "final_answer")] | last | .data.content', usage_jq: '[.[] | select(.type == "result")] | last | .usage.premiumRequests', roles: "reviewer implementer", max_attempts: 6, timeout_s: 900 }
 
 # Regras de tipagem e lint que entram no pedido do trabalhador, por papel.
 role_context:
   implementer:
+    - AGENTS.md
+    - docs/memoria/lint.md
+  reviewer:
     - AGENTS.md
     - docs/memoria/lint.md
 
@@ -60,6 +66,10 @@ portable:
     - OpenRouter
     - OPEN_ROUTER
     - nemotron
+    - copilot
+    - Copilot
+    - COPILOT
+    - mai-code
 
 checks:
   - portable
