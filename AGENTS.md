@@ -17,7 +17,7 @@ Documentação e comentários de código em pt-BR; código em inglês ([ADR-0012
 
 ## 2. Papéis
 
-**Joel** decide produto e arquitetura, aprova docs e PRs e faz merge. Qualquer agente de IA pode orquestrar o harness (ADR-0015); no Claude Code, os papéis são subagentes em [.claude/agents/](.claude/agents/) (planner, test-writer, reviewer, implementer) e a sessão principal orquestra seguindo o [workflow feature](../harness-ada/workflow/feature.md).
+**Joel** decide produto e arquitetura, aprova docs e PRs e faz merge. Qualquer agente de IA pode orquestrar o harness (ADR-0015); no Claude Code, os papéis são subagentes em [.claude/agents/](.claude/agents/) (planner, plan-reviewer, test-writer, reviewer, implementer) e a sessão principal orquestra seguindo o [workflow feature](../harness-ada/workflow/feature.md).
 
 ## 3. Fluxo de trabalho
 
