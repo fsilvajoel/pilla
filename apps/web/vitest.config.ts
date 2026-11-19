@@ -18,8 +18,6 @@ export default defineConfig({
         "lib/utils.ts", // cn() do shadcn/ui: só repassa para clsx + tailwind-merge
         "app/\\(admin\\)/**/page.tsx", // parênteses escapados: no glob, "(admin)" sem escape é grupo e não casa o nome da pasta; casca de rota do ADMIN: só monta o componente com os dados de mentira
         "lib/mock-data.ts", // dados de mentira das telas do ADMIN (decisões do Joel de 17/11), sem lógica
-        "lib/new-loan.ts", // stub E7-T05: sai quando a implementação real entrar
-        "components/new-loan-form.tsx", // stub E7-T07: sai quando a implementação real entrar
       ],
       thresholds: { lines: 85, branches: 85, functions: 85, statements: 85 },
     },

@@ -12,10 +12,11 @@
       "verdict": "aprovado"
     },
     "implement": {
-      "status": "pending"
+      "status": "done"
     },
     "review": {
-      "status": "pending"
+      "status": "done",
+      "verdict": "aprovado"
     }
   },
   "sources": [
@@ -133,8 +134,23 @@
     },
     "tests-reviewed": {
       "status": "PASS",
-      "at": "2026-11-19T15:53:39.029Z",
-      "detail": "2 teste(s) assinado(s)"
+      "at": "2026-11-19T15:54:09.840Z",
+      "detail": "2 teste(s) com sha assinado"
+    },
+    "coverage": {
+      "status": "PASS",
+      "at": "2026-11-19T15:55:13.780Z",
+      "detail": "100% nos arquivos da feature em apps/web (lib/new-loan.ts, components/new-loan-form.tsx)"
+    },
+    "mutation": {
+      "status": "PASS",
+      "at": "2026-11-19T15:55:29.968Z",
+      "detail": "score >= 80%: apps/web/lib/new-loan.ts 100.00% (16/16)"
+    },
+    "e2e": {
+      "status": "PASS",
+      "at": "2026-11-19T15:55:30.168Z",
+      "detail": "nenhum e2e na feature (nenhum critério e2e)"
     }
   }
 }

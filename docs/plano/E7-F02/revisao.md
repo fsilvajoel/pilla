@@ -17,3 +17,37 @@ revisor: subagente independente (general-purpose, sonnet, 19/11), que não escre
 
 ## Veredito
 aprovado
+
+# Revisão final E7-F02
+
+revisor: subagente independente (general-purpose, sonnet, 19/11), que não escreveu o código; somente leitura.
+arquivos: `apps/web/lib/new-loan.ts`, `apps/web/components/new-loan-form.tsx`, `apps/web/vitest.config.ts`; testes assinados sem alteração.
+
+## Rodada 1: reprovado
+- Achado alto: as duas exclusões de cobertura de `new-loan.ts` e `new-loan-form.tsx` continuavam no `vitest.config.ts`
+  (o `sed` procurou `@stub`, mas as linhas diziam `stub` sem `@`). Corrigido na hora; sem defeito aberto.
+
+## Rodada 2 (mesmo revisor, após a correção)
+- [x] A1..A4: defaults com `formatReais(cents(BigInt(bps)))`; corpo da RFC-004 §5 com `toStrictEqual`; `internalNotes` só quando
+  digitado; sem cliente dá `ZodError` e o alerta; multa sem vírgula dá `MoneyError`.
+- [x] Sem campo de conta (decisões de 19/11 §4); rótulos em `<label>`, `role="status"` e `role="alert"`.
+- [x] Marcadores `@stub E7-T05` e `E7-T07` e as duas exclusões de cobertura removidos; imports só os do `done` dos cartões.
+- [x] Sem `any`, `as`, `!`, `@ts-*` ou segredos.
+
+## Gates (19/11)
+| Gate | Resultado |
+|---|---|
+| `expect-red` | PASS (9 testes, todos falhando contra a casca) |
+| `tests-reviewed --sign` | PASS (2 testes) |
+| `coverage` | PASS (100% nos dois arquivos) |
+| `mutation` | PASS (new-loan.ts 100%, 16/16) |
+| `e2e` | PASS (nenhum critério e2e) |
+
+## Achados
+- nenhum pendente.
+
+## Defeitos abertos
+- nenhum.
+
+## Veredito
+aprovado
