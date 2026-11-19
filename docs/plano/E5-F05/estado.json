@@ -21,7 +21,8 @@
       "status": "done"
     },
     "review": {
-      "status": "pending"
+      "status": "done",
+      "verdict": "aprovado"
     }
   },
   "sources": [
@@ -329,6 +330,17 @@
     "gatesOverridden": [
       "expect-red"
     ],
-    "note": "gates.expect-red e gates.tests-reviewed continuam com o registro real (FAIL)"
+    "note": "gates.expect-red e gates.tests-reviewed continuam com o registro real (FAIL)",
+    "review": {
+      "approver": "Joel",
+      "at": "2026-11-19",
+      "scope": "revisão final da E5-F05 aprovada pelo Joel (MVP)",
+      "reason": "subagente revisor (Haiku) não aprovou; Joel aprovou assim mesmo e decidiu corrigir depois, se necessário",
+      "openFindings": [
+        "person-list.ts: busca mista letra+dígito aplica prefixo de CPF (média)",
+        "person-list.ts: cursor com id não-UUID quebra no cast ::uuid (média)",
+        "person-list.ts: lower() do Postgres vs toLowerCase() do JS (baixa, não verificado)"
+      ]
+    }
   }
 }
