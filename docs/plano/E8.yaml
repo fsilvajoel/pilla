@@ -1,100 +1,8 @@
 delivery: E8
-title: Portuguese GitHub issues mirroring the docs (ADR-0016); a deterministic renderer, a token check, the sync integration and a gate
+title: Portuguese GitHub issues mirroring the docs (ADR-0016); the sync generates pt-BR on the first run, plus the integration and a gate
 # Plano em docs/plano/issues-ptbr.md. O harness Ada mora fora do repositório (../harness-ada): os caminhos do
 # harness nos cartões são relativos a esta raiz. Cartões em inglês (ADR-0012); a tradução para pt-BR é outra etapa.
 cards:
-  # ---------------------------------------------------------------- E8-F01: renderizador
-  - id: E8-T01
-    title: Write render_issue.py, the deterministic issue renderer
-    kind: implement
-    assignee: claude
-    rules: []
-    refs: [docs/adr/0016-issues-do-github-em-ptbr-espelhando-docs.md, docs/plano/issues-ptbr.md]
-    dependsOn: []
-    allowedPaths:
-      - ../harness-ada/script/render_issue.py
-    protectedTests: []
-    checks:
-      - python3 ../harness-ada/script/render_issue.py . --all --out /tmp/issues-render
-      - python3 ../harness-ada/script/check_portable.py harness.project.yaml
-    done:
-      - 'usage: render_issue.py <project root> [--feature ID | --defeito Dn | --all] [--out folder] [--repo-url URL] [--branch NAME]'
-      - one .md per feature and per defect with the fixed sections (summary and scope, rules, contract, cards with DoR and DoD, references with links, screens, state)
-      - the English text of the cards (title, done, hints) is wrapped in a t marker with the short sha256 of the text; pt-BR items are copied unmarked
-      - exit 1 when a relative doc or image link does not exist; a body over 65000 characters is truncated with a warning and a link to the doc
-      - Python stdlib plus PyYAML as status.py does, fully typed, pt-BR docstrings, no project name and no machine path inside the harness
-    hints:
-      - the cards come from cards_glob, the features list of each E*.yaml gives the cards of a feature
-      - the PRD rules are the bullets and table rows cited in refs, such as PRD-001 RF-01
-    budget:
-      attempts: 3
-      toolCalls: 40
-      minutes: 30
-    readFirst:
-      - ../harness-ada/script/status.py
-      - ../harness-ada/script/sync_github_project.py
-      - docs/plano/issues-ptbr.md
-    sizeNote: about 450 lines
-  - id: E8-T02
-    title: Write the tests of render_issue.py
-    kind: test-author
-    assignee: claude
-    rules: []
-    refs: [docs/plano/issues-ptbr.md]
-    dependsOn: [E8-T01]
-    allowedPaths:
-      - ../harness-ada/tests/test_render_issue.py
-    protectedTests: []
-    checks:
-      - cd ../harness-ada && python3 -m pytest tests/test_render_issue.py -q
-    done:
-      - synthetic fixtures cover the sections, the t marker hash, the missing link failure, the 65000 characters truncation, the image link with raw=true and the defect rendering
-      - tests that read a real project (E7-F01, E4-F02 and D1) take its root from an environment variable and are skipped without it
-      - the tests only read the project, never write in it
-    hints:
-      - tmp_path builds the small project of the synthetic fixtures
-    budget:
-      attempts: 3
-      toolCalls: 30
-      minutes: 20
-    readFirst:
-      - ../harness-ada/script/render_issue.py
-      - ../harness-ada/tests/test_sync_github_project.py
-    sizeNote: about 250 lines
-  # ---------------------------------------------------------------- E8-F02: conferência da tradução
-  - id: E8-T03
-    title: Write check_issue_tokens.py, the token comparison between source and translation
-    kind: implement
-    assignee: alice
-    rules: []
-    skills:
-      - editar-arquivo
-      - coding-guidelines
-    refs: [docs/plano/issues-ptbr.md, docs/adr/0016-issues-do-github-em-ptbr-espelhando-docs.md]
-    dependsOn: [E8-T01]
-    allowedPaths:
-      - ../harness-ada/script/check_issue_tokens.py
-      - ../harness-ada/tests/test_check_issue_tokens.py
-    protectedTests: []
-    checks:
-      - cd ../harness-ada && python3 -m pytest tests/test_check_issue_tokens.py -q
-      - python3 ../harness-ada/script/check_portable.py harness.project.yaml
-    done:
-      - 'usage: check_issue_tokens.py <original.md> <translated.md>; exit 0 when every protected token of each t block of the original is in the matching block of the translation, 1 otherwise, listing the missing tokens'
-      - protected tokens are code spans between backticks, IDs such as E7-T01, RF-01 and RN-P01, file names and paths, numbers and URLs
-      - blocks are matched by the hash in the t marker; a block without a pair is an error
-      - Python stdlib only, fully typed, pt-BR docstrings, no project name and no machine path
-      - tests cover a clean translation, a dropped ID, a changed number, a mangled code span and an unpaired block
-    hints:
-      - split the text with a regular expression on the t marker and compare sets of tokens per block
-    budget:
-      attempts: 4
-      toolCalls: 30
-      minutes: 15
-    readFirst:
-      - ../harness-ada/script/render_issue.py
-      - ../harness-ada/script/check_status_consistency.py
-    sizeNote: about 120 lines plus tests
   # ---------------------------------------------------------------- E8-F03: integração, gate e docs
   - id: E8-T04
     title: Make sync_github_project.py use the rendered issue body
@@ -102,7 +10,6 @@ cards:
     assignee: claude
     rules: []
     refs: [docs/plano/issues-ptbr.md, docs/adr/0016-issues-do-github-em-ptbr-espelhando-docs.md]
-    dependsOn: [E8-T01, E8-T03]
     allowedPaths:
       - ../harness-ada/script/sync_github_project.py
       - ../harness-ada/tests/test_sync_github_project.py
@@ -129,7 +36,6 @@ cards:
     assignee: claude
     rules: []
     refs: [docs/plano/issues-ptbr.md]
-    dependsOn: [E8-T01]
     allowedPaths:
       - ../harness-ada/script/check_issue_render.py
       - ../harness-ada/tests/test_check_issue_render.py
@@ -179,12 +85,7 @@ cards:
     sizeNote: about 40 lines
 # Features (ADR-0014): planos em docs/plano/E8-F0<n>/plano.md (a escrever antes de despachar).
 features:
-  - id: E8-F01
-    title: Deterministic issue renderer
-    cards: [E8-T01, E8-T02]
-  - id: E8-F02
-    title: Translation token check
-    cards: [E8-T03]
+# E8-F01 (renderizador) e E8-F02 (conferência de tokens) removidas por decisão do Joel (19/11): o dado sai em pt-BR já na primeira execução. Cartões E8-T01..T03 saíram junto.
   - id: E8-F03
     title: Sync integration, render gate and docs
     cards: [E8-T04, E8-T05, E8-T06]

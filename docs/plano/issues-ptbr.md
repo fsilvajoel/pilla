@@ -14,24 +14,19 @@ ADRs/RFCs/PRD referenciados e imagens. Executável pela Alice em etapas pequenas
 | Telas | `prd/telas/*`, `plano/<F>/*.png` | imagens citadas no `D<n>.md` |
 | Estado | `estado.json`, `status.json` | campo Status |
 
-## Etapas (cada uma = um cartão pequeno; E8 sugerida)
-1. **Renderizador** (`render_issue.py`, harness-ada, Python stdlib, determinístico): lê os docs, gera
-   `issue.md` por feature/defeito com seções fixas em pt-BR; inglês dos cartões entra marcado
-   `<!--t:HASH-->texto original<!--/t-->`. Falha se link de doc/imagem não resolve. Testes com 2 features reais (E7-F01, E4-F02) e D1.
-2. **Tradução** (Alice): para cada bloco `<!--t:-->`, prompt fixo ("traduza para pt-BR técnico, preserve
-   código, IDs, nomes de arquivo e números; devolva só o texto"). Saída em `issue.pt-br.md` com cache por hash.
-   O orquestrador confere: IDs/código intactos (script compara tokens entre original e tradução).
-3. **Imagens**: resolver links `?raw=true`; verificar que o PNG está commitado no `main` antes do `--apply`.
-4. **Integração**: `sync_github_project.py` usa o corpo renderizado no lugar do corpo de status; mantém o marcador,
-   filtro de segredos e idempotência; adiciona issues de defeito (label `bug`) e labels de entrega.
-5. **Gate**: `check_issue_render.py` (sem inglês residual fora de código/IDs, links válidos, <65k chars) e
-   atualização do `workflow/` + `script/README.md` do Ada.
-6. **Rodada real**: `--apply` em dry-run, Joel vê 2 issues-piloto, depois todas (#1–#13 e D1–D3).
+## Etapas (decisão do Joel, 19/11: o dado sai em pt-BR já na primeira execução)
+Sem renderizador separado e sem conferência de tokens: E8-F01 e E8-F02 saíram do plano. Os cartões
+E8-T01..T03 saíram junto.
+1. **Integração** (E8-T04): o `sync_github_project.py` gera o corpo em pt-BR a partir das fontes, mantém o
+   marcador, o filtro de segredos e a idempotência; adiciona issues de defeito (label `bug`) e labels de entrega.
+2. **Imagens**: links `?raw=true` com o PNG já commitado no `main` antes do `--apply`.
+3. **Gate** (E8-T05): sem inglês residual fora de código e IDs, links válidos, corpo abaixo de 65k caracteres.
+4. **Rodada real** (E8-T06): `--apply` em dry-run; Joel vê 2 issues-piloto, depois todas (#1–#13 e D1–D3).
 
 ## Receita para a Alice (tarefa recorrente futura)
-"Atualizar as issues": (1) `render_issue.py --all`; (2) traduzir só blocos novos/alterados; (3) `check_issue_render.py`;
-(4) `sync_github_project.py --apply` (precisa do ok do Joel e `gh` com escopo `project`). Alice nunca decide estrutura
-nem altera os docs-fonte.
+"Atualizar as issues": (1) `sync_github_project.py --dry-run` (gera o corpo em pt-BR); (2) conferir o diff;
+(3) `sync_github_project.py --apply` (precisa do ok do Joel e `gh` com escopo `project`). Alice nunca decide
+estrutura nem altera os docs-fonte.
 
 ## Riscos
 - Tradução alterar IDs/código → gate de tokens. · Issue >65k → resumo pela Alice e link para o doc. ·
