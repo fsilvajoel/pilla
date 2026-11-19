@@ -31,6 +31,11 @@ commands:
   mutation: pnpm --filter @pilla/finance mutation
   verify: pnpm verify
 
+# Gates mutacao e e2e do harness (gate/mutacao.md, gate/e2e.md): ferramenta e score mínimo de mutação.
+gates:
+  mutation: { tool: stryker, min_score: 80 }
+  e2e: { tool: playwright }
+
 # Gate portable: textos do projeto que não podem aparecer dentro do harness.
 portable:
   forbidden:
