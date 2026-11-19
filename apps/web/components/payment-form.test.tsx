@@ -90,7 +90,8 @@ describe("PaymentForm", () => {
     const onSubmit = vi.fn();
     render(<PaymentForm loan={{ ...exampleLoanDetail, status: "PAID_OFF" }} onSubmit={onSubmit} />);
 
-    expect(screen.getByRole("alert")).toHaveTextContent("Este contrato não aceita pagamento.");
+    expect(screen.getByRole("alert")).toHaveTextContent("Contrato encerrado");
+    expect(screen.getByRole("alert")).toHaveTextContent("Este contrato já foi quitado e não aceita novos pagamentos.");
     expect(screen.queryByLabelText("Valor")).toBeNull();
     expect(screen.queryByRole("button", { name: "Registrar pagamento" })).toBeNull();
     expect(onSubmit).not.toHaveBeenCalled();
@@ -99,7 +100,10 @@ describe("PaymentForm", () => {
   it("blocks a renewed contract", () => {
     render(<PaymentForm loan={{ ...exampleLoanDetail, status: "RENEWED" }} onSubmit={vi.fn()} />);
 
-    expect(screen.getByRole("alert")).toHaveTextContent("Este contrato não aceita pagamento.");
+    expect(screen.getByRole("alert")).toHaveTextContent("Contrato encerrado");
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "Este contrato foi renovado. Registre o pagamento no contrato novo.",
+    );
     expect(screen.queryByLabelText("Valor")).toBeNull();
     expect(screen.queryByRole("button", { name: "Registrar pagamento" })).toBeNull();
   });
@@ -107,7 +111,10 @@ describe("PaymentForm", () => {
   it("blocks a renegotiated contract", () => {
     render(<PaymentForm loan={{ ...exampleLoanDetail, status: "RENEGOTIATED" }} onSubmit={vi.fn()} />);
 
-    expect(screen.getByRole("alert")).toHaveTextContent("Este contrato não aceita pagamento.");
+    expect(screen.getByRole("alert")).toHaveTextContent("Contrato encerrado");
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "Este contrato foi renegociado. Registre o pagamento no contrato novo.",
+    );
     expect(screen.queryByLabelText("Valor")).toBeNull();
     expect(screen.queryByRole("button", { name: "Registrar pagamento" })).toBeNull();
   });
@@ -115,7 +122,8 @@ describe("PaymentForm", () => {
   it("blocks a cancelled contract", () => {
     render(<PaymentForm loan={{ ...exampleLoanDetail, status: "CANCELLED" }} onSubmit={vi.fn()} />);
 
-    expect(screen.getByRole("alert")).toHaveTextContent("Este contrato não aceita pagamento.");
+    expect(screen.getByRole("alert")).toHaveTextContent("Contrato encerrado");
+    expect(screen.getByRole("alert")).toHaveTextContent("Este contrato foi cancelado e não aceita pagamentos.");
     expect(screen.queryByLabelText("Valor")).toBeNull();
     expect(screen.queryByRole("button", { name: "Registrar pagamento" })).toBeNull();
   });

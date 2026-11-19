@@ -18,14 +18,25 @@ export interface PaymentFormProps {
 
 type Outcome = "idle" | "ok" | "error";
 
-const closedStatuses: readonly LoanDetailResponse["status"][] = ["PAID_OFF", "RENEWED", "RENEGOTIATED", "CANCELLED"];
+type ClosedStatus = Extract<LoanDetailResponse["status"], "PAID_OFF" | "RENEWED" | "RENEGOTIATED" | "CANCELLED">;
+
+const closedStatusNotice: Record<ClosedStatus, string> = {
+  PAID_OFF: "Este contrato já foi quitado e não aceita novos pagamentos.",
+  CANCELLED: "Este contrato foi cancelado e não aceita pagamentos.",
+  RENEWED: "Este contrato foi renovado. Registre o pagamento no contrato novo.",
+  RENEGOTIATED: "Este contrato foi renegociado. Registre o pagamento no contrato novo.",
+};
+
+function isClosedStatus(status: LoanDetailResponse["status"]): status is ClosedStatus {
+  return status in closedStatusNotice;
+}
 
 const methods: readonly PaymentFormValues["method"][] = ["PIX", "BOLETO", "CASH", "BANK_TRANSFER"];
 
 /**
  * Registrar pagamento do ADMIN (PRD-001 RF-20). Título (h1) "Registrar pagamento", "Contrato " + `loanNumber` e
  * "Saldo devedor R$ " + `formatReais(outstandingCents)`. Contrato fechado (PAID_OFF, RENEWED, RENEGOTIATED,
- * CANCELLED) bloqueia a tela com "Este contrato não aceita pagamento."; DRAFT aceita. Formulário React Hook Form
+ * CANCELLED) bloqueia a tela com o título "Contrato encerrado" e o aviso do status (`closedStatusNotice`); DRAFT aceita. Formulário React Hook Form
  * com `PaymentFormValues` de `@/lib/payment-draft`: "Chave Pix de destino" (input de texto), "Data do pagamento"
  * (input type="date"), "Valor" e "Método" (select com PIX, BOLETO, CASH, BANK_TRANSFER e o texto de
  * `paymentMethodLabel` de `@/lib/labels`; começa em PIX). Sem comprovante. O botão "Registrar pagamento" chama
@@ -46,11 +57,14 @@ export function PaymentForm({ loan, onSubmit }: PaymentFormProps): JSX.Element {
     </>
   );
 
-  if (closedStatuses.includes(loan.status)) {
+  if (isClosedStatus(loan.status)) {
     return (
       <div>
         {header}
-        <p role="alert">Este contrato não aceita pagamento.</p>
+        <div role="alert">
+          <h2>Contrato encerrado</h2>
+          <p>{closedStatusNotice[loan.status]}</p>
+        </div>
       </div>
     );
   }

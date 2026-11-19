@@ -43,7 +43,7 @@ destinationKey: "chave-pix@exemplo.com", paidAt: "2026-12-13", amountCents: 1150
    contas, sem "só contas ativas".
 4. Contrato fechado (RN-R09): a tela bloqueia o formulário (não envia). Fecham: `PAID_OFF`, `RENEWED`,
    `RENEGOTIATED`, `CANCELLED`; `ACTIVE` e `WRITTEN_OFF` aceitam pagamento (RN-C20). A tela mostra o aviso "Este
-   contrato não aceita pagamento." (texto proposto, Joel confirma) em `role="alert"` e não renderiza o formulário
+   contrato não aceita pagamento." (texto confirmado por Joel) em `role="alert"` e não renderiza o formulário
    nem o botão de envio.
 5. RN-R06 na API (`createPaymentRequest`): fora desta feature, outra feature.
 
@@ -217,5 +217,5 @@ Metas de cobertura (cobradas pelos checks do `done`, não são critério): 100% 
 - Valor máximo do pagamento: pendência futura (pós-MVP); sem regra de negócio agora (decisão 1).
 - Tamanho máximo da chave Pix de destino (`destinationKey`): não definido; o schema só exige texto não vazio após trim. Joel define
   o limite (e se o nome do campo muda) em outra feature.
-- Texto do aviso de contrato fechado e status `DRAFT` (a RN-R09 não fala dele; hoje a tela o deixa aceitar): Joel
-  confirma.
+- Texto do aviso de contrato fechado: confirmado por Joel. Status `DRAFT` (a RN-R09 não fala dele; hoje a tela o deixa
+  aceitar): Joel confirma.
