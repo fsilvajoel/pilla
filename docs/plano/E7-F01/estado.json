@@ -20,6 +20,17 @@
     },
     "tests": {
       "status": "done"
+    },
+    "testReview": {
+      "status": "done",
+      "verdict": "aprovado"
+    },
+    "implement": {
+      "status": "done"
+    },
+    "review": {
+      "status": "done",
+      "verdict": "aprovado"
     }
   },
   "sources": [
@@ -170,22 +181,22 @@
     },
     "tests-reviewed": {
       "status": "PASS",
-      "at": "2026-11-19T12:52:19.575Z",
+      "at": "2026-11-19T14:03:44.103Z",
       "detail": "2 teste(s) com sha assinado"
     },
     "coverage": {
       "status": "PASS",
-      "at": "2026-11-19T12:52:21.625Z",
+      "at": "2026-11-19T14:03:46.182Z",
       "detail": "100% nos arquivos da feature em apps/web (lib/today.ts, components/person-form.tsx)"
     },
     "mutation": {
       "status": "PASS",
-      "at": "2026-11-19T12:52:29.466Z",
+      "at": "2026-11-19T14:03:54.496Z",
       "detail": "score >= 80%: apps/web/lib/today.ts 100.00% (3/3)"
     },
     "e2e": {
       "status": "PASS",
-      "at": "2026-11-19T12:48:15.973Z",
+      "at": "2026-11-19T14:03:54.634Z",
       "detail": "nenhum e2e na feature (nenhum critério e2e)"
     }
   },
