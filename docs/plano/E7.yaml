@@ -89,7 +89,7 @@ cards:
       - pnpm --filter @pilla/web lint
     done:
       - all tests in apps/web/lib/today.test.ts pass with 100% line and branch coverage of today.ts (run_check 0)
-      - the import type line and the value import of today.ts stay as they are: 'import { isoDate, type IsoDate } from "@pilla/finance";' (one line)
+      - 'the import type line and the value import of today.ts stay as they are: ''import { isoDate, type IsoDate } from "@pilla/finance";'' (one line)'
       - the day comes from shifting now by a fixed UTC−3 offset (10_800_000 ms, a named constant with a comment) and taking the first 10 characters of toISOString, and the text gets its brand with isoDate of @pilla/finance, never with as
       - the parameter loses the leading underscore; the /** */ comment is rewritten to describe the fixed offset, and the RangeError of an invalid date comes from toISOString
       - today.ts has no '// @stub E7-T02' line and apps/web/vitest.config.ts has no line that excludes lib/today.ts
