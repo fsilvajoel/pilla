@@ -12,7 +12,7 @@ cards:
     kind: test-author
     assignee: bia
     rules: []
-    refs: [PRD-001 RF-01, PRD-001 RF-03, RFC-005 persons, docs/plano/decisoes-2026-11-17.md]
+    refs: [PRD-001 RF-01, PRD-001 RF-03, PRD-001 RN-P01, RFC-005 persons, docs/plano/decisoes-2026-11-17.md]
     dependsOn: []
     allowedPaths:
       - apps/web/lib/today.test.ts
@@ -29,15 +29,20 @@ cards:
       - every test fails now against the stubs in HEAD and would pass with a correct implementation (run_check 0 and 1)
       - 'import { describe, expect, it } from "vitest";'
       - 'import { todayInBrt } from "./today";'
+      - 'import fc from "fast-check";'
       - 'import { fireEvent, render, screen } from "@testing-library/react";'
       - 'import { vi } from "vitest";'
       - 'import { mockPeople } from "@/lib/mock-data";'
       - 'import { PersonForm } from "./person-form";'
-      - 'today.test.ts: todayInBrt of the instants "2026-11-18T02:30:00Z" and "2026-11-17T15:00:00Z" is "2026-11-17" for both (decisões do Joel de 17/11)'
+      - 'today.test.ts: todayInBrt of the instants "2026-11-18T02:30:00Z" and "2026-11-17T15:00:00Z" is "2026-11-17" for both, a valid instant property equals UTC minus 3 hours, and Invalid Date throws RangeError (decisões do Joel de 17/11)'
       - 'person-form test "shows the labelled fields": labels "Nome completo", "CPF", "Telefone", "E-mail", "Nascimento", "Indicado por", "Observações" and button "Cadastrar" (PRD-001 RF-01)'
       - 'test "sends only the filled fields": "Maria da Silva", "52998224725" and "+5511987654321" give the status "Pessoa cadastrada." and onSubmit gets only fullName, cpf and phone (decisões do Joel de 17/11)'
       - 'test "sends the referrer": the same fields plus "Indicado por" "01936f8e-7b2c-7cde-8f00-000000000003" add referredById with that id to the body (PRD-001 RF-03)'
       - 'test "rejects a phone without +55": Telefone "11987654321" gives the alert "Confira os campos do cadastro." and onSubmit is not called (RFC-005 persons, decisões do Joel de 17/11)'
+      - 'test "rejects an invalid CPF": CPF "52998224726" gives the alert "Confira os campos do cadastro." and onSubmit is not called (PRD-001 RN-P01, RFC-005 persons)'
+      - 'test "rejects an invalid email": E-mail "maria@" gives the alert "Confira os campos do cadastro." and onSubmit is not called (PRD-001 RF-01, create-person.ts)'
+      - 'test "rejects an invalid birth date": Nascimento "2026-13-01" gives the alert "Confira os campos do cadastro." and onSubmit is not called (PRD-001 RF-01, common.ts isoDateSchema)'
+      - 'test "rejects an empty name": Nome completo "" gives the alert "Confira os campos do cadastro." and onSubmit is not called (PRD-001 RF-01, create-person.ts min(1))'
       - never edit apps/web/lib/today.ts nor apps/web/components/person-form.tsx
     hints:
       - the import lines of the done are the only imports, each name in them is used, and nothing else is imported
@@ -65,7 +70,7 @@ cards:
       - apps/web/app/page.test.tsx
       - apps/web/vitest.setup.ts
       - docs/plano/decisoes-2026-11-17.md
-    sizeNote: today.test.ts com 1 teste, ~12 linhas; person-form.test.tsx com 4 testes e uma função de preencher, ~75 linhas
+    sizeNote: today.test.ts com 3 testes (2 exemplos + inválido e propriedade), ~20 linhas; person-form.test.tsx com 8 testes e uma função de preencher, ~110 linhas
   - id: E7-T02
     title: Implement todayInBrt
     kind: implement
@@ -84,13 +89,12 @@ cards:
       - pnpm --filter @pilla/web lint
     done:
       - all tests in apps/web/lib/today.test.ts pass with 100% line and branch coverage of today.ts (run_check 0)
-      - the import type line of today.ts stays, and the only value import is the line below
-      - 'import { isoDate } from "@pilla/finance";'
-      - the day comes from Intl.DateTimeFormat with locale "en-CA" and timeZone "America/Sao_Paulo", and the text gets its brand with isoDate of @pilla/finance, never with as
-      - keep the signature and the /** */ comment unchanged, except that the parameter loses the leading underscore
+      - the import type line and the value import of today.ts stay as they are: 'import { isoDate, type IsoDate } from "@pilla/finance";' (one line)
+      - the day comes from shifting now by a fixed UTC−3 offset (10_800_000 ms, a named constant with a comment) and taking the first 10 characters of toISOString, and the text gets its brand with isoDate of @pilla/finance, never with as
+      - the parameter loses the leading underscore; the /** */ comment is rewritten to describe the fixed offset, and the RangeError of an invalid date comes from toISOString
       - today.ts has no '// @stub E7-T02' line and apps/web/vitest.config.ts has no line that excludes lib/today.ts
     hints:
-      - the en-CA locale already writes the date as year, month and day joined by dashes, so the format method gives the text isoDate expects
+      - the date text of toISOString is already AAAA-MM-DD, so slice(0, 10) gives the text isoDate expects; no Intl is needed
       - one write_file of today.ts, then one edit_file of apps/web/vitest.config.ts that deletes the line with stub E7-T02, then run_check 0, 1 and 2
     budget:
       attempts: 4
@@ -119,13 +123,13 @@ cards:
       - pnpm --filter @pilla/web lint
     done:
       - all tests in apps/web/components/person-form.test.tsx pass with at least 85% coverage of person-form.tsx (run_check 0)
-      - the two import type lines of person-form.tsx stay, and the only value imports are these three lines
-      - 'import { createPersonRequest } from "@pilla/schemas";'
+      - the import type lines of person-form.tsx stay; the value import of @pilla/schemas may share a line with its type imports: 'import { createPersonRequest, type CreatePersonRequest, type PersonSummary } from "@pilla/schemas";'
       - 'import { useState } from "react";'
       - 'import { useForm } from "react-hook-form";'
       - the form uses useForm of react-hook-form typed with PersonFormValues and register on each field, with every default value ""
+      - the "Nascimento" field is a text input (not type="date") so that an invalid birth date reaches createPersonRequest and shows the alert (C9)
       - the submit builds the body without the empty optional fields and validates it with createPersonRequest.parse inside try and catch; the catch shows the alert of the /** */ comment
-      - keep "use client", the interfaces, the signature and the /** */ comment unchanged, except that the props are destructured without the underscore aliases
+      - keep "use client", the interfaces, the signature and the /** */ comment unchanged, except that the props are destructured without the underscore aliases and the birth date input is type="text" (as the line above says), not type="date"
       - person-form.tsx has no '// @stub E7-T03' line and apps/web/vitest.config.ts has no line that excludes components/person-form.tsx
     hints:
       - the labels, the select options, the button and the two messages are written in the /** */ comment of person-form.tsx, copy them from there

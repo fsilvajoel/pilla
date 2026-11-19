@@ -1,0 +1,196 @@
+{
+  "feature": "E7-F01",
+  "stages": {
+    "plan": {
+      "status": "done"
+    },
+    "refinement": {
+      "status": "done",
+      "verdict": "ajustado",
+      "round": 1,
+      "worker": "copilot",
+      "attempts": [
+        {
+          "result": "accepted",
+          "usage": {
+            "premiumRequests": 1
+          }
+        }
+      ]
+    },
+    "tests": {
+      "status": "done"
+    }
+  },
+  "sources": [
+    "apps/web/lib/today.ts",
+    "apps/web/components/person-form.tsx"
+  ],
+  "domainSources": [
+    "apps/web/lib/today.ts"
+  ],
+  "criteria": [
+    {
+      "id": "A1",
+      "camadas": [
+        "unit",
+        "prop",
+        "mut"
+      ]
+    },
+    {
+      "id": "A2",
+      "camadas": [
+        "unit"
+      ]
+    },
+    {
+      "id": "A3",
+      "camadas": [
+        "unit"
+      ]
+    },
+    {
+      "id": "A4",
+      "camadas": [
+        "unit"
+      ]
+    }
+  ],
+  "tests": [
+    "apps/web/lib/today.test.ts",
+    "apps/web/components/person-form.test.tsx"
+  ],
+  "e2e": [],
+  "scenarios": [
+    {
+      "id": "C1",
+      "criterio": "A1",
+      "camada": "unit",
+      "arquivo": "apps/web/lib/today.test.ts",
+      "teste": "C1 (A1): gives 2026-11-17 for 2026-11-18T02:30:00Z"
+    },
+    {
+      "id": "C2",
+      "criterio": "A1",
+      "camada": "unit",
+      "arquivo": "apps/web/lib/today.test.ts",
+      "teste": "C2 (A1): gives 2026-11-17 for 2026-11-17T15:00:00Z"
+    },
+    {
+      "id": "C3",
+      "criterio": "A1",
+      "camada": "prop",
+      "arquivo": "apps/web/lib/today.test.ts",
+      "teste": "C3 (A1): equals the UTC day of now minus 3 hours for every valid instant"
+    },
+    {
+      "id": "C4",
+      "criterio": "A2",
+      "camada": "unit",
+      "arquivo": "apps/web/components/person-form.test.tsx",
+      "teste": "C4 (A2): shows the labelled fields and the Cadastrar button"
+    },
+    {
+      "id": "C4",
+      "criterio": "A2",
+      "camada": "unit",
+      "arquivo": "apps/web/components/person-form.test.tsx",
+      "teste": "C4 (A2): sends only the filled fields and shows the status"
+    },
+    {
+      "id": "C5",
+      "criterio": "A3",
+      "camada": "unit",
+      "arquivo": "apps/web/components/person-form.test.tsx",
+      "teste": "C5 (A3): sends the referrer id"
+    },
+    {
+      "id": "C6",
+      "criterio": "A4",
+      "camada": "unit",
+      "arquivo": "apps/web/components/person-form.test.tsx",
+      "teste": "C6 (A4): rejects a phone without +55"
+    },
+    {
+      "id": "C7",
+      "criterio": "A4",
+      "camada": "unit",
+      "arquivo": "apps/web/components/person-form.test.tsx",
+      "teste": "C7 (A4): rejects an invalid CPF"
+    },
+    {
+      "id": "C8",
+      "criterio": "A4",
+      "camada": "unit",
+      "arquivo": "apps/web/components/person-form.test.tsx",
+      "teste": "C8 (A4): rejects an invalid email"
+    },
+    {
+      "id": "C9",
+      "criterio": "A4",
+      "camada": "unit",
+      "arquivo": "apps/web/components/person-form.test.tsx",
+      "teste": "C9 (A4): rejects an invalid birth date"
+    },
+    {
+      "id": "C10",
+      "criterio": "A4",
+      "camada": "unit",
+      "arquivo": "apps/web/components/person-form.test.tsx",
+      "teste": "C10 (A4): rejects an empty name"
+    },
+    {
+      "id": "C12",
+      "criterio": "A4",
+      "camada": "unit",
+      "arquivo": "apps/web/components/person-form.test.tsx",
+      "teste": "C12 (A4): rejects notes with only spaces"
+    },
+    {
+      "id": "C11",
+      "criterio": "A4",
+      "camada": "unit",
+      "arquivo": "apps/web/lib/today.test.ts",
+      "teste": "C11 (A4): throws RangeError for an Invalid Date"
+    },
+    {
+      "id": "C13",
+      "criterio": "A1",
+      "camada": "unit",
+      "arquivo": "apps/web/lib/today.test.ts",
+      "teste": "C13 (A1): turns the day exactly at 03:00Z, the UTC−3 boundary"
+    }
+  ],
+  "gates": {
+    "expect-red": {
+      "status": "PASS",
+      "at": "2026-11-19T12:48:36.899Z",
+      "detail": "14 teste(s), todos falhando"
+    },
+    "tests-reviewed": {
+      "status": "PASS",
+      "at": "2026-11-19T12:52:19.575Z",
+      "detail": "2 teste(s) com sha assinado"
+    },
+    "coverage": {
+      "status": "PASS",
+      "at": "2026-11-19T12:52:21.625Z",
+      "detail": "100% nos arquivos da feature em apps/web (lib/today.ts, components/person-form.tsx)"
+    },
+    "mutation": {
+      "status": "PASS",
+      "at": "2026-11-19T12:52:29.466Z",
+      "detail": "score >= 80%: apps/web/lib/today.ts 100.00% (3/3)"
+    },
+    "e2e": {
+      "status": "PASS",
+      "at": "2026-11-19T12:48:15.973Z",
+      "detail": "nenhum e2e na feature (nenhum critério e2e)"
+    }
+  },
+  "testShas": {
+    "apps/web/lib/today.test.ts": "0ff6d3b3a0c5b74d36be4527a27a70b1bf32cf05",
+    "apps/web/components/person-form.test.tsx": "c4f6b351d1b92dd65a022fd07a16f6dd3e76a19f"
+  }
+}

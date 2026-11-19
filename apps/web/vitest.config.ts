@@ -18,12 +18,9 @@ export default defineConfig({
         "lib/utils.ts", // cn() do shadcn/ui: só repassa para clsx + tailwind-merge
         "app/\\(admin\\)/**/page.tsx", // parênteses escapados: no glob, "(admin)" sem escape é grupo e não casa o nome da pasta; casca de rota do ADMIN: só monta o componente com os dados de mentira
         "lib/mock-data.ts", // dados de mentira das telas do ADMIN (decisões do Joel de 17/11), sem lógica
-        "lib/today.ts", // stub E7-T02: sai quando a implementação real entrar
-        "components/person-form.tsx", // stub E7-T03: sai quando a implementação real entrar
         "lib/new-loan.ts", // stub E7-T05: sai quando a implementação real entrar
         "components/new-loan-form.tsx", // stub E7-T07: sai quando a implementação real entrar
         "components/loan-list.tsx", // stub E7-T09: sai quando a implementação real entrar
-
         "lib/payment-draft.ts", // stub E7-T12: sai quando a implementação real entrar
         "components/payment-form.tsx", // stub E7-T14: sai quando a implementação real entrar
       ],
