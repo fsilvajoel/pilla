@@ -17,6 +17,18 @@ export interface SimulationFormValues {
   readonly firstDueDate: string;
 }
 
+/** Texto da tela fora do formato aceito (D1, D2); `message` é o texto mostrado ao usuário. */
+export class FormInputError extends Error {
+  readonly code = "INVALID_FORM_INPUT";
+}
+
+const INTEGER_DIGITS = /^\d+$/;
+
+function parseInstallmentCount(text: string): number {
+  if (!INTEGER_DIGITS.test(text)) throw new FormInputError("Use somente números inteiros");
+  return Number(text);
+}
+
 /**
  * Converte os campos da tela no corpo `SimulateLoanRequest` (RFC-004 §5, ADR-0013: Zod de `@pilla/schemas`),
  * com type INSTALLMENT. Valor e taxa passam por `parseReais` de `@pilla/finance` ("6,33" vira 633), a
@@ -29,7 +41,7 @@ export function toSimulateRequest(values: SimulationFormValues): SimulateLoanReq
     principalCents: Number(parseReais(values.amount)),
     // taxa em % com duas casas: "6,33" vira 633 bps
     monthlyInterestRateBps: Number(parseReais(values.monthlyRate)),
-    installmentCount: Number(values.installmentCount),
+    installmentCount: parseInstallmentCount(values.installmentCount),
     frequency: frequencyOf(values.frequency),
     firstDueDate: values.firstDueDate,
   });
