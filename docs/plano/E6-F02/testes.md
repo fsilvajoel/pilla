@@ -28,6 +28,12 @@ registrados lá). Aqui basta uma rejeição por campo editável chegando ao aler
 | 1º vencimento | C9 | n/a: input date | n/a: input date | n/a: input date | n/a: input date | n/a | n/a | C8 (igual ao desembolso); C11 (passado) | n/a: E6-F01 | n/a: E6-F01 | n/a: input date |
 | `disbursementDate` (prop) | n/a: tipo `IsoDate` | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a |
 
+## Resumo: rótulo ligado ao valor
+O contrato (plano, A2) fixa o resumo como um único `<dl>` com pares `<dt>`/`<dd>` na ordem "Total a receber", "Juros",
+"Parcela"; o resumo não é tabela. C2 e C4 leem os pares com `summaryPairs()` (cada `term` com o `<dd>` irmão seguinte,
+dentro de `<dl>`) e comparam com `toEqual`/`toBe`; C10 confere `dl > dt` e `dl > dt + dd` com `toHaveText`. Os juros do
+CA-11 (C4) não são conferidos porque o A2 não os fixa.
+
 ## Arquivos de teste
 - apps/web/components/loan-simulation.test.tsx (unit)
 - apps/web/e2e/loan-simulation.e2e.ts (e2e)

@@ -24,8 +24,12 @@ Tela (textos exatos):
 - campos com rótulo: "Valor emprestado", "Taxa ao mês (%)", "Nº de parcelas", "Periodicidade" (select com as opções
   Semanal `WEEKLY`, Quinzenal `BIWEEKLY`, Mensal `MONTHLY` e Bimestral `BIMONTHLY`) e "1º vencimento"
   (`input type="date"`); botão "Simular";
-- resumo: "Total a receber" e "Juros" no formato `R$ ` + `formatReais`; "Parcela" no formato `<n> × R$ <valor>`
-  (ex.: `6 × R$ 1.150,00`);
+- resumo: uma lista de descrição `<dl>` com um par `<dt>` rótulo / `<dd>` valor (papéis `term`/`definition`) por
+  item, cada `<dd>` logo após o seu `<dt>`, com os rótulos exatos "Total a receber", "Juros" e "Parcela"; "Total a
+  receber" e "Juros" no formato `R$ ` + `formatReais`; "Parcela" no formato `<n> × R$ <valor>` (ex.:
+  `6 × R$ 1.150,00`). O resumo não é tabela; estrutura: um único `<dl>` com três pares `<dt>rótulo</dt><dd>valor</dd>`, nesta ordem:
+  "Total a receber", "Juros", "Parcela" (ex.: `<dt>Total a receber</dt><dd>R$ 6.900,00</dd>`). O resumo não é tabela
+  (a única tabela da tela é o cronograma);
 - tabela com as colunas Nº, Vencimento (`dd/mm/aaaa`), Principal, Juros e Parcela (`formatReais`, sem `R$`);
 - erro: um elemento `role="alert"` com o texto "Confira os campos da simulação.", sem resumo e sem tabela.
 
@@ -106,15 +110,18 @@ regra; qualquer erro desses vira o alerta.
 
 ## Cenários
 - C1 (A1, unit): render mostra os 5 campos com rótulo, as 4 opções da periodicidade e o botão "Simular" (fonte PRD-001 RF-10)
-- C2 (A2, unit): exemplo da RFC-004 §5 mostra `R$ 6.900,00`, `R$ 1.900,00` e `6 × R$ 1.150,00` (fonte RFC-004 §5)
+- C2 (A2, unit): exemplo da RFC-004 §5 mostra no `<dl>` os pares "Total a receber" `R$ 6.900,00`, "Juros" `R$ 1.900,00`
+  e "Parcela" `6 × R$ 1.150,00` (fonte RFC-004 §5)
 - C3 (A2, unit): exemplo da RFC-004 §5 mostra 6 linhas, e a 1ª é `1`, `14/12/2026`, `833,33`, `316,67`, `1.150,00` (fonte RFC-004 §5)
-- C4 (A2, unit): CA-11 mostra `4 × R$ 275,00` e `R$ 1.100,00` (fonte PRD-001 CA-11)
+- C4 (A2, unit): CA-11 mostra no `<dl>` os pares "Parcela" `4 × R$ 275,00` e "Total a receber" `R$ 1.100,00` (fonte
+  PRD-001 CA-11; a fonte não traz os juros finais, só o intermediário 95, então "Juros" não é conferido)
 - C5 (A3, unit): valor `5000` sem vírgula mostra o alerta e nenhum resultado
 - C6 (A3, unit): taxa `6` sem vírgula mostra o alerta e nenhum resultado
 - C7 (A3, unit): parcelas `0` mostra o alerta e nenhum resultado
 - C8 (A3, unit): 1º vencimento igual ao desembolso `2026-11-14` mostra o alerta (fonte PRD-001 RN-C04)
 - C9 (A3, unit): 1º vencimento vazio mostra o alerta
-- C10 (A4, e2e): `/emprestimos/simular` com o exemplo e 1º vencimento `2099-12-14` mostra o resumo da RFC-004 §5
+- C10 (A4, e2e): `/emprestimos/simular` com o exemplo e 1º vencimento `2099-12-14` mostra no `<dl>` os pares do C2
+  (resumo da RFC-004 §5)
 - C11 (A4, e2e): `/emprestimos/simular` com 1º vencimento `2000-01-14` mostra o alerta (fonte PRD-001 RN-C04)
 
 ## Arquivos de teste previstos

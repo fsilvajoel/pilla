@@ -16,10 +16,9 @@ async function simulate(page: Page, firstDueDate: string): Promise<void> {
 test("C10 (A4): /emprestimos/simular shows the RFC-004 §5 summary", async ({ page }) => {
   await simulate(page, "2099-12-14");
 
-  await expect(page.getByText("Total a receber")).toBeVisible();
-  await expect(page.getByText("R$ 6.900,00", { exact: true })).toBeVisible();
-  await expect(page.getByText("R$ 1.900,00", { exact: true })).toBeVisible();
-  await expect(page.getByText("6 × R$ 1.150,00", { exact: true })).toBeVisible();
+  // Resumo em <dl>: cada <dt> seguido do seu <dd>, na ordem do plano.
+  await expect(page.locator("dl > dt")).toHaveText(["Total a receber", "Juros", "Parcela"]);
+  await expect(page.locator("dl > dt + dd")).toHaveText(["R$ 6.900,00", "R$ 1.900,00", "6 × R$ 1.150,00"]);
   await expect(page.getByRole("alert")).toHaveCount(0);
 });
 

@@ -136,7 +136,7 @@
   "gates": {
     "expect-red": {
       "status": "PASS",
-      "at": "2026-11-19T01:59:54.965Z",
+      "at": "2026-11-19T02:12:16.071Z",
       "detail": "9 teste(s), todos falhando"
     }
   }

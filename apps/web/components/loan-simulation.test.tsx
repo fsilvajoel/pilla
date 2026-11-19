@@ -59,6 +59,17 @@ function dataRows(table: HTMLElement): HTMLElement[] {
     .filter((row) => within(row).queryAllByRole("cell").length > 0);
 }
 
+/** Pares [rótulo, valor] do resumo: cada `<dt>` (role term) com o `<dd>` logo depois, no mesmo `<dl>`. */
+async function summaryPairs(): Promise<[string, string | null][]> {
+  const terms = await screen.findAllByRole("term");
+  return terms.map((term) => {
+    const next = term.nextElementSibling;
+    const value =
+      next !== null && next.tagName === "DD" && term.parentElement?.tagName === "DL" ? next.textContent : null;
+    return [term.textContent, value];
+  });
+}
+
 /** Texto do alerta e se sobrou algum resultado (resumo ou tabela) na tela. */
 async function alertOutcome(): Promise<{ alert: string; hasSummary: boolean; hasTable: boolean }> {
   const alert = await screen.findByRole("alert");
@@ -92,11 +103,11 @@ describe("LoanSimulation", () => {
   it("C2 (A2): RFC-004 §5 example shows R$ 6.900,00, R$ 1.900,00 and 6 × R$ 1.150,00", async () => {
     simulateWith(rfcExample);
 
-    expect(await screen.findByText("Total a receber")).toBeInTheDocument();
-    expect(screen.getByText("Juros", { selector: ":not(th)" })).toBeInTheDocument();
-    expect(screen.getByText("R$ 6.900,00")).toBeInTheDocument();
-    expect(screen.getByText("R$ 1.900,00")).toBeInTheDocument();
-    expect(screen.getByText("6 × R$ 1.150,00")).toBeInTheDocument();
+    expect(await summaryPairs()).toEqual([
+      ["Total a receber", "R$ 6.900,00"],
+      ["Juros", "R$ 1.900,00"],
+      ["Parcela", "6 × R$ 1.150,00"],
+    ]);
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 
@@ -122,8 +133,11 @@ describe("LoanSimulation", () => {
   it("C4 (A2): CA-11 shows 4 × R$ 275,00 and R$ 1.100,00", async () => {
     simulateWith(ca11Example);
 
-    expect(await screen.findByText("4 × R$ 275,00")).toBeInTheDocument();
-    expect(screen.getByText("R$ 1.100,00")).toBeInTheDocument();
+    // O plano (A2) fixa só o total e a parcela do CA-11; os juros não são conferidos aqui.
+    const pairs = new Map(await summaryPairs());
+    expect([...pairs.keys()]).toEqual(["Total a receber", "Juros", "Parcela"]);
+    expect(pairs.get("Total a receber")).toBe("R$ 1.100,00");
+    expect(pairs.get("Parcela")).toBe("4 × R$ 275,00");
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 
