@@ -29,7 +29,9 @@ workers:
   # plano, cartões da feature e pm_queue).
   # O plano só tem o modelo automático (sem --model); cada execução consome 1 premium request (Free: 200/mês).
   # No máximo 2 chamadas por feature (rodada 1 e, depois da resposta do PM, rodada 2; workflow feature, etapa 1b); sem retentativa.
-  copilot: { adapter: cli-agent, command: copilot, read_args: "--output-format json --stream off --no-ask-user --no-auto-update --disable-builtin-mcps --disallow-temp-dir --deny-tool=write --deny-tool=shell --deny-tool=memory", write_args: "--output-format json --stream off --no-ask-user --no-auto-update --disable-builtin-mcps --disallow-temp-dir --allow-tool=write --deny-tool=shell --deny-tool=memory", output_jq: '[.[] | select(.type == "assistant.message" and .data.phase == "final_answer")] | last | .data.content', usage_jq: '[.[] | select(.type == "result")] | last | .usage.premiumRequests', roles: "refiner", max_attempts: 1, timeout_s: 900 }
+  # O executor do harness (executor: ../harness-ada/script/cli_agent.py) injeta no briefing as skills do papel e do
+  # cartão (--role, --skills) e roda `command` com read_args ou write_args (--mode).
+  copilot: { adapter: cli-agent, executor: ../harness-ada/script/cli_agent.py, command: copilot, read_args: "--output-format json --stream off --no-ask-user --no-auto-update --disable-builtin-mcps --disallow-temp-dir --deny-tool=write --deny-tool=shell --deny-tool=memory", write_args: "--output-format json --stream off --no-ask-user --no-auto-update --disable-builtin-mcps --disallow-temp-dir --allow-tool=write --deny-tool=shell --deny-tool=memory", output_jq: '[.[] | select(.type == "assistant.message" and .data.phase == "final_answer")] | last | .data.content', usage_jq: '[.[] | select(.type == "result")] | last | .usage.premiumRequests', roles: "refiner", max_attempts: 1, timeout_s: 900 }
 
 # Regras de tipagem e lint que entram no pedido do trabalhador, por papel.
 role_context:
@@ -63,6 +65,12 @@ role_skills:
 
 # Teto (bytes) do que o executor injeta no pedido como skills e regras; acima dele o executor falha, sem truncar.
 skills_max_bytes: 40000
+
+# Gate card-skills (harness: script/check_card_skills.py): cartões (lista `cards`) cujo allowedPaths toca um destes
+# prefixos precisam declarar `skills:`, e cada item precisa existir em skill_dir.
+cards_glob: docs/plano/E*.yaml
+skills_required_paths:
+  - apps/web
 
 # Fila de pendências de PM do refinamento funcional (workflow feature, etapa 1b).
 pm_queue: docs/plano/pendencias-pm.md

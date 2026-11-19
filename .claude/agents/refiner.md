@@ -34,6 +34,10 @@ orquestrador rejeitar a tentativa inteira.
   `C<n>` do cartão e não contradiz o plano; teste de cartão `test-author` falha contra o esboço; `implement` tem
   os testes em `protectedTests`.
 - `hints` e `budget` não contradizem o `done`.
+- **`skills:`** em todo cartão cujo `allowedPaths` toca `apps/web`: preencha com as skills extras pertinentes à
+  tarefa (`nome` ou `nome#regra`, ex.: `react-best-practices#<regra>` que existe em
+  `../harness-ada/skill/react-best-practices/rules/`), conforme `../harness-ada/workflow/feature-artefatos/cartao.md`.
+  Cartão web sem `skills:` ou com item inexistente reprova no gate `pnpm check:card-skills`.
 
 ## Lacuna: completar ou perguntar
 
