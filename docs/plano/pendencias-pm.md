@@ -138,3 +138,11 @@ Formato de cada entrada:
 - opções: a) aprovar como estão; b) outro padrão de ids ou de link ativo (dizer qual)
 - sugestão padrão: a) são o padrão usual de acessibilidade e de navegação de seção
 - resposta: a) aprovados os ids `<id>-error` e `<id>-description` e a regra do link ativo (19/11)
+
+## E9 pessoas — pós-entrega (20/11)
+- Joel aceitou com defeitos conhecidos, a corrigir depois.
+- Correlação entre indicações (rede de indicados) — pós-MVP.
+- Exclusão de pessoa, login/ADMIN e portal fora do E9.
+- `fakeCpf` em packages/schemas ainda é stub.
+- `pnpm gate` depende de `estado.json` no worktree.
+- e2e precisa de `workers: 1` (memória da VM).

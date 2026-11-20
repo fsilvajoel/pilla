@@ -32,9 +32,18 @@
       }
     },
     "refinement": {
-      "status": "needs_input",
-      "verdict": "pendencia-pm",
-      "round": 1
+      "status": "done",
+      "verdict": "ajustado",
+      "round": 2,
+      "secondOpinion": {
+        "worker": "pepe",
+        "model": "nvidia/nemotron-3.5-lightning:free",
+        "verdict": "aprovado",
+        "usage": {
+          "promptTokens": 166642,
+          "completionTokens": 6532
+        }
+      }
     },
     "tests": {
       "status": "pending"
@@ -157,5 +166,12 @@
     "apps/api/src/app.test.ts",
     "packages/schemas/src/api/core/health.test.ts"
   ],
-  "e2e": []
+  "e2e": [],
+  "gates": {
+    "expect-red": {
+      "status": "FAIL",
+      "at": "2026-11-20T03:11:15.008Z",
+      "detail": "testes não estão vermelhos; apps/api: 7 teste(s) pulado(s) ou todo; pular é FAIL; apps/api/src/core/http/env.test.ts: nenhum teste executado (erro de import ou sintaxe?); apps/api/src/core/http/zod-validation.pipe.test.ts: nenhum teste executado (erro de import ou sintaxe?); apps/api/src/core/http/problem-details.filter.test.ts: nenhum teste executado (erro de import ou sintaxe?); apps/api/src/core/http/health.controller.test.ts: nenhum teste executado (erro de import ou sintaxe?); apps/api/src/core/http/openapi.test.ts: nenhum teste executado (erro de import ou sintaxe?); packages/schemas/src/api/core/health.test.ts: 1 teste(s) passaram sem implementação (teste que não testa nada)"
+    }
+  }
 }
