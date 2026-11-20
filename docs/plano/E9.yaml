@@ -78,7 +78,11 @@ cards:
     refs: [RFC-003 §4.2, RFC-004 §2, RFC-004 §6, docs/plano/E9.md D1, docs/plano/E9-F02/plano.md, docs/adr/0017-estrategia-de-testes.md]
     dependsOn: [E9-T01]
     allowedPaths:
-      - apps/api/src/core/http/*.test.ts
+      - apps/api/src/core/http/env.test.ts
+      - apps/api/src/core/http/zod-validation.pipe.test.ts
+      - apps/api/src/core/http/problem-details.filter.test.ts
+      - apps/api/src/core/http/health.controller.test.ts
+      - apps/api/src/core/http/openapi.test.ts
       - apps/api/src/app.test.ts
       - packages/schemas/src/api/core/health.test.ts
     protectedTests: []
@@ -121,7 +125,11 @@ cards:
       - packages/schemas/src/api/core/health.ts
       - packages/schemas/src/index.ts
     protectedTests:
-      - apps/api/src/core/http/*.test.ts
+      - apps/api/src/core/http/env.test.ts
+      - apps/api/src/core/http/zod-validation.pipe.test.ts
+      - apps/api/src/core/http/problem-details.filter.test.ts
+      - apps/api/src/core/http/health.controller.test.ts
+      - apps/api/src/core/http/openapi.test.ts
       - apps/api/src/app.test.ts
       - packages/schemas/src/api/core/health.test.ts
     checks:
