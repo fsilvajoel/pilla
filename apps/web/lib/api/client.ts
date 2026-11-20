@@ -20,6 +20,8 @@ export interface ApiRequest<T> {
   path: string;
   query?: Record<string, QueryValue>;
   body?: unknown;
+  /** Cabeçalhos extras (ex.: `If-Match` das rotas de contrato, E10 D9). */
+  headers?: Record<string, string>;
   /** Schema Zod da resposta de sucesso (de @pilla/schemas). */
   schema: z.ZodType<T>;
 }
@@ -45,6 +47,7 @@ export async function apiFetch<T>(req: ApiRequest<T>): Promise<T> {
     method: req.method ?? "GET",
     headers: {
       accept: "application/json, application/problem+json",
+      ...req.headers,
       ...(req.body === undefined ? {} : { "content-type": "application/json" }),
     },
     body: req.body === undefined ? null : JSON.stringify(req.body),
