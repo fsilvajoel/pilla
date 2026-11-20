@@ -163,7 +163,7 @@ Resposta `200`:
 | 403 | `FORBIDDEN` | papel sem permissão / recurso de outra pessoa |
 | 404 | `NOT_FOUND` | inexistente (portal usa 404 também para "não é seu") |
 | 409 | `VERSION_CONFLICT` | `If-Match` desatualizado |
-| 409 | `DUPLICATE_CPF` | CPF já cadastrado em outra pessoa (19/11/2026) |
+| 409 | `DUPLICATE_CPF` | CPF já cadastrado; `detail` "CPF já cadastrado." (D8, aprovado por Joel em 20/11/2026) |
 | 422 | `LOAN_NOT_EDITABLE` | editar contrato fora de DRAFT |
 | 422 | `INSUFFICIENT_ACCOUNT_BALANCE` | RN-C10 |
 | 422 | `FIRST_DUE_DATE_BEFORE_DISBURSEMENT` | RN-C04 |
@@ -174,6 +174,7 @@ Resposta `200`:
 | 422 | `RECEIPT_REQUIRED` | RN-R06 |
 | 422 | `DUPLICATE_PIX_TRANSACTION` | mesmo `pixEndToEndId` já registrado |
 | 429 | `TOO_MANY_REQUESTS` | limite do portal/login |
+| 500 | `INTERNAL_ERROR` | erro inesperado; `detail` "Erro interno do servidor.", sem stack nem mensagem interna (aprovado por Joel em 20/11/2026, E9-F02) |
 
 Os textos em pt-BR de cada `code` ficam no arquivo de mensagens do sistema.
 

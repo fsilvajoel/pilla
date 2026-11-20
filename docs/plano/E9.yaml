@@ -18,6 +18,7 @@ cards:
       - infra/docker-compose.yml
       - apps/api/scripts/migrate.mts
       - apps/api/scripts/seed.mts
+      - apps/api/scripts/tsconfig.json
       - apps/api/package.json
       - pnpm-lock.yaml
       - .env.example
@@ -25,7 +26,7 @@ cards:
       - docs/travas.md
     protectedTests: []
     checks:
-      - docker compose -f infra/docker-compose.yml up -d --wait
+      - docker compose --env-file .env -f infra/docker-compose.yml up -d --wait
       - pnpm --filter @pilla/api db:migrate && pnpm --filter @pilla/api db:migrate
       - pnpm --filter @pilla/api db:seed && pnpm --filter @pilla/api db:seed
       - node scripts/check-env-example.mjs
@@ -77,13 +78,27 @@ cards:
     skills: [escrever-teste]
     refs: [RFC-003 §4.2, RFC-004 §2, RFC-004 §6, docs/plano/E9.md D1]
     dependsOn: [E9-T01]
+    # allowedPaths ampliados e INTERNAL_ERROR, reflect-metadata, rxjs, supertest e @types/supertest: aprovado por Joel em 20/11/2026
     allowedPaths:
       - apps/api/src/core/http/*.test.ts
       - apps/api/src/app.test.ts
+      - packages/schemas/src/api/core/health.test.ts
+      - apps/api/src/core/http/*.ts
+      - apps/api/src/db/database.ts
+      - apps/api/src/app.module.ts
+      - apps/api/src/main.ts
+      - packages/schemas/src/api/core/health.ts
+      - packages/schemas/src/api/problem.ts
+      - packages/schemas/src/index.ts
+      - docs/rfc/RFC-004-api-e-eventos.md
+      - docs/travas.md
+      - apps/api/package.json
+      - apps/api/tsconfig.json
+      - pnpm-lock.yaml
     protectedTests: []
     checks:
       - '! pnpm --filter @pilla/api exec vitest run src/core/http src/app.test.ts'
-      - node scripts/check-test-quality.mjs apps/api/src/core/http apps/api/src/app.test.ts
+      - node scripts/check-test-quality.mjs apps/api/src/core/http apps/api/src/app.test.ts packages/schemas/src/api/core/health.test.ts
       - pnpm --filter @pilla/api typecheck
     done:
       - GET /api/v1/health answers 200 with the database status
@@ -104,7 +119,11 @@ cards:
       - apps/api/src/core/http/**
       - apps/api/src/db/**
       - apps/api/package.json
-    protectedTests: [apps/api/src/core/http/*.test.ts, apps/api/src/app.test.ts]
+      - apps/api/tsconfig.json
+      - pnpm-lock.yaml
+      - packages/schemas/src/api/core/health.ts
+      - packages/schemas/src/index.ts
+    protectedTests: [apps/api/src/core/http/*.test.ts, apps/api/src/app.test.ts, packages/schemas/src/api/core/health.test.ts]
     checks:
       - pnpm --filter @pilla/api exec vitest run src/core/http src/app.test.ts
       - pnpm --filter @pilla/api typecheck
