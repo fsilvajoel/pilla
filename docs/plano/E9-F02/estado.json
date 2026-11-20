@@ -32,9 +32,18 @@
       }
     },
     "refinement": {
-      "status": "needs_input",
-      "verdict": "pendencia-pm",
-      "round": 1
+      "status": "done",
+      "verdict": "ajustado",
+      "round": 2,
+      "secondOpinion": {
+        "worker": "pepe",
+        "model": "nvidia/nemotron-3.5-lightning:free",
+        "verdict": "aprovado",
+        "usage": {
+          "promptTokens": 166642,
+          "completionTokens": 6532
+        }
+      }
     },
     "tests": {
       "status": "pending"

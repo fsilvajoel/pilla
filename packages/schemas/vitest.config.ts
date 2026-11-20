@@ -10,6 +10,7 @@ export default defineConfig({
         "src/**/*.test.ts",
         "src/index.ts",
         "src/fake-cpf.ts", // stub E4-T02: sai quando a implementação real entrar
+        "src/api/core/health.ts", // stub E9-F02 (E9-T03): sai quando a implementação real entrar
       ],
       thresholds: { lines: 100, branches: 100, functions: 100, statements: 100 },
     },

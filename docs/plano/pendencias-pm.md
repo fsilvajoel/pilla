@@ -138,3 +138,27 @@ Formato de cada entrada:
 - opções: a) aprovar como estão; b) outro padrão de ids ou de link ativo (dizer qual)
 - sugestão padrão: a) são o padrão usual de acessibilidade e de navegação de seção
 - resposta: a) aprovados os ids `<id>-error` e `<id>-description` e a regra do link ativo (19/11)
+
+## E9-T03 (E9-F02)
+- status: resolvida
+- data: 2026-11-19
+- pergunta: P1: qual `code` para o erro 500? A RFC-004 §6 não tem; `problemSchema` só aceita `code` que mapeie o `status`.
+- opções: a) `INTERNAL_ERROR`, status 500; b) outro nome (ex. `INTERNAL_SERVER_ERROR`)
+- sugestão padrão: a) `INTERNAL_ERROR`, como o D8 fez com `DUPLICATE_CPF`
+- resposta: a) `INTERNAL_ERROR` com status 500; RFC-004 §6 editada, `errorCodeSchema` e `errorStatus` no E9-T03 (19/11)
+
+## E9-T02 (E9-F02)
+- status: resolvida
+- data: 2026-11-19
+- pergunta: P2: aprova `reflect-metadata`, `rxjs`, `supertest` e `@types/supertest` em `docs/travas.md` §7?
+- opções: a) aprovar as quatro (`supertest` e `@types/supertest` em dev); b) recusar alguma
+- sugestão padrão: a) aprovar as quatro
+- resposta: a) aprovadas as quatro; `docs/travas.md` §7 atualizada (19/11)
+
+## E9-T05 (E9-F03)
+- status: resolvida
+- data: 2026-11-19
+- pergunta: a busca de pessoas por nome ignora acentos?
+- opções: a) sim (exige tratar acentos na consulta); b) não, só caixa
+- sugestão padrão: b) só caixa (menor)
+- resposta: a) a busca ignora acentos, por ora ("jose" encontra "José"); aplicada nos cartões E9-T04 e E9-T05 (19/11)

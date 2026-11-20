@@ -75,28 +75,38 @@ cards:
     assignee: bia
     rules: []
     skills: [escrever-teste]
-    refs: [RFC-003 §4.2, RFC-004 §2, RFC-004 §6, docs/plano/E9.md D1]
+    refs: [RFC-003 §4.2, RFC-004 §2, RFC-004 §6, docs/plano/E9.md D1, docs/plano/E9-F02/plano.md, docs/adr/0017-estrategia-de-testes.md]
     dependsOn: [E9-T01]
     allowedPaths:
       - apps/api/src/core/http/*.test.ts
       - apps/api/src/app.test.ts
+      - packages/schemas/src/api/core/health.test.ts
     protectedTests: []
     checks:
       - '! pnpm --filter @pilla/api exec vitest run src/core/http src/app.test.ts'
-      - node scripts/check-test-quality.mjs apps/api/src/core/http apps/api/src/app.test.ts
+      - '! pnpm --filter @pilla/schemas exec vitest run src/api/core/health.test.ts'
+      - node scripts/check-test-quality.mjs apps/api/src/core/http apps/api/src/app.test.ts packages/schemas/src/api/core/health.test.ts
       - pnpm --filter @pilla/api typecheck
     done:
-      - GET /api/v1/health answers 200 with the database status
-      - a body that fails the Zod schema answers 400 application/problem+json with code VALIDATION_FAILED and the field errors
-      - an unknown route answers 404 problem+json NOT_FOUND; an unexpected error answers 500 problem+json without stack
+      - 'env (A1, A2, C1 to C7): readApiEnv accepts PILLA_API_PORT 1024 to 65535 and a postgres(ql):// DATABASE_URL, and rejects the listed values with the exact messages, never echoing the value read'
+      - 'pipe (A3, C8 to C11): ZodValidationPipe returns the schema output or throws ProblemException VALIDATION_FAILED with one errors item per field'
+      - 'errors over Supertest (A4 to A7, C12 to C21): 400 VALIDATION_FAILED, 404 NOT_FOUND, 500 INTERNAL_ERROR without message or stack and a ProblemException code, all application/problem+json with the exact title and detail texts; fixture routes live only inside the tests'
+      - 'health (A8, A9, C22, C23): 200 {status ok, database up}; with the database closed, 200 {status degraded, database down}'
+      - 'app, bootstrap and OpenAPI (A10 to A12, C24 to C28): listens on 127.0.0.1 under /api/v1, rejects an invalid env, GET /api/v1/openapi.json matches the plan'
+      - 'health contract (A13, C29, C30): healthResponseSchema accepts the two valid objects and rejects the listed ones'
     budget: {attempts: 4, toolCalls: 25, minutes: 15}
+    readFirst:
+      - docs/plano/E9-F02/plano.md
+      - docs/plano/E9-F02/esboco-api.txt
+      - packages/schemas/src/api/problem.ts
+      - docs/adr/0017-estrategia-de-testes.md
   - id: E9-T03
     title: Bootstrap the NestJS app with the database provider, Zod pipe and problem+json filter
     kind: implement
     assignee: alice
     rules: []
     skills: [editar-arquivo, coding-guidelines, modular-design-principles]
-    refs: [RFC-003 §4.2, RFC-004 §2, ADR-0002, docs/plano/E9.md D1 D3]
+    refs: [RFC-003 §4.2, RFC-004 §2, RFC-004 §6, ADR-0002, docs/plano/E9.md D1 D3, docs/plano/E9-F02/plano.md]
     dependsOn: [E9-T02]
     allowedPaths:
       - apps/api/src/main.ts
@@ -104,17 +114,39 @@ cards:
       - apps/api/src/core/http/**
       - apps/api/src/db/**
       - apps/api/package.json
-    protectedTests: [apps/api/src/core/http/*.test.ts, apps/api/src/app.test.ts]
+      - apps/api/tsconfig.json
+      - pnpm-lock.yaml
+      - docs/travas.md
+      - packages/schemas/src/api/problem.ts
+      - packages/schemas/src/api/core/health.ts
+      - packages/schemas/src/index.ts
+    protectedTests:
+      - apps/api/src/core/http/*.test.ts
+      - apps/api/src/app.test.ts
+      - packages/schemas/src/api/core/health.test.ts
     checks:
-      - pnpm --filter @pilla/api exec vitest run src/core/http src/app.test.ts
+      - pnpm --filter @pilla/api test
+      - pnpm --filter @pilla/schemas test
+      - pnpm --filter @pilla/schemas typecheck
+      - pnpm check:schemas
       - pnpm --filter @pilla/api typecheck
       - pnpm --filter @pilla/api lint
       - node scripts/check-allowed-deps.mjs
     done:
-      - the T02 tests pass; the app listens on 127.0.0.1:PILLA_API_PORT with prefix /api/v1
-      - the database provider reads DATABASE_URL from the environment; tests inject PGlite
+      - the T02 tests pass and apps/api keeps 100% coverage; the app listens on 127.0.0.1:PILLA_API_PORT with prefix /api/v1 (script start calls bootstrap(process.env))
+      - 'readApiEnv validates PILLA_API_PORT and DATABASE_URL with the exact messages of the plan; the app does not start with an invalid env'
+      - 'INTERNAL_ERROR (500) is added to errorCodeSchema and errorStatus in packages/schemas (P1, same pattern as DUPLICATE_CPF in D8) and the 500 body passes problemSchema'
+      - 'healthResponseSchema in packages/schemas (reexported by index.ts); GET /api/v1/health and GET /api/v1/openapi.json (OpenApiController) answer as in the plan'
+      - 'the database provider reads DATABASE_URL from the environment; tests inject PGlite; experimentalDecorators on and an explicit @Inject on every constructor parameter'
+      - 'reflect-metadata, rxjs, supertest and @types/supertest are in the lists of docs/travas.md and in apps/api/package.json (P2)'
       - Zod only at the HTTP edge, strong typing, no any
     budget: {attempts: 3, toolCalls: 40, minutes: 30}
+    readFirst:
+      - docs/plano/E9-F02/plano.md
+      - docs/plano/E9-F02/esboco-api.txt
+      - packages/schemas/src/api/problem.ts
+      - docs/rfc/RFC-004-api-e-eventos.md
+      - docs/travas.md
 
   # ---------------------------------------------------------------- E9-F03: rotas de pessoas
   - id: E9-T04
@@ -136,7 +168,7 @@ cards:
       - node scripts/check-schemas.mjs
     done:
       - schemas for PersonListQuery (search, limit, cursor), PersonListResponse, PersonResponse and UpdatePersonRequest exist next to create-person.ts
-      - the schema tests cover CPF check digits, masked CPF/phone normalized to digits, limit bounds (default 20, max 100) and the mixed letter+digit search kept as plain text
+      - the schema tests cover CPF check digits, masked CPF/phone normalized to digits, limit bounds (default 20, max 100) and the mixed letter+digit search kept as plain text; the search text is not accent-folded in the schema (the folding is done by the list query)
       - RFC-004 §6 gains DUPLICATE_CPF 409 with detail "CPF já cadastrado." (D8)
     budget: {attempts: 3, toolCalls: 25, minutes: 15}
   - id: E9-T05
@@ -156,7 +188,7 @@ cards:
       - pnpm --filter @pilla/api typecheck
     done:
       - POST creates (201 + Location), invalid CPF gives 400, repeated CPF gives 409 DUPLICATE_CPF, unknown referrer gives 400
-      - GET list searches by name or CPF (listPersons rule, E5-F05 A11/A16 - name by case-insensitive substring, CPF by digit prefix ignoring dot and dash, union when the search is only digits; mixed letter+digit search is name substring only, never a CPF prefix), paginates by cursor and respects limit (default 20, max 100, above gives 400)
+      - GET list searches by name or CPF (listPersons rule, E5-F05 A11/A16 - name by substring ignoring case and accents ("jose" finds "José"; Joel 19/11), CPF by digit prefix ignoring dot and dash, union when the search is only digits; mixed letter+digit search is name substring only, never a CPF prefix), paginates by cursor and respects limit (default 20, max 100, above gives 400)
       - POST and PATCH bodies are validated by the schema, not by the web - CPF with check digits, phone and PIX key format; masked CPF or phone input (dots, dash, parentheses) is normalized to digits; errors give 400 with the field list
       - GET by id gives 200 or 404 NOT_FOUND
       - PATCH without If-Match gives 428, stale version gives 409 VERSION_CONFLICT, success returns the new version in ETag
