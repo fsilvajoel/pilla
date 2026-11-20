@@ -4,6 +4,8 @@ import {
   createLoanRequest,
   idSchema,
   payoffQuoteQuery,
+  renegotiateLoanRequest,
+  renewLoanRequest,
   updateLoanRequest,
   type ActivateLoanRequest,
   type CreateLoanRequest,
@@ -11,11 +13,18 @@ import {
   type LoanListResponse,
   type PayoffQuoteQuery,
   type PayoffQuoteResponse,
+  type RenegotiateLoanRequest,
+  type RenewLoanRequest,
   type UpdateLoanRequest,
 } from "@pilla/schemas";
 import { ZodValidationPipe } from "../../core/http/zod-validation.pipe";
 import { loanListQuery, type LoanListQuery } from "./loan-list-query";
-import { LoansService, type CreateLoanResponse, type LoanDraftResponse } from "../application/loans-service";
+import {
+  LoansService,
+  type CreateLoanResponse,
+  type LoanDraftResponse,
+  type RolloverDraftResponse,
+} from "../application/loans-service";
 
 type HeaderSetter = { setHeader(name: string, value: string): unknown };
 
@@ -94,5 +103,27 @@ export class LoansController {
     @Body(new ZodValidationPipe<ActivateLoanRequest>(activateLoanRequest)) body: ActivateLoanRequest,
   ): Promise<LoanDraftResponse> {
     return this.service.activate(id, ifMatchVersion(ifMatch), body);
+  }
+
+  @Post(":id/renew")
+  async renew(
+    @Param("id", new ZodValidationPipe<string>(idSchema)) id: string,
+    @Body(new ZodValidationPipe<RenewLoanRequest>(renewLoanRequest)) body: RenewLoanRequest,
+    @Res({ passthrough: true }) response: HeaderSetter,
+  ): Promise<RolloverDraftResponse> {
+    const loan = await this.service.renew(id, body);
+    response.setHeader("Location", `/api/v1/loans/${loan.id}`);
+    return loan;
+  }
+
+  @Post(":id/renegotiate")
+  async renegotiate(
+    @Param("id", new ZodValidationPipe<string>(idSchema)) id: string,
+    @Body(new ZodValidationPipe<RenegotiateLoanRequest>(renegotiateLoanRequest)) body: RenegotiateLoanRequest,
+    @Res({ passthrough: true }) response: HeaderSetter,
+  ): Promise<RolloverDraftResponse> {
+    const loan = await this.service.renegotiate(id, body);
+    response.setHeader("Location", `/api/v1/loans/${loan.id}`);
+    return loan;
   }
 }

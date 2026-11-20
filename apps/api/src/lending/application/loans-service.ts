@@ -5,6 +5,8 @@ import {
   loanRenegotiatedV1,
   loanRenewedV1,
   type ActivateLoanRequest,
+  type RenegotiateLoanRequest,
+  type RenewLoanRequest,
   type CreateLoanRequest,
   frequencySchema,
   loanDetailResponse,
@@ -29,7 +31,7 @@ import { findCurrentDefaultTerms } from "../infra/default-terms-repository";
 import { selectInstallmentsByLoan, selectLoan, selectLoanPage } from "../infra/loan-queries";
 import { loanRepository, type LoanDraftChanges, type LoanStore } from "../infra/loan-repository";
 import type { InstallmentRow, LoanRow } from "../infra/schema";
-import { assessLoan, quotePayoff, type LoanAssessment } from "./loan-assessment";
+import { assessLoan, quotePayoff, rolloverFigures, type LoanAssessment } from "./loan-assessment";
 
 const NOT_FOUND_DETAIL = "Recurso não encontrado.";
 const TIME_ZONE = "America/Sao_Paulo";
@@ -56,6 +58,16 @@ export type LoanDraftResponse = {
   disbursedAt: string | null;
   version: number;
 };
+
+/** DRAFT criado por renovação ou renegociação: o rascunho comum mais a ligação com a origem (RN-C15, RN-C17). */
+export type RolloverDraftResponse = LoanDraftResponse & {
+  originLoanId: string;
+  originType: string;
+  capitalizedAmountCents: number;
+};
+
+type RolloverKind = "RENEWAL" | "RENEGOTIATION";
+type RolloverRequest = RenewLoanRequest | RenegotiateLoanRequest;
 
 /** Filtros e página de GET /loans (já validados na borda). */
 export type LoanListParams = {
@@ -269,6 +281,16 @@ export class LoansService {
     });
   }
 
+  // Renovar (E10-F06): só com juros e encargos vencidos pagos; o novo DRAFT leva o principal em aberto (RN-C14, RN-C15).
+  async renew(id: string, request: RenewLoanRequest): Promise<RolloverDraftResponse> {
+    return this.draftFromOrigin(id, request, "RENEWAL");
+  }
+
+  // Renegociar (E10-F06): o novo DRAFT leva o saldo devedor; o que excede o principal é capitalizado (RN-C17).
+  async renegotiate(id: string, request: RenegotiateLoanRequest): Promise<RolloverDraftResponse> {
+    return this.draftFromOrigin(id, request, "RENEGOTIATION");
+  }
+
   async getDefaultTerms(): Promise<DefaultTermsResponse> {
     const row = await findCurrentDefaultTerms(this.db);
     if (row === null) throw new ProblemException("NOT_FOUND", NOT_FOUND_DETAIL);
@@ -376,6 +398,70 @@ export class LoansService {
     const installments = await this.installmentsOf(id);
     const allocations = await confirmedAllocationsByLoan(this.db, id);
     return payoffQuoteResponse.parse({ date, ...quotePayoff(loan, installments, allocations, isoDate(date)) });
+  }
+
+  // A origem só muda de status na ativação do novo contrato (D8); aqui nada é gravado nela, no ledger nem no outbox.
+  private async draftFromOrigin(
+    id: string,
+    request: RolloverRequest,
+    kind: RolloverKind,
+  ): Promise<RolloverDraftResponse> {
+    const origin = await this.requireLoan(id);
+    if (origin.status !== "ACTIVE") {
+      throw new ProblemException("LOAN_NOT_EDITABLE", "Só contrato ativo pode ser renovado ou renegociado.");
+    }
+    const now = new Date();
+    const today = todayInBrasilia(now);
+    const figures = rolloverFigures(
+      origin,
+      await this.installmentsOf(id),
+      await confirmedAllocationsByLoan(this.db, id),
+      isoDate(today),
+    );
+    if (kind === "RENEWAL" && figures.overdueInterestCents + figures.lateChargesCents > 0) {
+      throw new ProblemException(
+        "RENEWAL_REQUIRES_INTEREST_PAID",
+        "Há juros ou encargos vencidos em aberto; pague-os ou renegocie.",
+      );
+    }
+    const type = origin.type === "SINGLE_PAYMENT" ? "SINGLE_PAYMENT" : "INSTALLMENT";
+    const installmentCount = request.installmentCount ?? origin.installmentCount;
+    if (installmentCount === null || (type === "SINGLE_PAYMENT" && installmentCount !== 1)) {
+      throw new ProblemException("VALIDATION_FAILED", "Dados inválidos.", [
+        { field: "installmentCount", message: "Informe um número de parcelas válido para o tipo do contrato." },
+      ]);
+    }
+    const renewal = kind === "RENEWAL";
+    return loanRepository(this.db).inTransaction(async (store) => {
+      const row = await store.insert({
+        id: newId(),
+        loanNumber: await store.nextLoanNumber(Number(today.slice(0, 4))),
+        personId: origin.personId,
+        type,
+        status: "DRAFT",
+        principalCents: renewal ? figures.openPrincipalCents : figures.balanceCents,
+        monthlyInterestRateBps: request.monthlyInterestRateBps ?? origin.monthlyInterestRateBps,
+        installmentCount,
+        frequencyUnit: request.frequency?.unit ?? origin.frequencyUnit,
+        frequencyInterval: request.frequency?.interval ?? origin.frequencyInterval,
+        firstDueDate: request.firstDueDate,
+        contractedAt: today,
+        originLoanId: origin.id,
+        originType: kind,
+        capitalizedAmountCents: renewal ? 0 : figures.balanceCents - figures.openPrincipalCents,
+        lateFeeBps: origin.lateFeeBps,
+        lateInterestMonthlyBps: origin.lateInterestMonthlyBps,
+        gracePeriodDays: origin.gracePeriodDays,
+        roundingStepCents: origin.roundingStepCents,
+      });
+      await store.audit(auditEntry("loan.created", row.id, null, row, now));
+      return {
+        ...toResponse(row),
+        originLoanId: origin.id,
+        originType: kind,
+        capitalizedAmountCents: row.capitalizedAmountCents,
+      };
+    });
   }
 
   private async installmentsOf(loanId: string): Promise<InstallmentRow[]> {

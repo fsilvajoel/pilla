@@ -8,6 +8,8 @@ import { attachmentUploadUrlRequest } from "./core/attachment-upload-url";
 import { activateLoanRequest } from "./lending/activate-loan";
 import { createLoanRequest, defaultTermsResponse } from "./lending/create-loan";
 import { loanDetailResponse, loanListResponse } from "./lending/loan-views";
+import { renegotiateLoanRequest } from "./lending/renegotiate-loan";
+import { renewLoanRequest } from "./lending/renew-loan";
 import { payoffQuoteQuery, payoffQuoteResponse } from "./lending/payoff-quote";
 import { simulateLoanRequest, simulateLoanResponse } from "./lending/simulate-loan";
 import { updateLoanRequest } from "./lending/update-loan";
@@ -168,6 +170,20 @@ const cases: BodyCase[] = [
     schema: writeOffLoanRequest,
     body: { reason: "cliente sem contato há 6 meses" },
     invalid: { reason: "   " },
+  },
+  {
+    name: "renewLoanRequest",
+    schema: renewLoanRequest,
+    body: { firstDueDate: "2027-01-15" },
+    optional: { monthlyInterestRateBps: 500, installmentCount: 4, frequency: { unit: "MONTH", interval: 1 } },
+    invalid: { firstDueDate: "2027-02-30", monthlyInterestRateBps: -1, installmentCount: 0 },
+  },
+  {
+    name: "renegotiateLoanRequest",
+    schema: renegotiateLoanRequest,
+    body: { firstDueDate: "2027-01-15" },
+    optional: { monthlyInterestRateBps: 500, installmentCount: 4, frequency: { unit: "MONTH", interval: 1 } },
+    invalid: { firstDueDate: "2027-02-30", monthlyInterestRateBps: -1, installmentCount: 0 },
   },
   {
     name: "payoffQuoteQuery",

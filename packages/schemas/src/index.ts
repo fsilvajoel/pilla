@@ -19,6 +19,8 @@ export * from "./api/access/portal-access";
 export * from "./api/access/portal-session";
 export * from "./api/lending/activate-loan";
 export * from "./api/lending/write-off-loan";
+export * from "./api/lending/renew-loan";
+export * from "./api/lending/renegotiate-loan";
 export * from "./api/lending/payoff-quote";
 export * from "./api/payments/allocation-preview";
 export * from "./api/payments/reverse-payment";

@@ -138,3 +138,30 @@ export function quotePayoff(
     lateChargesCents: sum((open) => lateChargesAt(open, terms, date)),
   };
 }
+
+/** Números de renovação e renegociação na data (RN-C14, RN-C15, RN-C17), todos vindos das parcelas em aberto. */
+export type RolloverFigures = {
+  readonly openPrincipalCents: number;
+  readonly overdueInterestCents: number;
+  readonly lateChargesCents: number;
+  readonly balanceCents: number;
+};
+
+/** Principal em aberto, juros vencidos em aberto, encargos e saldo devedor em `date` (reusa as contas da F05). */
+export function rolloverFigures(
+  loan: LoanRow,
+  installmentRows: readonly InstallmentRow[],
+  allocations: readonly ConfirmedAllocation[],
+  date: IsoDate,
+): RolloverFigures {
+  const terms = lateTermsOf(loan);
+  const opens = openInstallments(installmentRows, allocations).map((item) => item.open);
+  const sum = (pick: (open: OpenInstallment) => bigint): number =>
+    Number(opens.reduce((total, open) => total + pick(open), 0n));
+  return {
+    openPrincipalCents: sum((open) => open.openPrincipal),
+    overdueInterestCents: sum((open) => (daysBetween(open.dueDate, date) > 0 ? open.openInterest : 0n)),
+    lateChargesCents: sum((open) => lateChargesAt(open, terms, date)),
+    balanceCents: Number(outstandingBalance(opens, terms, date)),
+  };
+}
