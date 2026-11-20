@@ -52,7 +52,7 @@ Esboço em `docs/plano/E9-F06/esboco-shared.txt` (assinaturas que lançam `Error
 
 ## Arquivos de produção
 
-Viram `sources`; nenhum é domínio (apresentação e cola), portanto `domainSources` é vazio e não há critério `mut`. Ficam fora de `sources`: `apps/web/components/ui/**` (gerado pela CLI, já excluído da cobertura em `vitest.config.ts`) e `apps/web/app/globals.css` (CSS, sem cobertura de linhas).
+Classificação TDD (ADR-0017): `apps/web/app/(admin)/layout.tsx` é `dispensa-estilo` e vai para `exemptSources` (só devolve `<AdminShell>`; sem condição nem estado); os demais ficam `tdd` (exibição condicional, `cloneElement`/aria, vazio/linhas, callbacks, mapa de variante, link ativo). `AdminShell` fica `tdd` porque A7 verifica comportamento observável (marca, `main`, navegação, Toaster). O layout, dispensado, também sai da cobertura em `vitest.config.ts`. Os demais viram `sources`; nenhum é domínio (apresentação e cola), portanto `domainSources` é vazio e não há critério `mut`. Ficam fora de `sources`: `apps/web/components/ui/**` (gerado pela CLI, já excluído da cobertura em `vitest.config.ts`) e `apps/web/app/globals.css` (CSS, sem cobertura de linhas).
 
 | Arquivo | Domínio |
 |---|---|
@@ -64,7 +64,7 @@ Viram `sources`; nenhum é domínio (apresentação e cola), portanto `domainSou
 | `apps/web/components/shared/status-badge.tsx` | não |
 | `apps/web/components/shared/admin-nav.tsx` | não |
 | `apps/web/components/shared/admin-shell.tsx` | não |
-| `apps/web/app/(admin)/layout.tsx` | não |
+| `apps/web/app/(admin)/layout.tsx` | não (`dispensa-estilo`, em `exemptSources`, fora de `sources`) |
 
 ## Domínio das entradas
 
@@ -151,9 +151,9 @@ Molde fixo: entrada, domínio, saída, erro, fonte, camada. Todos os testes fica
 - camada: unit, prop
 
 ### A7: casca do ADMIN com sidebar, navegação e Toaster
-- entrada: `AdminShell` com filho `<p>Conteúdo</p>`, `usePathname` mockado devolvendo `"/pessoas/nova"`, depois `"/emprestimos"`, depois `"/"`; e `AdminLayout` com o mesmo filho.
+- entrada: `AdminShell` com filho `<p>Conteúdo</p>`, `usePathname` mockado devolvendo `"/pessoas/nova"`, depois `"/emprestimos"`, depois `"/"`.
 - domínio: pathname dentro de uma seção, em outra seção e fora de ambas. Regra do link ativo, aprovada pelo PM em 19/11 (Decisões, 5): ativo se `pathname === href` ou `pathname` começa com `href + "/"`.
-- saída: o filho aparece dentro de `<main>`; a marca "pilla" aparece na sidebar (contrato do `AdminShell`); a navegação (`navigation`) tem os links "Pessoas" (`href="/pessoas"`) e "Empréstimos" (`href="/emprestimos"`), nessa ordem, e só esse; o link da seção atual tem `aria-current="page"` e o outro não (em `"/pessoas/nova"` o ativo é "Pessoas"; em `"/emprestimos"` é "Empréstimos"; em `"/"` nenhum); a região do `Toaster` existe (`section` cujo `aria-label` contém "Notifications"; o rótulo exato depende da versão do sonner e é conferido no T11); `AdminLayout` renderiza o mesmo filho dentro da casca.
+- saída: o filho aparece dentro de `<main>`; a marca "pilla" aparece na sidebar (contrato do `AdminShell`); a navegação (`navigation`) tem os links "Pessoas" (`href="/pessoas"`) e "Empréstimos" (`href="/emprestimos"`), nessa ordem, e só esse; o link da seção atual tem `aria-current="page"` e o outro não (em `"/pessoas/nova"` o ativo é "Pessoas"; em `"/emprestimos"` é "Empréstimos"; em `"/"` nenhum); a região do `Toaster` existe (`section` cujo `aria-label` contém "Notifications"; o rótulo exato depende da versão do sonner e é conferido no T11).
 - erro: nenhum.
 - fonte: E9-T13 done ("shadcn sidebar with Pessoas and Empréstimos, and the Toaster"); ADR-0013; rotas existentes `app/(admin)/pessoas` e `app/(admin)/emprestimos`.
 - camada: unit
@@ -178,7 +178,7 @@ Molde fixo: entrada, domínio, saída, erro, fonte, camada. Todos os testes fica
 - C16 (A7, unit): em `/pessoas/nova` o link "Pessoas" tem `aria-current="page"` e "Empréstimos" não; os `href` são `/pessoas` e `/emprestimos`; o filho está em `<main>`; a marca "pilla" aparece.
 - C17 (A7, unit): em `/emprestimos` o ativo é "Empréstimos".
 - C18 (A7, unit): em `/` nenhum link tem `aria-current` (rejeição: pathname fora das seções).
-- C19 (A7, unit): `Toaster` presente na casca; `AdminLayout` renderiza o filho dentro da casca.
+- C19 (A7, unit): `Toaster` presente na casca. (`AdminLayout` é dispensa-estilo: sem teste.)
 - C20 (A5, unit): com `destructive=true` o botão "Excluir" tem `data-variant="destructive"`; sem a prop, `data-variant="default"`.
 
 ## Arquivos de teste previstos
@@ -190,7 +190,7 @@ Pacote `@pilla/web` (`pnpm --filter @pilla/web exec vitest run components/shared
 - `apps/web/components/shared/data-table.test.tsx` (C8, C9; C10 prop com fast-check)
 - `apps/web/components/shared/confirm-dialog.test.tsx` (C11, C12, C13, C20)
 - `apps/web/components/shared/status-badge.test.tsx` (C14; C15 prop)
-- `apps/web/components/shared/admin-shell.test.tsx` (C16 a C19; importa `@/app/(admin)/layout` para o C19; stub de `matchMedia` e mock de `next/navigation` no arquivo)
+- `apps/web/components/shared/admin-shell.test.tsx` (C16 a C19; stub de `matchMedia` e mock de `next/navigation` no arquivo)
 - e2e: nenhum (sem critério e2e; a navegação de ponta a ponta é da E9-F11).
 
 ## Verificação sem critério A<n>

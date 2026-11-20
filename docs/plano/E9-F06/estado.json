@@ -30,8 +30,7 @@
     "apps/web/components/shared/confirm-dialog.tsx",
     "apps/web/components/shared/status-badge.tsx",
     "apps/web/components/shared/admin-nav.tsx",
-    "apps/web/components/shared/admin-shell.tsx",
-    "apps/web/app/(admin)/layout.tsx"
+    "apps/web/components/shared/admin-shell.tsx"
   ],
   "domainSources": [],
   "criteria": [
@@ -89,5 +88,12 @@
     "apps/web/components/shared/status-badge.test.tsx",
     "apps/web/components/shared/admin-shell.test.tsx"
   ],
-  "e2e": []
+  "e2e": [],
+  "exemptSources": [
+    {
+      "file": "apps/web/app/(admin)/layout.tsx",
+      "class": "dispensa-estilo",
+      "reason": "só devolve <AdminShell>{children}</AdminShell>, sem condição, cálculo nem estado; o comportamento da casca é testado em admin-shell.test.tsx (A7); conferência visual no navegador"
+    }
+  ]
 }

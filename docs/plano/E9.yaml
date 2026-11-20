@@ -336,7 +336,7 @@ cards:
       - data-table.test.tsx covers C8-C9 and C10 as a fast-check property (A4)
       - confirm-dialog.test.tsx covers C11-C13 and C20 (A5)
       - status-badge.test.tsx covers C14 and C15 as a fast-check property (A6); data-variant values checked against the generated badge.tsx in the test review, after E9-T11
-      - admin-shell.test.tsx covers C16-C19 (A7, AdminShell, AdminNav and AdminLayout), with a matchMedia stub and a next/navigation mock inside the file
+      - admin-shell.test.tsx covers C16-C19 (A7, AdminShell and AdminNav; AdminLayout is dispensa-estilo, no test), with a matchMedia stub and a next/navigation mock inside the file
       - every test names its C<n>; all fail against the stub (expect-red), none by import or type error
     budget: {attempts: 4, toolCalls: 30, minutes: 20}
   - id: E9-T13
