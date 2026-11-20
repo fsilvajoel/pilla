@@ -15,6 +15,10 @@ import { allocationPreviewRequest } from "./payments/allocation-preview";
 import { createPaymentRequest } from "./payments/create-payment";
 import { reversePaymentRequest } from "./payments/reverse-payment";
 import { createPersonRequest, personListResponse } from "./people/create-person";
+import { addressSchema, createAddressRequest, updateAddressRequest } from "./people/address";
+import { personDetailResponse } from "./people/person-detail";
+import { createPixKeyRequest, pixKeySchema, updatePixKeyRequest } from "./people/pix-key";
+import { updatePersonRequest } from "./people/update-person";
 import { problemSchema } from "./problem";
 import { accountEntryRequest } from "./treasury/account-entry";
 import { accountListResponse } from "./treasury/account-summary";
@@ -35,6 +39,26 @@ const line = { number: 1, dueDate: "2026-12-14", principalCents: 83333, interest
 const charges = { lateFeeBps: 200, lateInterestMonthlyBps: 100, gracePeriodDays: 0 };
 const loan = { personId: id(1), ...simulation, ...charges };
 const person = { id: id(1), fullName: "Maria da Silva", cpf: "52998224725", phone: "+5511987654321", active: true };
+const address = {
+  street: "Rua das Flores",
+  number: "120",
+  district: "Centro",
+  city: "São Paulo",
+  state: "SP",
+  postalCode: "01001000",
+};
+const addressInvalid = {
+  street: " ",
+  number: "",
+  complement: " ",
+  district: "",
+  city: "",
+  state: "sp",
+  postalCode: "01001-000",
+  isPrimary: "yes",
+};
+const pixKey = { type: "EMAIL", value: "maria@example.com" };
+const pixKeyInvalid = { type: "ALEATORIA", value: " ", isPrimary: "yes" };
 // RFC-004 §5 (portal): contrato 2026-0012, 2 parcelas pagas, saldo 4.600,00.
 const listItem = {
   id: id(2),
@@ -187,6 +211,82 @@ const cases: BodyCase[] = [
       referredById: uuidV4,
       notes: "x".repeat(2001),
     },
+  },
+  {
+    name: "updatePersonRequest",
+    schema: updatePersonRequest,
+    body: { version: 3 },
+    optional: {
+      fullName: "Maria Souza",
+      cpf: "52998224725",
+      phone: "+5511987654321",
+      email: "maria@example.com",
+      birthDate: "1980-05-20",
+      referredById: id(3),
+      notes: "indicada",
+    },
+    invalid: { version: -1, fullName: " ", cpf: "52998224726", phone: "11987654321", email: "maria" },
+  },
+  {
+    name: "personDetailResponse",
+    schema: personDetailResponse,
+    body: {
+      ...person,
+      version: 1,
+      referrer: null,
+      referrals: [{ ...person, id: id(4) }],
+      addresses: [{ id: id(5), ...address, isPrimary: true }],
+      pixKeys: [{ id: id(6), ...pixKey, isPrimary: true }],
+    },
+    optional: { email: "maria@example.com", birthDate: "1980-05-20", notes: "indicada" },
+    invalid: {
+      version: 1.5,
+      referrer: { ...person, cpf: "1" },
+      referrals: [{ id: "x" }],
+      addresses: [{ id: id(5), ...address, isPrimary: true, state: "S" }],
+      pixKeys: [{ id: id(6), type: "X", value: "a", isPrimary: true }],
+    },
+  },
+  {
+    name: "addressSchema",
+    schema: addressSchema,
+    body: { id: id(5), ...address, isPrimary: false },
+    optional: { complement: "Apto 4" },
+    invalid: { ...addressInvalid, id: uuidV4 },
+  },
+  {
+    name: "createAddressRequest",
+    schema: createAddressRequest,
+    body: address,
+    optional: { complement: "Apto 4", isPrimary: true },
+    invalid: addressInvalid,
+  },
+  {
+    name: "updateAddressRequest",
+    schema: updateAddressRequest,
+    body: {},
+    optional: { ...address, complement: "Apto 4", isPrimary: true },
+    invalid: addressInvalid,
+  },
+  {
+    name: "pixKeySchema",
+    schema: pixKeySchema,
+    body: { id: id(6), ...pixKey, isPrimary: false },
+    invalid: { ...pixKeyInvalid, id: uuidV4 },
+  },
+  {
+    name: "createPixKeyRequest",
+    schema: createPixKeyRequest,
+    body: pixKey,
+    optional: { isPrimary: true },
+    invalid: pixKeyInvalid,
+  },
+  {
+    name: "updatePixKeyRequest",
+    schema: updatePixKeyRequest,
+    body: {},
+    optional: { ...pixKey, isPrimary: true },
+    invalid: pixKeyInvalid,
   },
   {
     name: "personListResponse",
