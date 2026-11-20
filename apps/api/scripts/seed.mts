@@ -1,6 +1,7 @@
-// Semeia 6 pessoas fictícias (RNF-02) em DATABASE_URL local. Idempotente, numa única transação.
+// Semeia a conta base e 6 pessoas fictícias (RNF-02) em DATABASE_URL local. Idempotente, numa única transação.
 // Recusa host que não seja 127.0.0.1 ou localhost, para nunca misturar dado de teste com produção.
 import pg from "pg";
+import { BASE_ACCOUNT_ID, BASE_ACCOUNT_NAME } from "../src/treasury/infra/account-repository.ts";
 
 type PixType = "CPF" | "CNPJ" | "EMAIL" | "PHONE" | "RANDOM";
 
@@ -200,6 +201,10 @@ function readDatabaseUrl(): URL {
 }
 
 async function seed(client: pg.PoolClient): Promise<void> {
+  await client.query(`INSERT INTO treasury.accounts (id, name) VALUES ($1, $2) ON CONFLICT (id) DO NOTHING`, [
+    BASE_ACCOUNT_ID,
+    BASE_ACCOUNT_NAME,
+  ]);
   for (const p of persons) {
     await client.query(
       `INSERT INTO people.persons (id, full_name, cpf, phone, referred_by_id)
