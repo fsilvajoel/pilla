@@ -399,6 +399,7 @@ export class LoansService {
       personName: personNameOf(names, loan.personId),
       type: loanTypeSchema.parse(loan.type),
       status: loan.status,
+      version: loan.version,
       standing: assessment.standing,
       principalCents: loan.principalCents,
       monthlyInterestRateBps: loan.monthlyInterestRateBps,

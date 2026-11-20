@@ -49,6 +49,7 @@ beforeEach(async () => {
   await client.query("delete from lending.installments");
   await client.query("delete from lending.loans");
   await client.query("delete from people.persons");
+  await client.query("delete from treasury.accounts");
   await client.query(
     `insert into people.persons (id, full_name, cpf, phone) values
      ($1, 'Ana Souza', '52998224725', '+5511987654321'),
@@ -275,6 +276,7 @@ describe("GET /api/v1/loans (E10-F05, A1 to A3)", () => {
 });
 
 type DetailBody = {
+  version: number;
   status?: string;
   standing: string | null;
   paidCents: number;
@@ -312,6 +314,22 @@ describe("GET /api/v1/loans/{id} (E10-F05, A4 to A6)", () => {
       paidCents: 180000,
       outstandingCents: 425000,
     });
+  });
+
+  it("C7b: exposes the real row version, so an edit bumps it and activate works with the new one", async () => {
+    await client.query("insert into treasury.accounts (id, name, active) values ($1, 'Conta ativa', true)", [ACCOUNT]);
+    await seedLoan({ id: A, number: "2026-0001", status: "DRAFT" });
+    expect((await detail(A)).body.version).toBe(1);
+    const edited = await request(baseUrl).patch(`/api/v1/loans/${A}`).set("If-Match", "1").send({ gracePeriodDays: 5 });
+    expect(edited.status).toBe(200);
+    const after = await detail(A);
+    expect(after.body.version).toBe(2);
+    const activated = await request(baseUrl)
+      .post(`/api/v1/loans/${A}/activate`)
+      .set("If-Match", String(after.body.version))
+      .send({ disbursedAt: "2026-08-20", accountId: ACCOUNT });
+    expect(activated.status).toBe(200);
+    expect((await detail(A)).body.version).toBe(3);
   });
 
   it("C8 (A4): paidCents counts the confirmed allocations of each installment", async () => {

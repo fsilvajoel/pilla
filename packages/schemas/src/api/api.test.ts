@@ -389,6 +389,7 @@ const cases: BodyCase[] = [
       personId: id(1),
       personName: "Maria da Silva",
       status: "ACTIVE",
+      version: 2,
       standing: "CURRENT",
       contractedAt: "2026-11-14",
       disbursedAt: "2026-11-14",
@@ -401,6 +402,7 @@ const cases: BodyCase[] = [
     },
     invalid: {
       status: "OPEN",
+      version: 0,
       standing: "LATE",
       disbursedAt: "2026-11-31",
       installments: [{ ...installment, status: "DONE" }],

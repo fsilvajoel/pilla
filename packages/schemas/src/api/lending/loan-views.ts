@@ -62,6 +62,7 @@ export const loanDetailResponse = z.strictObject({
   personName: z.string().min(1),
   type: loanTypeSchema,
   status: loanStatusSchema,
+  version: z.int().positive(),
   standing: loanStandingSchema.nullable(),
   principalCents: positiveCentsSchema,
   monthlyInterestRateBps: bpsSchema,
