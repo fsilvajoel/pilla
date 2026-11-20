@@ -1,236 +1,141 @@
 import { describe, expect, it } from "vitest";
+import { errorStatus, problemSchema } from "../problem";
 import { createPersonRequest, personListResponse, personSummarySchema } from "./create-person";
 import { personListQuery } from "./person-list-query";
-import { personResponse } from "./person-response";
 import { updatePersonRequest } from "./update-person";
-import { errorCodeSchema, errorStatus, problemSchema } from "../problem";
 
 const ANA_ID = "01970000-0000-7000-8000-000000000001";
 const OTHER_ID = "01970000-0000-7000-8000-000000000002";
+const ANA_CPF = "52998224725";
+const ANA_PHONE = "+5511987654321";
 
-const validCreate = { fullName: "Ana Costa", cpf: "52998224725", phone: "+5511987654321" };
+const basicResponse = { id: ANA_ID, fullName: "Ana Costa", cpf: ANA_CPF, phone: ANA_PHONE, active: true, version: 1 };
 
-function issuePaths(result: { success: boolean; error?: { issues: { path: PropertyKey[] }[] } }): string[] {
-  return [...new Set((result.error?.issues ?? []).map((i) => i.path.map(String).join(".")))];
+// person-response.ts nasce no E9-T06/contrato; o import é dinâmico para o arquivo carregar (e ficar vermelho) sem ele.
+async function loadPersonResponse(): Promise<{ safeParse(input: unknown): { success: boolean } }> {
+  const path = "./person-response";
+  const mod = (await import(/* @vite-ignore */ path)) as {
+    personResponse: { safeParse(input: unknown): { success: boolean } };
+  };
+  return mod.personResponse;
 }
 
-describe("createPersonRequest (C2, A2)", () => {
-  it("C2 (A2): accepts the minimal body and trims the name", () => {
-    const result = createPersonRequest.safeParse({ ...validCreate, fullName: "  Ana Costa  " });
-    expect(result.success).toBe(true);
-    expect(result.data).toEqual(validCreate);
+describe("PersonResponse (C1, C8, C9)", () => {
+  it("C1 (A1): aceita a resposta básica exata, com e sem opcionais", async () => {
+    const personResponse = await loadPersonResponse();
+
+    expect(personResponse.safeParse(basicResponse).success).toBe(true);
+    expect(
+      personResponse.safeParse({ ...basicResponse, email: "ana@example.com", birthDate: "1990-01-31", notes: "obs" })
+        .success,
+    ).toBe(true);
   });
 
-  it("C2 (A2): accepts every optional field", () => {
-    const body = {
-      ...validCreate,
-      email: "ana@example.com",
-      birthDate: "1990-05-17",
-      referredById: OTHER_ID,
-      notes: "  cliente antiga  ",
-    };
-    const result = createPersonRequest.safeParse(body);
-    expect(result.success).toBe(true);
-    expect(result.data).toEqual({ ...body, notes: "cliente antiga" });
+  it("C8 (A8): é estrito e não aceita campos agregados da ficha", async () => {
+    const personResponse = await loadPersonResponse();
+
+    expect(personResponse.safeParse(basicResponse).success).toBe(true);
+    for (const extra of [{ addresses: [] }, { pixKeys: [] }, { referrer: null }, { referrals: [] }]) {
+      expect(personResponse.safeParse({ ...basicResponse, ...extra }).success).toBe(false);
+    }
   });
 
-  it.each([
-    ["masked CPF", { cpf: "529.982.247-25" }, "cpf"],
-    ["CPF with invalid check digits", { cpf: "11111111111" }, "cpf"],
-    ["masked phone", { phone: "(11) 99999-0000" }, "phone"],
-    ["empty name", { fullName: "" }, "fullName"],
-    ["blank name", { fullName: "   " }, "fullName"],
-    ["151-character name", { fullName: "a".repeat(151) }, "fullName"],
-    ["invalid e-mail", { email: "nao-e-email" }, "email"],
-    ["null optional", { email: null }, "email"],
-    ["invalid birth date", { birthDate: "2026-02-30" }, "birthDate"],
-    ["non-v7 referrer id", { referredById: "not-a-uuid" }, "referredById"],
-    ["notes over 2000", { notes: "x".repeat(2001) }, "notes"],
-    ["blank notes", { notes: "  " }, "notes"],
-  ])("C2 (A2): rejects %s", (_name, patch, field) => {
-    const result = createPersonRequest.safeParse({ ...validCreate, ...patch });
-    expect(result.success).toBe(false);
-    expect(issuePaths(result)).toEqual([field]);
-  });
+  it("C9 (A9): exige version e não aceita null nos opcionais", async () => {
+    const personResponse = await loadPersonResponse();
+    const withoutVersion = { id: ANA_ID, fullName: "Ana Costa", cpf: ANA_CPF, phone: ANA_PHONE, active: true };
 
-  it("C2 (A2): accepts a 150-character name", () => {
-    expect(createPersonRequest.safeParse({ ...validCreate, fullName: "a".repeat(150) }).success).toBe(true);
-  });
-
-  it("C2 (A2): rejects an unknown key", () => {
-    const result = createPersonRequest.safeParse({ ...validCreate, active: true });
-    expect(result.success).toBe(false);
-    expect(result.error?.issues[0]?.code).toBe("unrecognized_keys");
-  });
-
-  it("C2 (A2): rejects missing required fields", () => {
-    const result = createPersonRequest.safeParse({});
-    expect(result.success).toBe(false);
-    expect(issuePaths(result)).toEqual(["fullName", "cpf", "phone"]);
+    expect(personResponse.safeParse(basicResponse).success).toBe(true);
+    expect(personResponse.safeParse(withoutVersion).success).toBe(false);
+    for (const field of ["email", "birthDate", "notes"]) {
+      expect(personResponse.safeParse({ ...basicResponse, [field]: null }).success).toBe(false);
+    }
   });
 });
 
-describe("personListQuery (C7, A7)", () => {
-  it("C7 (A7): applies the defaults", () => {
-    const result = personListQuery.safeParse({});
-    expect(result.success).toBe(true);
-    expect(result.data).toEqual({ search: "", limit: 20 });
+describe("PersonListResponse (C5)", () => {
+  it("C5 (A5): item importado sem CPF tem cpf null e passa no resumo e na lista", () => {
+    const imported = { id: OTHER_ID, fullName: "Beto Importado", cpf: null, phone: ANA_PHONE, active: true };
+
+    expect(personSummarySchema.safeParse(imported).success).toBe(true);
+    expect(personListResponse.safeParse({ items: [imported], nextCursor: null }).success).toBe(true);
   });
 
-  it("C7 (A7): accepts search, limit and cursor", () => {
-    const result = personListQuery.safeParse({ search: "jose", limit: 100, cursor: "abc" });
-    expect(result.success).toBe(true);
-    expect(result.data).toEqual({ search: "jose", limit: 100, cursor: "abc" });
-  });
+  it("C5 (A5): lista vazia, propriedade extra e CPF ausente", () => {
+    const item = { id: ANA_ID, fullName: "Ana Costa", cpf: ANA_CPF, phone: ANA_PHONE, active: true };
+    const imported = { ...item, cpf: null };
 
-  it("C7 (A7): accepts limit 1 and a null cursor", () => {
-    const result = personListQuery.safeParse({ limit: 1, cursor: null });
-    expect(result.success).toBe(true);
-    expect(result.data).toEqual({ search: "", limit: 1, cursor: null });
-  });
-
-  it.each([0, -1, 101, 1.5])("C7 (A7): rejects limit %s", (limit) => {
-    const result = personListQuery.safeParse({ limit });
-    expect(result.success).toBe(false);
-    expect(issuePaths(result)).toEqual(["limit"]);
-  });
-
-  it("C7 (A7): rejects a text limit", () => {
-    const result = personListQuery.safeParse({ limit: "abc" });
-    expect(result.success).toBe(false);
-    expect(issuePaths(result)).toEqual(["limit"]);
+    expect(personListResponse.safeParse({ items: [], nextCursor: null }).success).toBe(true);
+    expect(personListResponse.safeParse({ items: [{ ...item, extra: 1 }], nextCursor: null }).success).toBe(false);
+    const withoutCpf = { id: ANA_ID, fullName: "Ana Costa", phone: ANA_PHONE, active: true };
+    expect(personListResponse.safeParse({ items: [withoutCpf], nextCursor: null }).success).toBe(false);
+    expect(personListResponse.safeParse({ items: [imported], nextCursor: null }).success).toBe(true);
   });
 });
 
-describe("personSummarySchema and personListResponse (C5, A5)", () => {
-  const summary = { id: ANA_ID, fullName: "Ana Costa", cpf: "52998224725", phone: "+5511987654321", active: true };
+describe("updatePersonRequest (C9, C10)", () => {
+  it("C9 (A9): null limpa email, birthDate e notes", () => {
+    const result = updatePersonRequest.safeParse({ version: 3, notes: null, email: null, birthDate: null });
 
-  it("C5 (A5): accepts a summary with null cpf", () => {
-    const result = personSummarySchema.safeParse({ ...summary, cpf: null });
     expect(result.success).toBe(true);
-    expect(result.data).toEqual({ ...summary, cpf: null });
+    if (result.success) {
+      expect(result.data).toEqual({ version: 3, notes: null, email: null, birthDate: null });
+    }
   });
 
-  it("C5 (A5): rejects an extra property, a missing property and an invalid cpf", () => {
-    expect(personSummarySchema.safeParse({ ...summary, version: 1 }).success).toBe(false);
-    expect(personSummarySchema.safeParse({ ...summary, phone: undefined }).success).toBe(false);
-    expect(personSummarySchema.safeParse({ ...summary, cpf: "11111111111" }).success).toBe(false);
+  it("C9 (A9): cpf null, referredById, active e campo extra são recusados mesmo com os nulls válidos", () => {
+    expect(updatePersonRequest.safeParse({ version: 3, email: null }).success).toBe(true);
+    expect(updatePersonRequest.safeParse({ version: 3, cpf: null }).success).toBe(false);
+    expect(updatePersonRequest.safeParse({ version: 3, referredById: OTHER_ID }).success).toBe(false);
+    expect(updatePersonRequest.safeParse({ version: 3, active: false }).success).toBe(false);
+    expect(updatePersonRequest.safeParse({ version: 3, extra: "x" }).success).toBe(false);
   });
 
-  it("C5 (A5): accepts the empty page and a page with cursor", () => {
-    expect(personListResponse.parse({ items: [], nextCursor: null })).toEqual({ items: [], nextCursor: null });
-    expect(personListResponse.parse({ items: [summary], nextCursor: "c1" })).toEqual({
-      items: [summary],
-      nextCursor: "c1",
-    });
+  it("C9/C10 (A9, A10): version é obrigatória, inteira e não negativa, com null aceito nos opcionais", () => {
+    expect(updatePersonRequest.safeParse({ version: 0, notes: null }).success).toBe(true);
+    expect(updatePersonRequest.safeParse({ notes: null }).success).toBe(false);
+    expect(updatePersonRequest.safeParse({ fullName: "Ana", notes: null }).success).toBe(false);
+    expect(updatePersonRequest.safeParse({ version: -1, notes: null }).success).toBe(false);
+    expect(updatePersonRequest.safeParse({ version: 1.5, notes: null }).success).toBe(false);
   });
 
-  it("C5 (A5): rejects a page without nextCursor", () => {
-    expect(personListResponse.safeParse({ items: [] }).success).toBe(false);
-  });
-});
+  it("C9 (A9): campos ausentes continuam ausentes e os informados são validados e aparados", () => {
+    const result = updatePersonRequest.safeParse({ version: 2, fullName: "  Ana Souza  ", email: null });
 
-describe("personResponse (C1, C8, A1, A8)", () => {
-  const basic = {
-    id: ANA_ID,
-    fullName: "Ana Costa",
-    cpf: "52998224725",
-    phone: "+5511987654321",
-    active: true,
-    version: 1,
-  };
-
-  it("C1 (A1): accepts the basic body", () => {
-    expect(personResponse.parse(basic)).toEqual(basic);
-  });
-
-  it("C8 (A8): accepts the optional non-null fields", () => {
-    const full = { ...basic, email: "ana@example.com", birthDate: "1990-05-17", notes: "obs" };
-    expect(personResponse.parse(full)).toEqual(full);
-  });
-
-  it.each([
-    ["extra addresses", { addresses: [] }],
-    ["extra referrer", { referrer: null }],
-    ["null email", { email: null }],
-    ["null notes", { notes: null }],
-    ["string version", { version: "1" }],
-    ["null cpf", { cpf: null }],
-  ])("C8 (A8): rejects %s", (_name, patch) => {
-    expect(personResponse.safeParse({ ...basic, ...patch }).success).toBe(false);
-  });
-
-  it("C8 (A8): rejects a missing version", () => {
-    expect(personResponse.safeParse({ ...basic, version: undefined }).success).toBe(false);
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data).toEqual({ version: 2, fullName: "Ana Souza", email: null });
+    }
+    expect(updatePersonRequest.safeParse({ version: 2, cpf: "11111111111", email: null }).success).toBe(false);
   });
 });
 
-describe("updatePersonRequest (C9, C10, A9, A10)", () => {
-  it("C9 (A9): accepts version alone", () => {
-    expect(updatePersonRequest.parse({ version: 0 })).toEqual({ version: 0 });
+describe("contratos de apoio (C2, C3, C7, C11)", () => {
+  it("C3/C11 (A3, A11): DUPLICATE_CPF e VERSION_CONFLICT são 409, o problem valida e PATCH aceita birthDate null", () => {
+    expect(errorStatus.DUPLICATE_CPF).toBe(409);
+    expect(errorStatus.VERSION_CONFLICT).toBe(409);
+    const problem = { title: "DUPLICATE_CPF", status: 409, detail: "CPF já cadastrado.", code: "DUPLICATE_CPF" };
+    expect(problemSchema.safeParse(problem).success).toBe(true);
+    expect(problemSchema.safeParse({ ...problem, status: 400 }).success).toBe(false);
+    expect(updatePersonRequest.safeParse({ version: 1, birthDate: null }).success).toBe(true);
   });
 
-  it("C9 (A9): accepts null for email, birthDate and notes", () => {
-    const body = { version: 3, notes: null, email: null, birthDate: null };
-    expect(updatePersonRequest.parse(body)).toEqual(body);
+  it("C2 (A2): create normaliza máscara, recusa nulo em opcional; update aceita o mesmo CPF mascarado", () => {
+    const masked = createPersonRequest.safeParse({ fullName: "Ana Costa", cpf: "529.982.247-25", phone: ANA_PHONE });
+    expect(masked.success).toBe(true);
+    if (masked.success) expect(masked.data.cpf).toBe(ANA_CPF);
+    expect(
+      createPersonRequest.safeParse({ fullName: "Ana Costa", cpf: ANA_CPF, phone: ANA_PHONE, notes: null }).success,
+    ).toBe(false);
+    expect(updatePersonRequest.safeParse({ version: 1, cpf: "529.982.247-25", notes: null }).success).toBe(true);
   });
 
-  it("C9 (A9): accepts editable fields and trims", () => {
-    const result = updatePersonRequest.parse({
-      version: 2,
-      fullName: "  Ana Maria  ",
-      cpf: "11144477735",
-      phone: "+5511912345678",
-      email: "ana@example.com",
-      birthDate: "1990-05-17",
-      notes: "obs",
-    });
-    expect(result).toEqual({
-      version: 2,
-      fullName: "Ana Maria",
-      cpf: "11144477735",
-      phone: "+5511912345678",
-      email: "ana@example.com",
-      birthDate: "1990-05-17",
-      notes: "obs",
-    });
-  });
-
-  it.each([
-    ["missing version", {}, "version"],
-    ["negative version", { version: -1 }, "version"],
-    ["fractional version", { version: 1.5 }, "version"],
-    ["null cpf", { version: 1, cpf: null }, "cpf"],
-    ["invalid cpf", { version: 1, cpf: "11111111111" }, "cpf"],
-    ["masked phone", { version: 1, phone: "(11) 99999-0000" }, "phone"],
-    ["blank name", { version: 1, fullName: "  " }, "fullName"],
-    ["null name", { version: 1, fullName: null }, "fullName"],
-    ["null phone", { version: 1, phone: null }, "phone"],
-  ])("C9 (A9): rejects %s", (_name, body, field) => {
-    const result = updatePersonRequest.safeParse(body);
-    expect(result.success).toBe(false);
-    expect(issuePaths(result)).toEqual([field]);
-  });
-
-  it.each([
-    ["active", { version: 1, active: false }],
-    ["referredById", { version: 1, referredById: OTHER_ID }],
-    ["unknown key", { version: 1, foo: "bar" }],
-  ])("C9 (A9): rejects the key %s", (_name, body) => {
-    const result = updatePersonRequest.safeParse(body);
-    expect(result.success).toBe(false);
-    expect(result.error?.issues[0]?.code).toBe("unrecognized_keys");
-  });
-});
-
-describe("problem catalog (C3, C11, A3, A11)", () => {
-  it("C3 (A3): DUPLICATE_CPF is a known code with status 409", () => {
-    expect(errorCodeSchema.safeParse("DUPLICATE_CPF").success).toBe(true);
-    expect((errorStatus as Record<string, number>)["DUPLICATE_CPF"]).toBe(409);
-  });
-
-  it("C3 (A3): accepts the DUPLICATE_CPF problem body", () => {
-    const body = { title: "DUPLICATE_CPF", status: 409, detail: "CPF já cadastrado.", code: "DUPLICATE_CPF" };
-    expect(problemSchema.parse(body)).toEqual(body);
+  it("C7 (A7): query usa limit 20 por padrão, aceita 1 a 100 e recusa o resto; cursor aceita null", () => {
+    expect(personListQuery.parse({}).limit).toBe(20);
+    expect(personListQuery.parse({ limit: "100" }).limit).toBe(100);
+    for (const limit of ["0", "-1", "101", "1.5", "1e1", "", "abc"]) {
+      expect(personListQuery.safeParse({ limit }).success).toBe(false);
+    }
+    expect(personListQuery.safeParse({ cursor: "abc" }).success).toBe(true);
+    expect(personListQuery.safeParse({ cursor: null }).success).toBe(true);
   });
 });

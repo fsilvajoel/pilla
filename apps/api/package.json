@@ -9,8 +9,11 @@
     "lint": "eslint src",
     "test": "vitest run --coverage",
     "mutation": "stryker run",
-    "db:generate": "drizzle-kit generate --config drizzle-kit/core.config.ts",
-    "db:regen": "node scripts/db-regen.mjs"
+    "db:generate": "drizzle-kit generate --config drizzle-kit/core.config.ts && drizzle-kit generate --config drizzle-kit/people.config.ts && drizzle-kit generate --config drizzle-kit/access.config.ts && drizzle-kit generate --config drizzle-kit/lending.config.ts && drizzle-kit generate --config drizzle-kit/payments.config.ts && drizzle-kit generate --config drizzle-kit/treasury.config.ts",
+    "db:regen": "node scripts/db-regen.mjs",
+    "start": "node --env-file=../../.env --import tsx --eval \"import('./src/main.ts').then((m) => m.bootstrap(process.env))\"",
+    "db:migrate": "node --env-file=../../.env --import tsx scripts/migrate.mts",
+    "db:seed": "node --env-file=../../.env --import tsx scripts/seed.mts"
   },
   "dependencies": {
     "@nestjs/common": "^12.5.1",
@@ -25,7 +28,6 @@
   },
   "devDependencies": {
     "@electric-sql/pglite": "0.5.14",
-    "@fast-check/vitest": "0.5.0",
     "@nestjs/testing": "^12.5.1",
     "@pilla/config": "workspace:*",
     "@stryker-mutator/core": "^10.1.1",
@@ -37,6 +39,7 @@
     "drizzle-kit": "^0.31.11",
     "fast-check": "^4.10.2",
     "supertest": "^7.3.2",
+    "tsx": "^4.23.15",
     "vitest": "^5.1.0"
   }
 }

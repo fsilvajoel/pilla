@@ -1,29 +1,35 @@
-// OpenAPI gerado do zod (ADR-0017): o schema é a fonte da verdade, sem dependência nova.
 import { Controller, Get } from "@nestjs/common";
 import { healthResponseSchema, problemSchema } from "@pilla/schemas";
 import { z } from "zod";
 
-type JsonSchema = Readonly<Record<string, unknown>>;
-type OpenApiResponse = {
-  readonly description: string;
-  readonly content: Readonly<Record<string, { readonly schema: { readonly $ref: string } }>>;
-};
+type JsonSchema = z.core.JSONSchema.BaseSchema;
+type SchemaRef = { readonly $ref: string };
 
 export type OpenApiDocument = {
   readonly openapi: "3.1.0";
   readonly info: { readonly title: string; readonly version: string };
   readonly servers: readonly { readonly url: string }[];
-  readonly paths: Readonly<
-    Record<
-      string,
-      Readonly<
-        Record<string, { readonly operationId: string; readonly responses: Readonly<Record<string, OpenApiResponse>> }>
-      >
-    >
-  >;
-  readonly components: { readonly schemas: Readonly<Record<string, JsonSchema>> };
+  readonly paths: {
+    readonly "/health": {
+      readonly get: {
+        readonly operationId: "getHealth";
+        readonly responses: {
+          readonly "200": {
+            readonly description: string;
+            readonly content: { readonly "application/json": { readonly schema: SchemaRef } };
+          };
+          readonly "500": {
+            readonly description: string;
+            readonly content: { readonly "application/problem+json": { readonly schema: SchemaRef } };
+          };
+        };
+      };
+    };
+  };
+  readonly components: { readonly schemas: { readonly HealthResponse: JsonSchema; readonly Problem: JsonSchema } };
 };
 
+// OpenAPI gerado do zod (ADR-0017): o schema em packages/schemas é a fonte da verdade.
 export function buildOpenApiDocument(): OpenApiDocument {
   return {
     openapi: "3.1.0",
@@ -47,10 +53,7 @@ export function buildOpenApiDocument(): OpenApiDocument {
       },
     },
     components: {
-      schemas: {
-        HealthResponse: z.toJSONSchema(healthResponseSchema),
-        Problem: z.toJSONSchema(problemSchema),
-      },
+      schemas: { HealthResponse: z.toJSONSchema(healthResponseSchema), Problem: z.toJSONSchema(problemSchema) },
     },
   };
 }

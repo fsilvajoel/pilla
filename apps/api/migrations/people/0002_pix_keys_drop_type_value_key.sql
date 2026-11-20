@@ -1,0 +1,1 @@
+ALTER TABLE "people"."pix_keys" DROP CONSTRAINT "pix_keys_type_value_key";

@@ -1,65 +1,56 @@
-// Filtro global: toda exceção vira application/problem+json (RFC-004 §2 e §6).
 import { Catch, HttpException, Inject, Logger } from "@nestjs/common";
 import type { ArgumentsHost, ExceptionFilter } from "@nestjs/common";
-import { HttpAdapterHost } from "@nestjs/core";
-import { errorStatus } from "@pilla/schemas";
-import type { ErrorCode, Problem } from "@pilla/schemas";
-import { ProblemException } from "./problem-exception";
+import { HttpAdapterHost, type AbstractHttpAdapter } from "@nestjs/core";
+import { errorStatus, type ErrorCode, type Problem } from "@pilla/schemas";
+import { inspect } from "node:util";
+import { ProblemException, type ProblemFieldError } from "./problem-exception";
 
-const standard: Readonly<
-  Record<"VALIDATION_FAILED" | "NOT_FOUND" | "INTERNAL_ERROR", { title: string; detail: string }>
-> = {
-  VALIDATION_FAILED: { title: "Validação falhou", detail: "Dados inválidos." },
-  NOT_FOUND: { title: "Não encontrado", detail: "Recurso não encontrado." },
-  INTERNAL_ERROR: { title: "Erro interno", detail: "Erro interno do servidor." },
+type Descriptor = { code: ErrorCode; detail: string; errors: readonly ProblemFieldError[] | undefined };
+
+const titles: Partial<Record<ErrorCode, string>> = {
+  VALIDATION_FAILED: "Validação falhou",
+  NOT_FOUND: "Não encontrado",
+  INTERNAL_ERROR: "Erro interno",
 };
 
-function standardProblem(code: keyof typeof standard): Problem {
-  return { ...standard[code], status: errorStatus[code], code };
-}
-
-function toProblem(exception: unknown, logger: Logger): Problem {
+function describeException(exception: unknown): Descriptor {
   if (exception instanceof ProblemException) {
-    const code: ErrorCode = exception.code;
-    const title =
-      code === "VALIDATION_FAILED"
-        ? standard.VALIDATION_FAILED.title
-        : code === "NOT_FOUND"
-          ? standard.NOT_FOUND.title
-          : code;
-    const problem: Problem = { title, status: errorStatus[code], detail: exception.detail, code };
-    return exception.errors === undefined ? problem : { ...problem, errors: [...exception.errors] };
+    return { code: exception.code, detail: exception.detail, errors: exception.errors };
   }
-  if (exception instanceof HttpException) {
-    if (exception.getStatus() === 404) return standardProblem("NOT_FOUND");
-    if (exception.getStatus() === 400) return standardProblem("VALIDATION_FAILED");
-  }
-  // Log só com tipo da exceção e código; mensagem e stack podem conter segredos (decisão do PM, 20/11).
-  const type = exception instanceof Error ? exception.name : typeof exception;
-  logger.error(`${type} -> INTERNAL_ERROR`);
-  return standardProblem("INTERNAL_ERROR");
+  const status = exception instanceof HttpException ? exception.getStatus() : 500;
+  if (status === 404) return { code: "NOT_FOUND", detail: "Recurso não encontrado.", errors: undefined };
+  if (status === 400) return { code: "VALIDATION_FAILED", detail: "Dados inválidos.", errors: undefined };
+  return { code: "INTERNAL_ERROR", detail: "Erro interno do servidor.", errors: undefined };
 }
 
-/** Escreve o problema na resposta; usado pelo filtro e pelo 404 fora do prefixo. */
-export function replyProblem(adapterHost: HttpAdapterHost, response: unknown, problem: Problem): void {
-  const adapter = adapterHost.httpAdapter;
-  adapter.setHeader(response, "Content-Type", "application/problem+json; charset=utf-8");
+export function toProblem(exception: unknown): Problem {
+  const { code, detail, errors } = describeException(exception);
+  if (code === "INTERNAL_ERROR") Logger.error(inspect(exception));
+  return {
+    title: titles[code] ?? code,
+    status: errorStatus[code],
+    detail,
+    code,
+    ...(errors === undefined ? {} : { errors: [...errors] }),
+  };
+}
+
+export function sendProblem(adapter: AbstractHttpAdapter, response: unknown, problem: Problem): void {
+  adapter.setHeader(response, "Content-Type", "application/problem+json");
   adapter.reply(response, problem, problem.status);
 }
 
-/** 404 padrão (RFC-004 §6). */
-export function notFoundProblem(): Problem {
-  return standardProblem("NOT_FOUND");
-}
-
+// Toda resposta de erro é application/problem+json (RFC 9457, RFC-004 §6). O erro 500 vai só para o log.
 @Catch()
 export class ProblemDetailsFilter implements ExceptionFilter {
-  private readonly logger = new Logger(ProblemDetailsFilter.name);
+  private readonly adapterHost: HttpAdapterHost;
 
-  constructor(@Inject(HttpAdapterHost) private readonly adapterHost: HttpAdapterHost) {}
+  constructor(@Inject(HttpAdapterHost) adapterHost: HttpAdapterHost) {
+    this.adapterHost = adapterHost;
+  }
 
   catch(exception: unknown, host: ArgumentsHost): void {
-    const problem = toProblem(exception, this.logger);
-    replyProblem(this.adapterHost, host.switchToHttp().getResponse(), problem);
+    const response: unknown = host.switchToHttp().getResponse();
+    sendProblem(this.adapterHost.httpAdapter, response, toProblem(exception));
   }
 }

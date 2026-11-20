@@ -15,6 +15,12 @@ import { allocationPreviewRequest } from "./payments/allocation-preview";
 import { createPaymentRequest } from "./payments/create-payment";
 import { reversePaymentRequest } from "./payments/reverse-payment";
 import { createPersonRequest, personListResponse } from "./people/create-person";
+import { addressSchema, createAddressRequest, updateAddressRequest } from "./people/address";
+import { personListQuery } from "./people/person-list-query";
+import { personDetailResponse } from "./people/person-detail";
+import { createPixKeyRequest, pixKeySchema, updatePixKeyRequest } from "./people/pix-key";
+import { personResponse } from "./people/person-response";
+import { updatePersonRequest } from "./people/update-person";
 import { problemSchema } from "./problem";
 import { accountEntryRequest } from "./treasury/account-entry";
 import { accountListResponse } from "./treasury/account-summary";
@@ -35,6 +41,26 @@ const line = { number: 1, dueDate: "2026-12-14", principalCents: 83333, interest
 const charges = { lateFeeBps: 200, lateInterestMonthlyBps: 100, gracePeriodDays: 0 };
 const loan = { personId: id(1), ...simulation, ...charges };
 const person = { id: id(1), fullName: "Maria da Silva", cpf: "52998224725", phone: "+5511987654321", active: true };
+const address = {
+  street: "Rua das Flores",
+  number: "120",
+  district: "Centro",
+  city: "São Paulo",
+  state: "SP",
+  postalCode: "01001000",
+};
+const addressInvalid = {
+  street: " ",
+  number: "",
+  complement: " ",
+  district: "",
+  city: "",
+  state: "sp",
+  postalCode: "01001-000",
+  isPrimary: "yes",
+};
+const pixKey = { type: "EMAIL", value: "maria@example.com" };
+const pixKeyInvalid = { type: "ALEATORIA", value: " ", isPrimary: "yes" };
 // RFC-004 §5 (portal): contrato 2026-0012, 2 parcelas pagas, saldo 4.600,00.
 const listItem = {
   id: id(2),
@@ -187,6 +213,95 @@ const cases: BodyCase[] = [
       referredById: uuidV4,
       notes: "x".repeat(2001),
     },
+  },
+  {
+    name: "updatePersonRequest",
+    schema: updatePersonRequest,
+    body: { version: 3 },
+    optional: {
+      fullName: "Maria Souza",
+      cpf: "52998224725",
+      phone: "+5511987654321",
+      email: "maria@example.com",
+      birthDate: "1980-05-20",
+      notes: "indicada",
+    },
+    invalid: { version: -1, fullName: " ", cpf: "52998224726", phone: "11987654321", email: "maria" },
+  },
+  {
+    name: "personResponse",
+    schema: personResponse,
+    body: { ...person, version: 1 },
+    optional: { email: "maria@example.com", birthDate: "1980-05-20", notes: "indicada" },
+    invalid: { version: -1, email: "maria", birthDate: "20/05/1980" },
+  },
+  {
+    name: "personDetailResponse",
+    schema: personDetailResponse,
+    body: {
+      ...person,
+      version: 1,
+      referrer: null,
+      referrals: [{ ...person, id: id(4) }],
+      addresses: [{ id: id(5), ...address, isPrimary: true }],
+      pixKeys: [{ id: id(6), ...pixKey, isPrimary: true }],
+    },
+    optional: { email: "maria@example.com", birthDate: "1980-05-20", notes: "indicada" },
+    invalid: {
+      version: 1.5,
+      referrer: { ...person, cpf: "1" },
+      referrals: [{ id: "x" }],
+      addresses: [{ id: id(5), ...address, isPrimary: true, state: "S" }],
+      pixKeys: [{ id: id(6), type: "X", value: "a", isPrimary: true }],
+    },
+  },
+  {
+    name: "addressSchema",
+    schema: addressSchema,
+    body: { id: id(5), ...address, isPrimary: false },
+    optional: { complement: "Apto 4" },
+    invalid: { ...addressInvalid, id: uuidV4 },
+  },
+  {
+    name: "createAddressRequest",
+    schema: createAddressRequest,
+    body: address,
+    optional: { complement: "Apto 4", isPrimary: true },
+    invalid: addressInvalid,
+  },
+  {
+    name: "updateAddressRequest",
+    schema: updateAddressRequest,
+    body: {},
+    optional: { ...address, complement: "Apto 4", isPrimary: true },
+    invalid: addressInvalid,
+  },
+  {
+    name: "pixKeySchema",
+    schema: pixKeySchema,
+    body: { id: id(6), ...pixKey, isPrimary: false },
+    invalid: { ...pixKeyInvalid, id: uuidV4 },
+  },
+  {
+    name: "createPixKeyRequest",
+    schema: createPixKeyRequest,
+    body: pixKey,
+    optional: { isPrimary: true },
+    invalid: pixKeyInvalid,
+  },
+  {
+    name: "updatePixKeyRequest",
+    schema: updatePixKeyRequest,
+    body: {},
+    optional: { ...pixKey, isPrimary: true },
+    invalid: pixKeyInvalid,
+  },
+  {
+    name: "personListQuery",
+    schema: personListQuery,
+    body: {},
+    optional: { search: "joão 123", limit: "50", cursor: "abc" },
+    invalid: { search: "x".repeat(101), limit: "101", cursor: "" },
   },
   {
     name: "personListResponse",
@@ -385,5 +500,79 @@ describe("phoneSchema and loanNumberSchema (RFC-005)", () => {
     ["26-0012", false],
   ])("loan number %s is valid: %s", (loanNumber, valid) => {
     expect(loanNumberSchema.safeParse(loanNumber).success).toBe(valid);
+  });
+});
+
+describe("personListQuery rules (RF-04)", () => {
+  it("defaults the limit to 20", () => {
+    expect(personListQuery.parse({})).toEqual({ limit: 20 });
+  });
+
+  it.each([
+    ["1", 1],
+    ["100", 100],
+    ["20", 20],
+  ])("accepts limit %s", (text, limit) => {
+    expect(personListQuery.parse({ limit: text }).limit).toBe(limit);
+  });
+
+  it.each(["0", "101", " 6 ", "1e1", "6.5", "-1", "abc", ""])("rejects limit %j", (text) => {
+    expect(personListQuery.safeParse({ limit: text }).success).toBe(false);
+  });
+
+  it.each(["maria", "JOÃO da silva", "529.982", "52998", "maria 52998", "a1b2"])(
+    "keeps the search %j as plain text",
+    (search) => {
+      expect(personListQuery.parse({ search }).search).toBe(search);
+    },
+  );
+
+  it("trims the search", () => {
+    expect(personListQuery.parse({ search: "  maria  " }).search).toBe("maria");
+  });
+});
+
+describe("masked CPF and phone in person bodies (RF-01)", () => {
+  const base = { fullName: "Maria da Silva", cpf: "529.982.247-25", phone: "+55 (11) 98765-4321" };
+
+  it("createPersonRequest normalizes CPF and phone", () => {
+    const parsed = createPersonRequest.parse(base);
+    expect(parsed.cpf).toBe("52998224725");
+    expect(parsed.phone).toBe("+5511987654321");
+  });
+
+  it("updatePersonRequest normalizes CPF and phone", () => {
+    const parsed = updatePersonRequest.parse({ ...base, version: 2 });
+    expect(parsed.cpf).toBe("52998224725");
+    expect(parsed.phone).toBe("+5511987654321");
+  });
+
+  it("still checks the digits after removing the mask", () => {
+    expect(createPersonRequest.safeParse({ ...base, cpf: "529.982.247-26" }).success).toBe(false);
+    expect(createPersonRequest.safeParse({ ...base, phone: "(11) 98765-4321" }).success).toBe(false);
+  });
+
+  it.each([null, "texto", [1]])("lets the schema reject a body that is not an object (%j)", (body) => {
+    expect(createPersonRequest.safeParse(body).success).toBe(false);
+  });
+
+  it("ignores non-string cpf and phone", () => {
+    expect(createPersonRequest.safeParse({ ...base, cpf: 52998224725, phone: 5511987654321 }).success).toBe(false);
+  });
+});
+
+describe("DUPLICATE_CPF problem code (D8)", () => {
+  const duplicate = { title: "CPF duplicado", detail: "CPF já cadastrado.", code: "DUPLICATE_CPF" };
+
+  it("maps to 409 and only to 409", () => {
+    expect(problemSchema.safeParse({ ...duplicate, status: 409 }).success).toBe(true);
+    expect(problemSchema.safeParse({ ...duplicate, status: 422 }).success).toBe(false);
+  });
+});
+
+describe("INTERNAL_ERROR problem code", () => {
+  it("maps to 500", () => {
+    const internal = { title: "Erro interno", detail: "Erro interno do servidor.", code: "INTERNAL_ERROR" };
+    expect(problemSchema.safeParse({ ...internal, status: 500 }).success).toBe(true);
   });
 });

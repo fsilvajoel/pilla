@@ -13,6 +13,8 @@ export default defineConfig({
       include: ["app/**/*.{ts,tsx}", "components/**/*.{ts,tsx}", "lib/**/*.{ts,tsx}"],
       exclude: [
         "**/*.test.{ts,tsx}",
+        "app/**/*.tsx", // telas (JSX) de app/: sem teste de tela nesta fase (decisão Joel 21/11); cobertura só para lógica
+        "components/**/*.tsx", // componentes de tela (JSX): sem teste de tela nesta fase (decisão Joel 21/11); components/people/format.ts (lógica) continua medido
         "app/layout.tsx", // casca <html>/<body> do Next; não renderiza dentro do jsdom
         "components/ui/**", // código gerado pelo shadcn/ui; coberto pelos testes das telas que o usam
         "lib/utils.ts", // cn() do shadcn/ui: só repassa para clsx + tailwind-merge

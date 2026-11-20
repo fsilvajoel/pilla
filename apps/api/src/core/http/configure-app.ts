@@ -1,23 +1,24 @@
-// Configuração comum do app Nest: prefixo global e filtro problem+json.
-import type { INestApplication } from "@nestjs/common";
+import { NotFoundException, type INestApplication } from "@nestjs/common";
 import { HttpAdapterHost } from "@nestjs/core";
-import { notFoundProblem, ProblemDetailsFilter, replyProblem } from "./problem-details.filter";
+import { ProblemDetailsFilter, sendProblem, toProblem } from "./problem-details.filter";
 
-const prefix = "api/v1";
-const prefixPattern = /^\/api\/v1(?:[/?]|$)/;
+const PREFIX = "api/v1";
 
+// Prefixo /api/v1 e filtro problem+json globais (D1, RFC-004 §2).
 export function configureApp(app: INestApplication): void {
-  const adapterHost = app.get(HttpAdapterHost);
-  app.setGlobalPrefix(prefix);
-  app.useGlobalFilters(new ProblemDetailsFilter(adapterHost));
-  // O 404 interno do Nest só cobre rotas sob o prefixo; fora dele o Express responderia em HTML.
-  app.use((request: unknown, response: unknown, next: () => void): void => {
-    const url = String(adapterHost.httpAdapter.getRequestUrl(request));
-    // Dentro do prefixo: `/api/v1`, `/api/v1/...` ou `/api/v1?query`.
-    if (prefixPattern.test(url)) {
+  // Sem ETag automático: a API não usa If-Match/ETag, a versão trafega no corpo (RFC-004).
+  const instance: unknown = app.getHttpAdapter().getInstance();
+  const set: unknown = typeof instance === "function" ? Reflect.get(instance, "set") : undefined;
+  if (typeof set === "function") Reflect.apply(set, instance, ["etag", false]);
+  app.setGlobalPrefix(PREFIX);
+  app.useGlobalFilters(new ProblemDetailsFilter(app.get(HttpAdapterHost)));
+  // O 404 do Nest só cobre rotas dentro do prefixo; fora dele o Express responderia HTML.
+  const adapter = app.get(HttpAdapterHost).httpAdapter;
+  app.use((request: unknown, response: unknown, next: () => void) => {
+    if (String(adapter.getRequestUrl(request)).startsWith(`/${PREFIX}`)) {
       next();
       return;
     }
-    replyProblem(adapterHost, response, notFoundProblem());
+    sendProblem(adapter, response, toProblem(new NotFoundException()));
   });
 }
