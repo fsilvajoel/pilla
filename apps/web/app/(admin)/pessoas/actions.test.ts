@@ -15,6 +15,7 @@ const cache = vi.hoisted(() => ({ revalidatePath: vi.fn() }));
 vi.mock("@/lib/api/people", () => api);
 vi.mock("next/cache", () => cache);
 
+import type { CreateAddressRequest, CreatePixKeyRequest } from "@pilla/schemas";
 import { ApiProblem } from "@/lib/api/problem";
 import {
   addAddressAction,
@@ -29,6 +30,16 @@ import {
   updatePersonAction,
   updatePixKeyAction,
 } from "./actions";
+
+const address: CreateAddressRequest = {
+  street: "Rua A",
+  number: "10",
+  district: "Centro",
+  city: "São Paulo",
+  state: "SP",
+  postalCode: "01001000",
+};
+const pixKey: CreatePixKeyRequest = { type: "EMAIL", value: "ana@example.com" };
 
 function problem(status: number, code: "NOT_FOUND" | "VALIDATION_FAILED"): ApiProblem {
   return new ApiProblem(status, {
@@ -93,12 +104,12 @@ describe("pessoas/actions", () => {
     api.addPixKey.mockResolvedValue({});
     api.updatePixKey.mockResolvedValue({});
     api.deletePixKey.mockResolvedValue(undefined);
-    expect((await addAddressAction("p1", {} as never)).ok).toBe(true);
+    expect((await addAddressAction("p1", address)).ok).toBe(true);
     expect(cache.revalidatePath).toHaveBeenCalledWith("/pessoas/p1");
     expect((await updateAddressAction("a1", {})).ok).toBe(true);
     expect(cache.revalidatePath).toHaveBeenCalledWith("/pessoas/[id]", "page");
     expect((await deleteAddressAction("a1")).ok).toBe(true);
-    expect((await addPixKeyAction("p1", {} as never)).ok).toBe(true);
+    expect((await addPixKeyAction("p1", pixKey)).ok).toBe(true);
     expect((await updatePixKeyAction("k1", {})).ok).toBe(true);
     expect((await deletePixKeyAction("k1")).ok).toBe(true);
     expect((await setPrimaryAddressAction("p1", "a1")).ok).toBe(true);
