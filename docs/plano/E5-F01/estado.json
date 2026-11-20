@@ -1,0 +1,187 @@
+{
+  "feature": "E5-F01",
+  "stages": {
+    "plan": {
+      "status": "done"
+    },
+    "tests": {
+      "status": "done"
+    },
+    "testReview": {
+      "status": "done",
+      "verdict": "aprovado"
+    },
+    "implement": {
+      "status": "done"
+    },
+    "review": {
+      "status": "done",
+      "verdict": "aprovado"
+    }
+  },
+  "sources": [
+    "apps/api/src/core/public/ids.ts",
+    "apps/api/src/core/public/audit.ts"
+  ],
+  "domainSources": [
+    "apps/api/src/core/public/ids.ts"
+  ],
+  "criteria": [
+    {
+      "id": "A1",
+      "camadas": [
+        "unit",
+        "mut"
+      ]
+    },
+    {
+      "id": "A2",
+      "camadas": [
+        "unit",
+        "mut"
+      ]
+    },
+    {
+      "id": "A3",
+      "camadas": [
+        "unit",
+        "mut"
+      ]
+    },
+    {
+      "id": "A4",
+      "camadas": [
+        "unit"
+      ]
+    }
+  ],
+  "tests": [
+    "apps/api/src/core/public/ids.test.ts",
+    "apps/api/src/core/public/audit.test.ts"
+  ],
+  "e2e": [],
+  "scenarios": [
+    {
+      "id": "C1",
+      "criterio": "A1",
+      "camada": "unit",
+      "arquivo": "apps/api/src/core/public/ids.test.ts",
+      "teste": "gives the RFC 9562 A.6 vector"
+    },
+    {
+      "id": "C2",
+      "criterio": "A1",
+      "camada": "unit",
+      "arquivo": "apps/api/src/core/public/ids.test.ts",
+      "teste": "gives the zero lower bound"
+    },
+    {
+      "id": "C2",
+      "criterio": "A1",
+      "camada": "unit",
+      "arquivo": "apps/api/src/core/public/ids.test.ts",
+      "teste": "gives the max upper bound"
+    },
+    {
+      "id": "C3",
+      "criterio": "A2",
+      "camada": "unit",
+      "arquivo": "apps/api/src/core/public/ids.test.ts",
+      "teste": "throws RangeError for random length 9"
+    },
+    {
+      "id": "C3",
+      "criterio": "A2",
+      "camada": "unit",
+      "arquivo": "apps/api/src/core/public/ids.test.ts",
+      "teste": "throws RangeError for random length 11"
+    },
+    {
+      "id": "C3",
+      "criterio": "A2",
+      "camada": "unit",
+      "arquivo": "apps/api/src/core/public/ids.test.ts",
+      "teste": "throws RangeError for unixMs -1"
+    },
+    {
+      "id": "C3",
+      "criterio": "A2",
+      "camada": "unit",
+      "arquivo": "apps/api/src/core/public/ids.test.ts",
+      "teste": "throws RangeError for unixMs 1.5"
+    },
+    {
+      "id": "C3",
+      "criterio": "A2",
+      "camada": "unit",
+      "arquivo": "apps/api/src/core/public/ids.test.ts",
+      "teste": "throws RangeError for unixMs 281474976710656"
+    },
+    {
+      "id": "C4",
+      "criterio": "A3",
+      "camada": "unit",
+      "arquivo": "apps/api/src/core/public/ids.test.ts",
+      "teste": "matches UUID v7 pattern and two calls differ"
+    },
+    {
+      "id": "C5",
+      "criterio": "A3",
+      "camada": "unit",
+      "arquivo": "apps/api/src/core/public/ids.test.ts",
+      "teste": "time in first 12 hex digits is between Date.now before and after"
+    },
+    {
+      "id": "C6",
+      "criterio": "A4",
+      "camada": "unit",
+      "arquivo": "apps/api/src/core/public/audit.test.ts",
+      "teste": "stores ADMIN entry with all fields"
+    },
+    {
+      "id": "C7",
+      "criterio": "A4",
+      "camada": "unit",
+      "arquivo": "apps/api/src/core/public/audit.test.ts",
+      "teste": "stores SYSTEM entry with nullable fields as null"
+    },
+    {
+      "id": "C8",
+      "criterio": "A4",
+      "camada": "unit",
+      "arquivo": "apps/api/src/core/public/audit.test.ts",
+      "teste": "rejects on duplicate id (primary key)"
+    }
+  ],
+  "gates": {
+    "expect-red": {
+      "status": "PASS",
+      "at": "2026-11-19T14:36:41.893Z",
+      "detail": "13 teste(s), todos falhando"
+    },
+    "tests-reviewed": {
+      "status": "PASS",
+      "at": "2026-11-19T14:36:47.658Z",
+      "detail": "2 teste(s) assinado(s)"
+    },
+    "coverage": {
+      "status": "PASS",
+      "at": "2026-11-19T14:36:51.724Z",
+      "detail": "100% nos arquivos da feature em apps/api (src/core/public/ids.ts, src/core/public/audit.ts)"
+    },
+    "mutation": {
+      "status": "PASS",
+      "at": "2026-11-19T14:37:02.599Z",
+      "detail": "score >= 80%: apps/api/src/core/public/ids.ts 94.12% (32/34); sobreviventes: L9 StringLiteral, L12 StringLiteral"
+    },
+    "e2e": {
+      "status": "PASS",
+      "at": "2026-11-19T14:37:04.414Z",
+      "detail": "nenhum e2e na feature (nenhum critério e2e)"
+    }
+  },
+  "testShas": {
+    "apps/api/src/core/public/ids.test.ts": "b693712a96149d071ff37d52d42da3e563d930de",
+    "apps/api/src/core/public/audit.test.ts": "9dea1c1fb6e36912978e40550e29dee6196b1f76"
+  }
+}

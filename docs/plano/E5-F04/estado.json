@@ -1,0 +1,136 @@
+{
+  "feature": "E5-F04",
+  "stages": {
+    "plan": {
+      "status": "done"
+    },
+    "tests": {
+      "status": "done"
+    },
+    "testReview": {
+      "status": "done",
+      "verdict": "aprovado"
+    },
+    "implement": {
+      "status": "done"
+    },
+    "review": {
+      "status": "done",
+      "verdict": "aprovado"
+    }
+  },
+  "sources": [
+    "apps/api/src/lending/domain/reversal.ts"
+  ],
+  "domainSources": [
+    "apps/api/src/lending/domain/reversal.ts"
+  ],
+  "criteria": [
+    {
+      "id": "A1",
+      "camadas": [
+        "unit",
+        "mut"
+      ]
+    },
+    {
+      "id": "A2",
+      "camadas": [
+        "unit",
+        "mut"
+      ]
+    }
+  ],
+  "tests": [
+    "apps/api/src/lending/domain/reversal.test.ts"
+  ],
+  "e2e": [],
+  "scenarios": [
+    {
+      "id": "C1",
+      "criterio": "A1",
+      "camada": "unit",
+      "arquivo": "apps/api/src/lending/domain/reversal.test.ts",
+      "teste": "returns true for RENEWED"
+    },
+    {
+      "id": "C2",
+      "criterio": "A1",
+      "camada": "unit",
+      "arquivo": "apps/api/src/lending/domain/reversal.test.ts",
+      "teste": "returns true for RENEGOTIATED"
+    },
+    {
+      "id": "C3",
+      "criterio": "A1",
+      "camada": "unit",
+      "arquivo": "apps/api/src/lending/domain/reversal.test.ts",
+      "teste": "returns false for ACTIVE"
+    },
+    {
+      "id": "C4",
+      "criterio": "A1",
+      "camada": "unit",
+      "arquivo": "apps/api/src/lending/domain/reversal.test.ts",
+      "teste": "returns false for PAID_OFF"
+    },
+    {
+      "id": "C5",
+      "criterio": "A1",
+      "camada": "unit",
+      "arquivo": "apps/api/src/lending/domain/reversal.test.ts",
+      "teste": "returns false for WRITTEN_OFF"
+    },
+    {
+      "id": "C6",
+      "criterio": "A2",
+      "camada": "unit",
+      "arquivo": "apps/api/src/lending/domain/reversal.test.ts",
+      "teste": "returns true for PAID_OFF with 1n"
+    },
+    {
+      "id": "C7",
+      "criterio": "A2",
+      "camada": "unit",
+      "arquivo": "apps/api/src/lending/domain/reversal.test.ts",
+      "teste": "returns false for PAID_OFF with 0n"
+    },
+    {
+      "id": "C8",
+      "criterio": "A2",
+      "camada": "unit",
+      "arquivo": "apps/api/src/lending/domain/reversal.test.ts",
+      "teste": "returns false for ACTIVE with 500n"
+    }
+  ],
+  "testShas": {
+    "apps/api/src/lending/domain/reversal.test.ts": "84f1e86eb462747d0b3d2b2f8c265f17cb3cdac6"
+  },
+  "gates": {
+    "tests-reviewed": {
+      "status": "PASS",
+      "at": "2026-11-19T14:23:42.825Z",
+      "detail": "1 teste(s) assinado(s)"
+    },
+    "coverage": {
+      "status": "PASS",
+      "at": "2026-11-19T14:23:43.628Z",
+      "detail": "100% nos arquivos da feature em apps/api (src/lending/domain/reversal.ts)"
+    },
+    "expect-red": {
+      "status": "PASS",
+      "at": "2026-11-19T14:23:37.112Z",
+      "detail": "8 teste(s), todos falhando"
+    },
+    "mutation": {
+      "status": "PASS",
+      "at": "2026-11-19T14:26:21.431Z",
+      "detail": "score >= 80%: apps/api/src/lending/domain/reversal.ts 100.00% (20/20)"
+    },
+    "e2e": {
+      "status": "PASS",
+      "at": "2026-11-19T14:23:44.362Z",
+      "detail": "nenhum e2e na feature (nenhum critério e2e)"
+    }
+  }
+}

@@ -1,0 +1,437 @@
+delivery: E6
+title: Loan simulation screen in the web app; Bia writes the tests, Alice the code
+cards:
+  - id: E6-T01
+    title: Write the tests for frequencyOf and simulate
+    kind: test-author
+    assignee: bia
+    rules: []
+    skills:
+      - escrever-teste
+    refs: [PRD-001 RF-10, RFC-004 §5, RFC-002 §3.4, ADR-0013]
+    dependsOn: []
+    allowedPaths:
+      - apps/web/lib/simulation.test.ts
+    protectedTests: []
+    checks:
+      - '! pnpm --filter @pilla/web exec vitest run lib/simulation.test.ts'
+      - node scripts/check-test-quality.mjs apps/web/lib/simulation.test.ts
+      - pnpm --filter @pilla/web typecheck
+      - pnpm --filter @pilla/web lint
+    done:
+      - every test fails now against the stub in HEAD and would pass with a correct implementation (run_check 0)
+      - 'import { describe, expect, it } from "vitest";'
+      - 'import { DueDateError, isoDate } from "@pilla/finance";'
+      - 'import type { SimulateLoanRequest } from "@pilla/schemas";'
+      - 'import { frequencyOf, simulate } from "./simulation";'
+      - 'frequencyOf gives { unit: "DAY", interval: 7 } for WEEKLY, DAY 15 for BIWEEKLY, { unit: "MONTH", interval: 1 } for MONTHLY and MONTH 2 for BIMONTHLY (RN-C04 of PRD-001)'
+      - the example of RFC-004 §5 with disbursementDate 2026-11-14 gives interest 190000n, total 690000n and installmentAmount 115000n (RFC-004 §5)
+      - 'in that example schedule has length 6 and schedule[0] toEqual { number: 1, dueDate: "2026-12-14", principal: 83333n, interest: 31667n, total: 115000n } (RFC-004 §5)'
+      - CA-11 (principalCents 100000, 1000 bps, 4 installments, DAY 7) gives installmentAmount 27500n and total 110000n (PRD-001 CA-11)
+      - simulate throws DueDateError when firstDueDate equals disbursementDate, both 2026-11-14 (RN-C04 of PRD-001)
+      - never edit apps/web/lib/simulation.ts
+    hints:
+      - the import lines of the done are the only imports of the file, each name in them is used, and nothing else is imported
+      - SimulateLoanRequest is inferred from zod, see common.ts, so principalCents, monthlyInterestRateBps and installmentCount are plain number and firstDueDate is plain string
+      - build each request as a const typed SimulateLoanRequest with plain number literals such as 500000 and 633, never wrapped with cents, bps or isoDate
+      - the RFC-004 §5 request is type INSTALLMENT, principalCents 500000, monthlyInterestRateBps 633, installmentCount 6, frequency MONTH 1, firstDueDate 2026-12-14
+      - the CA-11 request is type INSTALLMENT, principalCents 100000, monthlyInterestRateBps 1000, installmentCount 4, frequency DAY 7, firstDueDate 2026-11-21
+      - every simulate call passes isoDate of 2026-11-14 as the second argument, because disbursementDate is IsoDate, the only branded input of the file
+      - interest, total and installmentAmount are Cents, a branded bigint, so compare them with toBe against a bigint literal such as 190000n
+      - schedule lines are ScheduledInstallment of schedule.ts with the fields number, dueDate, principal, interest and total, not the principalCents names of the API schema
+      - CA-11 asserts only installmentAmount and total, never interest, as the plan says in A2
+      - the error case spreads the RFC-004 §5 request with firstDueDate 2026-11-14 and passes DueDateError to toThrow
+      - one write_file of the whole test file, then run_check 0, 1, 2 and 3
+    budget:
+      attempts: 4
+      toolCalls: 20
+      minutes: 10
+    readFirst:
+      - apps/web/lib/simulation.ts
+      - packages/schemas/src/api/lending/simulate-loan.ts
+      - packages/schemas/src/common.ts
+      - packages/finance/src/index.ts
+      - packages/finance/src/schedule.ts
+    sizeNote: um describe por função, 8 a 9 testes, ~80 linhas
+  # E6-T02 e E6-T07 eram um cartão só (frequencyOf + simulate) que estourou 24 chamadas; agora um por função.
+  - id: E6-T02
+    title: Implement frequencyOf
+    kind: implement
+    assignee: alice
+    rules: [RN-C04]
+    skills:
+      - editar-arquivo
+      - coding-guidelines
+    refs: [PRD-001 RF-10, ADR-0013]
+    dependsOn: [E6-T01]
+    allowedPaths:
+      - apps/web/lib/simulation.ts
+    protectedTests:
+      - apps/web/lib/simulation.test.ts
+    checks:
+      - pnpm --filter @pilla/web exec vitest run lib/simulation.test.ts -t frequencyOf
+      - pnpm --filter @pilla/web typecheck
+      - pnpm --filter @pilla/web lint
+    done:
+      - the four tests of the describe frequencyOf in apps/web/lib/simulation.test.ts pass (run_check 0)
+      - frequencyOf gives, for each FrequencyPreset, the unit and interval listed in its /** */ comment (RN-C04)
+      - the parameter of frequencyOf loses the leading underscore and its signature keeps the types FrequencyPreset and Frequency
+      - simulate stays exactly as in HEAD, still throwing not implemented, because it is the job of E6-T07
+      - simulation.ts keeps the line '// @stub E6-T02', the import type lines, the types and the /** */ comments unchanged
+    hints:
+      - only the body and the parameter name of frequencyOf change, and simulation.ts gets no new import line
+      - Frequency of due-dates.ts is an interface with a readonly unit DAY or MONTH and a readonly interval number, already imported as a type
+      - each preset gets an object literal with unit and interval, as the /** */ comment of frequencyOf lists them
+      - the check runs only the frequencyOf tests, so the simulate tests are not part of this card
+      - one edit_file of simulation.ts that replaces the whole frequencyOf function, then run_check 0, 1 and 2
+    budget:
+      attempts: 4
+      toolCalls: 18
+      minutes: 8
+    readFirst:
+      - apps/web/lib/simulation.ts
+      - packages/finance/src/due-dates.ts
+    sizeNote: frequencyOf com ~15 linhas; o resto de simulation.ts não muda
+  # E6-T07 falhou duas vezes em 17/11 (21 e 24 chamadas > 20): 4 leituras, o comentário do stub mandava usar a 1ª
+  # parcela enquanto a dica proibia índice, e 5 escritas fora de allowedPaths. Agora: 1 leitura, tipos e assinaturas na
+  # dica, comentário do stub alinhado (sem 1ª parcela), escrita só em simulation.ts. Não há teste de função auxiliar,
+  # então simulate não se divide sem pedir testes novos à Bia (decisão do Joel).
+  - id: E6-T07
+    title: Implement simulate
+    kind: implement
+    assignee: bia
+    exception: nao-compensa-alice
+    exceptionReason: "estourou 20 toolCalls 2x mesmo refatiado; decisão do Joel 17/11"
+    exceptionApprovedBy: "Joel 2026-11-17"
+    rules: [RN-C03, RN-C04]
+    skills:
+      - editar-arquivo
+      - coding-guidelines
+    refs: [PRD-001 RF-10, RFC-002 §3.4, RFC-004 §5, PRD-001 CA-11, ADR-0013]
+    dependsOn: [E6-T02]
+    allowedPaths:
+      - apps/web/lib/simulation.ts
+    protectedTests:
+      - apps/web/lib/simulation.test.ts
+    checks:
+      - pnpm --filter @pilla/web exec vitest run lib/simulation.test.ts -t simulate
+      - pnpm --filter @pilla/web typecheck
+      - pnpm --filter @pilla/web lint
+    done:
+      - the four tests of the describe simulate in apps/web/lib/simulation.test.ts pass (run_check 0)
+      - 'import { bps, cents, generateSchedule, isoDate } from "@pilla/finance";'
+      - simulate calls generateSchedule with type INSTALLMENT, count equal to installmentCount, the request frequency, disbursementDate and roundingStep 500n (RN-C03)
+      - principalCents and monthlyInterestRateBps become Cents and Bps through BigInt and then cents and bps, never with as
+      - firstDueDate is plain text in the request and becomes IsoDate through isoDate before it reaches generateSchedule
+      - interest, total and installmentAmount are Cents made with cents, and schedule is the array generateSchedule gives
+      - simulate has no if, no ternary, no ?? and no ?. and no try and no catch, so an error of generateSchedule such as DueDateError of RN-C04 goes up untouched
+      - simulation.ts keeps the line '// @stub E6-T02', frequencyOf, the import type lines, the types and the /** */ comments
+      - the parameters of simulate lose the underscore, and the import line of the done is the only new line outside simulate
+    hints:
+      - the only file read is apps/web/lib/simulation.ts, because every type and signature needed is in these hints
+      - the signature stays as in HEAD, with parameter request of type SimulateLoanRequest, parameter disbursementDate of type IsoDate and result type SimulationResult
+      - the import line of the done goes right after the line '// @stub E6-T02', above the two import type lines that stay as they are
+      - cents takes a bigint and gives Cents, bps takes a bigint and gives Bps, and isoDate takes a string and gives IsoDate, all from @pilla/finance
+      - generateSchedule takes one object with type, count, principal, monthlyInterestRate, firstDueDate, frequency, disbursementDate and roundingStep and gives ScheduledInstallment[]
+      - each ScheduledInstallment has number, dueDate, principal, interest and total, the last three of type Cents
+      - SimulateLoanRequest of @pilla/schemas has type, principalCents, monthlyInterestRateBps, installmentCount, frequency and firstDueDate, with plain number and string
+      - request.frequency already has the shape of Frequency, so it goes to generateSchedule as it is
+      - interest and total are sums over the lines, and adding two Cents gives a plain bigint, so each sum goes through cents before it enters the result
+      - never read a line by index or by destructuring, since the strict tsconfig makes it possibly undefined and its guard would be a branch no test reaches
+      - RN-C03 says every installment has the same total, so installmentAmount comes from total and the number of lines, both bigint
+      - write only apps/web/lib/simulation.ts, since apps/web/lib/simulation.test.ts is protected and no other file changes
+      - one edit_file of simulation.ts that adds the import line, one replace_function of simulate, then run_check 0, 1 and 2
+    budget:
+      attempts: 4
+      toolCalls: 18
+      minutes: 10
+    readFirst:
+      - apps/web/lib/simulation.ts
+    sizeNote: simulate com ~20 linhas e 1 linha de import nova; o resto de simulation.ts não muda
+  - id: E6-T09
+    title: Remove the simulation stub and check full coverage
+    kind: implement
+    assignee: alice
+    rules: []
+    skills:
+      - editar-arquivo
+      - coding-guidelines
+    refs: [PRD-001 RF-10, ADR-0013]
+    dependsOn: [E6-T07]
+    allowedPaths:
+      - apps/web/lib/simulation.ts
+      - apps/web/vitest.config.ts
+    protectedTests:
+      - apps/web/lib/simulation.test.ts
+    checks:
+      - pnpm --filter @pilla/web exec vitest run lib/simulation.test.ts --coverage --coverage.include=lib/simulation.ts --coverage.exclude=none --coverage.thresholds.lines=100 --coverage.thresholds.branches=100
+      - pnpm --filter @pilla/web typecheck
+      - pnpm --filter @pilla/web lint
+      - '! grep -n "stub E6-T02" apps/web/lib/simulation.ts apps/web/vitest.config.ts'
+    done:
+      - all tests in apps/web/lib/simulation.test.ts pass with 100% line and branch coverage of simulation.ts (run_check 0)
+      - simulation.ts has no '// @stub E6-T02' line and apps/web/vitest.config.ts has no line that excludes lib/simulation.ts (run_check 3)
+      - 'import { bps, cents, generateSchedule, isoDate } from "@pilla/finance";'
+      - frequencyOf and simulate keep the behavior E6-T02 and E6-T07 gave them, and every other line of the two files stays
+    hints:
+      - E6-T02 and E6-T07 already made the code, so this card only deletes two lines and runs the full check
+      - the line of vitest.config.ts to delete is the one inside coverage.exclude with lib/simulation.ts and the comment stub E6-T02, and the line of lib/simulation-form.ts right below it stays
+      - if run_check 0 shows a line or branch of simulation.ts not covered, fix that line in simulation.ts so it has no branch, because the test file is protected and never changes
+      - one edit_file of simulation.ts that deletes the line '// @stub E6-T02', one edit_file of apps/web/vitest.config.ts that deletes the line with stub E6-T02, then run_check 0, 1, 2 and 3
+    budget:
+      attempts: 4
+      toolCalls: 20
+      minutes: 8
+    readFirst:
+      - apps/web/lib/simulation.ts
+      - apps/web/vitest.config.ts
+    sizeNote: simulation.ts e vitest.config.ts perdem 1 linha cada
+  - id: E6-T03
+    title: Write the tests for toSimulateRequest
+    kind: test-author
+    assignee: bia
+    rules: []
+    skills:
+      - escrever-teste
+    refs: [PRD-001 RF-10, RFC-004 §5, ADR-0013]
+    dependsOn: []
+    allowedPaths:
+      - apps/web/lib/simulation-form.test.ts
+    protectedTests: []
+    checks:
+      - '! pnpm --filter @pilla/web exec vitest run lib/simulation-form.test.ts'
+      - node scripts/check-test-quality.mjs apps/web/lib/simulation-form.test.ts
+      - pnpm --filter @pilla/web typecheck
+      - pnpm --filter @pilla/web lint
+    done:
+      - every test fails now against the stub in HEAD and would pass with a correct implementation (run_check 0)
+      - 'import { describe, expect, it } from "vitest";'
+      - 'import { MoneyError } from "@pilla/finance";'
+      - 'import { ZodError } from "zod";'
+      - 'import type { SimulationFormValues } from "./simulation-form";'
+      - 'import { toSimulateRequest } from "./simulation-form";'
+      - 'the RFC-004 §5 form gives toEqual { type: "INSTALLMENT", principalCents: 500000, monthlyInterestRateBps: 633, installmentCount: 6, frequency: { unit: "MONTH", interval: 1 }, firstDueDate: "2026-12-14" } (RFC-004 §5)'
+      - 'monthlyRate "10,00" gives monthlyInterestRateBps 1000 and WEEKLY gives frequency { unit: "DAY", interval: 7 } (PRD-001 CA-11)'
+      - amount "5000" without the comma throws MoneyError (parseReais format of RFC-004 §2)
+      - installmentCount "0" throws ZodError (simulateLoanRequest of ADR-0013)
+      - never edit apps/web/lib/simulation-form.ts
+    hints:
+      - the import lines of the done are the only imports of the file, each name in them is used, and nothing else is imported
+      - toSimulateRequest returns SimulateLoanRequest, whose principalCents, monthlyInterestRateBps and installmentCount are plain number, so the expected literal has 500000 and 633, never 500000n
+      - each form is a const typed SimulationFormValues, with text in amount, monthlyRate, installmentCount and firstDueDate and a FrequencyPreset in frequency
+      - the RFC-004 §5 form is amount 5.000,00, monthlyRate 6,33, installmentCount 6, frequency MONTHLY and firstDueDate 2026-12-14
+      - the CA-11 form is amount 1.000,00, monthlyRate 10,00, installmentCount 4, frequency WEEKLY and firstDueDate 2026-11-21
+      - each error case spreads the RFC-004 §5 form changing only one field, and passes the error class to toThrow
+      - one write_file of the whole test file, then run_check 0, 1, 2 and 3
+    budget:
+      attempts: 4
+      toolCalls: 20
+      minutes: 10
+    readFirst:
+      - apps/web/lib/simulation-form.ts
+      - apps/web/lib/simulation.ts
+      - packages/schemas/src/api/lending/simulate-loan.ts
+      - packages/schemas/src/common.ts
+      - packages/finance/src/money.ts
+    sizeNote: um describe com 4 testes, ~50 linhas
+  - id: E6-T04
+    title: Implement toSimulateRequest
+    kind: implement
+    assignee: alice
+    rules: []
+    skills:
+      - editar-arquivo
+      - coding-guidelines
+    refs: [PRD-001 RF-10, RFC-004 §5, ADR-0013]
+    # E6-T09 explícito: na v13 o T04 gastou as 18 chamadas no typecheck do simulation.ts ainda parcial.
+    dependsOn: [E6-T03, E6-T09]
+    allowedPaths:
+      - apps/web/lib/simulation-form.ts
+      - apps/web/vitest.config.ts
+    protectedTests:
+      - apps/web/lib/simulation-form.test.ts
+    checks:
+      - pnpm --filter @pilla/web exec vitest run lib/simulation-form.test.ts --coverage --coverage.include=lib/simulation-form.ts --coverage.exclude=none --coverage.thresholds.lines=100 --coverage.thresholds.branches=100
+      - pnpm --filter @pilla/web typecheck
+      - pnpm --filter @pilla/web lint
+      - '! grep -n "stub E6-T04" apps/web/lib/simulation-form.ts apps/web/vitest.config.ts'
+    done:
+      - all tests in apps/web/lib/simulation-form.test.ts pass with 100% line and branch coverage of simulation-form.ts (run_check 0)
+      - 'import { parseReais } from "@pilla/finance";'
+      - 'import { simulateLoanRequest } from "@pilla/schemas";'
+      - 'import { frequencyOf } from "./simulation";'
+      - amount and monthlyRate go through parseReais, frequency through frequencyOf and the whole object through simulateLoanRequest.parse
+      - principalCents, monthlyInterestRateBps and installmentCount reach simulateLoanRequest.parse as number, and firstDueDate as the text typed in the form
+      - keep the interface, the signature and the /** */ comments unchanged, except that the parameter loses the leading underscore
+      - simulation-form.ts has no '// @stub E6-T04' line and apps/web/vitest.config.ts has no line that excludes lib/simulation-form.ts (run_check 3)
+    hints:
+      - the import type lines of simulation-form.ts stay as they are, next to the three import lines of the done
+      - parseReais gives Cents, a bigint, and Number turns it into the number the request schema expects, and installmentCount is text that Number turns into a number too
+      - one write_file of simulation-form.ts, then one edit_file of apps/web/vitest.config.ts that deletes the line with stub E6-T04, then run_check 0, 1, 2 and 3
+    budget:
+      attempts: 4
+      toolCalls: 20
+      minutes: 8
+    readFirst:
+      - apps/web/lib/simulation-form.ts
+      - apps/web/lib/simulation.ts
+      - packages/schemas/src/api/lending/simulate-loan.ts
+      - packages/finance/src/money.ts
+    sizeNote: simulation-form.ts com ~35 linhas
+  - id: E6-T05
+    title: Write the tests for the LoanSimulation component
+    kind: test-author
+    assignee: bia
+    rules: []
+    skills:
+      - escrever-teste
+      - accessibility
+    refs: [PRD-001 RF-10, RFC-004 §5, ADR-0013]
+    dependsOn: [E6-T04]
+    allowedPaths:
+      - apps/web/components/loan-simulation.test.tsx
+    protectedTests: []
+    checks:
+      - '! pnpm --filter @pilla/web exec vitest run components/loan-simulation.test.tsx'
+      - node scripts/check-test-quality.mjs apps/web/components/loan-simulation.test.tsx
+      - pnpm --filter @pilla/web typecheck
+      - pnpm --filter @pilla/web lint
+    done:
+      - every test fails now against the stub in HEAD and would pass with a correct implementation (run_check 0)
+      - 'import { fireEvent, render, screen, within } from "@testing-library/react";'
+      - 'import { describe, expect, it } from "vitest";'
+      - 'import { isoDate } from "@pilla/finance";'
+      - 'import { LoanSimulation } from "./loan-simulation";'
+      - shows inputs labelled "Valor emprestado", "Taxa ao mês (%)", "Nº de parcelas", "Periodicidade", "1º vencimento" and a button "Simular" (PRD-001 RF-10)
+      - the RFC-004 §5 example with disbursementDate 2026-11-14 and a click on Simular shows "R$ 6.900,00", "R$ 1.900,00" and "6 × R$ 1.150,00" (RFC-004 §5)
+      - in that result the table row that has "14/12/2026" also has "833,33", "316,67" and "1.150,00" (RFC-004 §5)
+      - amount "5000" without the comma and a click on Simular shows an alert with text "Confira os campos da simulação." (PRD-001 RF-10, comment of loan-simulation.tsx)
+      - never edit apps/web/components/loan-simulation.tsx
+    hints:
+      - the import lines of the done are the only imports of the file, each name in them is used, and nothing else is imported
+      - follow apps/web/app/page.test.tsx and render with disbursementDate equal to isoDate of 2026-11-14
+      - a helper function fills the five fields with fireEvent.change on screen.getByLabelText and then clicks the button Simular
+      - the RFC-004 §5 example typed in the form is amount 5.000,00, rate 6,33, 6 installments, Periodicidade MONTHLY and first due date 2026-12-14
+      - Periodicidade is a select whose option values are the presets, so its change event uses the value MONTHLY
+      - the submit is async, so wait with findBy and assert on the awaited element, as in expect of await screen.findByText, never await expect of a findBy promise
+      - the installment value repeats in every table row and other values may repeat too, so find the row with findByRole row by its 14/12/2026 name and query the cells with within on that row
+      - the alert is found with findByRole alert and its text is checked with toHaveTextContent, because an alert has no accessible name
+      - one write_file of the whole test file, then run_check 0, 1, 2 and 3
+    budget:
+      attempts: 4
+      toolCalls: 20
+      minutes: 12
+    readFirst:
+      - apps/web/components/loan-simulation.tsx
+      - apps/web/app/page.test.tsx
+      - apps/web/vitest.setup.ts
+      - apps/web/lib/simulation-form.ts
+    sizeNote: um describe com 4 testes e uma função de preencher o formulário, ~70 linhas
+  # E6-T06 e E6-T08 eram um cartão só (tela inteira, ~100 linhas) que estourou 20 chamadas; agora formulário + resumo + alerta,
+  # depois a tabela. Os dois protegem o mesmo teste; o T06 roda só os três testes dele (-t).
+  - id: E6-T06
+    title: Implement the LoanSimulation form, summary and alert
+    kind: implement
+    assignee: alice
+    rules: []
+    skills:
+      - editar-arquivo
+      - react-best-practices
+      - react-best-practices#rerender-derived-state-no-effect
+    refs: [PRD-001 RF-10, RFC-004 §5, ADR-0013]
+    dependsOn: [E6-T05, E6-T04, E6-T09]
+    allowedPaths:
+      - apps/web/components/loan-simulation.tsx
+    protectedTests:
+      - apps/web/components/loan-simulation.test.tsx
+    checks:
+      - pnpm --filter @pilla/web exec vitest run components/loan-simulation.test.tsx -t "shows (inputs labelled|Total a receber|an alert)"
+      - pnpm --filter @pilla/web typecheck
+      - pnpm --filter @pilla/web lint
+    done:
+      - the three tests "shows inputs labelled…", "shows Total a receber…" and "shows an alert…" of loan-simulation.test.tsx pass (run_check 0)
+      - 'import { formatReais } from "@pilla/finance";'
+      - 'import { useState } from "react";'
+      - 'import { useForm } from "react-hook-form";'
+      - 'import { simulate } from "../lib/simulation";'
+      - 'import type { SimulationResult } from "../lib/simulation";'
+      - 'import { toSimulateRequest } from "../lib/simulation-form";'
+      - 'import type { SimulationFormValues } from "../lib/simulation-form";'
+      - the form uses useForm typed with SimulationFormValues and register on each of its five fields
+      - each field has its own label element tied to it by htmlFor and id, with the label texts and the select options of the /** */ comment
+      - the submit passes the values through toSimulateRequest and simulate inside try and catch, and the catch shows the alert of the /** */ comment
+      - after a good submit the result shows Total a receber, Juros and Parcela in the formats of the /** */ comment, each value the whole text of its own element
+      - keep "use client", the line '// @stub E6-T06', the props interface, the signature and the /** */ comment; the prop is destructured without the underscore alias
+    hints:
+      - the two import type lines already in loan-simulation.tsx stay, next to the seven import lines of the done
+      - disbursementDate of the props is the second argument of simulate, and the SimulationResult or the error flag lives in useState
+      - Periodicidade is a select with the four option values and texts of the /** */ comment, and 1º vencimento is an input of type date
+      - Simular is a button of type submit inside the form, and handleSubmit of useForm runs the submit after the click, so the tests wait with findBy
+      - the lint is strictTypeChecked, and no-misused-promises refuses the promise of handleSubmit given straight to onSubmit, so wrap it with void inside a plain function
+      - the lint refuses a number inside a template literal, so the installment count of Parcela goes through String first
+      - the schedule table is the job of E6-T08, so this card renders no table
+      - one write_file of loan-simulation.tsx, then run_check 0, 1 and 2
+    budget:
+      attempts: 5
+      toolCalls: 20
+      minutes: 12
+    readFirst:
+      - apps/web/components/loan-simulation.tsx
+      - apps/web/lib/simulation-form.ts
+      - apps/web/lib/simulation.ts
+      - packages/finance/src/money.ts
+    sizeNote: loan-simulation.tsx com 80 linhas
+  - id: E6-T08
+    title: Implement the LoanSimulation schedule table
+    kind: implement
+    assignee: alice
+    rules: []
+    skills:
+      - editar-arquivo
+      - react-best-practices
+      - react-best-practices#rendering-conditional-render
+    refs: [PRD-001 RF-10, RFC-004 §5, ADR-0013]
+    dependsOn: [E6-T06]
+    allowedPaths:
+      - apps/web/components/loan-simulation.tsx
+      - apps/web/vitest.config.ts
+    protectedTests:
+      - apps/web/components/loan-simulation.test.tsx
+    checks:
+      - pnpm --filter @pilla/web exec vitest run components/loan-simulation.test.tsx --coverage --coverage.include=components/loan-simulation.tsx --coverage.exclude=none
+      - pnpm --filter @pilla/web typecheck
+      - pnpm --filter @pilla/web lint
+      - '! grep -n "stub E6-T06" apps/web/components/loan-simulation.tsx apps/web/vitest.config.ts'
+    done:
+      - all tests in apps/web/components/loan-simulation.test.tsx pass with at least 85% coverage of loan-simulation.tsx (run_check 0)
+      - below the summary, the result has a table with the header cells Nº, Vencimento, Principal, Juros and Parcela of the /** */ comment
+      - the table has one tr per schedule line, keyed by number, and each cell is the whole text of its own td
+      - Vencimento shows the dueDate as dd/mm/aaaa, and Principal, Juros and Parcela show formatReais of principal, interest and total, without R$
+      - the form, the submit, the summary and the alert of E6-T06 stay as they are, and no import line is added
+      - loan-simulation.tsx has no '// @stub E6-T06' line and apps/web/vitest.config.ts has no line that excludes components/loan-simulation.tsx (run_check 3)
+    hints:
+      - the schedule lines are ScheduledInstallment of schedule.ts with the fields number, dueDate, principal, interest and total, all money as Cents
+      - dueDate is IsoDate, the text aaaa-mm-dd, and the cell shows the same three parts in the order dd/mm/aaaa
+      - the line number is a number, and the lint refuses a number inside a template literal, so it goes through String if it is joined to text
+      - one edit_file of loan-simulation.tsx that inserts the table after the summary, one edit_file that deletes the line with stub E6-T06, one edit_file of apps/web/vitest.config.ts that deletes the line with stub E6-T06, then run_check 0, 1, 2 and 3
+    budget:
+      attempts: 5
+      toolCalls: 20
+      minutes: 10
+    readFirst:
+      - apps/web/components/loan-simulation.tsx
+      - packages/finance/src/schedule.ts
+      - packages/finance/src/money.ts
+    sizeNote: a tabela soma ~25 linhas a loan-simulation.tsx; vitest.config.ts perde 1 linha
+# Features (ADR-0014): planos em docs/plano/E6-F01/plano.md e docs/plano/E6-F02/plano.md.
+# Telas do ADMIN com dados de mentira (cadastro de pessoa, novo contrato, lista, detalhe, pagamento) e a página
+# da simulação ficam fora: dependem de decisões do Joel (esquemas de packages/schemas, data de desembolso).
+features:
+  - id: E6-F01
+    title: Browser-side loan simulation logic
+    cards: [E6-T01, E6-T03, E6-T02, E6-T07, E6-T09, E6-T04]
+    biaBudget: 8
+  - id: E6-F02
+    title: Loan simulation component
+    cards: [E6-T05, E6-T06, E6-T08]
+    biaBudget: 8

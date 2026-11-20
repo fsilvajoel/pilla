@@ -1,0 +1,13 @@
+id: H-04
+title: "Implement metrics.py: JSONL run metrics and summary"
+refs: [AUDIT-V1-07]
+readFirst: [tests/test_metrics.py]
+allowedPaths: [metrics.py]
+protectedTests: [tests/test_metrics.py]
+checks:
+  - python3 -m unittest tests.test_metrics -v
+  - python3 -m py_compile metrics.py
+done:
+  - "metrics.py exposes append(path, record), load(path) and summary(records) as the tests expect (byKind holds the same fields per kind)"
+  - "Standard library only; under 60 lines"
+budget: {attempts: 3, toolCalls: 20}

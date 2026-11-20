@@ -1,0 +1,76 @@
+// Esboço do contrato E9-F02 (workflow feature, etapa 1). Cada bloco = um arquivo; o orquestrador copia antes do E9-T02
+// e exclui da cobertura com o comentário `stub E9-F02` enquanto não for implementado. Corpo = Error("esboço: não implementado").
+// Só depende de zod e @pilla/schemas, exceto onde o Nest é nomeado; o Nest só compila depois da P2 (dependências).
+
+// ==== apps/api/src/core/http/env.ts ====
+export type ApiEnv = { readonly host: "127.0.0.1"; readonly port: number; readonly databaseUrl: string };
+export function readApiEnv(_env: Readonly<Record<string, string | undefined>>): ApiEnv {
+  throw new Error("esboço: não implementado");
+}
+
+// ==== apps/api/src/core/http/problem-exception.ts ====
+import { HttpException } from "@nestjs/common";
+import type { ErrorCode } from "@pilla/schemas";
+export type ProblemFieldError = { readonly field: string; readonly message: string };
+export class ProblemException extends HttpException {
+  readonly code: ErrorCode;
+  readonly detail: string;
+  readonly errors: readonly ProblemFieldError[] | undefined;
+  constructor(_code: ErrorCode, _detail: string, _errors?: readonly ProblemFieldError[]) {
+    super("esboço", 500);
+    throw new Error("esboço: não implementado");
+  }
+}
+
+// ==== apps/api/src/core/http/zod-validation.pipe.ts ====
+import type { ArgumentMetadata, PipeTransform } from "@nestjs/common";
+import type { ZodType } from "zod";
+export class ZodValidationPipe<T> implements PipeTransform<unknown, T> {
+  constructor(_schema: ZodType<T>) {}
+  transform(_value: unknown, _metadata: ArgumentMetadata): T {
+    throw new Error("esboço: não implementado");
+  }
+}
+
+// ==== apps/api/src/core/http/health.controller.ts ====
+import type { HealthResponse } from "@pilla/schemas";
+export class HealthController {
+  check(): Promise<HealthResponse> {
+    throw new Error("esboço: não implementado");
+  }
+}
+
+// ==== apps/api/src/core/http/openapi.ts ====
+export type OpenApiDocument = Readonly<Record<string, unknown>>; // forma exata no plano (Contrato)
+export function buildOpenApiDocument(): OpenApiDocument {
+  throw new Error("esboço: não implementado");
+}
+
+// ==== apps/api/src/core/http/configure-app.ts ====
+import type { INestApplication } from "@nestjs/common";
+export function configureApp(_app: INestApplication): void {
+  throw new Error("esboço: não implementado");
+}
+
+// ==== apps/api/src/db/database.ts ====
+import type { NodePgDatabase } from "drizzle-orm/node-postgres";
+import type { PgliteDatabase } from "drizzle-orm/pglite";
+export type Database = NodePgDatabase | PgliteDatabase;
+export type DatabaseHandle = { readonly db: Database; close(): Promise<void> };
+export const DATABASE: unique symbol = Symbol("DATABASE");
+export const DATABASE_HANDLE: unique symbol = Symbol("DATABASE_HANDLE");
+export function createDatabase(_databaseUrl: string): DatabaseHandle {
+  throw new Error("esboço: não implementado");
+}
+
+// ==== apps/api/src/main.ts ====
+import type { INestApplication } from "@nestjs/common";
+export function bootstrap(_env: Readonly<Record<string, string | undefined>>): Promise<INestApplication> {
+  throw new Error("esboço: não implementado");
+}
+
+// ==== packages/schemas/src/api/core/health.ts ====
+// Esboço: o schema recusa tudo (z.never) até o E9-T03; o tipo já é o final (contrato primeiro, ADR-0017).
+import { z } from "zod";
+export type HealthResponse = { readonly status: "ok" | "degraded"; readonly database: "up" | "down" };
+export const healthResponseSchema: z.ZodType<HealthResponse> = z.never();

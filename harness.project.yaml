@@ -1,0 +1,135 @@
+# Configuração do projeto para o harness Ada (../harness-ada). Caminhos relativos à raiz deste repositório.
+harness: ../harness-ada
+# Pasta compartilhada de skills (todos os papéis leem todas): mora no harness, não no projeto.
+skill_dir: ../harness-ada/skill
+# Caminho local que o adaptador Claude Code exige: link simbólico para skill_dir (adapter/claude-code.md).
+skill_link: .claude/skills
+
+# Idioma (policy/idioma.md do harness): texto do harness em pt-BR; código e commits em inglês.
+language:
+  docs: pt-BR
+  code: en
+  commits: en
+
+# Papel -> definição no adaptador atual (Claude Code: subagentes em .claude/agents/). O orquestrador é qualquer agente de IA.
+roles:
+  orchestrator: { agent: null }
+  # Time OpenRouter (19/11): quem faz o quê é só esta tabela. Copilot fica definido em workers, fora da escala.
+  # planner: Pepe rascunha e o planner Claude critica e assina (um revisa o outro). refiner: Pepe.
+  planner: { agent: .claude/agents/planner.md, worker: pepe }
+  refiner: { agent: .claude/agents/refiner.md, worker: pepe, second_opinion: pepe }
+  # test-writer: Bia (api-chat, laço run_card.py).
+  test-writer: { agent: .claude/agents/test-writer.md, worker: bia }
+  # reviewer: Vera só na revisão dos testes (etapa 3, stages.testReview); revisão final segue com o agent Claude.
+  reviewer: { agent: .claude/agents/reviewer.md, worker: vera, worker_stages: [testReview] }
+  # implementer: Baidu só no backend (todo allowedPath do cartão sob estes prefixos); o resto segue com o agent Claude.
+  implementer: { agent: .claude/agents/implementer.md, worker: baidu, worker_paths: [apps/api, packages/finance, packages/schemas] }
+
+# Trabalhadores do harness (adapter/api-chat.md, adapter/cli-agent.md). Bia: modelo remoto na OpenRouter, por ora como implementer e test-writer.
+# A chave fica só no key_file; o executor do harness (script/api_chat.py) lê só a linha OPEN_ROUTER_API_KEY, sem exportar.
+# Cota do tier grátis: 1000 requisições/dia, reset 00:00 UTC (GET /key -> data.free_model_daily_requests).
+workers:
+  bia: { adapter: api-chat, base_url: "https://openrouter.ai/api/v1", model: "nvidia/nemotron-3-ultra-550b-a55b:free", key_env: OPEN_ROUTER_API_KEY, key_file: .env, quota_url: "https://openrouter.ai/api/v1/key", quota_remaining: ".data.free_model_daily_requests.remaining", quota_reserve: 20, max_attempts: 6, timeout_s: 300 }
+  # Time OpenRouter (19/11), dividido entre as chaves: KEY = Bia e Pepe; KEY2 = Baidu e Vera.
+  # api-tools (adapter/api-tools.md): mesmas ferramentas para todos (ler, listar, buscar, commands.*, escrita no escopo do papel).
+  # Pepe (Joel, 19/11): nemotron-3.5-lightning, grátis (tier free, cota compartilhada com a Bia na KEY). Antes: deepseek-v4.1-flash, pago (~US$0,013 por plano; falhou por max_steps nos refinamentos da E9).
+  # Segunda opinião do refinador (como o Copilot era): o Opus escreve, o pepe revisa (roles.refiner.second_opinion).
+  pepe: { adapter: api-tools, base_url: "https://openrouter.ai/api/v1", model: "nvidia/nemotron-3.5-lightning:free", key_env: OPEN_ROUTER_API_KEY, key_file: .env, quota_url: "https://openrouter.ai/api/v1/key", quota_remaining: ".data.free_model_daily_requests.remaining", quota_reserve: 20, max_attempts: 2, max_steps: 30, timeout_s: 300 }
+  # Vera: revisora dos testes (bake-off 19/11: 5/5 defeitos, 1 falso positivo). Modelo diferente do da Bia.
+  vera: { adapter: api-tools, base_url: "https://openrouter.ai/api/v1", model: "nvidia/nemotron-3.5-super-vl:free", key_env: OPEN_ROUTER_API_KEY2, key_file: .env, quota_url: "https://openrouter.ai/api/v1/key", quota_remaining: ".data.free_model_daily_requests.remaining", quota_reserve: 20, max_attempts: 6, max_steps: 30, timeout_s: 300 }
+  # Baidu: implementer de backend.
+  baidu: { adapter: api-tools, base_url: "https://openrouter.ai/api/v1", model: "baidu/ernie-5.5-flash-preview:free", key_env: OPEN_ROUTER_API_KEY2, key_file: .env, quota_url: "https://openrouter.ai/api/v1/key", quota_remaining: ".data.free_model_daily_requests.remaining", quota_reserve: 20, max_attempts: 6, max_steps: 40, timeout_s: 300 }
+  # Copilot CLI (adapter/cli-agent.md), já autenticado na VM: refiner (refinamento funcional, escrita restrita a
+  # plano, cartões da feature e pm_queue) e planner (decisão do Joel, 19/11: Claude e Copilot planejam juntos).
+  # planner roda em modo leitura (padrão do dispatch.py para papéis fora de refiner/implementer): o Copilot devolve
+  # o rascunho do plano no stdout e o planner Claude critica, pede correção (no máximo 2 rodadas) e grava os artefatos.
+  # O plano só tem o modelo automático (sem --model); cada execução consome 1 premium request (Free: 200/mês).
+  # refiner: no máximo 2 chamadas por feature (rodada 1 e, depois da resposta do PM, rodada 2; workflow feature, etapa 1b).
+  # planner: no máximo 3 chamadas por feature (rascunho + 2 correções). Sem retentativa nos dois.
+  # O executor do harness (executor: ../harness-ada/script/cli_agent.py) injeta no briefing as skills do papel e do
+  # cartão (--role, --skills) e roda `command` com read_args ou write_args (--mode).
+  copilot: { adapter: cli-agent, executor: ../harness-ada/script/cli_agent.py, command: copilot, read_args: "--output-format json --stream off --no-ask-user --no-auto-update --disable-builtin-mcps --disallow-temp-dir --deny-tool=write --deny-tool=shell --deny-tool=memory", write_args: "--output-format json --stream off --no-ask-user --no-auto-update --disable-builtin-mcps --disallow-temp-dir --allow-tool=write --deny-tool=shell --deny-tool=memory", output_jq: '[.[] | select(.type == "assistant.message" and .data.phase == "final_answer")] | last | .data.content', usage_jq: '[.[] | select(.type == "result")] | last | .usage.premiumRequests', roles: "refiner planner", max_attempts: 1, timeout_s: 900 }
+
+# Regras de tipagem e lint que entram no pedido do trabalhador, por papel.
+role_context:
+  implementer:
+    - AGENTS.md
+    - docs/memoria/lint.md
+  refiner:
+    - AGENTS.md
+    - docs/memoria/lint.md
+    - docs/plano/README.md
+
+# Skills que cada papel lê SEMPRE, antes de começar (nomes em skill_dir). Quem não tem ferramentas (Bia, Copilot) as
+# recebe no pedido, injetadas pelo executor; o molde do agente Claude manda ler as mesmas (manter as duas listas iguais).
+# Skills extras por tarefa vêm do campo `skills` do cartão (harness: workflow/feature-artefatos/cartao.md).
+role_skills:
+  planner:
+    - escrever-teste
+  refiner:
+    - escrever-teste
+    - revisar-teste
+  test-writer:
+    - escrever-teste
+    - revisar-teste
+  reviewer:
+    - revisar-teste
+    - escrever-teste
+    - coding-guidelines
+  implementer:
+    - editar-arquivo
+    - coding-guidelines
+
+# Teto (bytes) do que o executor injeta no pedido como skills e regras; acima dele o executor falha, sem truncar.
+skills_max_bytes: 40000
+
+# Gate card-skills (harness: script/check_card_skills.py): cartões (lista `cards`) cujo allowedPaths toca um destes
+# prefixos precisam declarar `skills:`, e cada item precisa existir em skill_dir.
+cards_glob: docs/plano/E*.yaml
+skills_required_paths:
+  - apps/web
+
+# Fila de pendências de PM do refinamento funcional (workflow feature, etapa 1b).
+pm_queue: docs/plano/pendencias-pm.md
+
+# Comandos de verificação do projeto alvo. Workflows, skills e gates citam a
+# chave (commands.test etc.), nunca o comando literal.
+commands:
+  test: pnpm --filter <pkg> exec vitest run <arquivo>
+  coverage: pnpm --filter <pkg> test
+  typecheck: pnpm --filter <pkg> typecheck
+  lint: pnpm --filter <pkg> lint
+  format: pnpm exec prettier --check <arquivos>
+  deps: pnpm depcruise
+  tests-qual: pnpm check:tests
+  schemas: pnpm check:schemas
+  db: pnpm --filter @pilla/api db:generate
+  mutation: pnpm --filter @pilla/finance mutation
+  verify: pnpm verify
+
+# Gates mutacao e e2e do harness (gate/mutacao.md, gate/e2e.md): ferramenta e score mínimo de mutação.
+gates:
+  mutation: { tool: stryker, min_score: 80 }
+  e2e: { tool: playwright }
+
+# Gate portable: textos do projeto que não podem aparecer dentro do harness.
+portable:
+  forbidden:
+    - pilla
+    - /home/
+    - tools/alice-harness
+    - docs/regras
+    - /apps/
+    - openrouter
+    - OpenRouter
+    - OPEN_ROUTER
+    - nemotron
+    - copilot
+    - Copilot
+    - COPILOT
+    - mai-code
+
+checks:
+  - portable
+  - skill-format
+  - status-consistency

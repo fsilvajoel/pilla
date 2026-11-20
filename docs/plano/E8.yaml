@@ -1,0 +1,91 @@
+delivery: E8
+title: Portuguese GitHub issues mirroring the docs (ADR-0016); the sync generates pt-BR on the first run, plus the integration and a gate
+# Plano em docs/plano/issues-ptbr.md. O harness Ada mora fora do repositório (../harness-ada): os caminhos do
+# harness nos cartões são relativos a esta raiz. Cartões em inglês (ADR-0012); a tradução para pt-BR é outra etapa.
+cards:
+  # ---------------------------------------------------------------- E8-F03: integração, gate e docs
+  - id: E8-T04
+    title: Make sync_github_project.py use the rendered issue body
+    kind: implement
+    assignee: claude
+    rules: []
+    refs: [docs/plano/issues-ptbr.md, docs/adr/0016-issues-do-github-em-ptbr-espelhando-docs.md]
+    allowedPaths:
+      - ../harness-ada/script/sync_github_project.py
+      - ../harness-ada/tests/test_sync_github_project.py
+    protectedTests: []
+    checks:
+      - cd ../harness-ada && python3 -m pytest tests/test_sync_github_project.py -q
+    done:
+      - the body of a feature issue is the rendered (and translated, when issue.pt-br.md exists) text, keeping the ada-feature marker, the secrets filter and idempotency
+      - defect issues get the ada-defeito marker and the bug label; deliveries get labels
+      - without --apply nothing is written; the secrets filter still stops everything with exit 4
+    hints:
+      - desired_issues builds the body today; render_issue.render_feature is the new source
+    budget:
+      attempts: 3
+      toolCalls: 30
+      minutes: 20
+    readFirst:
+      - ../harness-ada/script/sync_github_project.py
+      - ../harness-ada/script/render_issue.py
+    sizeNote: about 80 changed lines plus tests
+  - id: E8-T05
+    title: Write the check_issue_render.py gate
+    kind: implement
+    assignee: claude
+    rules: []
+    refs: [docs/plano/issues-ptbr.md]
+    allowedPaths:
+      - ../harness-ada/script/check_issue_render.py
+      - ../harness-ada/tests/test_check_issue_render.py
+    protectedTests: []
+    checks:
+      - cd ../harness-ada && python3 -m pytest tests/test_check_issue_render.py -q
+      - python3 ../harness-ada/script/check_issue_render.py .
+    done:
+      - the gate renders everything in memory and fails on a broken link, on a body over 65000 characters and on residual English outside code and IDs in translated files
+      - exit 0 when clean, 1 with one line per finding
+      - Python stdlib, fully typed, pt-BR docstrings, no project name and no machine path
+    hints:
+      - residual English is a word list check on the text outside code spans and t blocks
+    budget:
+      attempts: 3
+      toolCalls: 30
+      minutes: 20
+    readFirst:
+      - ../harness-ada/script/render_issue.py
+      - ../harness-ada/script/check_status_consistency.py
+    sizeNote: about 150 lines plus tests
+  - id: E8-T06
+    title: Document the issue commands in the harness workflow and script README
+    kind: docs
+    assignee: claude
+    rules: []
+    refs: [docs/plano/issues-ptbr.md]
+    dependsOn: [E8-T04, E8-T05]
+    allowedPaths:
+      - ../harness-ada/script/README.md
+      - ../harness-ada/workflow
+    protectedTests: []
+    checks:
+      - python3 ../harness-ada/script/check_portable.py harness.project.yaml
+    done:
+      - script/README.md lists render_issue.py, check_issue_tokens.py and check_issue_render.py with usage and exit codes
+      - the workflow says when to refresh the issues, with the Alice recipe of docs/plano/issues-ptbr.md and no project name
+    hints:
+      - keep the harness generic, the project name never appears
+    budget:
+      attempts: 2
+      toolCalls: 15
+      minutes: 10
+    readFirst:
+      - ../harness-ada/script/README.md
+      - docs/plano/issues-ptbr.md
+    sizeNote: about 40 lines
+# Features (ADR-0014): planos em docs/plano/E8-F0<n>/plano.md (a escrever antes de despachar).
+features:
+# E8-F01 (renderizador) e E8-F02 (conferência de tokens) removidas por decisão do Joel (19/11): o dado sai em pt-BR já na primeira execução. Cartões E8-T01..T03 saíram junto.
+  - id: E8-F03
+    title: Sync integration, render gate and docs
+    cards: [E8-T04, E8-T05, E8-T06]

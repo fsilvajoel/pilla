@@ -1,0 +1,19 @@
+// Ponto de entrada público do motor financeiro (RFC-002). Nomes: docs/glossario.md.
+export { bps, cents, formatReais, MoneyError, parseReais } from "./money";
+export type { Bps, Cents } from "./money";
+export { addDays, addMonths, DateError, daysBetween, isoDate } from "./date";
+export type { IsoDate } from "./date";
+export { roundToStep, RoundingError } from "./rounding";
+export { simpleInterest, InterestError } from "./interest";
+export type { Periods } from "./interest";
+export { splitEvenly, SplitError } from "./split";
+export { DueDateError, generateDueDates } from "./due-dates";
+export type { DueDatesInput, Frequency } from "./due-dates";
+export { generateSchedule, periodsFor, ScheduleError } from "./schedule";
+export type { ScheduledInstallment, ScheduleInput, ScheduleTerms } from "./schedule";
+export { calculateLateCharges } from "./late-charges";
+export type { LateCharges, LateChargesInput } from "./late-charges";
+export { lateChargesAt, loanStanding, openAmount, outstandingBalance, payoffAmount } from "./balance";
+export type { LateTerms, LoanStanding, OpenInstallment } from "./balance";
+export { allocatePayment, AllocationError } from "./allocation";
+export type { PaymentAllocation } from "./allocation";

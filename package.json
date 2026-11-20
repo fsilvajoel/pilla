@@ -1,0 +1,47 @@
+{
+  "name": "pilla",
+  "private": true,
+  "description": "Gestão de empréstimos (estudo de arquitetura). Ver docs/README.md.",
+  "packageManager": "pnpm@12.18.0",
+  "engines": {
+    "node": ">=26"
+  },
+  "type": "module",
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "test": "turbo run test",
+    "mutation": "turbo run mutation",
+    "e2e": "turbo run e2e",
+    "depcruise": "depcruise apps packages --config .dependency-cruiser.cjs",
+    "check:env": "node scripts/check-env-example.mjs",
+    "check:deps": "node scripts/check-allowed-deps.mjs",
+    "check:schemas": "node scripts/check-schemas.mjs packages/schemas/src && node scripts/check-avoid.mjs docs/memoria/libs/zod.md packages/schemas/src",
+    "check:lint-sheet": "node scripts/check-lint-sheet.mjs",
+    "test:scripts": "node --test scripts/check-schemas.test.mjs scripts/check-test-quality.test.mjs",
+    "test:harness": "vitest run --config scripts/vitest.config.mts",
+    "check:harness": "tsc -p scripts/tsconfig.json && eslint --no-warn-ignored scripts/*.mts",
+    "gate": "node scripts/gates.mts",
+    "check:role-skills": "python3 ../harness-ada/script/check_role_skills.py .",
+    "check:card-skills": "python3 ../harness-ada/script/check_card_skills.py .",
+    "check:status": "python3 ../harness-ada/script/check_status_consistency.py .",
+    "check:tests": "node scripts/check-test-quality.mjs $(git ls-files '*.test.ts' '*.test.tsx' '*.test.mts')",
+    "verify": "pnpm check:deps && pnpm check:env && pnpm check:tests && pnpm check:schemas && pnpm check:lint-sheet && pnpm check:role-skills && pnpm check:card-skills && pnpm check:status && pnpm test:scripts && pnpm check:harness && pnpm test:harness && pnpm lint && pnpm typecheck && pnpm depcruise && pnpm test",
+    "prepare": "lefthook install"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "^21.2.4",
+    "@commitlint/config-conventional": "^21.2.4",
+    "@types/node": "~26.6.6",
+    "dependency-cruiser": "^18.7.2",
+    "eslint": "^10.15.0",
+    "lefthook": "^2.2.2",
+    "prettier": "^3.10.1",
+    "turbo": "^2.11.11",
+    "typescript": "~6.0.3",
+    "typescript-eslint": "^8.72.2",
+    "vitest": "^5.1.0"
+  }
+}

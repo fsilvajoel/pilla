@@ -1,0 +1,510 @@
+delivery: E9
+title: People registration end to end (API on NestJS + Postgres, shadcn screens); people only
+# Plano e decisões D1–D10 em docs/plano/E9.md. Cartões esqueleto: o planner de cada feature detalha done, hints
+# e readFirst no plano.md da feature antes do refinamento. Cartões em inglês (ADR-0012).
+# Regra de dono: bia escreve testes; alice implementa backend (apps/api, packages/schemas); claude faz infra e web.
+# Todo cartão que toca apps/web leva skills; cartão de tela leva também shadcn e tailwind-css (gate card-skills).
+cards:
+  # ---------------------------------------------------------------- E9-F01: banco de desenvolvimento
+  - id: E9-T01
+    title: Add the dev Postgres (docker compose), migrate and seed scripts
+    kind: implement
+    assignee: claude
+    rules: [RN-P01, RN-P02]
+    skills: [security-best-practices]
+    refs: [RFC-003 §4.8, RFC-005 §3, RFC-005 §8, PRD-001 RF-01, PRD-001 RF-02, PRD-001 RF-03, docs/plano/E9.md D2 D3 D4, docs/plano/E9-F01/plano.md]
+    dependsOn: []
+    allowedPaths:
+      - infra/docker-compose.yml
+      - apps/api/scripts/migrate.mts
+      - apps/api/scripts/seed.mts
+      - apps/api/scripts/tsconfig.json
+      - apps/api/package.json
+      - pnpm-lock.yaml
+      - .env.example
+      - docs/dev/banco-local.md
+      - docs/travas.md
+    protectedTests: []
+    checks:
+      - docker compose --env-file .env -f infra/docker-compose.yml up -d --wait
+      - pnpm --filter @pilla/api db:migrate && pnpm --filter @pilla/api db:migrate
+      - pnpm --filter @pilla/api db:seed && pnpm --filter @pilla/api db:seed
+      - node scripts/check-env-example.mjs
+      - node scripts/check-allowed-deps.mjs
+    done:
+      - Docker is installed on the dev environment (outside the repo) and the compose runs PostgreSQL 17 bound to 127.0.0.1 with the named volume pilla-pgdata and a healthcheck (A1, C1; P4)
+      - docker compose config shows the published port as 127.0.0.1:${POSTGRES_PORT}:5432 and no port on 0.0.0.0; a POSTGRES_PORT that is not numeric or is above 65535 is refused (A1, C3; P4)
+      - a missing POSTGRES_* variable makes docker compose fail naming the variable (A1, C2)
+      - db:migrate applies the drizzle migrations of every folder of migrationFolders to DATABASE_URL and is idempotent: the second run exits 0 with no new row in drizzle.migrations_<folder> (A2, C4)
+      - db:migrate with DATABASE_URL empty, blank or not a postgres:// URL exits 1 with a message in stderr and opens no connection (A2, C5)
+      - db:seed inserts 6 fictional people (valid CPFs, E.164 phones, 8 addresses, 8 PIX keys, exactly one referral) in one transaction and is idempotent: the second run exits 0 with the same counts 6 / 8 / 8 (A3, C6, C7)
+      - db:seed on a database without migrations exits 1 and leaves no row; a missing DATABASE_URL exits 1 (A3, C8)
+      - db:seed refuses a DATABASE_URL whose host is not 127.0.0.1 or localhost (exit 1, clear message, no connection) (A3, C8; P3)
+      - every new variable is in .env and .env.example in the same commit; no real secret in git (A4)
+      - check-env-example.mjs exits 0 with the new keys and exits 1 listing a key that is in only one of the two files (A4, C9)
+      - docs/dev/banco-local.md explains up, migrate, seed and reset in pt-BR with the exact commands, the .env.example variables and the 1024-65535 range of POSTGRES_PORT (A5, C10; P4)
+      - pg and @types/pg are installed in apps/api/package.json with pnpm-lock.yaml updated and @types/pg in the Dev list of docs/travas.md, so check-allowed-deps.mjs exits 0 (P2)
+    hints:
+      - 'load the root .env with node --env-file=../../.env (the cwd of pnpm --filter is apps/api) and run with tsx, as in "db:migrate": "node --env-file=../../.env --import tsx scripts/migrate.mts"; .mts with extensionless relative imports needs tsx'
+      - the migrator is drizzle-orm/node-postgres/migrator with migrationsFolder "migrations/<folder>", migrationsSchema "drizzle" and migrationsTable "migrations_<folder>"; reuse migrationFolders of src/db/migrate.ts so the order is not duplicated
+      - 'seed: INSERT ... ON CONFLICT DO NOTHING by id, one transaction, people before addresses and PIX, the referred person after the referrer (FK persons_referred_by_id_fkey); optional fields left out, never undefined (lesson of E5-F02)'
+      - no any; close the pg Pool in finally; never log DATABASE_URL or the password
+      - 'compose: ${VAR:?message} on the required variables, the fixed tag postgres:17 (P4), the named volume pilla-pgdata and a healthcheck for up -d --wait'
+      - 'seed data: Ana Souza 12345678909, Bruno Lima 11144477735 (referred by Ana), Carla Dias 10020030088, Diego Rocha 21436587107, Elisa Prado 31415926590, Fábio Nunes 27182818205; phones +5511999990001 to +5511999990006; fixed literal uuid ids chosen by the implementer; 8 addresses and 8 PIX keys, at least 1 of each per person and exactly 1 primary per person (a person with only one is primary)'
+      - the host refusal (P3) reads the host of DATABASE_URL, accepts only 127.0.0.1 and localhost and exits 1 with a message in stderr before opening a connection
+      - the 1024-65535 range of POSTGRES_PORT (P4) goes in the comment of .env.example and in docs/dev/banco-local.md; the refusal of a non numeric value or of a value above 65535 comes from compose or Postgres (C3)
+      - '@types/pg goes in devDependencies of apps/api/package.json and in the Dev list of docs/travas.md, otherwise node scripts/check-allowed-deps.mjs fails (P2, travas §7)'
+    budget: {attempts: 3, toolCalls: 40, minutes: 30}
+    readFirst:
+      - docs/plano/E9-F01/plano.md
+      - docs/plano/E9.md
+      - docs/rfc/RFC-003-stack-tecnologica.md
+      - docs/rfc/RFC-005-modelo-fisico-banco.md
+      - apps/api/src/db/migrate.ts
+      - apps/api/src/people/infra/schema.ts
+      - apps/api/migrations/people
+      - .env.example
+      - scripts/check-env-example.mjs
+      - docs/travas.md
+      - docs/memoria/README.md
+    sizeNote: compose ~25 linhas, dois scripts curtos, doc curta
+
+  # ---------------------------------------------------------------- E9-F02: base da API NestJS
+  - id: E9-T02
+    title: Write the tests for the API bootstrap, health, Zod pipe and problem+json filter
+    kind: test-author
+    assignee: bia
+    rules: []
+    skills: [escrever-teste]
+    refs: [RFC-003 §4.2, RFC-004 §2, RFC-004 §6, docs/plano/E9.md D1]
+    dependsOn: [E9-T01]
+    # allowedPaths ampliados e INTERNAL_ERROR, reflect-metadata, rxjs, supertest e @types/supertest: aprovado por Joel em 20/11/2026
+    allowedPaths:
+      - apps/api/src/core/http/*.test.ts
+      - apps/api/src/app.test.ts
+      - packages/schemas/src/api/core/health.test.ts
+      - apps/api/src/core/http/*.ts
+      - apps/api/src/db/database.ts
+      - apps/api/src/app.module.ts
+      - apps/api/src/main.ts
+      - packages/schemas/src/api/core/health.ts
+      - packages/schemas/src/api/problem.ts
+      - packages/schemas/src/index.ts
+      - docs/rfc/RFC-004-api-e-eventos.md
+      - docs/travas.md
+      - apps/api/package.json
+      - apps/api/tsconfig.json
+      - pnpm-lock.yaml
+    protectedTests: []
+    checks:
+      - '! pnpm --filter @pilla/api exec vitest run src/core/http src/app.test.ts'
+      - node scripts/check-test-quality.mjs apps/api/src/core/http apps/api/src/app.test.ts packages/schemas/src/api/core/health.test.ts
+      - pnpm --filter @pilla/api typecheck
+    done:
+      - GET /api/v1/health answers 200 with the database status
+      - a body that fails the Zod schema answers 400 application/problem+json with code VALIDATION_FAILED and the field errors
+      - an unknown route answers 404 problem+json NOT_FOUND; an unexpected error answers 500 problem+json without stack
+    budget: {attempts: 4, toolCalls: 25, minutes: 15}
+  - id: E9-T03
+    title: Bootstrap the NestJS app with the database provider, Zod pipe and problem+json filter
+    kind: implement
+    assignee: alice
+    rules: []
+    skills: [editar-arquivo, coding-guidelines, modular-design-principles]
+    refs: [RFC-003 §4.2, RFC-004 §2, ADR-0002, docs/plano/E9.md D1 D3]
+    dependsOn: [E9-T02]
+    allowedPaths:
+      - apps/api/src/main.ts
+      - apps/api/src/app.module.ts
+      - apps/api/src/core/http/**
+      - apps/api/src/db/**
+      - apps/api/package.json
+      - apps/api/tsconfig.json
+      - pnpm-lock.yaml
+      - packages/schemas/src/api/core/health.ts
+      - packages/schemas/src/index.ts
+    protectedTests: [apps/api/src/core/http/*.test.ts, apps/api/src/app.test.ts, packages/schemas/src/api/core/health.test.ts]
+    checks:
+      - pnpm --filter @pilla/api exec vitest run src/core/http src/app.test.ts
+      - pnpm --filter @pilla/api typecheck
+      - pnpm --filter @pilla/api lint
+      - node scripts/check-allowed-deps.mjs
+    done:
+      - the T02 tests pass; the app listens on 127.0.0.1:PILLA_API_PORT with prefix /api/v1
+      - the database provider reads DATABASE_URL from the environment; tests inject PGlite
+      - Zod only at the HTTP edge, strong typing, no any
+    budget: {attempts: 3, toolCalls: 40, minutes: 30}
+
+  # ---------------------------------------------------------------- E9-F03: rotas de pessoas
+  - id: E9-T04
+    title: Add the people API schemas (list, detail, update, problem codes) to @pilla/schemas
+    kind: implement
+    assignee: alice
+    rules: []
+    skills: [editar-arquivo]
+    refs: [RFC-004 §3, RFC-004 §6, PRD-001 RF-01, docs/plano/E9.md D8 D9]
+    dependsOn: [E9-T03]
+    allowedPaths:
+      - packages/schemas/src/api/people/**
+      - packages/schemas/src/index.ts
+      - docs/rfc/RFC-004*.md
+    protectedTests: []
+    checks:
+      - pnpm --filter @pilla/schemas test
+      - pnpm --filter @pilla/schemas typecheck
+      - node scripts/check-schemas.mjs
+    done:
+      - schemas for PersonListQuery (search, limit, cursor), PersonListResponse, PersonResponse and UpdatePersonRequest exist next to create-person.ts
+      - the schema tests cover CPF check digits, masked CPF/phone normalized to digits, limit bounds (default 20, max 100) and the mixed letter+digit search kept as plain text
+      - RFC-004 §6 gains DUPLICATE_CPF 409 with detail "CPF já cadastrado." (D8)
+    budget: {attempts: 3, toolCalls: 25, minutes: 15}
+  - id: E9-T05
+    title: Write the tests for the people routes (POST, GET list/search, GET by id, PATCH)
+    kind: test-author
+    assignee: bia
+    rules: []
+    skills: [escrever-teste]
+    refs: [RFC-004 §3, RFC-004 §6, PRD-001 RF-01, PRD-001 RF-03, docs/plano/E9.md D8 D9]
+    dependsOn: [E9-T04, E5-F02, E5-F05]
+    allowedPaths:
+      - apps/api/src/people/http/*.test.ts
+    protectedTests: []
+    checks:
+      - '! pnpm --filter @pilla/api exec vitest run src/people/http'
+      - node scripts/check-test-quality.mjs apps/api/src/people/http
+      - pnpm --filter @pilla/api typecheck
+    done:
+      - POST creates (201 + Location), invalid CPF gives 400, repeated CPF gives 409 DUPLICATE_CPF, unknown referrer gives 400
+      - GET list searches by name or CPF (listPersons rule, E5-F05 A11/A16 - name by case-insensitive substring, CPF by digit prefix ignoring dot and dash, union when the search is only digits; mixed letter+digit search is name substring only, never a CPF prefix), paginates by cursor and respects limit (default 20, max 100, above gives 400)
+      - POST and PATCH bodies are validated by the schema, not by the web - CPF with check digits, phone and PIX key format; masked CPF or phone input (dots, dash, parentheses) is normalized to digits; errors give 400 with the field list
+      - GET by id gives 200 or 404 NOT_FOUND
+      - PATCH without If-Match gives 428, stale version gives 409 VERSION_CONFLICT, success returns the new version in ETag
+    budget: {attempts: 4, toolCalls: 30, minutes: 20}
+  - id: E9-T06
+    title: Implement the people controller and module on top of the existing repositories
+    kind: implement
+    assignee: alice
+    rules: []
+    skills: [editar-arquivo, coding-guidelines, tactical-ddd]
+    refs: [RFC-004 §3, ADR-0002, docs/plano/E9.md D1 D8 D9]
+    dependsOn: [E9-T05]
+    allowedPaths:
+      - apps/api/src/people/http/**
+      - apps/api/src/people/people.module.ts
+      - apps/api/src/people/application/**
+      - apps/api/src/app.module.ts
+    protectedTests: [apps/api/src/people/http/*.test.ts]
+    checks:
+      - pnpm --filter @pilla/api exec vitest run src/people
+      - pnpm --filter @pilla/api typecheck
+      - pnpm --filter @pilla/api lint
+    done:
+      - the T05 tests pass and the E5 repository tests still pass
+      - the controller only translates HTTP; rules live in application/, access in infra/
+    budget: {attempts: 3, toolCalls: 40, minutes: 30}
+
+  # ---------------------------------------------------------------- E9-F04: endereços e PIX
+  - id: E9-T07
+    title: Write the tests for addresses and PIX keys routes (one primary each)
+    kind: test-author
+    assignee: bia
+    rules: []
+    skills: [escrever-teste]
+    refs: [RFC-004 §3, PRD-001 RF-02]
+    dependsOn: [E9-T06]
+    allowedPaths:
+      - apps/api/src/people/http/addresses.http.test.ts
+      - apps/api/src/people/http/pix-keys.http.test.ts
+    protectedTests: []
+    checks:
+      - '! pnpm --filter @pilla/api exec vitest run src/people/http/addresses.http.test.ts src/people/http/pix-keys.http.test.ts'
+      - node scripts/check-test-quality.mjs apps/api/src/people/http
+    done:
+      - POST/PATCH/DELETE for addresses and PIX keys answer per RFC-004 §3
+      - marking one as primary unmarks the previous one; the first one created is primary
+      - a PIX key is validated by type (CPF, e-mail, phone, random)
+      - deleting the primary promotes the most recent remaining one, or none
+    budget: {attempts: 4, toolCalls: 30, minutes: 20}
+  - id: E9-T08
+    title: Implement the address and PIX key schemas, repositories and routes
+    kind: implement
+    assignee: alice
+    rules: []
+    skills: [editar-arquivo, coding-guidelines]
+    refs: [RFC-004 §3, PRD-001 RF-02]
+    dependsOn: [E9-T07]
+    allowedPaths:
+      - packages/schemas/src/api/people/**
+      - apps/api/src/people/**
+    protectedTests:
+      - apps/api/src/people/http/addresses.http.test.ts
+      - apps/api/src/people/http/pix-keys.http.test.ts
+      - apps/api/src/people/infra/addresses.test.ts
+      - apps/api/src/people/infra/pix-keys.test.ts
+    checks:
+      - pnpm --filter @pilla/api exec vitest run src/people
+      - pnpm --filter @pilla/schemas test
+      - pnpm --filter @pilla/api typecheck
+    done:
+      - the T07 tests and the existing infra tests pass; the primary swap runs in one transaction
+    budget: {attempts: 3, toolCalls: 40, minutes: 30}
+
+  # ---------------------------------------------------------------- E9-F05: ficha agregada
+  - id: E9-T09
+    title: Write the tests for the person sheet (GET /people/{id} with addresses, PIX, referrer and referrals)
+    kind: test-author
+    assignee: bia
+    rules: []
+    skills: [escrever-teste]
+    refs: [RFC-004 §3, PRD-001 RF-03, PRD-001 RF-04, docs/plano/E9.md D7]
+    dependsOn: [E9-T08]
+    allowedPaths:
+      - apps/api/src/people/http/person-sheet.http.test.ts
+    protectedTests: []
+    checks:
+      - '! pnpm --filter @pilla/api exec vitest run src/people/http/person-sheet.http.test.ts'
+      - node scripts/check-test-quality.mjs apps/api/src/people/http/person-sheet.http.test.ts
+    done:
+      - the sheet brings the person, addresses (primary first), PIX keys (primary first), the referrer (id and name) and the referrals
+      - contracts is an empty list until lending has an API (D7)
+    budget: {attempts: 4, toolCalls: 25, minutes: 15}
+  - id: E9-T10
+    title: Implement the person sheet query
+    kind: implement
+    assignee: alice
+    rules: []
+    skills: [editar-arquivo, coding-guidelines]
+    refs: [RFC-004 §3, PRD-001 RF-04]
+    dependsOn: [E9-T09]
+    allowedPaths:
+      - packages/schemas/src/api/people/**
+      - apps/api/src/people/**
+    protectedTests: [apps/api/src/people/http/person-sheet.http.test.ts]
+    checks:
+      - pnpm --filter @pilla/api exec vitest run src/people
+      - pnpm --filter @pilla/api typecheck
+    done:
+      - the T09 tests pass with at most 4 queries per sheet (no N+1)
+    budget: {attempts: 3, toolCalls: 30, minutes: 20}
+
+  # ---------------------------------------------------------------- E9-F06: design system web
+  - id: E9-T11
+    title: Set the light green palette and add the shadcn base components via CLI
+    kind: implement
+    assignee: claude
+    rules: []
+    skills: [shadcn, tailwind-css, react-best-practices, accessibility]
+    refs: [ADR-0013, docs/plano/E9.md D5 D6, docs/plano/E9-F06/plano.md]
+    dependsOn: []
+    readFirst:
+      - docs/plano/E9-F06/plano.md
+      - apps/web/components.json
+      - apps/web/app/globals.css
+    allowedPaths:
+      - apps/web/app/globals.css
+      - apps/web/components.json
+      - apps/web/components/ui/**
+      - apps/web/hooks/**
+      - apps/web/package.json
+      - pnpm-lock.yaml
+      - docs/travas.md
+      - docs/plano/E9-F06/plano.md
+    protectedTests: []
+    checks:
+      - pnpm --filter @pilla/web typecheck
+      - pnpm --filter @pilla/web lint
+      - pnpm --filter @pilla/web build
+      - node scripts/check-allowed-deps.mjs
+      - '! grep -qE "^\.dark" apps/web/app/globals.css'
+    done:
+      - 'components added only with pnpm dlx shadcn@latest add: button input label textarea select form card table badge dialog alert-dialog dropdown-menu sheet sidebar separator skeleton sonner tabs tooltip pagination breadcrumb avatar (form -> field if the CLI refuses, recorded in the plan)'
+      - globals.css :root tokens are exactly the oklch values of the plan table "Paleta"; sidebar-* follow the same light green; no .dark block (D5)
+      - Badge gains success and warning variants with a short pt-BR comment; no other hand edit in components/ui
+      - sonner and next-themes listed in docs/travas.md; check-allowed-deps passes
+      - 'visual review in the browser: no console error, primary-foreground on primary has AA contrast (by hand)'
+    budget: {attempts: 3, toolCalls: 30, minutes: 20}
+
+  - id: E9-T13
+    title: Implement the shared composites and the ADMIN shell (sidebar layout)
+    kind: implement
+    assignee: claude
+    rules: []
+    skills: [shadcn, tailwind-css, react-best-practices, accessibility]
+    refs: [ADR-0013, docs/plano/E9.md D5 D6, docs/plano/E9-F06/plano.md]
+    dependsOn: []
+    readFirst:
+      - docs/plano/E9-F06/plano.md
+      - docs/plano/E9-F06/esboco-shared.txt
+      - apps/web/components/shared/
+    allowedPaths:
+      - apps/web/components/shared/**
+      - apps/web/app/(admin)/layout.tsx
+    protectedTests: []
+    checks:
+      - pnpm --filter @pilla/web typecheck
+      - pnpm --filter @pilla/web lint
+      - pnpm --filter @pilla/web build
+      - '! grep -rnE "style=|#[0-9a-fA-F]{3,8}\b|rgb\(|oklch\(" apps/web/components/shared --include=*.tsx'
+    done:
+      - stubs replaced; no "esboço" error and no "stub E9-F06" coverage exclusion left
+      - composites only compose components/ui; no style= and no literal color in shared/, colors only through globals.css tokens (D5)
+      - ADMIN layout uses the shadcn sidebar with Pessoas and Empréstimos and the Toaster (sonner, theme light); AdminShell and AdminNav live in shared/, layout.tsx only composes them
+      - 'visual review in the browser (plan A1-A7 as checklist): route opens, empty/loading/error states render, no console error'
+    budget: {attempts: 3, toolCalls: 40, minutes: 30}
+
+
+  # ---------------------------------------------------------------- E9-F07: cliente da API no web
+  - id: E9-T15
+    title: Implement the server-side API client for people
+    kind: implement
+    assignee: claude
+    rules: []
+    skills: [react-best-practices, coding-guidelines, security-best-practices]
+    refs: [ADR-0013, RFC-004 §2, docs/plano/E9.md D4]
+    dependsOn: [E9-T06]
+    allowedPaths:
+      - apps/web/lib/api/**
+      - apps/web/package.json
+      - .env.example
+    protectedTests: []
+    checks:
+      - pnpm --filter @pilla/web typecheck
+      - pnpm --filter @pilla/web lint
+      - node scripts/check-env-example.mjs
+    done:
+      - server-only fetch wrapper; base URL from PILLA_API_URL; responses parsed with the @pilla/schemas Zod; problem+json becomes a typed ApiProblem (code, field errors)
+      - lib/mock-data.ts is no longer used by people code
+    budget: {attempts: 3, toolCalls: 30, minutes: 20}
+
+
+  # ---------------------------------------------------------------- E9-F08: lista e busca
+  - id: E9-T17
+    title: Implement /pessoas (list and search) with shared components
+    kind: implement
+    assignee: claude
+    rules: []
+    skills: [shadcn, tailwind-css, react-best-practices, accessibility]
+    refs: [PRD-001 RF-04, ADR-0013, docs/plano/E9.md D4 D6 D8]
+    dependsOn: [E9-T13, E9-T15]
+    allowedPaths:
+      - apps/web/components/people/**
+      - apps/web/app/(admin)/pessoas/page.tsx
+      - apps/web/app/(admin)/pessoas/loading.tsx
+    protectedTests: []
+    checks:
+      - pnpm --filter @pilla/web typecheck
+      - pnpm --filter @pilla/web lint
+    done:
+      - Server Component reading the API; list shows name, masked CPF, phone and a link to the sheet; search box writes ?search= and passes it as is to the API; "Carregar mais" uses the cursor; loading uses Skeleton
+      - 'visual review in the browser: /pessoas opens; empty (EmptyState with "Nova pessoa"), loading and error states render; no console error'
+    budget: {attempts: 3, toolCalls: 30, minutes: 20}
+
+
+  # ---------------------------------------------------------------- E9-F09: cadastro e edição
+  - id: E9-T19
+    title: Rebuild the person form with shadcn and Server Actions (/pessoas/nova and /pessoas/[id]/editar)
+    kind: implement
+    assignee: claude
+    rules: []
+    skills: [shadcn, tailwind-css, react-best-practices, accessibility, coding-guidelines]
+    refs: [PRD-001 RF-01, PRD-001 RF-03, ADR-0013, docs/plano/E9.md D4 D6 D8 D9]
+    dependsOn: [E9-T13, E9-T15]
+    allowedPaths:
+      - apps/web/components/people/**
+      - apps/web/components/person-form.tsx
+      - apps/web/components/person-form.test.tsx
+      - apps/web/app/(admin)/pessoas/nova/**
+      - apps/web/app/(admin)/pessoas/[id]/editar/**
+      - apps/web/app/(admin)/pessoas/actions.ts
+    protectedTests: []
+    checks:
+      - pnpm --filter @pilla/web typecheck
+      - pnpm --filter @pilla/web lint
+    done:
+      - React Hook Form with the CreatePersonRequest Zod from @pilla/schemas (no rule copied into the web); CPF and phone masks are display only; API problem field errors appear under the field; referrer chosen by searching people
+      - save calls a Server Action, then revalidatePath and redirect to the sheet with a success toast; DUPLICATE_CPF shows the API detail on the CPF field; VERSION_CONFLICT shows a toast asking to reload
+      - old components/person-form.* moves to components/people/ (old test removed)
+      - 'visual review in the browser: both routes open; empty, loading and error states render; no console error'
+    budget: {attempts: 3, toolCalls: 40, minutes: 30}
+
+
+  # ---------------------------------------------------------------- E9-F10: ficha
+  - id: E9-T21
+    title: Implement /pessoas/[id] (sheet) with address and PIX management
+    kind: implement
+    assignee: claude
+    rules: []
+    skills: [shadcn, tailwind-css, react-best-practices, accessibility, coding-guidelines]
+    refs: [PRD-001 RF-02, PRD-001 RF-04, ADR-0013, docs/plano/E9.md D4 D6 D7]
+    dependsOn: [E9-T10, E9-T13, E9-T15]
+    allowedPaths:
+      - apps/web/components/people/**
+      - apps/web/app/(admin)/pessoas/[id]/page.tsx
+      - apps/web/app/(admin)/pessoas/[id]/loading.tsx
+      - apps/web/app/(admin)/pessoas/[id]/not-found.tsx
+      - apps/web/app/(admin)/pessoas/actions.ts
+    protectedTests: []
+    checks:
+      - pnpm --filter @pilla/web typecheck
+      - pnpm --filter @pilla/web lint
+    done:
+      - sheet shows data, referrer and referrals (links), the empty "Nenhum contrato" block and the Editar button; 404 from the API renders not-found
+      - addresses and PIX keys - add and edit in a Dialog, remove with ConfirmDialog, primary marked with Badge and "Tornar principal" (the API decides the primary swap)
+      - 'visual review in the browser: route opens; empty, loading and error states render; no console error'
+    budget: {attempts: 3, toolCalls: 40, minutes: 30}
+
+
+  # ---------------------------------------------------------------- E9-F11: e2e
+  - id: E9-T22
+    title: Write the Playwright e2e of the people flow against the real API and Postgres
+    kind: test-author
+    assignee: claude
+    rules: []
+    skills: [escrever-teste, accessibility]
+    refs: [PRD-001 RF-01, PRD-001 RF-02, PRD-001 RF-03, PRD-001 RF-04, docs/plano/E9.md]
+    dependsOn: [E9-T17, E9-T19, E9-T21]
+    allowedPaths:
+      - apps/web/e2e/people.spec.ts
+      - apps/web/playwright.config.ts
+    protectedTests: []
+    checks:
+      - pnpm --filter @pilla/web e2e
+    done:
+      - with compose up, migrate and seed - create a person with referrer, find it by CPF, add two addresses and swap the primary, add a PIX key, edit the phone and see it on the sheet
+      - repeated CPF shows the field error; no console errors
+    budget: {attempts: 3, toolCalls: 40, minutes: 30}
+
+features:
+  - id: E9-F01
+    title: Dev database (docker compose, migrations, seed)
+    cards: [E9-T01]
+  - id: E9-F02
+    title: NestJS API foundation (health, DB provider, Zod pipe, problem+json)
+    cards: [E9-T02, E9-T03]
+  - id: E9-F03
+    title: People routes (create, read, update, list/search)
+    cards: [E9-T04, E9-T05, E9-T06]
+  - id: E9-F04
+    title: Addresses and PIX keys (one primary each)
+    cards: [E9-T07, E9-T08]
+  - id: E9-F05
+    title: Person sheet aggregate (GET /people/{id})
+    cards: [E9-T09, E9-T10]
+  - id: E9-F06
+    title: Web design system (light green palette, shadcn components, shared composites, ADMIN shell)
+    cards: [E9-T11, E9-T13]
+  - id: E9-F07
+    title: Typed server-side API client in the web app
+    cards: [E9-T15]
+  - id: E9-F08
+    title: People list and search screen
+    cards: [E9-T17]
+  - id: E9-F09
+    title: Person create and edit screens
+    cards: [E9-T19]
+  - id: E9-F10
+    title: Person sheet screen with address and PIX management
+    cards: [E9-T21]
+  - id: E9-F11
+    title: People end-to-end test (Playwright, real API and Postgres)
+    cards: [E9-T22]

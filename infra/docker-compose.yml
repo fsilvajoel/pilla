@@ -1,0 +1,24 @@
+# PostgreSQL de desenvolvimento (RFC-003 §4.8). Só para dev: porta publicada apenas em 127.0.0.1.
+# Variáveis lidas do .env da raiz: docker compose --env-file .env -f infra/docker-compose.yml up -d --wait
+name: pilla
+services:
+  postgres:
+    image: postgres:17
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:?defina POSTGRES_USER no .env}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?defina POSTGRES_PASSWORD no .env}
+      POSTGRES_DB: ${POSTGRES_DB:?defina POSTGRES_DB no .env}
+    ports:
+      - "127.0.0.1:${POSTGRES_PORT:?defina POSTGRES_PORT no .env}:5432"
+    volumes:
+      - pilla-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+volumes:
+  pilla-pgdata:
+    name: pilla-pgdata

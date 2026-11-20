@@ -1,0 +1,1653 @@
+{
+ "resumo": {
+  "gemma": {
+   "reps": 3,
+   "implDone": "7/9",
+   "implFirstPass": "2/9",
+   "implClean": "7/9",
+   "implRejections": 0.8,
+   "implSeconds": 75.1,
+   "reviewDone": "3/3",
+   "reviewRejections": 0.7,
+   "serverErrors": 0,
+   "defectsFound": 2.3,
+   "defectsLocated": 1.7,
+   "falsePositives": 0,
+   "itemsRight": 5.3,
+   "reviewSeconds": 30.7,
+   "outTokPerSec": 136.8,
+   "outputTokens": 12473,
+   "promptTokens": 3256299,
+   "failureCategories": [
+    "checklist",
+    "esboço",
+    "teste",
+    "vazio"
+   ],
+   "stalls": 10
+  },
+  "qwen35": {
+   "reps": 3,
+   "implDone": "9/9",
+   "implFirstPass": "8/9",
+   "implClean": "9/9",
+   "implRejections": 0.1,
+   "implSeconds": 29.2,
+   "reviewDone": "2/3",
+   "reviewRejections": 1.3,
+   "serverErrors": 0,
+   "defectsFound": 2.7,
+   "defectsLocated": 2.3,
+   "falsePositives": 0.3,
+   "itemsRight": 4.3,
+   "reviewSeconds": 87.0,
+   "outTokPerSec": 91.4,
+   "outputTokens": 27957,
+   "promptTokens": 1945226,
+   "failureCategories": [
+    "checklist",
+    "lint",
+    "typecheck"
+   ],
+   "stalls": 0
+  },
+  "qwen38": {
+   "reps": 3,
+   "implDone": "9/9",
+   "implFirstPass": "9/9",
+   "implClean": "9/9",
+   "implRejections": 0,
+   "implSeconds": 28.6,
+   "reviewDone": "1/3",
+   "reviewRejections": 1.3,
+   "serverErrors": 0,
+   "defectsFound": 1,
+   "defectsLocated": 1,
+   "falsePositives": 0,
+   "itemsRight": 2,
+   "reviewSeconds": 75.8,
+   "outTokPerSec": 51.2,
+   "outputTokens": 13745,
+   "promptTokens": 1061251,
+   "failureCategories": [
+    "checklist"
+   ],
+   "stalls": 0
+  },
+  "gptoss": {
+   "reps": 3,
+   "implDone": "9/9",
+   "implFirstPass": "2/9",
+   "implClean": "9/9",
+   "implRejections": 0.8,
+   "implSeconds": 70.0,
+   "reviewDone": "1/3",
+   "reviewRejections": 1.7,
+   "serverErrors": 2,
+   "defectsFound": 0,
+   "defectsLocated": 0,
+   "falsePositives": 0.7,
+   "itemsRight": 0.3,
+   "reviewSeconds": 102.3,
+   "outTokPerSec": 35.4,
+   "outputTokens": 21912,
+   "promptTokens": 1162210,
+   "failureCategories": [
+    "checklist",
+    "esboço"
+   ],
+   "stalls": 0
+  }
+ },
+ "execucoes": [
+  {
+   "rep": "r1",
+   "profile": "gemma",
+   "model": "alice",
+   "cards": [
+    {
+     "task": "E2-T15",
+     "kind": "implement",
+     "status": "failed",
+     "attempts": 2,
+     "toolCalls": 31,
+     "seconds": 219.8,
+     "promptTokens": 706000,
+     "outputTokens": 919,
+     "outTokPerSec": 124.6,
+     "promptTokPerSec": 4231.2,
+     "failureCategories": [
+      [
+       "vazio",
+       "esboço",
+       "teste"
+      ]
+     ],
+     "stalls": 4,
+     "toolErrors": 0,
+     "serverErrors": null,
+     "harnessRev": "a984aec"
+    },
+    {
+     "task": "E2-T19",
+     "kind": "implement",
+     "status": "done",
+     "attempts": 2,
+     "toolCalls": 11,
+     "seconds": 14.5,
+     "promptTokens": 47544,
+     "outputTokens": 531,
+     "outTokPerSec": 140.1,
+     "promptTokPerSec": 9096.8,
+     "failureCategories": [],
+     "stalls": 0,
+     "toolErrors": 0,
+     "serverErrors": null,
+     "harnessRev": "a984aec"
+    },
+    {
+     "task": "E2-T22",
+     "kind": "implement",
+     "status": "done",
+     "attempts": 3,
+     "toolCalls": 15,
+     "seconds": 23.0,
+     "promptTokens": 67836,
+     "outputTokens": 1019,
+     "outTokPerSec": 147.6,
+     "promptTokPerSec": 10688.2,
+     "failureCategories": [
+      [
+       "esboço"
+      ]
+     ],
+     "stalls": 0,
+     "toolErrors": 0,
+     "serverErrors": null,
+     "harnessRev": "a984aec"
+    },
+    {
+     "task": "E2-T23",
+     "kind": "pre-review",
+     "status": "done",
+     "attempts": 3,
+     "toolCalls": 34,
+     "seconds": 32.7,
+     "promptTokens": 376673,
+     "outputTokens": 1521,
+     "outTokPerSec": 125.5,
+     "promptTokPerSec": 23047.0,
+     "failureCategories": [
+      [
+       "checklist"
+      ]
+     ],
+     "stalls": 2,
+     "toolErrors": 0,
+     "serverErrors": null,
+     "harnessRev": "a984aec"
+    }
+   ],
+   "implement": {
+    "E2-T15": {
+     "stub": true,
+     "exportType": false,
+     "strict": false,
+     "testsPass": false,
+     "typecheck": true,
+     "clean": false
+    },
+    "E2-T19": {
+     "stub": false,
+     "exportType": true,
+     "strict": true,
+     "testsPass": true,
+     "typecheck": true,
+     "clean": true
+    },
+    "E2-T22": {
+     "stub": false,
+     "exportType": true,
+     "strict": true,
+     "testsPass": true,
+     "typecheck": true,
+     "clean": true
+    }
+   },
+   "review": {
+    "status": "done",
+    "verdict": {
+     "C1": "ok",
+     "C2": "ok",
+     "C3": "parcial",
+     "C4": "falta",
+     "C5": "ok",
+     "C6": "ok",
+     "C7": "falta"
+    },
+    "defectsFound": [
+     "C3",
+     "C4",
+     "C7"
+    ],
+    "defectsLocated": [
+     "C4",
+     "C7"
+    ],
+    "falsePositives": [],
+    "itemsRight": 6,
+    "summary": "C1 ok - packages/schemas/src/api/api.test.ts:41-160\nC2 ok - packages/schemas/src/api/access/admin-login.ts:4, packages/schemas/src/api/access/portal-access.ts:4, packages/schemas/src/api/access/portal-session.ts:4, packages/schemas/src/api/core/attachment-upload-url.ts:4, packages/schemas/src/api/lending/activate-loan.ts:5, packages/schemas/src/api/lending/payoff-quote.ts:5, packages/schemas/src/api/lending/simulate-loan.ts:11, packages/schemas/src/api/lending/write-off-loan.ts:5, packages/schemas/src/api/payments/allocation-preview.ts:5, packages/schemas/src/api/payments/reverse-payment.ts:5, packages/schemas/src/api/problem.ts:45\nC3 parcial - packages/schemas/src/api/core/attachment-upload-url.ts:7 (usa z.number().int() em vez de z.int())\nC4 falta - packages/schemas/src/api/access/portal-session.ts:5 (usa regex em vez de cpfSchema)\nC5 ok - packages/schemas/src/index.ts:14-23\nC6 ok - packages/schemas/src/api/problem.ts:44-60 (conforme RFC-004 §6)\nC7 falta - run_check 1 -> 0% (falha em attachment-upload-url.ts:7)"
+   }
+  },
+  {
+   "rep": "r1",
+   "profile": "qwen35",
+   "model": "qwen3.5:9b-q4_K_M",
+   "cards": [
+    {
+     "task": "E2-T15",
+     "kind": "implement",
+     "status": "done",
+     "attempts": 2,
+     "toolCalls": 12,
+     "seconds": 41.1,
+     "promptTokens": 45035,
+     "outputTokens": 1028,
+     "outTokPerSec": 92.6,
+     "promptTokPerSec": 19738.7,
+     "failureCategories": [],
+     "stalls": 0,
+     "toolErrors": 0,
+     "serverErrors": null,
+     "harnessRev": "a984aec"
+    },
+    {
+     "task": "E2-T19",
+     "kind": "implement",
+     "status": "done",
+     "attempts": 2,
+     "toolCalls": 10,
+     "seconds": 15.2,
+     "promptTokens": 35132,
+     "outputTokens": 797,
+     "outTokPerSec": 92.6,
+     "promptTokPerSec": 20061.9,
+     "failureCategories": [],
+     "stalls": 0,
+     "toolErrors": 0,
+     "serverErrors": null,
+     "harnessRev": "a984aec"
+    },
+    {
+     "task": "E2-T22",
+     "kind": "implement",
+     "status": "done",
+     "attempts": 2,
+     "toolCalls": 10,
+     "seconds": 13.9,
+     "promptTokens": 32324,
+     "outputTokens": 697,
+     "outTokPerSec": 93.4,
+     "promptTokPerSec": 19033.5,
+     "failureCategories": [],
+     "stalls": 0,
+     "toolErrors": 0,
+     "serverErrors": null,
+     "harnessRev": "a984aec"
+    },
+    {
+     "task": "E2-T23",
+     "kind": "pre-review",
+     "status": "done",
+     "attempts": 3,
+     "toolCalls": 36,
+     "seconds": 62.9,
+     "promptTokens": 340623,
+     "outputTokens": 4553,
+     "outTokPerSec": 88.1,
+     "promptTokPerSec": 44527.1,
+     "failureCategories": [
+      [
+       "checklist"
+      ]
+     ],
+     "stalls": 0,
+     "toolErrors": 0,
+     "serverErrors": null,
+     "harnessRev": "a984aec"
+    }
+   ],
+   "implement": {
+    "E2-T15": {
+     "stub": false,
+     "exportType": true,
+     "strict": true,
+     "testsPass": true,
+     "typecheck": true,
+     "clean": true
+    },
+    "E2-T19": {
+     "stub": false,
+     "exportType": true,
+     "strict": true,
+     "testsPass": true,
+     "typecheck": true,
+     "clean": true
+    },
+    "E2-T22": {
+     "stub": false,
+     "exportType": true,
+     "strict": true,
+     "testsPass": true,
+     "typecheck": true,
+     "clean": true
+    }
+   },
+   "review": {
+    "status": "done",
+    "verdict": {
+     "C1": "ok",
+     "C2": "ok",
+     "C3": "falta",
+     "C4": "falta",
+     "C5": "falta",
+     "C6": "parcial",
+     "C7": "falta"
+    },
+    "defectsFound": [
+     "C3",
+     "C4",
+     "C5",
+     "C7"
+    ],
+    "defectsLocated": [
+     "C3",
+     "C4",
+     "C5",
+     "C7"
+    ],
+    "falsePositives": [
+     "C6"
+    ],
+    "itemsRight": 6,
+    "summary": "C1 ok - search_code 'export const' em packages/schemas/src/api -> 12 resultados; api.test.ts importa todos (linhas 4-14)\nC2 ok - search_code 'z.strictObject' em packages/schemas/src/api -> 11 resultados, todos os request bodies usam z.strictObject\nC3 falta - allocation-preview.ts:7 usa z.int().positive() em vez de positiveCentsSchema para amountCents\nC4 falta - portal-session.ts:5 usa z.string().regex(/^\\d{11}$/) em vez de cpfSchema para cpf\nC5 falta - src/index.ts falta exportar activate-loan, write-off-loan, reverse-payment (verificado read_file src/index.ts)\nC6 parcial - allocation-preview.ts usa loanId (não está no glossario que tem loanNumber)\nC7 falta - run_check 1 -> attachment-upload-url.ts:7 usa z.number().int() em vez de primitivas do common.ts"
+   }
+  },
+  {
+   "rep": "r1",
+   "profile": "qwen38",
+   "model": "hf.co/unsloth/Qwen3.8-27B-GGUF:UD-IQ2_XXS",
+   "cards": [
+    {
+     "task": "E2-T15",
+     "kind": "implement",
+     "status": "done",
+     "attempts": 2,
+     "toolCalls": 13,
+     "seconds": 42.4,
+     "promptTokens": 52088,
+     "outputTokens": 706,
+     "outTokPerSec": 52.0,
+     "promptTokPerSec": 8314.7,
+     "failureCategories": [],
+     "stalls": 0,
+     "toolErrors": 0,
+     "serverErrors": null,
+     "harnessRev": "a984aec"
+    },
+    {
+     "task": "E2-T19",
+     "kind": "implement",
+     "status": "done",
+     "attempts": 2,
+     "toolCalls": 11,
+     "seconds": 24.0,
+     "promptTokens": 42526,
+     "outputTokens": 665,
+     "outTokPerSec": 52.1,
+     "promptTokPerSec": 7083.1,
+     "failureCategories": [],
+     "stalls": 0,
+     "toolErrors": 0,
+     "serverErrors": null,
+     "harnessRev": "a984aec"
+    },
+    {
+     "task": "E2-T22",
+     "kind": "implement",
+     "status": "done",
+     "attempts": 2,
+     "toolCalls": 11,
+     "seconds": 23.1,
+     "promptTokens": 37881,
+     "outputTokens": 631,
+     "outTokPerSec": 51.9,
+     "promptTokPerSec": 6599.6,
+     "failureCategories": [],
+     "stalls": 0,
+     "toolErrors": 0,
+     "serverErrors": null,
+     "harnessRev": "a984aec"
+    },
+    {
+     "task": "E2-T23",
+     "kind": "pre-review",
+     "status": "failed",
+     "attempts": 3,
+     "toolCalls": 47,
+     "seconds": 96.2,
+     "promptTokens": 372341,
+     "outputTokens": 3436,
+     "outTokPerSec": 48.6,
+     "promptTokPerSec": 18323.0,
+     "failureCategories": [
+      [
+       "checklist"
+      ],
+      [
+       "checklist"
+      ]
+     ],
+     "stalls": 0,
+     "toolErrors": 0,
+     "serverErrors": null,
+     "harnessRev": "a984aec"
+    }
+   ],
+   "implement": {
+    "E2-T15": {
+     "stub": false,
+     "exportType": true,
+     "strict": true,
+     "testsPass": true,
+     "typecheck": true,
+     "clean": true
+    },
+    "E2-T19": {
+     "stub": false,
+     "exportType": true,
+     "strict": true,
+     "testsPass": true,
+     "typecheck": true,
+     "clean": true
+    },
+    "E2-T22": {
+     "stub": false,
+     "exportType": true,
+     "strict": true,
+     "testsPass": true,
+     "typecheck": true,
+     "clean": true
+    }
+   },
+   "review": {
+    "status": "failed",
+    "verdict": {},
+    "defectsFound": [],
+    "defectsLocated": [],
+    "falsePositives": [],
+    "itemsRight": 0,
+    "summary": "limite de tentativas; último problema:\n'ok' sem prova em: C5. Cite arquivo:linha que exista, ou a busca que prova (ex.: \"search_code 'Math\\.' -> 0 resultados\") ou o check (\"run_check 1 -> 94,4%\"). Item com 'every/todo/cada' pede a busca que cobre todos os arquivos (search_code) ou um arquivo:linha por arquivo; um exemplo só não prova."
+   }
+  },
+  {
+   "rep": "r1",
+   "profile": "gptoss",
+   "model": "gpt-oss:20b",
+   "cards": [
+    {
+     "task": "E2-T15",
+     "kind": "implement",
+     "status": "done",
+     "attempts": 2,
+     "toolCalls": 17,
+     "seconds": 53.3,
+     "promptTokens": 95472,
+     "outputTokens": 817,
+     "outTokPerSec": 35.7,
+     "promptTokPerSec": 12230.0,
+     "failureCategories": [],
+     "stalls": 0,
+     "toolErrors": 1,
+     "serverErrors": 0,
+     "harnessRev": "5286a25"
+    },
+    {
+     "task": "E2-T19",
+     "kind": "implement",
+     "status": "done",
+     "attempts": 3,
+     "toolCalls": 16,
+     "seconds": 67.0,
+     "promptTokens": 82815,
+     "outputTokens": 1742,
+     "outTokPerSec": 34.9,
+     "promptTokPerSec": 12395.2,
+     "failureCategories": [
+      [
+       "esboço"
+      ]
+     ],
+     "stalls": 0,
+     "toolErrors": 0,
+     "serverErrors": 0,
+     "harnessRev": "5286a25"
+    },
+    {
+     "task": "E2-T22",
+     "kind": "implement",
+     "status": "done",
+     "attempts": 3,
+     "toolCalls": 16,
+     "seconds": 70.7,
+     "promptTokens": 68570,
+     "outputTokens": 1914,
+     "outTokPerSec": 35.3,
+     "promptTokPerSec": 10796.7,
+     "failureCategories": [
+      [
+       "esboço"
+      ]
+     ],
+     "stalls": 0,
+     "toolErrors": 3,
+     "serverErrors": 0,
+     "harnessRev": "5286a25"
+    },
+    {
+     "task": "E2-T23",
+     "kind": "pre-review",
+     "status": "failed",
+     "attempts": 3,
+     "toolCalls": 26,
+     "seconds": 198.7,
+     "promptTokens": 267519,
+     "outputTokens": 6195,
+     "outTokPerSec": 34.6,
+     "promptTokPerSec": 20535.6,
+     "failureCategories": [
+      [
+       "checklist"
+      ],
+      [
+       "checklist"
+      ]
+     ],
+     "stalls": 0,
+     "toolErrors": 6,
+     "serverErrors": 0,
+     "harnessRev": "5286a25"
+    }
+   ],
+   "implement": {
+    "E2-T15": {
+     "stub": false,
+     "exportType": true,
+     "strict": true,
+     "testsPass": true,
+     "typecheck": true,
+     "clean": true
+    },
+    "E2-T19": {
+     "stub": false,
+     "exportType": true,
+     "strict": true,
+     "testsPass": true,
+     "typecheck": true,
+     "clean": true
+    },
+    "E2-T22": {
+     "stub": false,
+     "exportType": true,
+     "strict": true,
+     "testsPass": true,
+     "typecheck": true,
+     "clean": true
+    }
+   },
+   "review": {
+    "status": "failed",
+    "verdict": {},
+    "defectsFound": [],
+    "defectsLocated": [],
+    "falsePositives": [],
+    "itemsRight": 0,
+    "summary": "limite de tentativas; último problema:\nsummary sem linha para: C1, C2, C3, C4, C5, C6, C7. Formato: uma linha por item '<chave> ok|falta|parcial|n/a - evidência (arquivo:linha ou comando)'."
+   }
+  },
+  {
+   "rep": "r2",
+   "profile": "gemma",
+   "model": "alice",
+   "cards": [
+    {
+     "task": "E2-T15",
+     "kind": "implement",
+     "status": "failed",
+     "attempts": 2,
+     "toolCalls": 29,
+     "seconds": 185.6,
+     "promptTokens": 640836,
+     "outputTokens": 863,
+     "outTokPerSec": 122.2,
+     "promptTokPerSec": 4533.9,
+     "failureCategories": [
+      [
+       "vazio",
+       "esboço",
+       "teste"
+      ]
+     ],
+     "stalls": 4,
+     "toolErrors": 0,
+     "serverErrors": 0,
+     "harnessRev": "5286a25"
+    },
+    {
+     "task": "E2-T19",
+     "kind": "implement",
+     "status": "done",
+     "attempts": 2,
+     "toolCalls": 11,
+     "seconds": 14.2,
+     "promptTokens": 47553,
+     "outputTokens": 540,
+     "outTokPerSec": 139.7,
+     "promptTokPerSec": 9640.0,
+     "failureCategories": [],
+     "stalls": 0,
+     "toolErrors": 0,
+     "serverErrors": 0,
+     "harnessRev": "5286a25"
+    },
+    {
+     "task": "E2-T22",
+     "kind": "implement",
+     "status": "done",
+     "attempts": 3,
+     "toolCalls": 15,
+     "seconds": 21.7,
+     "promptTokens": 66999,
+     "outputTokens": 858,
+     "outTokPerSec": 151.8,
+     "promptTokPerSec": 10625.6,
+     "failureCategories": [
+      [
+       "esboço"
+      ]
+     ],
+     "stalls": 0,
+     "toolErrors": 0,
+     "serverErrors": 0,
+     "harnessRev": "5286a25"
+    },
+    {
+     "task": "E2-T23",
+     "kind": "pre-review",
+     "status": "done",
+     "attempts": 3,
+     "toolCalls": 34,
+     "seconds": 30.3,
+     "promptTokens": 324044,
+     "outputTokens": 1606,
+     "outTokPerSec": 134.5,
+     "promptTokPerSec": 22259.1,
+     "failureCategories": [
+      [
+       "checklist"
+      ]
+     ],
+     "stalls": 0,
+     "toolErrors": 0,
+     "serverErrors": 0,
+     "harnessRev": "5286a25"
+    }
+   ],
+   "implement": {
+    "E2-T15": {
+     "stub": true,
+     "exportType": false,
+     "strict": false,
+     "testsPass": false,
+     "typecheck": true,
+     "clean": false
+    },
+    "E2-T19": {
+     "stub": false,
+     "exportType": true,
+     "strict": true,
+     "testsPass": true,
+     "typecheck": true,
+     "clean": true
+    },
+    "E2-T22": {
+     "stub": false,
+     "exportType": true,
+     "strict": true,
+     "testsPass": true,
+     "typecheck": true,
+     "clean": true
+    }
+   },
+   "review": {
+    "status": "done",
+    "verdict": {
+     "C1": "ok",
+     "C2": "ok",
+     "C3": "ok",
+     "C4": "falta",
+     "C5": "ok",
+     "C6": "ok",
+     "C7": "falta"
+    },
+    "defectsFound": [
+     "C4",
+     "C7"
+    ],
+    "defectsLocated": [
+     "C7"
+    ],
+    "falsePositives": [],
+    "itemsRight": 5,
+    "summary": "C1 ok - packages/schemas/src/api/api.test.ts:41-160\nC2 ok - packages/schemas/src/api/access/admin-login.ts:4, portal-access.ts:4, portal-session.ts:4, core/attachment-upload-url.ts:4, lending/activate-loan.ts:5, lending/payoff-quote.ts:5, lending/simulate-loan.ts:11, lending/write-off-loan.ts:5, payments/allocation-preview.ts:5, payments/reverse-payment.ts:5, problem.ts:45\nC3 ok - lending/activate-loan.ts:6-7, lending/payoff-quote.ts:6, lending/simulate-loan.ts:14-15, lending/simulate-loan.ts:27-34, payments/allocation-preview.ts:7-8\nC4 falta - packages/schemas/src/api/core/attachment-upload-url.ts:7 (z.number().int())\nC5 ok - packages/schemas/src/index.ts:14-23\nC6 ok - search_code 'z\\.number\\(\\)\\.int\\(\\)' -> 1 resultado (packages/schemas/src/api/core/attachment-upload-url.ts:7)\nC7 falta - run_check 1 -> 0% (packages/schemas/src/api/core/attachment-upload-url.ts:7)"
+   }
+  },
+  {
+   "rep": "r2",
+   "profile": "qwen35",
+   "model": "qwen3.5:9b-q4_K_M",
+   "cards": [
+    {
+     "task": "E2-T15",
+     "kind": "implement",
+     "status": "done",
+     "attempts": 2,
+     "toolCalls": 10,
+     "seconds": 35.2,
+     "promptTokens": 37184,
+     "outputTokens": 669,
+     "outTokPerSec": 94.2,
+     "promptTokPerSec": 18973.4,
+     "failureCategories": [],
+     "stalls": 0,
+     "toolErrors": 0,
+     "serverErrors": 0,
+     "harnessRev": "5286a25"
+    },
+    {
+     "task": "E2-T19",
+     "kind": "implement",
+     "status": "done",
+     "attempts": 2,
+     "toolCalls": 8,
+     "seconds": 14.3,
+     "promptTokens": 27350,
+     "outputTokens": 755,
+     "outTokPerSec": 94.7,
+     "promptTokPerSec": 17348.1,
+     "failureCategories": [],
+     "stalls": 0,
+     "toolErrors": 0,
+     "serverErrors": 0,
+     "harnessRev": "5286a25"
+    },
+    {
+     "task": "E2-T22",
+     "kind": "implement",
+     "status": "done",
+     "attempts": 2,
+     "toolCalls": 10,
+     "seconds": 15.1,
+     "promptTokens": 40205,
+     "outputTokens": 801,
+     "outTokPerSec": 94.8,
+     "promptTokPerSec": 22595.7,
+     "failureCategories": [],
+     "stalls": 0,
+     "toolErrors": 0,
+     "serverErrors": 0,
+     "harnessRev": "5286a25"
+    },
+    {
+     "task": "E2-T23",
+     "kind": "pre-review",
+     "status": "done",
+     "attempts": 3,
+     "toolCalls": 50,
+     "seconds": 132.9,
+     "promptTokens": 607026,
+     "outputTokens": 7416,
+     "outTokPerSec": 84.8,
+     "promptTokPerSec": 16191.1,
+     "failureCategories": [
+      [
+       "checklist"
+      ],
+      [
+       "checklist"
+      ]
+     ],
+     "stalls": 0,
+     "toolErrors": 0,
+     "serverErrors": 0,
+     "harnessRev": "5286a25"
+    }
+   ],
+   "implement": {
+    "E2-T15": {
+     "stub": false,
+     "exportType": true,
+     "strict": true,
+     "testsPass": true,
+     "typecheck": true,
+     "clean": true
+    },
+    "E2-T19": {
+     "stub": false,
+     "exportType": true,
+     "strict": true,
+     "testsPass": true,
+     "typecheck": true,
+     "clean": true
+    },
+    "E2-T22": {
+     "stub": false,
+     "exportType": true,
+     "strict": true,
+     "testsPass": true,
+     "typecheck": true,
+     "clean": true
+    }
+   },
+   "review": {
+    "status": "done",
+    "verdict": {
+     "C1": "ok",
+     "C2": "ok",
+     "C3": "falta",
+     "C4": "falta",
+     "C5": "falta",
+     "C6": "ok",
+     "C7": "falta"
+    },
+    "defectsFound": [
+     "C3",
+     "C4",
+     "C5",
+     "C7"
+    ],
+    "defectsLocated": [
+     "C4",
+     "C5",
+     "C7"
+    ],
+    "falsePositives": [],
+    "itemsRight": 7,
+    "summary": "C1 ok - packages/schemas/src/api/api.test.ts:41-133 lista todos os schemas testados no array cases\nC2 ok - search_code 'z.strictObject' -> 12 resultados em packages/schemas/src/api, todos os schemas usam z.strictObject\nC3 falta - packages/schemas/src/api/core/attachment-upload-url.ts:7 usa z.number().int().positive() em vez de positiveCentsSchema\nC4 falta - packages/schemas/src/api/access/portal-session.ts:5 usa cpf: z.string().regex(/^\\d{11}$/) em vez de cpfSchema\nC5 falta - packages/schemas/src/index.ts não exporta reversePaymentRequest (arquivo packages/schemas/src/api/payments/reverse-payment.ts existe)\nC6 ok - RFC-004 §3 especifica os campos para cada endpoint e todos os schemas correspondem exatamente: admin-login.ts:5-6, portal-access.ts:5, attachment-upload-url.ts:5-7, activate-loan.ts:6-7, payoff-quote.ts:6, simulate-loan.ts:12-18, write-off-loan.ts:6, allocation-preview.ts:6-8, reverse-payment.ts:6\nC7 falta - run_check 1 -> packages/schemas/src/api/core/attachment-upload-url.ts:7 usa z.number().int()"
+   }
+  },
+  {
+   "rep": "r2",
+   "profile": "qwen38",
+   "model": "hf.co/unsloth/Qwen3.8-27B-GGUF:UD-IQ2_XXS",
+   "cards": [
+    {
+     "task": "E2-T15",
+     "kind": "implement",
+     "status": "done",
+     "attempts": 2,
+     "toolCalls": 14,
+     "seconds": 43.0,
+     "promptTokens": 66645,
+     "outputTokens": 708,
+     "outTokPerSec": 51.8,
+     "promptTokPerSec": 9341.7,
+     "failureCategories": [],
+     "stalls": 0,
+     "toolErrors": 0,
+     "serverErrors": 0,
+     "harnessRev": "5286a25"
+    },
+    {
+     "task": "E2-T19",
+     "kind": "implement",
+     "status": "done",
+     "attempts": 2,
+     "toolCalls": 11,
+     "seconds": 20.3,
+     "promptTokens": 32393,
+     "outputTokens": 511,
+     "outTokPerSec": 52.2,
+     "promptTokPerSec": 5956.0,
+     "failureCategories": [],
+     "stalls": 0,
+     "toolErrors": 0,
+     "serverErrors": 0,
+     "harnessRev": "5286a25"
+    },
+    {
+     "task": "E2-T22",
+     "kind": "implement",
+     "status": "done",
+     "attempts": 2,
+     "toolCalls": 11,
+     "seconds": 24.1,
+     "promptTokens": 32841,
+     "outputTokens": 695,
+     "outTokPerSec": 51.8,
+     "promptTokPerSec": 5928.4,
+     "failureCategories": [],
+     "stalls": 0,
+     "toolErrors": 0,
+     "serverErrors": 0,
+     "harnessRev": "5286a25"
+    },
+    {
+     "task": "E2-T23",
+     "kind": "pre-review",
+     "status": "done",
+     "attempts": 2,
+     "toolCalls": 32,
+     "seconds": 63.1,
+     "promptTokens": 173331,
+     "outputTokens": 2227,
+     "outTokPerSec": 49.3,
+     "promptTokPerSec": 11772.7,
+     "failureCategories": [
+      [
+       "checklist"
+      ]
+     ],
+     "stalls": 0,
+     "toolErrors": 0,
+     "serverErrors": 0,
+     "harnessRev": "5286a25"
+    }
+   ],
+   "implement": {
+    "E2-T15": {
+     "stub": false,
+     "exportType": true,
+     "strict": true,
+     "testsPass": true,
+     "typecheck": true,
+     "clean": true
+    },
+    "E2-T19": {
+     "stub": false,
+     "exportType": true,
+     "strict": true,
+     "testsPass": true,
+     "typecheck": true,
+     "clean": true
+    },
+    "E2-T22": {
+     "stub": false,
+     "exportType": true,
+     "strict": true,
+     "testsPass": true,
+     "typecheck": true,
+     "clean": true
+    }
+   },
+   "review": {
+    "status": "done",
+    "verdict": {
+     "C1": "ok",
+     "C2": "ok",
+     "C3": "falta",
+     "C4": "parcial",
+     "C5": "ok",
+     "C6": "ok",
+     "C7": "falta"
+    },
+    "defectsFound": [
+     "C3",
+     "C4",
+     "C7"
+    ],
+    "defectsLocated": [
+     "C3",
+     "C4",
+     "C7"
+    ],
+    "falsePositives": [],
+    "itemsRight": 6,
+    "summary": "C1 ok - api.test.ts:41-133 cases cover all 12 exports (simulateLoanRequest, simulateLoanResponse, problemSchema, adminLoginRequest, portalAccessRequest, portalSessionRequest, attachmentUploadUrlRequest, activateLoanRequest, payoffQuoteQuery, writeOffLoanRequest, allocationPreviewRequest, reversePaymentRequest)\nC2 ok - all 12 schemas use z.strictObject (admin-login.ts:4, portal-access.ts:4, portal-session.ts:4, attachment-upload-url.ts:4, activate-loan.ts:5, payoff-quote.ts:5, simulate-loan.ts:12/27/41, write-off-loan.ts:5, allocation-preview.ts:5, reverse-payment.ts:5, problem.ts:45)\nC3 falta - money field amountCents in allocation-preview.ts:7 uses raw z.int().positive() instead of positiveCentsSchema from common.ts:11 (RFC-004 §3 lending/payments)\nC4 parcial - portal-session.ts:5 has z.string().regex(/^\\d{11}$/) for CPF outside common.ts (should reuse cpfSchema from common.ts:22-27); no z.string() for ids/dates/money (ids use idSchema, dates use isoDateSchema)\nC5 ok - search_code 'export * from \"./api' -> 10 resultados (index.ts:14-23) covering all 10 API schema files (problem, simulate-loan, admin-login, portal-access, portal-session, activate-loan, write-off-loan, payoff-quote, allocation-preview, attachment-upload-url)\nC6 ok - field names match RFC-004 §3 and docs/glossario.md: username/password (admin-login.ts:5-6), enabled (portal-access.ts:5), cpf (portal-session.ts:5), fileName/contentType/sizeBytes (attachment-upload-url.ts:5-7), disbursedAt/accountId (activate-loan.ts:6-7), date (payoff-quote.ts:6), type/principalCents/monthlyInterestRateBps/installmentCount/frequency/firstDueDate (simulate-loan.ts:13-18), reason (write-off-loan.ts:6/reverse-payment.ts:6), loanId/amountCents/paidAt (allocation-preview.ts:6-8), code/status/title/detail (problem.ts:51/48/47/49)\nC7 falta - run_check 1 exit=1: attachment-upload-url.ts:7 uses z.number().int().positive() which the zod sheet (docs/memoria/libs/zod.md:19) says to replace with z.int().positive()"
+   }
+  },
+  {
+   "rep": "r2",
+   "profile": "gptoss",
+   "model": "gpt-oss:20b",
+   "cards": [
+    {
+     "task": "E2-T15",
+     "kind": "implement",
+     "status": "done",
+     "attempts": 3,
+     "toolCalls": 16,
+     "seconds": 104.3,
+     "promptTokens": 89886,
+     "outputTokens": 1110,
+     "outTokPerSec": 35.8,
+     "promptTokPerSec": 11892.6,
+     "failureCategories": [
+      [
+       "esboço"
+      ]
+     ],
+     "stalls": 0,
+     "toolErrors": 1,
+     "serverErrors": 0,
+     "harnessRev": "5286a25"
+    },
+    {
+     "task": "E2-T19",
+     "kind": "implement",
+     "status": "done",
+     "attempts": 3,
+     "toolCalls": 22,
+     "seconds": 84.1,
+     "promptTokens": 128755,
+     "outputTokens": 2174,
+     "outTokPerSec": 35.9,
+     "promptTokPerSec": 15176.4,
+     "failureCategories": [
+      [
+       "esboço"
+      ]
+     ],
+     "stalls": 0,
+     "toolErrors": 2,
+     "serverErrors": 1,
+     "harnessRev": "5286a25"
+    },
+    {
+     "task": "E2-T22",
+     "kind": "implement",
+     "status": "done",
+     "attempts": 3,
+     "toolCalls": 18,
+     "seconds": 64.8,
+     "promptTokens": 87973,
+     "outputTokens": 1710,
+     "outTokPerSec": 35.9,
+     "promptTokPerSec": 12850.5,
+     "failureCategories": [
+      [
+       "esboço"
+      ]
+     ],
+     "stalls": 0,
+     "toolErrors": 3,
+     "serverErrors": 0,
+     "harnessRev": "5286a25"
+    },
+    {
+     "task": "E2-T23",
+     "kind": "pre-review",
+     "status": "done",
+     "attempts": 2,
+     "toolCalls": 13,
+     "seconds": 47.5,
+     "promptTokens": 46936,
+     "outputTokens": 1451,
+     "outTokPerSec": 36.2,
+     "promptTokPerSec": 8656.3,
+     "failureCategories": [
+      [
+       "checklist"
+      ]
+     ],
+     "stalls": 0,
+     "toolErrors": 2,
+     "serverErrors": 0,
+     "harnessRev": "5286a25"
+    }
+   ],
+   "implement": {
+    "E2-T15": {
+     "stub": false,
+     "exportType": true,
+     "strict": true,
+     "testsPass": true,
+     "typecheck": true,
+     "clean": true
+    },
+    "E2-T19": {
+     "stub": false,
+     "exportType": true,
+     "strict": true,
+     "testsPass": true,
+     "typecheck": true,
+     "clean": true
+    },
+    "E2-T22": {
+     "stub": false,
+     "exportType": true,
+     "strict": true,
+     "testsPass": true,
+     "typecheck": true,
+     "clean": true
+    }
+   },
+   "review": {
+    "status": "done",
+    "verdict": {
+     "C1": "n/a",
+     "C2": "parcial",
+     "C3": "ok",
+     "C4": "ok",
+     "C5": "ok",
+     "C6": "parcial",
+     "C7": "n/a"
+    },
+    "defectsFound": [],
+    "defectsLocated": [],
+    "falsePositives": [
+     "C2",
+     "C6"
+    ],
+    "itemsRight": 1,
+    "summary": "C1 n/a - fora do repositório\nC2 parcial - usa z.number().int() em attachment-upload-url.ts (search_code 'z\\.number\\(\\.int\\(\\)'\nC3 ok - uso de centsSchema/isoDateSchema demonstrado em activate-loan.ts:5\nC4 ok - regex somente em common.ts (search_code 'new RegExp' -> 0 resultados)\nC5 ok - exportação em src/index.ts (search_code 'export {.*} from' -> 1 ocorrência em src/index.ts:10)\nC6 parcial - alguns nomes de campo não correspondem ao RFC-004 (ex.: fileName vs file_name em RFC; evidência em attachment-upload-url.ts:4)\nC7 n/a - run_check 1 não analisado"
+   }
+  },
+  {
+   "rep": "r3",
+   "profile": "gemma",
+   "model": "alice",
+   "cards": [
+    {
+     "task": "E2-T15",
+     "kind": "implement",
+     "status": "done",
+     "attempts": 4,
+     "toolCalls": 27,
+     "seconds": 151.8,
+     "promptTokens": 574954,
+     "outputTokens": 887,
+     "outTokPerSec": 126.5,
+     "promptTokPerSec": 6181.8,
+     "failureCategories": [
+      [
+       "vazio",
+       "esboço",
+       "teste"
+      ]
+     ],
+     "stalls": 0,
+     "toolErrors": 0,
+     "serverErrors": 0,
+     "harnessRev": "5286a25"
+    },
+    {
+     "task": "E2-T19",
+     "kind": "implement",
+     "status": "done",
+     "attempts": 3,
+     "toolCalls": 14,
+     "seconds": 22.3,
+     "promptTokens": 66497,
+     "outputTokens": 900,
+     "outTokPerSec": 142.7,
+     "promptTokPerSec": 10322.0,
+     "failureCategories": [
+      [
+       "esboço"
+      ]
+     ],
+     "stalls": 0,
+     "toolErrors": 0,
+     "serverErrors": 0,
+     "harnessRev": "5286a25"
+    },
+    {
+     "task": "E2-T22",
+     "kind": "implement",
+     "status": "done",
+     "attempts": 3,
+     "toolCalls": 16,
+     "seconds": 23.3,
+     "promptTokens": 73693,
+     "outputTokens": 1041,
+     "outTokPerSec": 146.4,
+     "promptTokPerSec": 10829.1,
+     "failureCategories": [
+      [
+       "esboço"
+      ]
+     ],
+     "stalls": 0,
+     "toolErrors": 0,
+     "serverErrors": 0,
+     "harnessRev": "5286a25"
+    },
+    {
+     "task": "E2-T23",
+     "kind": "pre-review",
+     "status": "done",
+     "attempts": 1,
+     "toolCalls": 27,
+     "seconds": 29.1,
+     "promptTokens": 263670,
+     "outputTokens": 1788,
+     "outTokPerSec": 139.7,
+     "promptTokPerSec": 19939.5,
+     "failureCategories": [],
+     "stalls": 0,
+     "toolErrors": 0,
+     "serverErrors": 0,
+     "harnessRev": "5286a25"
+    }
+   ],
+   "implement": {
+    "E2-T15": {
+     "stub": false,
+     "exportType": true,
+     "strict": true,
+     "testsPass": true,
+     "typecheck": true,
+     "clean": true
+    },
+    "E2-T19": {
+     "stub": false,
+     "exportType": true,
+     "strict": true,
+     "testsPass": true,
+     "typecheck": true,
+     "clean": true
+    },
+    "E2-T22": {
+     "stub": false,
+     "exportType": true,
+     "strict": true,
+     "testsPass": true,
+     "typecheck": true,
+     "clean": true
+    }
+   },
+   "review": {
+    "status": "done",
+    "verdict": {
+     "C1": "ok",
+     "C2": "ok",
+     "C3": "ok",
+     "C4": "parcial",
+     "C5": "ok",
+     "C6": "ok",
+     "C7": "parcial"
+    },
+    "defectsFound": [
+     "C4",
+     "C7"
+    ],
+    "defectsLocated": [
+     "C4",
+     "C7"
+    ],
+    "falsePositives": [],
+    "itemsRight": 5,
+    "summary": "C1 ok - packages/schemas/src/api/api.test.ts:41-160\nC2 ok - packages/schemas/src/api/access/admin-login.ts:4, packages/schemas/src/api/access/portal-access.ts:4, packages/schemas/src/api/access/portal-session.ts:4, packages/schemas/src/api/core/attachment-upload-url.ts:4, packages/schemas/src/api/lending/activate-loan.ts:5, packages/schemas/src/api/lending/payoff-quote.ts:5, packages/schemas/src/api/lending/simulate-loan.ts:11, packages/schemas/src/api/lending/write-off-loan.ts:5, packages/schemas/src/api/payments/allocation-preview.ts:5, packages/schemas/src/api/payments/reverse-payment.ts:5, packages/schemas/src/api/problem.ts:45\nC3 ok - packages/schemas/src/api/lending/simulate-loan.ts:14, packages/schemas/src/api/lending/simulate-loan.ts:42, packages/schemas/src/api/lending/simulate-loan.ts:43, packages/schemas/src/api/lending/simulate-loan.ts:44, packages/schemas/src/api/lending/activate-loan.ts:6, packages/schemas/src/api/lending/payoff-quote.ts:6, packages/schemas/src/api/payments/allocation-preview.ts:8\nC4 parcial - packages/schemas/src/api/access/portal-session.ts:5 (regex), packages/schemas/src/api/core/attachment-upload-url.ts:7 (z.number().int())\nC5 ok - packages/schemas/src/index.ts:14-23\nC6 ok - packages/schemas/src/api/problem.ts:51 (matches RFC-004 §6)\nC7 parcial - run_check 1 -> 94,4% (packages/schemas/src/api/core/attachment-upload-url.ts:7)"
+   }
+  },
+  {
+   "rep": "r3",
+   "profile": "qwen35",
+   "model": "qwen3.5:9b-q4_K_M",
+   "cards": [
+    {
+     "task": "E2-T15",
+     "kind": "implement",
+     "status": "done",
+     "attempts": 3,
+     "toolCalls": 14,
+     "seconds": 46.8,
+     "promptTokens": 61693,
+     "outputTokens": 1284,
+     "outTokPerSec": 93.5,
+     "promptTokPerSec": 24434.0,
+     "failureCategories": [
+      [
+       "typecheck",
+       "lint"
+      ]
+     ],
+     "stalls": 0,
+     "toolErrors": 0,
+     "serverErrors": 0,
+     "harnessRev": "5286a25"
+    },
+    {
+     "task": "E2-T19",
+     "kind": "implement",
+     "status": "done",
+     "attempts": 2,
+     "toolCalls": 9,
+     "seconds": 14.3,
+     "promptTokens": 32932,
+     "outputTokens": 749,
+     "outTokPerSec": 94.2,
+     "promptTokPerSec": 19636.8,
+     "failureCategories": [],
+     "stalls": 0,
+     "toolErrors": 0,
+     "serverErrors": 0,
+     "harnessRev": "5286a25"
+    },
+    {
+     "task": "E2-T22",
+     "kind": "implement",
+     "status": "done",
+     "attempts": 3,
+     "toolCalls": 25,
+     "seconds": 66.9,
+     "promptTokens": 329281,
+     "outputTokens": 4589,
+     "outTokPerSec": 87.7,
+     "promptTokPerSec": 45494.1,
+     "failureCategories": [],
+     "stalls": 0,
+     "toolErrors": 0,
+     "serverErrors": 0,
+     "harnessRev": "5286a25"
+    },
+    {
+     "task": "E2-T23",
+     "kind": "pre-review",
+     "status": "failed",
+     "attempts": 3,
+     "toolCalls": 38,
+     "seconds": 65.2,
+     "promptTokens": 356441,
+     "outputTokens": 4619,
+     "outTokPerSec": 86.3,
+     "promptTokPerSec": 44337.2,
+     "failureCategories": [
+      [
+       "checklist"
+      ]
+     ],
+     "stalls": 0,
+     "toolErrors": 0,
+     "serverErrors": 0,
+     "harnessRev": "5286a25"
+    }
+   ],
+   "implement": {
+    "E2-T15": {
+     "stub": false,
+     "exportType": true,
+     "strict": true,
+     "testsPass": true,
+     "typecheck": true,
+     "clean": true
+    },
+    "E2-T19": {
+     "stub": false,
+     "exportType": true,
+     "strict": true,
+     "testsPass": true,
+     "typecheck": true,
+     "clean": true
+    },
+    "E2-T22": {
+     "stub": false,
+     "exportType": true,
+     "strict": true,
+     "testsPass": true,
+     "typecheck": true,
+     "clean": true
+    }
+   },
+   "review": {
+    "status": "failed",
+    "verdict": {},
+    "defectsFound": [],
+    "defectsLocated": [],
+    "falsePositives": [],
+    "itemsRight": 0,
+    "summary": "limite de tentativas; último problema:\n'ok' sem prova em: C5. Cite arquivo:linha que exista, ou a busca que prova (ex.: \"search_code 'Math\\.' -> 0 resultados\") ou o check (\"run_check 1 -> 94,4%\"). Item com 'every/todo/cada' pede a busca que cobre todos os arquivos (search_code) ou um arquivo:linha por arquivo; um exemplo só não prova."
+   }
+  },
+  {
+   "rep": "r3",
+   "profile": "qwen38",
+   "model": "hf.co/unsloth/Qwen3.8-27B-GGUF:UD-IQ2_XXS",
+   "cards": [
+    {
+     "task": "E2-T15",
+     "kind": "implement",
+     "status": "done",
+     "attempts": 2,
+     "toolCalls": 11,
+     "seconds": 37.0,
+     "promptTokens": 32068,
+     "outputTokens": 558,
+     "outTokPerSec": 52.1,
+     "promptTokPerSec": 6237.0,
+     "failureCategories": [],
+     "stalls": 0,
+     "toolErrors": 0,
+     "serverErrors": 0,
+     "harnessRev": "5286a25"
+    },
+    {
+     "task": "E2-T19",
+     "kind": "implement",
+     "status": "done",
+     "attempts": 2,
+     "toolCalls": 11,
+     "seconds": 20.9,
+     "promptTokens": 37072,
+     "outputTokens": 540,
+     "outTokPerSec": 52.0,
+     "promptTokPerSec": 6813.1,
+     "failureCategories": [],
+     "stalls": 0,
+     "toolErrors": 0,
+     "serverErrors": 0,
+     "harnessRev": "5286a25"
+    },
+    {
+     "task": "E2-T22",
+     "kind": "implement",
+     "status": "done",
+     "attempts": 2,
+     "toolCalls": 11,
+     "seconds": 22.4,
+     "promptTokens": 32738,
+     "outputTokens": 613,
+     "outTokPerSec": 51.9,
+     "promptTokPerSec": 5902.0,
+     "failureCategories": [],
+     "stalls": 0,
+     "toolErrors": 0,
+     "serverErrors": 0,
+     "harnessRev": "5286a25"
+    },
+    {
+     "task": "E2-T23",
+     "kind": "pre-review",
+     "status": "failed",
+     "attempts": 3,
+     "toolCalls": 33,
+     "seconds": 68.1,
+     "promptTokens": 149327,
+     "outputTokens": 2455,
+     "outTokPerSec": 49.1,
+     "promptTokPerSec": 9892.3,
+     "failureCategories": [
+      [
+       "checklist"
+      ]
+     ],
+     "stalls": 0,
+     "toolErrors": 0,
+     "serverErrors": 0,
+     "harnessRev": "5286a25"
+    }
+   ],
+   "implement": {
+    "E2-T15": {
+     "stub": false,
+     "exportType": true,
+     "strict": true,
+     "testsPass": true,
+     "typecheck": true,
+     "clean": true
+    },
+    "E2-T19": {
+     "stub": false,
+     "exportType": true,
+     "strict": true,
+     "testsPass": true,
+     "typecheck": true,
+     "clean": true
+    },
+    "E2-T22": {
+     "stub": false,
+     "exportType": true,
+     "strict": true,
+     "testsPass": true,
+     "typecheck": true,
+     "clean": true
+    }
+   },
+   "review": {
+    "status": "failed",
+    "verdict": {},
+    "defectsFound": [],
+    "defectsLocated": [],
+    "falsePositives": [],
+    "itemsRight": 0,
+    "summary": "limite de tentativas; último problema:\n'ok' sem prova em: C5. Cite arquivo:linha que exista, ou a busca que prova (ex.: \"search_code 'Math\\.' -> 0 resultados\") ou o check (\"run_check 1 -> 94,4%\"). Item com 'every/todo/cada' pede a busca que cobre todos os arquivos (search_code) ou um arquivo:linha por arquivo; um exemplo só não prova."
+   }
+  },
+  {
+   "rep": "r3",
+   "profile": "gptoss",
+   "model": "gpt-oss:20b",
+   "cards": [
+    {
+     "task": "E2-T15",
+     "kind": "implement",
+     "status": "done",
+     "attempts": 2,
+     "toolCalls": 18,
+     "seconds": 94.5,
+     "promptTokens": 110202,
+     "outputTokens": 884,
+     "outTokPerSec": 34.9,
+     "promptTokPerSec": 13320.2,
+     "failureCategories": [],
+     "stalls": 0,
+     "toolErrors": 0,
+     "serverErrors": 1,
+     "harnessRev": "5286a25"
+    },
+    {
+     "task": "E2-T19",
+     "kind": "implement",
+     "status": "done",
+     "attempts": 3,
+     "toolCalls": 16,
+     "seconds": 50.8,
+     "promptTokens": 78530,
+     "outputTokens": 1178,
+     "outTokPerSec": 34.7,
+     "promptTokPerSec": 11875.1,
+     "failureCategories": [
+      [
+       "esboço"
+      ]
+     ],
+     "stalls": 0,
+     "toolErrors": 0,
+     "serverErrors": 0,
+     "harnessRev": "5286a25"
+    },
+    {
+     "task": "E2-T22",
+     "kind": "implement",
+     "status": "done",
+     "attempts": 3,
+     "toolCalls": 15,
+     "seconds": 40.7,
+     "promptTokens": 52097,
+     "outputTokens": 885,
+     "outTokPerSec": 35.3,
+     "promptTokPerSec": 9146.9,
+     "failureCategories": [
+      [
+       "esboço"
+      ]
+     ],
+     "stalls": 0,
+     "toolErrors": 0,
+     "serverErrors": 0,
+     "harnessRev": "5286a25"
+    },
+    {
+     "task": "E2-T23",
+     "kind": "pre-review",
+     "status": "failed",
+     "attempts": 3,
+     "toolCalls": 10,
+     "seconds": 60.8,
+     "promptTokens": 53455,
+     "outputTokens": 1852,
+     "outTokPerSec": 35.2,
+     "promptTokPerSec": 8838.1,
+     "failureCategories": [
+      [
+       "checklist"
+      ],
+      [
+       "checklist"
+      ]
+     ],
+     "stalls": 0,
+     "toolErrors": 1,
+     "serverErrors": 0,
+     "harnessRev": "5286a25"
+    }
+   ],
+   "implement": {
+    "E2-T15": {
+     "stub": false,
+     "exportType": true,
+     "strict": true,
+     "testsPass": true,
+     "typecheck": true,
+     "clean": true
+    },
+    "E2-T19": {
+     "stub": false,
+     "exportType": true,
+     "strict": true,
+     "testsPass": true,
+     "typecheck": true,
+     "clean": true
+    },
+    "E2-T22": {
+     "stub": false,
+     "exportType": true,
+     "strict": true,
+     "testsPass": true,
+     "typecheck": true,
+     "clean": true
+    }
+   },
+   "review": {
+    "status": "failed",
+    "verdict": {},
+    "defectsFound": [],
+    "defectsLocated": [],
+    "falsePositives": [],
+    "itemsRight": 0,
+    "summary": "limite de tentativas; último problema:\n'ok' sem prova em: C2, C5. Cite arquivo:linha que exista, ou a busca que prova (ex.: \"search_code 'Math\\.' -> 0 resultados\") ou o check (\"run_check 1 -> 94,4%\"). Item com 'every/todo/cada' pede a busca que cobre todos os arquivos (search_code) ou um arquivo:linha por arquivo; um exemplo só não prova."
+   }
+  }
+ ]
+}

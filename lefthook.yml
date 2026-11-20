@@ -1,0 +1,24 @@
+# Hooks locais (docs/travas.md §8): pre-commit = format + lint + gitleaks; pre-push = typecheck + testes.
+pre-commit:
+  parallel: true
+  commands:
+    format:
+      glob: "*.{ts,tsx,mts,mjs,cjs,json}"
+      exclude: ["pnpm-lock.yaml", "docs/**", "**/migrations/**/meta/**"]
+      run: pnpm exec prettier --check {staged_files}
+    lint:
+      glob: "*.{ts,tsx,mts}"
+      run: pnpm exec eslint --no-warn-ignored {staged_files}
+    test-quality:
+      glob: "*.test.{ts,tsx,mts}"
+      run: node scripts/check-test-quality.mjs {staged_files}
+    gitleaks:
+      run: gitleaks git --pre-commit --staged --no-banner
+commit-msg:
+  commands:
+    commitlint:
+      run: pnpm exec commitlint --edit {1}
+pre-push:
+  commands:
+    verify:
+      run: pnpm verify

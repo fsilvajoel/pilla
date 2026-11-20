@@ -1,0 +1,16 @@
+{
+ "task": "H-03",
+ "status": "done",
+ "files": [
+  "edits.py"
+ ],
+ "diffStat": "",
+ "attempts": 1,
+ "toolCalls": 10,
+ "aliceTokens": {
+  "prompt": 29449,
+  "output": 1585
+ },
+ "message": "Implemented `apply_edit` in `edits.py` with exact-string replacement, handling `replace_all`, and raising `ValueError` with Portuguese messages as required by tests.",
+ "runDir": "<harness>/runs/H-03/20261114-185758"
+}

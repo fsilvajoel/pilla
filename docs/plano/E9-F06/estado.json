@@ -1,0 +1,81 @@
+{
+  "feature": "E9-F06",
+  "stages": {
+    "plan": {
+      "status": "done"
+    },
+    "refinement": {
+      "status": "done",
+      "verdict": "ajustado",
+      "round": 2
+    },
+    "tests": {
+      "status": "skipped",
+      "note": "fora do fluxo de feature (ADR-0017): só revisão visual; E9-T12 removido em 19/11/2026 (sem teste de front nesta fase)"
+    },
+    "testReview": {
+      "status": "skipped",
+      "note": "fora do fluxo de feature (ADR-0017): só revisão visual; E9-T12 removido em 19/11/2026 (sem teste de front nesta fase)"
+    },
+    "implement": {
+      "status": "skipped",
+      "note": "fora do fluxo de feature (ADR-0017): só revisão visual"
+    },
+    "review": {
+      "status": "skipped",
+      "note": "fora do fluxo de feature (ADR-0017): só revisão visual"
+    }
+  },
+  "sources": [],
+  "domainSources": [],
+  "tests": [],
+  "e2e": [],
+  "exemptSources": [
+    {
+      "file": "apps/web/components/shared/page-header.tsx",
+      "class": "dispensa-estilo",
+      "reason": "só layout e composição visual de componentes do shadcn, sem regra própria; fica fora do fluxo de feature (ADR-0017), com revisão visual no navegador; a lógica que a revisão isolar vira arquivo tdd depois"
+    },
+    {
+      "file": "apps/web/components/shared/empty-state.tsx",
+      "class": "dispensa-estilo",
+      "reason": "só layout e composição visual de componentes do shadcn, sem regra própria; fica fora do fluxo de feature (ADR-0017), com revisão visual no navegador; a lógica que a revisão isolar vira arquivo tdd depois"
+    },
+    {
+      "file": "apps/web/components/shared/form-field.tsx",
+      "class": "dispensa-estilo",
+      "reason": "só layout e composição visual de componentes do shadcn, sem regra própria; fica fora do fluxo de feature (ADR-0017), com revisão visual no navegador; a lógica que a revisão isolar vira arquivo tdd depois"
+    },
+    {
+      "file": "apps/web/components/shared/data-table.tsx",
+      "class": "dispensa-estilo",
+      "reason": "só layout e composição visual de componentes do shadcn, sem regra própria; fica fora do fluxo de feature (ADR-0017), com revisão visual no navegador; a lógica que a revisão isolar vira arquivo tdd depois"
+    },
+    {
+      "file": "apps/web/components/shared/confirm-dialog.tsx",
+      "class": "dispensa-estilo",
+      "reason": "só layout e composição visual de componentes do shadcn, sem regra própria; fica fora do fluxo de feature (ADR-0017), com revisão visual no navegador; a lógica que a revisão isolar vira arquivo tdd depois"
+    },
+    {
+      "file": "apps/web/components/shared/status-badge.tsx",
+      "class": "dispensa-estilo",
+      "reason": "só layout e composição visual de componentes do shadcn, sem regra própria; fica fora do fluxo de feature (ADR-0017), com revisão visual no navegador; a lógica que a revisão isolar vira arquivo tdd depois"
+    },
+    {
+      "file": "apps/web/components/shared/admin-nav.tsx",
+      "class": "dispensa-estilo",
+      "reason": "só layout e composição visual de componentes do shadcn, sem regra própria; fica fora do fluxo de feature (ADR-0017), com revisão visual no navegador; a lógica que a revisão isolar vira arquivo tdd depois"
+    },
+    {
+      "file": "apps/web/components/shared/admin-shell.tsx",
+      "class": "dispensa-estilo",
+      "reason": "só layout e composição visual de componentes do shadcn, sem regra própria; fica fora do fluxo de feature (ADR-0017), com revisão visual no navegador; a lógica que a revisão isolar vira arquivo tdd depois"
+    },
+    {
+      "file": "apps/web/app/(admin)/layout.tsx",
+      "class": "dispensa-estilo",
+      "reason": "só devolve <AdminShell>{children}</AdminShell>, sem condição nem estado; revisão visual no navegador"
+    }
+  ],
+  "outOfFlow": true
+}

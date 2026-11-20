@@ -4,7 +4,29 @@
 node_modules/
 __pycache__/
 .venv/
+.pytest_cache/
 dist/
 build/
 *.log
 .DS_Store
+coverage/
+.turbo/
+reports/
+.stryker-tmp/
+test-results/
+playwright-report/
+*.tsbuildinfo
+.vitest/
+.next/
+.next-real/
+.next-people/
+.next-e2e/
+next-env.d.ts
+
+apps/web/AGENTS.md
+
+# worktrees temporários dos agentes do Claude Code
+.claude/worktrees/
+
+# status gerado pelo harness Ada (não versionar)
+status.json

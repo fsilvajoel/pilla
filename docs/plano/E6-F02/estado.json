@@ -1,0 +1,168 @@
+{
+  "feature": "E6-F02",
+  "stages": {
+    "plan": {
+      "status": "done"
+    },
+    "tests": {
+      "status": "done"
+    },
+    "testReview": {
+      "status": "done",
+      "verdict": "aprovado"
+    },
+    "implement": {
+      "status": "done"
+    },
+    "review": {
+      "status": "done",
+      "verdict": "aprovado"
+    }
+  },
+  "sources": [
+    "apps/web/components/loan-simulation.tsx"
+  ],
+  "domainSources": [],
+  "criteria": [
+    {
+      "id": "A1",
+      "camadas": [
+        "unit"
+      ]
+    },
+    {
+      "id": "A2",
+      "camadas": [
+        "unit"
+      ]
+    },
+    {
+      "id": "A3",
+      "camadas": [
+        "unit"
+      ]
+    },
+    {
+      "id": "A4",
+      "camadas": [
+        "e2e"
+      ]
+    }
+  ],
+  "tests": [
+    "apps/web/components/loan-simulation.test.tsx"
+  ],
+  "e2e": [
+    "apps/web/e2e/loan-simulation.e2e.ts"
+  ],
+  "scenarios": [
+    {
+      "id": "C1",
+      "criterio": "A1",
+      "camada": "unit",
+      "arquivo": "apps/web/components/loan-simulation.test.tsx",
+      "teste": "C1 (A1): shows the five labelled fields, the four frequency options and the Simular button"
+    },
+    {
+      "id": "C2",
+      "criterio": "A2",
+      "camada": "unit",
+      "arquivo": "apps/web/components/loan-simulation.test.tsx",
+      "teste": "C2 (A2): RFC-004 §5 example shows R$ 6.900,00, R$ 1.900,00 and 6 × R$ 1.150,00"
+    },
+    {
+      "id": "C3",
+      "criterio": "A2",
+      "camada": "unit",
+      "arquivo": "apps/web/components/loan-simulation.test.tsx",
+      "teste": "C3 (A2): RFC-004 §5 example shows 6 rows and the first is 1, 14/12/2026, 833,33, 316,67, 1.150,00"
+    },
+    {
+      "id": "C4",
+      "criterio": "A2",
+      "camada": "unit",
+      "arquivo": "apps/web/components/loan-simulation.test.tsx",
+      "teste": "C4 (A2): CA-11 shows 4 × R$ 275,00 and R$ 1.100,00"
+    },
+    {
+      "id": "C5",
+      "criterio": "A3",
+      "camada": "unit",
+      "arquivo": "apps/web/components/loan-simulation.test.tsx",
+      "teste": "C5 (A3): amount 5000 without comma shows the alert and no result"
+    },
+    {
+      "id": "C6",
+      "criterio": "A3",
+      "camada": "unit",
+      "arquivo": "apps/web/components/loan-simulation.test.tsx",
+      "teste": "C6 (A3): rate 6 without comma shows the alert and no result"
+    },
+    {
+      "id": "C7",
+      "criterio": "A3",
+      "camada": "unit",
+      "arquivo": "apps/web/components/loan-simulation.test.tsx",
+      "teste": "C7 (A3): installment count 0 shows the alert and no result"
+    },
+    {
+      "id": "C8",
+      "criterio": "A3",
+      "camada": "unit",
+      "arquivo": "apps/web/components/loan-simulation.test.tsx",
+      "teste": "C8 (A3): first due date equal to disbursement date shows the alert"
+    },
+    {
+      "id": "C9",
+      "criterio": "A3",
+      "camada": "unit",
+      "arquivo": "apps/web/components/loan-simulation.test.tsx",
+      "teste": "C9 (A3): empty first due date shows the alert"
+    },
+    {
+      "id": "C10",
+      "criterio": "A4",
+      "camada": "e2e",
+      "arquivo": "apps/web/e2e/loan-simulation.e2e.ts",
+      "teste": "C10 (A4): /emprestimos/simular shows the RFC-004 §5 summary"
+    },
+    {
+      "id": "C11",
+      "criterio": "A4",
+      "camada": "e2e",
+      "arquivo": "apps/web/e2e/loan-simulation.e2e.ts",
+      "teste": "C11 (A4): /emprestimos/simular shows the alert for a past first due date"
+    }
+  ],
+  "gates": {
+    "expect-red": {
+      "status": "PASS",
+      "at": "2026-11-19T02:13:53.574Z",
+      "detail": "9 teste(s), todos falhando"
+    },
+    "tests-reviewed": {
+      "status": "PASS",
+      "at": "2026-11-19T14:03:54.764Z",
+      "detail": "2 teste(s) com sha assinado"
+    },
+    "coverage": {
+      "status": "PASS",
+      "at": "2026-11-19T14:03:57.201Z",
+      "detail": "100% nos arquivos da feature em apps/web (components/loan-simulation.tsx)"
+    },
+    "mutation": {
+      "status": "PASS",
+      "at": "2026-11-19T03:10:29.322Z",
+      "detail": "nada a medir: `domainSources` vazio e nenhum critério mut"
+    },
+    "e2e": {
+      "status": "PASS",
+      "at": "2026-11-19T14:04:03.111Z",
+      "detail": "2 teste(s) e2e passaram"
+    }
+  },
+  "testShas": {
+    "apps/web/components/loan-simulation.test.tsx": "82cb8569dd6b9dc4ef5176ec6eaa6a464d432c6a",
+    "apps/web/e2e/loan-simulation.e2e.ts": "ab9972d0b25b66f8cfc1a7e79a579ab9dd3dbbc2"
+  }
+}

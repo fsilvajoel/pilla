@@ -1,0 +1,17 @@
+{
+ "task": "H-02",
+ "status": "failed",
+ "files": [
+  "policy.default.yaml",
+  "policy.py"
+ ],
+ "diffStat": "",
+ "attempts": 4,
+ "toolCalls": 35,
+ "aliceTokens": {
+  "prompt": 968597,
+  "output": 43434
+ },
+ "message": "limite de tentativas; último problema:\npolicy.default.yaml: suppression: pattern: \"eslint-disable\"\npolicy.default.yaml: any: pattern: \"(:\\\\s*any\\\\b|<any>|\\\\bas\\\\s+any\\\\b)\"\npolicy.default.yaml: TODO without id: - label: \"TODO without id\"\npolicy.default.yaml: TODO without id: pattern: \"\\\\b(TODO|FIXME)\\\\b(?![\\\\s*\\\\(?[A-Z]+-[A-Z]?\\\\d+)\"",
+ "runDir": "<harness>/runs/H-02/20261114-185004"
+}

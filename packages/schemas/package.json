@@ -1,0 +1,23 @@
+{
+  "name": "@pilla/schemas",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "description": "Esquemas Zod de API e de eventos, versionados (RFC-004)",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "lint": "eslint .",
+    "test": "vitest run --coverage"
+  },
+  "dependencies": {
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@pilla/config": "workspace:*",
+    "@vitest/coverage-v8": "^5.1.0",
+    "vitest": "^5.1.0"
+  }
+}

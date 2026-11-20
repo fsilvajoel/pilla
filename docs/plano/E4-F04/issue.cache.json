@@ -1,0 +1,18 @@
+{
+  "04fac0805f": "detecte objetos simples verificando o protótipo em redact",
+  "46c774796d": "nunca editar apps/api/src/log/redact.ts nem apps/api/src/log/redact.test.ts",
+  "47fec3afe8": "o valor esperado é sempre REDACTED ou o mesmo valor de entrada, nunca um valor computado no teste",
+  "5a01620221": "um objeto simples é aquele cujo protótipo é Object.prototype ou null, independentemente das chaves que ele possui",
+  "5a52c77be6": "uma replace_function de redact, em seguida run_check 0, 1 e 2",
+  "795cc7457d": "import { REDACTED, redact } from \"./redact\";",
+  "7bdd49306c": "todos os testes falham agora contra a redação em HEAD e passariam com uma implementação correta (run_check 0)",
+  "8b812e6cb2": "um write_file do arquivo de teste inteiro, em seguida run_check 0, 1, 2 e 3",
+  "9c8969fece": "o mesmo objeto aninhado dentro de outro objeto e dentro de um array também é redacionado",
+  "ba2fed71e0": "todos os testes em apps/api/src/log/redact.test.ts e apps/api/src/log/redact-prototype.test.ts passam com 100% de cobertura de linha e ramo de redact.ts (run_check 0)",
+  "c506e5caeb": "a verificação de objeto simples em redact lê uma propriedade que pode ser substituída por uma chave própria, e a regra a seguir é a linha A1 de docs/plano/E4-F04/plano.md",
+  "c99ba060e1": "compare o resultado inteiro com toEqual contra um literal de objeto simples, para que não seja necessária nenhuma conversão de tipo nem acesso a propriedades",
+  "d39367ca1d": "um literal de objeto simples com uma chave própria chamada constructor (cenário C9 de docs/plano/E4-F04/plano.md) tem sua chave cpf substituída por REDACTED e mantém as chaves constructor e name",
+  "d46e8d4aa1": "mantenha REDACTED, a regra da chave sensível e os comentários /** */ inalterados",
+  "eb9d2060c9": "Redação de objetos com uma chave constructor própria",
+  "fe9e9bf482": "Escrever o teste para um objeto simples com uma chave constructor"
+}

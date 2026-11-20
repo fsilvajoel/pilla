@@ -1,0 +1,239 @@
+delivery: E3
+title: Database tables in apps/api (RFC-005), one table per card, from the core model module
+cards:
+  - id: E3-T00
+    title: Model module for the database (apps/api, Drizzle, PGlite tests, core.outbox)
+    kind: implement
+    assignee: claude
+    rules: []
+    refs: [RFC-005 §1, RFC-005 §2, RFC-005 §8, RFC-003 §4.1]
+    dependsOn: []
+    allowedPaths: [apps/api/**]
+    checks:
+      - pnpm --filter @pilla/api test
+    done:
+      - core.outbox and core.processed_events migrated and tested; conventions.test.ts checks RFC-005 §1 on the migrated database
+  - id: E3-T01
+    title: Add the core.audit_log table (RFC-005 §2)
+    kind: implement
+    assignee: alice
+    rules: []
+    refs: [RFC-005 §2, RFC-005 §1]
+    dependsOn: [E3-T00]
+    allowedPaths:
+      - apps/api/src/core/infra/schema.ts
+    generatedPaths:
+      - apps/api/migrations/core/*
+    protectedTests:
+      - apps/api/src/core/infra/audit-log.test.ts
+      - apps/api/src/db/conventions.test.ts
+    checks:
+      - pnpm --filter @pilla/api typecheck
+      - pnpm --filter @pilla/api db:regen audit_log
+      - pnpm --filter @pilla/api exec vitest run src/core/infra/audit-log.test.ts src/db/conventions.test.ts
+      - pnpm --filter @pilla/api lint
+    done:
+      - run_check 1 writes the migration (0001_audit_log.sql and meta/); run it again after every change to schema.ts; never write the migration by hand
+      - all tests in audit-log.test.ts and apps/api/src/db/conventions.test.ts pass (run_check 2)
+      - "columns: id uuid PK; actor_type text; actor_id uuid (sem .notNull()); action text; entity_type text; entity_id uuid; before/after jsonb e ip inet (sem .notNull()); at timestamptz"
+      - every column without "null" above is notNull()
+      - actor_type is text with a CHECK constraint, not a PostgreSQL enum (RFC-005 §1)
+      - index on (entity_type, entity_id, at)
+      - add the table after processedEvents in schema.ts; keep outbox and processedEvents unchanged
+      - export type AuditLogRow = typeof auditLog.$inferSelect;
+    hints:
+      - "import check and inet from drizzle-orm/pg-core; CHECK: check(\"audit_log_actor_type_check\", sql`${t.actorType} IN ('ADMIN', 'CLIENT', 'SYSTEM')`)"
+      - "the instant() helper of schema.ts gives timestamptz; the index goes in the table's second argument, like outbox_pending_idx"
+      - one edit_file call appending the table at the end of schema.ts, then run_check 0 (typecheck), 1 (migration) and 2 (tests)
+    budget:
+      attempts: 4
+      toolCalls: 25
+      minutes: 8
+    readFirst:
+      - apps/api/src/core/infra/schema.ts
+      - apps/api/src/core/infra/audit-log.test.ts
+    sizeNote: uma tabela por cartão; o modelo é outbox em core/infra/schema.ts
+  - id: E3-T02
+    title: core.attachments table (Drizzle schema + generated migration)
+    assignee: alice
+    kind: implement
+    rules: []
+    refs: [RFC-005 §2, RFC-005 §1]
+    dependsOn: [E3-T01]
+    allowedPaths:
+      - apps/api/src/core/infra/schema.ts
+    generatedPaths:
+      - apps/api/migrations/core/*
+    protectedTests:
+      - apps/api/src/core/infra/attachments.test.ts
+      - apps/api/src/db/conventions.test.ts
+    checks:
+      - pnpm --filter @pilla/api typecheck
+      - pnpm --filter @pilla/api db:regen attachments
+      - pnpm --filter @pilla/api exec vitest run src/core/infra/attachments.test.ts src/db/conventions.test.ts
+      - pnpm --filter @pilla/api lint
+    done:
+      - run_check 1 writes the migration (0002_attachments.sql and meta/); run it again after every change to schema.ts; never write the migration by hand
+      - all tests in attachments.test.ts and apps/api/src/db/conventions.test.ts pass (run_check 2)
+      - "every column has .notNull(); id: uuid(\"id\").primaryKey(); kind: text(\"kind\"); fileName: text(\"file_name\")"
+      - "contentType: text(\"content_type\"); sizeBytes: bigint(\"size_bytes\", { mode: \"number\" }); sha256: char(\"sha256\", { length: 64 })"
+      - "storageKey: text(\"storage_key\").notNull().unique(); uploadedBy: uuid(\"uploaded_by\"); uploadedAt: instant(\"uploaded_at\")"
+      - "check attachments_kind_check: kind IN ('RECEIPT', 'SIGNED_CONTRACT', 'IMPORT_FILE', 'OTHER')"
+      - "check attachments_size_bytes_check: size_bytes >= 0; check attachments_sha256_check: sha256 ~ '^[0-9a-f]{64}$'"
+      - add the table after auditLog in schema.ts; keep the other tables unchanged
+      - export type AttachmentRow = typeof attachments.$inferSelect;
+    hints:
+      - "import bigint and char from drizzle-orm/pg-core (check is already imported)"
+      - "each check is a call, like the one in auditLog: check(\"attachments_size_bytes_check\", sql`${t.sizeBytes} >= 0`)"
+      - one edit_file call appending the table at the end of schema.ts, then run_check 0 (typecheck), 1 (migration) and 2 (tests)
+    budget:
+      attempts: 4
+      toolCalls: 25
+      minutes: 8
+    readFirst:
+      - apps/api/src/core/infra/schema.ts
+      - apps/api/src/core/infra/attachments.test.ts
+    sizeNote: uma tabela por cartão; o modelo é auditLog em core/infra/schema.ts
+  - id: E3-T04
+    title: people.persons table (Drizzle schema + generated migration)
+    assignee: alice
+    kind: implement
+    rules: [RN-P01, RN-P02]
+    refs: [RFC-005 §3, RFC-005 §1]
+    dependsOn: [E3-T02]
+    allowedPaths:
+      - apps/api/src/people/infra/schema.ts
+    generatedPaths:
+      - apps/api/migrations/people/*
+    protectedTests:
+      - apps/api/src/people/infra/persons.test.ts
+      - apps/api/src/db/conventions.test.ts
+    checks:
+      - pnpm --filter @pilla/api typecheck
+      - pnpm --filter @pilla/api db:regen persons people
+      - pnpm --filter @pilla/api exec vitest run src/people/infra/persons.test.ts src/db/conventions.test.ts
+      - pnpm --filter @pilla/api lint
+    done:
+      - run_check 1 writes migrations/people/ (one .sql with every uncommitted table, and meta/); run it again after every change to schema.ts
+      - never write or edit a migration by hand; the .sql name may change between runs, that is expected
+      - all tests in persons.test.ts and apps/api/src/db/conventions.test.ts pass (run_check 2)
+      - import { instant } from "../../db/columns";
+      - "id: uuid(\"id\").primaryKey(); fullName: text(\"full_name\").notNull(); cpf: char(\"cpf\", { length: 11 }); phone: text(\"phone\").notNull()"
+      - "email: text(\"email\"); birthDate: date(\"birth_date\"); referredById: uuid(\"referred_by_id\"); notes: text(\"notes\")"
+      - "active: boolean(\"active\").notNull().default(true); anonymizedAt: instant(\"anonymized_at\")"
+      - "createdAt: instant(\"created_at\").notNull().defaultNow(); updatedAt: instant(\"updated_at\").notNull().defaultNow()"
+      - "version: integer(\"version\").notNull().default(1)"
+      - "foreign key persons_referred_by_id_fkey: referred_by_id references persons.id (same table)"
+      - "uniqueIndex persons_cpf_key on cpf WHERE cpf IS NOT NULL; index persons_full_name_idx on lower(full_name)"
+      - index persons_phone_idx on phone; index persons_referred_by_id_idx on referred_by_id
+      - "check persons_cpf_check: cpf ~ '^[0-9]{11}$'; check persons_phone_check: phone ~ '^[+][1-9][0-9]{7,14}$'"
+      - "check persons_referred_by_id_check: referred_by_id <> id"
+      - "cpf, email, birthDate, referredById, notes and anonymizedAt are nullable: no .notNull() on them"
+      - add the table after the people line in schema.ts; keep this line unchanged
+      - export const people = pgSchema("people");
+      - export type PersonRow = typeof persons.$inferSelect;
+    hints:
+      - "import { sql } from \"drizzle-orm\"; from drizzle-orm/pg-core: boolean, char, check, date, foreignKey, index, integer, text, uniqueIndex, uuid"
+      - "the model is attachments in apps/api/src/core/infra/schema.ts: checks and indexes go in the second argument (t) => [ ... ]"
+      - "self foreign key, in the second argument: foreignKey({ name: \"persons_referred_by_id_fkey\", columns: [t.referredById], foreignColumns: [t.id] })"
+      - "expression index: index(\"persons_full_name_idx\").on(sql`lower(${t.fullName})`)"
+      - "partial unique index: uniqueIndex(\"persons_cpf_key\").on(t.cpf).where(sql`${t.cpf} IS NOT NULL`)"
+      - schema.ts has only 4 lines; one write_file with the whole file (imports, the people line, the table), then run_check 0 (typecheck), 1 (migration) and 2 (tests)
+    budget:
+      attempts: 4
+      toolCalls: 25
+      minutes: 10
+    readFirst:
+      - apps/api/src/people/infra/schema.ts
+      - apps/api/src/people/infra/persons.test.ts
+      - apps/api/src/core/infra/schema.ts
+    sizeNote: uma tabela por cartão; o modelo é attachments em core/infra/schema.ts
+  - id: E3-T05
+    title: people.addresses table (Drizzle schema + generated migration)
+    assignee: alice
+    kind: implement
+    rules: []
+    refs: [RFC-005 §3, RFC-005 §1]
+    dependsOn: [E3-T04]
+    allowedPaths:
+      - apps/api/src/people/infra/schema.ts
+    generatedPaths:
+      - apps/api/migrations/people/*
+    protectedTests:
+      - apps/api/src/people/infra/addresses.test.ts
+      - apps/api/src/db/conventions.test.ts
+    checks:
+      - pnpm --filter @pilla/api typecheck
+      - pnpm --filter @pilla/api db:regen addresses people
+      - pnpm --filter @pilla/api exec vitest run src/people/infra/addresses.test.ts src/db/conventions.test.ts
+      - pnpm --filter @pilla/api lint
+    done:
+      - run_check 1 writes migrations/people/ (one .sql with every uncommitted table, and meta/); run it again after every change to schema.ts
+      - never write or edit a migration by hand; the .sql name may change between runs, that is expected
+      - all tests in addresses.test.ts and apps/api/src/db/conventions.test.ts pass (run_check 2)
+      - "id: uuid(\"id\").primaryKey(); personId: uuid(\"person_id\").notNull().references(() => persons.id)"
+      - "street: text(\"street\").notNull(); number: text(\"number\").notNull(); complement: text(\"complement\")"
+      - "district: text(\"district\").notNull(); city: text(\"city\").notNull(); state: char(\"state\", { length: 2 }).notNull()"
+      - "postalCode: char(\"postal_code\", { length: 8 }).notNull(); isPrimary: boolean(\"is_primary\").notNull().default(false)"
+      - "createdAt: instant(\"created_at\").notNull().defaultNow(); updatedAt: instant(\"updated_at\").notNull().defaultNow()"
+      - "version: integer(\"version\").notNull().default(1)"
+      - "uniqueIndex addresses_one_primary_idx on person_id WHERE is_primary (one primary address per person)"
+      - "check addresses_state_check: state ~ '^[A-Z]{2}$'; check addresses_postal_code_check: postal_code ~ '^[0-9]{8}$'"
+      - add the table after persons in schema.ts; keep persons unchanged
+      - export type AddressRow = typeof addresses.$inferSelect;
+    hints:
+      - "the model is persons in the same file: checks and indexes go in the second argument (t) => [ ... ]; every helper is already imported"
+      - "partial unique index: uniqueIndex(\"addresses_one_primary_idx\").on(t.personId).where(sql`${t.isPrimary}`)"
+      - one edit_file call appending the table at the end of schema.ts, then run_check 0 (typecheck), 1 (migration) and 2 (tests)
+    budget:
+      attempts: 4
+      toolCalls: 25
+      minutes: 8
+    readFirst:
+      - apps/api/src/people/infra/schema.ts
+      - apps/api/src/people/infra/addresses.test.ts
+    sizeNote: uma tabela por cartão; o modelo é persons no mesmo arquivo
+  - id: E3-T06
+    title: people.pix_keys table (Drizzle schema + generated migration)
+    assignee: alice
+    kind: implement
+    rules: []
+    refs: [RFC-005 §3, RFC-005 §1]
+    dependsOn: [E3-T05]
+    allowedPaths:
+      - apps/api/src/people/infra/schema.ts
+    generatedPaths:
+      - apps/api/migrations/people/*
+    protectedTests:
+      - apps/api/src/people/infra/pix-keys.test.ts
+      - apps/api/src/db/conventions.test.ts
+    checks:
+      - pnpm --filter @pilla/api typecheck
+      - pnpm --filter @pilla/api db:regen pix_keys people
+      - pnpm --filter @pilla/api exec vitest run src/people/infra/pix-keys.test.ts src/db/conventions.test.ts
+      - pnpm --filter @pilla/api lint
+    done:
+      - run_check 1 writes migrations/people/ (one .sql with every uncommitted table, and meta/); run it again after every change to schema.ts
+      - never write or edit a migration by hand; the .sql name may change between runs, that is expected
+      - all tests in pix-keys.test.ts and apps/api/src/db/conventions.test.ts pass (run_check 2)
+      - "id: uuid(\"id\").primaryKey(); ownerPersonId: uuid(\"owner_person_id\").notNull().references(() => persons.id)"
+      - "type: text(\"type\").notNull(); value: text(\"value\").notNull(); isPrimary: boolean(\"is_primary\").notNull().default(false)"
+      - "createdAt: instant(\"created_at\").notNull().defaultNow(); updatedAt: instant(\"updated_at\").notNull().defaultNow()"
+      - "version: integer(\"version\").notNull().default(1)"
+      - "check pix_keys_type_check: type IN ('CPF', 'CNPJ', 'EMAIL', 'PHONE', 'RANDOM')"
+      - "unique pix_keys_type_value_key on (type, value); uniqueIndex pix_keys_one_primary_idx on owner_person_id WHERE is_primary"
+      - add the table after addresses in schema.ts; keep persons and addresses unchanged
+      - export type PixKeyRow = typeof pixKeys.$inferSelect;
+    hints:
+      - "import unique from drizzle-orm/pg-core (the other helpers are already imported)"
+      - "two-column unique constraint, in the second argument: unique(\"pix_keys_type_value_key\").on(t.type, t.value)"
+      - "the one-primary index is like addresses_one_primary_idx: uniqueIndex(...).on(t.ownerPersonId).where(sql`${t.isPrimary}`)"
+      - two edit_file calls (unique in the pg-core import; the table at the end of schema.ts), then run_check 0 (typecheck), 1 (migration) and 2 (tests)
+    budget:
+      attempts: 4
+      toolCalls: 25
+      minutes: 8
+    readFirst:
+      - apps/api/src/people/infra/schema.ts
+      - apps/api/src/people/infra/pix-keys.test.ts
+    sizeNote: uma tabela por cartão; o modelo é addresses no mesmo arquivo

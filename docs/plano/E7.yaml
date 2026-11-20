@@ -1,0 +1,841 @@
+delivery: E7
+title: ADMIN screens with mock data (person, new loan, loan list and detail, payment); Bia writes the tests, Alice the code
+# Decisões do Joel de 17/11 em docs/plano/decisoes-2026-11-17.md (esquemas, rotas, textos, data de hoje em BRT).
+# Esquemas Zod, lib/labels.ts, lib/mock-data.ts e as páginas de app/(admin) saíram no commit de preparo (infra
+# sem lógica). Cada cartão abaixo tem a casca marcada '// @stub <ID>' no HEAD.
+# Revisão de 17/11: linhas de import exatas no done (lista fechada), consultas sem ambiguidade (getByRole com
+# name, um render por teste), valores literais das fixtures e readFirst com common.ts e o index do finance.
+cards:
+  # ---------------------------------------------------------------- E7-F01: cadastro de pessoa + hoje em BRT
+  - id: E7-T01
+    title: Write the tests for todayInBrt and the PersonForm component
+    kind: test-author
+    assignee: bia
+    rules: []
+    skills:
+      - escrever-teste
+      - accessibility
+    refs: [PRD-001 RF-01, PRD-001 RF-03, PRD-001 RN-P01, RFC-005 persons, docs/plano/decisoes-2026-11-17.md]
+    dependsOn: []
+    allowedPaths:
+      - apps/web/lib/today.test.ts
+      - apps/web/components/person-form.test.tsx
+    protectedTests: []
+    checks:
+      - '! pnpm --filter @pilla/web exec vitest run lib/today.test.ts'
+      - '! pnpm --filter @pilla/web exec vitest run components/person-form.test.tsx'
+      - node scripts/check-test-quality.mjs apps/web/lib/today.test.ts
+      - node scripts/check-test-quality.mjs apps/web/components/person-form.test.tsx
+      - pnpm --filter @pilla/web typecheck
+      - pnpm --filter @pilla/web lint
+    done:
+      - every test fails now against the stubs in HEAD and would pass with a correct implementation (run_check 0 and 1)
+      - 'import { describe, expect, it } from "vitest";'
+      - 'import { todayInBrt } from "./today";'
+      - 'import fc from "fast-check";'
+      - 'import { fireEvent, render, screen } from "@testing-library/react";'
+      - 'import { vi } from "vitest";'
+      - 'import { mockPeople } from "@/lib/mock-data";'
+      - 'import { PersonForm } from "./person-form";'
+      - 'today.test.ts: todayInBrt of the instants "2026-11-18T02:30:00Z" and "2026-11-17T15:00:00Z" is "2026-11-17" for both, a valid instant property equals UTC minus 3 hours, and Invalid Date throws RangeError (decisões do Joel de 17/11)'
+      - 'person-form test "shows the labelled fields": labels "Nome completo", "CPF", "Telefone", "E-mail", "Nascimento", "Indicado por", "Observações" and button "Cadastrar" (PRD-001 RF-01)'
+      - 'test "sends only the filled fields": "Maria da Silva", "52998224725" and "+5511987654321" give the status "Pessoa cadastrada." and onSubmit gets only fullName, cpf and phone (decisões do Joel de 17/11)'
+      - 'test "sends the referrer": the same fields plus "Indicado por" "01936f8e-7b2c-7cde-8f00-000000000003" add referredById with that id to the body (PRD-001 RF-03)'
+      - 'test "rejects a phone without +55": Telefone "11987654321" gives the alert "Confira os campos do cadastro." and onSubmit is not called (RFC-005 persons, decisões do Joel de 17/11)'
+      - 'test "rejects an invalid CPF": CPF "52998224726" gives the alert "Confira os campos do cadastro." and onSubmit is not called (PRD-001 RN-P01, RFC-005 persons)'
+      - 'test "rejects an invalid email": E-mail "maria@" gives the alert "Confira os campos do cadastro." and onSubmit is not called (PRD-001 RF-01, create-person.ts)'
+      - 'test "rejects an invalid birth date": Nascimento "2026-13-01" gives the alert "Confira os campos do cadastro." and onSubmit is not called (PRD-001 RF-01, common.ts isoDateSchema)'
+      - 'test "rejects an empty name": Nome completo "" gives the alert "Confira os campos do cadastro." and onSubmit is not called (PRD-001 RF-01, create-person.ts min(1))'
+      - never edit apps/web/lib/today.ts nor apps/web/components/person-form.tsx
+    hints:
+      - the import lines of the done are the only imports, each name in them is used, and nothing else is imported
+      - today.test.ts has the describe line of vitest and the ./today line, and person-form.test.tsx has the describe line of vitest, the vi line of vitest, the testing-library line, the mock-data line and the ./person-form line
+      - one write_file per test file, then run_check 0, 1, 2, 3, 4 and 5
+      - todayInBrt takes a Date made from the instant text and gives IsoDate of @pilla/finance, a branded string, so toBe against the plain text works and no type import is needed
+      - render PersonForm with people set to mockPeople and onSubmit set to a const made with vi.fn, and render it once per test
+      - every field is filled with fireEvent.change on screen.getByLabelText with the whole label text and a target whose value is the text, the select Indicado por too, whose option value is the person id
+      - 01936f8e-7b2c-7cde-8f00-000000000003 is João Pereira in mockPeople, and Nome completo, CPF and Telefone get Maria da Silva, 52998224725 and +5511987654321
+      - the expected body of the first test is the object with fullName, cpf and phone and no other key, and the referrer test adds referredById
+      - the click is fireEvent.click on screen.getByRole with role button and name Cadastrar, never getByText
+      - the submit is async, so await screen.findByRole with role status or alert, keep that element and check it with toHaveTextContent, never await expect of a findBy promise, and the onSubmit checks come after it
+      - apps/web/app/page.test.tsx is the model, and there is no userEvent in the project, only @testing-library/react
+    budget:
+      attempts: 4
+      toolCalls: 26
+      minutes: 14
+    readFirst:
+      - apps/web/lib/today.ts
+      - apps/web/components/person-form.tsx
+      - apps/web/lib/mock-data.ts
+      - packages/schemas/src/api/people/create-person.ts
+      - packages/schemas/src/common.ts
+      - packages/finance/src/index.ts
+      - apps/web/app/page.test.tsx
+      - apps/web/vitest.setup.ts
+      - docs/plano/decisoes-2026-11-17.md
+    sizeNote: today.test.ts com 3 testes (2 exemplos + inválido e propriedade), ~20 linhas; person-form.test.tsx com 8 testes e uma função de preencher, ~110 linhas
+  - id: E7-T02
+    title: Implement todayInBrt
+    kind: implement
+    assignee: alice
+    rules: []
+    skills:
+      - editar-arquivo
+      - coding-guidelines
+    refs: [docs/plano/decisoes-2026-11-17.md, RFC-002]
+    dependsOn: [E7-T01]
+    allowedPaths:
+      - apps/web/lib/today.ts
+      - apps/web/vitest.config.ts
+    protectedTests:
+      - apps/web/lib/today.test.ts
+    checks:
+      - pnpm --filter @pilla/web exec vitest run lib/today.test.ts --coverage --coverage.include=lib/today.ts --coverage.exclude=none --coverage.thresholds.lines=100 --coverage.thresholds.branches=100
+      - pnpm --filter @pilla/web typecheck
+      - pnpm --filter @pilla/web lint
+    done:
+      - all tests in apps/web/lib/today.test.ts pass with 100% line and branch coverage of today.ts (run_check 0)
+      - 'the import type line and the value import of today.ts stay as they are: ''import { isoDate, type IsoDate } from "@pilla/finance";'' (one line)'
+      - the day comes from shifting now by a fixed UTC−3 offset (10_800_000 ms, a named constant with a comment) and taking the first 10 characters of toISOString, and the text gets its brand with isoDate of @pilla/finance, never with as
+      - the parameter loses the leading underscore; the /** */ comment is rewritten to describe the fixed offset, and the RangeError of an invalid date comes from toISOString
+      - today.ts has no '// @stub E7-T02' line and apps/web/vitest.config.ts has no line that excludes lib/today.ts
+    hints:
+      - the date text of toISOString is already AAAA-MM-DD, so slice(0, 10) gives the text isoDate expects; no Intl is needed
+      - one write_file of today.ts, then one edit_file of apps/web/vitest.config.ts that deletes the line with stub E7-T02, then run_check 0, 1 and 2
+    budget:
+      attempts: 4
+      toolCalls: 18
+      minutes: 8
+    readFirst:
+      - apps/web/lib/today.ts
+      - apps/web/lib/today.test.ts
+      - packages/finance/src/index.ts
+    sizeNote: today.ts com ~15 linhas
+  - id: E7-T03
+    title: Implement the PersonForm component
+    kind: implement
+    assignee: alice
+    rules: []
+    skills:
+      - editar-arquivo
+      - react-best-practices
+      - react-best-practices#rerender-derived-state-no-effect
+    refs: [PRD-001 RF-01, PRD-001 RF-03, ADR-0013, docs/plano/decisoes-2026-11-17.md]
+    dependsOn: [E7-T01]
+    allowedPaths:
+      - apps/web/components/person-form.tsx
+      - apps/web/vitest.config.ts
+    protectedTests:
+      - apps/web/components/person-form.test.tsx
+    checks:
+      - pnpm --filter @pilla/web exec vitest run components/person-form.test.tsx --coverage --coverage.include=components/person-form.tsx --coverage.exclude=none
+      - pnpm --filter @pilla/web typecheck
+      - pnpm --filter @pilla/web lint
+    done:
+      - all tests in apps/web/components/person-form.test.tsx pass with at least 85% coverage of person-form.tsx (run_check 0)
+      - the import type lines of person-form.tsx stay; the value import of @pilla/schemas may share a line with its type imports: 'import { createPersonRequest, type CreatePersonRequest, type PersonSummary } from "@pilla/schemas";'
+      - 'import { useState } from "react";'
+      - 'import { useForm } from "react-hook-form";'
+      - the form uses useForm of react-hook-form typed with PersonFormValues and register on each field, with every default value ""
+      - the "Nascimento" field is a text input (not type="date") so that an invalid birth date reaches createPersonRequest and shows the alert (C9)
+      - the submit builds the body without the empty optional fields and validates it with createPersonRequest.parse inside try and catch; the catch shows the alert of the /** */ comment
+      - keep "use client", the interfaces, the signature and the /** */ comment unchanged, except that the props are destructured without the underscore aliases and the birth date input is type="text" (as the line above says), not type="date"
+      - person-form.tsx has no '// @stub E7-T03' line and apps/web/vitest.config.ts has no line that excludes components/person-form.tsx
+    hints:
+      - the labels, the select options, the button and the two messages are written in the /** */ comment of person-form.tsx, copy them from there
+      - keep the outcome in useState, either the success or the error, and show the status or the alert from it
+      - each label wraps its field or points to it with htmlFor and id, so getByLabelText finds it
+      - onSubmit is optional, so call it with optional chaining
+      - one write_file of person-form.tsx, then one edit_file of apps/web/vitest.config.ts that deletes the line with stub E7-T03, then run_check 0, 1 and 2
+    budget:
+      attempts: 5
+      toolCalls: 22
+      minutes: 15
+    readFirst:
+      - apps/web/components/person-form.tsx
+      - apps/web/components/person-form.test.tsx
+      - packages/schemas/src/api/people/create-person.ts
+    sizeNote: person-form.tsx com ~110 linhas (grande para a Alice; fatiar fica para decisão do Joel)
+
+  # ---------------------------------------------------------------- E7-F02: novo contrato
+  - id: E7-T04
+    title: Write the tests for newLoanFormDefaults and toCreateLoanRequest
+    kind: test-author
+    assignee: bia
+    rules: []
+    skills:
+      - escrever-teste
+    refs: [PRD-001 RF-11, PRD-001 RF-41, PRD-001 CA-05, RFC-004 §5, docs/plano/decisoes-2026-11-17.md]
+    dependsOn: [E6-T04]
+    allowedPaths:
+      - apps/web/lib/new-loan.test.ts
+    protectedTests: []
+    checks:
+      - '! pnpm --filter @pilla/web exec vitest run lib/new-loan.test.ts'
+      - node scripts/check-test-quality.mjs apps/web/lib/new-loan.test.ts
+      - pnpm --filter @pilla/web typecheck
+      - pnpm --filter @pilla/web lint
+    done:
+      - every test fails now against the stub in HEAD and would pass with a correct implementation (run_check 0)
+      - 'import { describe, expect, it } from "vitest";'
+      - 'import { MoneyError } from "@pilla/finance";'
+      - 'import { ZodError } from "zod";'
+      - 'import { mockDefaultTerms } from "@/lib/mock-data";'
+      - 'import type { NewLoanFormValues } from "./new-loan";'
+      - 'import { newLoanFormDefaults, toCreateLoanRequest } from "./new-loan";'
+      - 'test "fills the default terms": newLoanFormDefaults of mockDefaultTerms is the defaults object of the hints, with "6,33", "2,00", "1,00" and "0" (PRD-001 RF-41, CA-05)'
+      - 'test "builds the RFC-004 example": toCreateLoanRequest of example is the request of the hints, with principalCents 500000 and monthlyInterestRateBps 633 (RFC-004 §5, PRD-001 CA-05)'
+      - 'test "keeps the internal notes": notes "cliente antigo" add internalNotes "cliente antigo" to that request, and empty notes leave the key out (decisões do Joel de 17/11)'
+      - 'test "rejects bad input": an empty personId throws ZodError and lateFee "2" without the comma throws MoneyError (PRD-001 RF-11, RFC-004 §2)'
+      - never edit apps/web/lib/new-loan.ts
+    hints:
+      - the import lines of the done are the only imports of the file, each name in them is used, and nothing else is imported
+      - one write_file of the whole test file, then run_check 0, 1, 2 and 3
+      - 'example is one const typed NewLoanFormValues at the top of the describe, written as a full literal: amount "5.000,00", monthlyRate "6,33", installmentCount "6", frequency "MONTHLY", firstDueDate "2026-12-14", personId "01936f8e-7b2c-7cde-8f00-000000000001", lateFee "2,00", lateInterest "1,00", gracePeriodDays "0", internalNotes ""'
+      - 'the defaults object, checked with toStrictEqual, is { amount: "", monthlyRate: "6,33", installmentCount: "", frequency: "MONTHLY", firstDueDate: "", personId: "", lateFee: "2,00", lateInterest: "1,00", gracePeriodDays: "0", internalNotes: "" }'
+      - 'the request, checked with toStrictEqual, is one const without a type annotation: { personId: "01936f8e-7b2c-7cde-8f00-000000000001", type: "INSTALLMENT", principalCents: 500000, monthlyInterestRateBps: 633, installmentCount: 6, frequency: { unit: "MONTH", interval: 1 }, firstDueDate: "2026-12-14", lateFeeBps: 200, lateInterestMonthlyBps: 100, gracePeriodDays: 0 }'
+      - the notes test spreads example with internalNotes cliente antigo and expects the request spread with the same internalNotes, and example as it is gives the request without the key
+      - every field of NewLoanFormValues is string except frequency, FrequencyPreset of ./simulation, and the type annotation keeps MONTHLY from widening to string
+      - CreateLoanRequest is inferred from zod, see common.ts, so its numbers are plain number literals, never bigint, never wrapped with cents or bps
+      - toStrictEqual is used because toEqual would accept a key with undefined, and the empty notes must leave the key out
+      - mockDefaultTerms is lateFeeBps 200, lateInterestMonthlyBps 100, gracePeriodDays 0, suggestedMonthlyRateBps 633 and roundingStepCents 500, and it is used only in the first test
+      - each bad call spreads example with personId empty or with lateFee 2, sits inside a function given to expect, and toThrow takes the class ZodError of zod or MoneyError of @pilla/finance
+    budget:
+      attempts: 4
+      toolCalls: 20
+      minutes: 10
+    readFirst:
+      - apps/web/lib/new-loan.ts
+      - apps/web/lib/simulation-form.ts
+      - apps/web/lib/mock-data.ts
+      - packages/schemas/src/api/lending/create-loan.ts
+      - packages/schemas/src/common.ts
+      - packages/finance/src/index.ts
+      - packages/finance/src/money.ts
+    sizeNote: um describe com 4 testes, ~60 linhas
+  - id: E7-T05
+    title: Implement newLoanFormDefaults and toCreateLoanRequest
+    kind: implement
+    assignee: alice
+    rules: []
+    skills:
+      - editar-arquivo
+      - coding-guidelines
+    refs: [PRD-001 RF-11, PRD-001 RF-41, RFC-004 §5, ADR-0013]
+    dependsOn: [E7-T04]
+    allowedPaths:
+      - apps/web/lib/new-loan.ts
+      - apps/web/vitest.config.ts
+    protectedTests:
+      - apps/web/lib/new-loan.test.ts
+    checks:
+      - pnpm --filter @pilla/web exec vitest run lib/new-loan.test.ts --coverage --coverage.include=lib/new-loan.ts --coverage.exclude=none --coverage.thresholds.lines=100 --coverage.thresholds.branches=100
+      - pnpm --filter @pilla/web typecheck
+      - pnpm --filter @pilla/web lint
+    done:
+      - all tests in apps/web/lib/new-loan.test.ts pass with 100% line and branch coverage of new-loan.ts (run_check 0)
+      - the two import type lines of new-loan.ts stay, and the only value imports are these three lines
+      - 'import { cents, formatReais, parseReais } from "@pilla/finance";'
+      - 'import { createLoanRequest } from "@pilla/schemas";'
+      - 'import { toSimulateRequest } from "./simulation-form";'
+      - newLoanFormDefaults writes the bps with formatReais and cents of @pilla/finance, never with as
+      - toCreateLoanRequest reuses toSimulateRequest for the simulation fields, parseReais for lateFee and lateInterest, and createLoanRequest.parse for the whole object
+      - keep the interface, the signatures and the /** */ comments unchanged, except that the parameters lose the leading underscore
+      - new-loan.ts has no '// @stub E7-T05' line and apps/web/vitest.config.ts has no line that excludes lib/new-loan.ts
+    hints:
+      - cents takes a bigint and formatReais takes Cents, so the number from the defaults goes through BigInt and cents first, and 633 reads as 6,33
+      - parseReais gives Cents, a bigint, and Number turns it into the number the request schema expects
+      - spread the simulation request into the new object, and add internalNotes only when the text is not empty, because the test checks with toStrictEqual
+      - one write_file of new-loan.ts, then one edit_file of apps/web/vitest.config.ts that deletes the line with stub E7-T05, then run_check 0, 1 and 2
+    budget:
+      attempts: 4
+      toolCalls: 20
+      minutes: 10
+    readFirst:
+      - apps/web/lib/new-loan.ts
+      - apps/web/lib/new-loan.test.ts
+      - apps/web/lib/simulation-form.ts
+      - packages/schemas/src/api/lending/create-loan.ts
+      - packages/finance/src/index.ts
+    sizeNote: new-loan.ts com ~60 linhas
+  - id: E7-T06
+    title: Write the tests for the NewLoanForm component
+    kind: test-author
+    assignee: bia
+    rules: []
+    skills:
+      - escrever-teste
+      - accessibility
+    refs: [PRD-001 RF-11, PRD-001 RF-41, PRD-001 CA-05, RFC-004 §5, docs/plano/decisoes-2026-11-17.md]
+    dependsOn: [E7-T05]
+    allowedPaths:
+      - apps/web/components/new-loan-form.test.tsx
+    protectedTests: []
+    checks:
+      - '! pnpm --filter @pilla/web exec vitest run components/new-loan-form.test.tsx'
+      - node scripts/check-test-quality.mjs apps/web/components/new-loan-form.test.tsx
+      - pnpm --filter @pilla/web typecheck
+      - pnpm --filter @pilla/web lint
+    done:
+      - every test fails now against the stub in HEAD and would pass with a correct implementation (run_check 0)
+      - 'import { fireEvent, render, screen } from "@testing-library/react";'
+      - 'import { describe, expect, it } from "vitest";'
+      - 'import { vi } from "vitest";'
+      - 'import { mockDefaultTerms, mockPeople } from "@/lib/mock-data";'
+      - 'import { NewLoanForm } from "./new-loan-form";'
+      - 'test "shows the labelled fields": "Cliente", "Valor emprestado", "Nº de parcelas", "Periodicidade", "1º vencimento" and button "Criar contrato" (PRD-001 RF-11)'
+      - 'test "starts with the default terms": "Taxa ao mês (%)" "6,33", "Multa (%)" "2,00", "Mora ao mês (%)" "1,00", "Carência (dias)" "0", "Observações internas" "" (PRD-001 RF-41, CA-05)'
+      - 'test "creates the RFC-004 example": the example gives the status "Contrato criado em rascunho." and onSubmit gets the request of the hints (RFC-004 §5)'
+      - 'test "adjusts a default": the example with Multa "3,00" gives onSubmit the same request with lateFeeBps 300 (PRD-001 RF-41, RFC-004 §2)'
+      - 'test "asks for the client": the example without Cliente gives the alert "Confira os campos do contrato." and onSubmit is not called (decisões do Joel de 17/11)'
+      - never edit apps/web/components/new-loan-form.tsx
+    hints:
+      - the import lines of the done are the only imports of the file, each name in them is used, and nothing else is imported
+      - one write_file of the whole test file, then run_check 0, 1, 2 and 3
+      - render NewLoanForm with people mockPeople, defaults mockDefaultTerms and onSubmit a const made with vi.fn, once per test
+      - getByLabelText takes the whole label text exactly as written in the done, with the parentheses
+      - 'a helper fills the example with fireEvent.change on screen.getByLabelText: Cliente gets 01936f8e-7b2c-7cde-8f00-000000000001, the option value of Maria da Silva, Valor emprestado gets 5.000,00, Nº de parcelas gets 6 and 1º vencimento gets 2026-12-14'
+      - the defaults test also checks that Periodicidade has the value MONTHLY, and the labels with the percent sign are written exactly as in the done
+      - Taxa, Periodicidade, Multa, Mora and Carência keep their default values in the example, and the adjust test changes Multa to 3,00 after the helper
+      - every field is a text input except Cliente and Periodicidade, which are select, 1º vencimento, an input of type date, and Observações internas, a textarea, so every toHaveValue takes a string
+      - 'the expected request is one const without a type annotation, and the adjust test spreads it with lateFeeBps 300: { personId: "01936f8e-7b2c-7cde-8f00-000000000001", type: "INSTALLMENT", principalCents: 500000, monthlyInterestRateBps: 633, installmentCount: 6, frequency: { unit: "MONTH", interval: 1 }, firstDueDate: "2026-12-14", lateFeeBps: 200, lateInterestMonthlyBps: 100, gracePeriodDays: 0 }'
+      - the click is fireEvent.click on screen.getByRole with role button and name Criar contrato
+      - the submit is async, so await screen.findByRole with role status or alert, keep that element and check it with toHaveTextContent, never await expect of a findBy promise, and the onSubmit checks come after it
+      - apps/web/app/page.test.tsx is the model, and there is no userEvent in the project, only @testing-library/react
+    budget:
+      attempts: 4
+      toolCalls: 22
+      minutes: 12
+    readFirst:
+      - apps/web/components/new-loan-form.tsx
+      - apps/web/lib/new-loan.ts
+      - apps/web/lib/mock-data.ts
+      - packages/schemas/src/api/lending/create-loan.ts
+      - packages/schemas/src/common.ts
+      - apps/web/app/page.test.tsx
+      - apps/web/vitest.setup.ts
+    sizeNote: um describe com 5 testes e uma função de preencher o exemplo, ~90 linhas
+  - id: E7-T07
+    title: Implement the NewLoanForm component
+    kind: implement
+    assignee: alice
+    rules: []
+    skills:
+      - editar-arquivo
+      - react-best-practices
+      - react-best-practices#rerender-derived-state-no-effect
+    refs: [PRD-001 RF-11, PRD-001 RF-41, ADR-0013]
+    dependsOn: [E7-T06]
+    allowedPaths:
+      - apps/web/components/new-loan-form.tsx
+      - apps/web/vitest.config.ts
+    protectedTests:
+      - apps/web/components/new-loan-form.test.tsx
+    checks:
+      - pnpm --filter @pilla/web exec vitest run components/new-loan-form.test.tsx --coverage --coverage.include=components/new-loan-form.tsx --coverage.exclude=none
+      - pnpm --filter @pilla/web typecheck
+      - pnpm --filter @pilla/web lint
+    done:
+      - all tests in apps/web/components/new-loan-form.test.tsx pass with at least 85% coverage of new-loan-form.tsx (run_check 0)
+      - the two import type lines of new-loan-form.tsx stay, and the only other imports are these four lines
+      - 'import type { NewLoanFormValues } from "@/lib/new-loan";'
+      - 'import { newLoanFormDefaults, toCreateLoanRequest } from "@/lib/new-loan";'
+      - 'import { useState } from "react";'
+      - 'import { useForm } from "react-hook-form";'
+      - the form uses useForm of react-hook-form typed with NewLoanFormValues, defaultValues from newLoanFormDefaults and register on each field
+      - the submit calls toCreateLoanRequest inside try and catch; the catch shows the alert of the /** */ comment
+      - keep "use client", the props interface, the signature and the /** */ comment unchanged, except that the props are destructured without the underscore aliases
+      - new-loan-form.tsx has no '// @stub E7-T07' line and apps/web/vitest.config.ts has no line that excludes components/new-loan-form.tsx
+    hints:
+      - the labels, the select options, the button and the two messages are written in the /** */ comment of new-loan-form.tsx, copy them from there
+      - every field is a plain text input except Cliente and Periodicidade (select), 1º vencimento (input type date) and Observações internas (textarea)
+      - keep the outcome in useState and show the status or the alert from it, and call the optional onSubmit with optional chaining
+      - one write_file of new-loan-form.tsx, then one edit_file of apps/web/vitest.config.ts that deletes the line with stub E7-T07, then run_check 0, 1 and 2
+    budget:
+      attempts: 5
+      toolCalls: 22
+      minutes: 15
+    readFirst:
+      - apps/web/components/new-loan-form.tsx
+      - apps/web/components/new-loan-form.test.tsx
+      - apps/web/lib/new-loan.ts
+    sizeNote: new-loan-form.tsx com ~130 linhas (grande para a Alice; fatiar fica para decisão do Joel)
+
+  # ---------------------------------------------------------------- E7-F03: lista e detalhe de contratos
+  - id: E7-T08
+    title: Write the tests for the LoanList and LoanDetail components
+    kind: test-author
+    assignee: bia
+    rules: []
+    skills:
+      - escrever-teste
+      - accessibility
+    refs: [PRD-001 RF-18, RFC-004 §5, docs/glossario.md, docs/plano/decisoes-2026-11-17.md]
+    dependsOn: []
+    allowedPaths:
+      - apps/web/components/loan-list.test.tsx
+      - apps/web/components/loan-detail.test.tsx
+    protectedTests: []
+    checks:
+      - '! pnpm --filter @pilla/web exec vitest run components/loan-list.test.tsx'
+      - '! pnpm --filter @pilla/web exec vitest run components/loan-detail.test.tsx'
+      - node scripts/check-test-quality.mjs apps/web/components/loan-list.test.tsx
+      - node scripts/check-test-quality.mjs apps/web/components/loan-detail.test.tsx
+      - pnpm --filter @pilla/web typecheck
+      - pnpm --filter @pilla/web lint
+    done:
+      - every test fails now against the stubs in HEAD and would pass with a correct implementation (run_check 0 and 1)
+      - 'import { render, screen, within } from "@testing-library/react";'
+      - 'import { describe, expect, it } from "vitest";'
+      - 'import { exampleLoanListItem, paidOffLoanListItem } from "@/lib/mock-data";'
+      - 'import { LoanList } from "./loan-list";'
+      - 'import { draftLoanDetail, exampleLoanDetail } from "@/lib/mock-data";'
+      - 'import { LoanDetail } from "./loan-detail";'
+      - 'loan-list test "shows the RFC-004 loan": the row of 2026-0012 links to "/emprestimos/01936f8e-7b2c-7cde-8f00-000000000002" and has "R$ 4.600,00", "14/02/2027" and "Em dia" (RFC-004 §5, decisões do Joel de 17/11)'
+      - 'loan-list tests "shows a closed loan", row 2026-0003 with "Quitado", "R$ 0,00" and "—", and "shows an empty list", "Nenhum contrato." and no table (decisões do Joel de 17/11)'
+      - 'loan-detail test "shows the summary": h1 "Contrato 2026-0012" and "R$ 1.900,00", "R$ 6.900,00", "R$ 2.300,00" and "R$ 4.600,00" (RFC-004 §5, decisões do Joel de 17/11)'
+      - 'loan-detail test "shows the installments": row 14/12/2026 has "Paga", row 14/02/2027 has "1.150,00" and "Aberta" (RFC-004 §5)'
+      - 'loan-detail tests "links the payment of an active loan" to "/emprestimos/01936f8e-7b2c-7cde-8f00-000000000002/pagamento" and "hides the payment link of a draft" (decisões do Joel de 17/11)'
+      - never edit apps/web/components/loan-list.tsx nor apps/web/components/loan-detail.tsx
+    hints:
+      - the import lines of the done are the only imports, each name in them is used, and nothing else is imported
+      - loan-list.test.tsx has the testing-library line, the vitest line, the exampleLoanListItem line and the ./loan-list line, and loan-detail.test.tsx has the testing-library line, the vitest line, the draftLoanDetail line and the ./loan-detail line
+      - one write_file per test file, then run_check 0, 1, 2, 3, 4 and 5
+      - the first loan-list test renders loans with only exampleLoanListItem, the closed test renders exampleLoanListItem and paidOffLoanListItem, and the empty test renders an empty list
+      - the first loan-list test also finds getByRole columnheader by name Contrato, Cliente, Valor emprestado, Saldo devedor, Próximo vencimento and Situação
+      - a row is found with getByRole with role row and a name regex, such as /2026-0012/ or /14\/12\/2026/, and its cells are queried with within on that row
+      - in row 2026-0012 the link is getByRole with role link and name 2026-0012, checked with toHaveAttribute href, and the row also has Maria da Silva and R$ 5.000,00
+      - in row 2026-0003 the texts are Quitado, R$ 2.000,00, R$ 0,00 and the dash of the next due date
+      - the empty test finds getByText Nenhum contrato., queryByRole table is null, and getByRole link with name Novo contrato has href /emprestimos/novo
+      - the summary test finds getByRole heading with level 1 and name Contrato 2026-0012, and R$ 5.000,00 too
+      - the active link is getByRole link with name Registrar pagamento on exampleLoanDetail, and the draft test checks queryByRole link with that name toBeNull on draftLoanDetail
+      - one render per test, because two renders in the same test repeat the heading, the links and the texts and getBy finds more than one
+      - pass the fixtures of @/lib/mock-data as they are, never new objects, so no type import is needed
+      - each getByText string is the whole text of one cell or one dd, exactly as written, never a part or a regex
+      - in row 14/12/2026 the text 1.150,00 appears twice, Parcela and Pago, so that row is checked only by Paga
+      - in row 14/02/2027 the text 0,00 appears twice, Pago and Encargos, so that row is checked only by 1.150,00 and Aberta
+      - each href is written as the whole literal string of the done, never joined
+      - these components have no submit, so render and getBy are enough, and apps/web/app/page.test.tsx is the model
+    budget:
+      attempts: 4
+      toolCalls: 26
+      minutes: 14
+    readFirst:
+      - apps/web/components/loan-list.tsx
+      - apps/web/components/loan-detail.tsx
+      - apps/web/lib/mock-data.ts
+      - apps/web/lib/labels.ts
+      - packages/schemas/src/api/lending/loan-views.ts
+      - apps/web/app/page.test.tsx
+      - apps/web/vitest.setup.ts
+    sizeNote: loan-list.test.tsx com 3 testes, ~50 linhas; loan-detail.test.tsx com 4 testes, ~55 linhas
+  # E7-T09/T10 refatiados em 17/11 (falharam no teto de 20 chamadas): cada componente vira render básico com o stub
+  # mantido e check -t só nos testes do básico (E7-T09, E7-T10) e estados/variações com o arquivo inteiro e
+  # cobertura (E7-T15, E7-T16), que tiram o stub e a linha do vitest.config.ts.
+  - id: E7-T09
+    title: Implement the basic render of the LoanList component
+    kind: implement
+    assignee: bia
+    exception: nao-compensa-alice
+    exceptionReason: "estourou 20 toolCalls 2x mesmo refatiado; decisão do Joel 17/11"
+    exceptionApprovedBy: "Joel 2026-11-17"
+    rules: []
+    skills:
+      - editar-arquivo
+      - react-best-practices
+      - react-best-practices#rendering-conditional-render
+    refs: [RFC-004 §5, docs/plano/decisoes-2026-11-17.md]
+    dependsOn: [E7-T08]
+    allowedPaths:
+      - apps/web/components/loan-list.tsx
+    protectedTests:
+      - apps/web/components/loan-list.test.tsx
+    checks:
+      - pnpm --filter @pilla/web exec vitest run components/loan-list.test.tsx -t "shows the RFC-004 loan"
+      - pnpm --filter @pilla/web typecheck
+      - pnpm --filter @pilla/web lint
+    done:
+      - the test "shows the RFC-004 loan" of apps/web/components/loan-list.test.tsx passes (run_check 0)
+      - the two import type lines of loan-list.tsx stay, and the only value imports are these three lines
+      - 'import { cents, formatReais } from "@pilla/finance";'
+      - 'import Link from "next/link";'
+      - 'import { loanStandingLabel, loanStatusLabel } from "@/lib/labels";'
+      - the link Novo contrato to /emprestimos/novo, then the table with the six column headers of the /** */ comment and one row per loan, key id
+      - amounts use formatReais and cents of @pilla/finance and the labels come from apps/web/lib/labels.ts, never written again in the component
+      - keep the '// @stub E7-T09' line, the props interface, the signature and the /** */ comment unchanged, except that the prop is destructured without the underscore alias
+      - the empty list and the dash of a null date are left to E7-T15
+    hints:
+      - the files to read are the two of readFirst, the only file to write is apps/web/components/loan-list.tsx, and the test is not read
+      - LoanListItem of @pilla/schemas has id, loanNumber and personName as string, principalCents and outstandingCents as number, status as LoanStatus, standing as LoanStanding or null, and nextDueDate as an aaaa-mm-dd string or null
+      - cents of @pilla/finance takes a bigint and gives Cents, formatReais takes Cents and gives the text without R$, so each number goes through BigInt, then cents, then formatReais
+      - loanStandingLabel and loanStatusLabel are records keyed by LoanStanding and LoanStatus, and a null key is a type error, so the standing label is read only when status is ACTIVE and standing is not null, else the status label
+      - the date in dd/mm/aaaa comes from splitting the text on the dash and joining the parts in reverse with a slash, and a null date may show the dash already
+      - each value is the whole text of its own td, and the Contrato cell holds the Link with the text loanNumber
+      - Link of next/link renders an anchor with href, and the component needs no "use client"
+      - one write_file of loan-list.tsx, then run_check 0, 1 and 2
+    budget:
+      attempts: 4
+      toolCalls: 18
+      minutes: 10
+    readFirst:
+      - apps/web/components/loan-list.tsx
+      - apps/web/lib/labels.ts
+    sizeNote: loan-list.tsx com ~60 linhas; só o teste do contrato ativo
+  - id: E7-T15
+    title: Finish the LoanList component with the empty list and the closed loan
+    kind: implement
+    assignee: alice
+    rules: []
+    skills:
+      - editar-arquivo
+      - react-best-practices
+      - react-best-practices#rendering-conditional-render
+    refs: [RFC-004 §5, docs/plano/decisoes-2026-11-17.md]
+    dependsOn: [E7-T09]
+    allowedPaths:
+      - apps/web/components/loan-list.tsx
+      - apps/web/vitest.config.ts
+    protectedTests:
+      - apps/web/components/loan-list.test.tsx
+    checks:
+      - pnpm --filter @pilla/web exec vitest run components/loan-list.test.tsx --coverage --coverage.include=components/loan-list.tsx --coverage.exclude=none
+      - pnpm --filter @pilla/web typecheck
+      - pnpm --filter @pilla/web lint
+      - '! grep -n "stub E7-T09" apps/web/components/loan-list.tsx apps/web/vitest.config.ts'
+    done:
+      - all tests in apps/web/components/loan-list.test.tsx pass with at least 85% coverage of loan-list.tsx (run_check 0)
+      - with no loans, the text "Nenhum contrato." in place of the table, and the link Novo contrato stays
+      - a null nextDueDate shows "—" and a loan not ACTIVE shows loanStatusLabel of its status
+      - the imports, the props interface, the signature and the /** */ comment stay as E7-T09 left them
+      - loan-list.tsx has no '// @stub E7-T09' line and apps/web/vitest.config.ts has no line that excludes components/loan-list.tsx (run_check 3)
+    hints:
+      - the component already renders the active loan, so only the empty list, the dash and the status label of a closed loan change
+      - edit_file in loan-list.tsx, never a new write_file of the whole file
+      - the table is not rendered at all when loans is empty, so queryByRole table is null
+      - the dash is the single character of the done, the whole text of its td
+      - one edit_file of apps/web/vitest.config.ts deletes the line with stub E7-T09, and one edit_file of loan-list.tsx deletes the stub line
+      - edit_file of loan-list.tsx, the two edit_file of the stub lines, then run_check 0, 1, 2 and 3
+    budget:
+      attempts: 4
+      toolCalls: 20
+      minutes: 10
+    readFirst:
+      - apps/web/components/loan-list.tsx
+    sizeNote: loan-list.tsx +10 linhas; tira o stub
+  - id: E7-T10
+    title: Implement the basic render of the LoanDetail component
+    kind: implement
+    assignee: bia
+    exception: nao-compensa-alice
+    exceptionReason: "estourou 20 toolCalls 2x mesmo refatiado; decisão do Joel 17/11"
+    exceptionApprovedBy: "Joel 2026-11-17"
+    rules: []
+    skills:
+      - editar-arquivo
+      - react-best-practices
+      - react-best-practices#rendering-conditional-render
+    refs: [PRD-001 RF-18, RFC-004 §5, docs/plano/decisoes-2026-11-17.md]
+    dependsOn: [E7-T08]
+    allowedPaths:
+      - apps/web/components/loan-detail.tsx
+    protectedTests:
+      - apps/web/components/loan-detail.test.tsx
+    checks:
+      - pnpm --filter @pilla/web exec vitest run components/loan-detail.test.tsx -t "shows the summary|shows the installments"
+      - pnpm --filter @pilla/web typecheck
+      - pnpm --filter @pilla/web lint
+    done:
+      - the tests "shows the summary" and "shows the installments" of apps/web/components/loan-detail.test.tsx pass (run_check 0)
+      - the two import type lines of loan-detail.tsx stay, and the only value imports are these two lines
+      - 'import { cents, formatReais } from "@pilla/finance";'
+      - 'import { installmentStatusLabel } from "@/lib/labels";'
+      - the h1, the personName, the dl of the five summary pairs and the table of installments of the /** */ comment
+      - keep the '// @stub E7-T10' line, the props interface, the signature and the /** */ comment unchanged, except that the prop is destructured without the underscore alias
+      - the loan situation and the payment link are left to E7-T16
+    hints:
+      - the only file to read is apps/web/components/loan-detail.tsx, the only file to write is the same file, and the test is not read
+      - LoanDetailResponse of @pilla/schemas has loanNumber and personName as string, principalCents, interestCents, totalCents, paidCents and outstandingCents as number, and installments as an array of LoanInstallment
+      - LoanInstallment has number as number, dueDate as an aaaa-mm-dd string, totalCents, paidCents and lateChargesCents as number and status as InstallmentStatus
+      - cents of @pilla/finance takes a bigint and gives Cents, formatReais takes Cents and gives the text without R$, so each number goes through BigInt, then cents, then formatReais
+      - the h1 text is exactly "Contrato " plus loanNumber, each summary value is "R$ " plus the formatted amount as the whole text of its own dd, and each table value the whole text of its own td
+      - the date in dd/mm/aaaa comes from splitting the text on the dash and joining the parts in reverse with a slash
+      - the installments are read with map over the array, never by index
+      - one write_file of loan-detail.tsx, then run_check 0, 1 and 2
+    budget:
+      attempts: 4
+      toolCalls: 18
+      minutes: 10
+    readFirst:
+      - apps/web/components/loan-detail.tsx
+    sizeNote: loan-detail.tsx com ~70 linhas; sem situação nem link
+  - id: E7-T16
+    title: Finish the LoanDetail component with the situation and the payment link
+    kind: implement
+    assignee: alice
+    rules: []
+    skills:
+      - editar-arquivo
+      - react-best-practices
+      - react-best-practices#rendering-conditional-render
+    refs: [PRD-001 RF-18, RFC-004 §5, docs/plano/decisoes-2026-11-17.md]
+    dependsOn: [E7-T10]
+    allowedPaths:
+      - apps/web/components/loan-detail.tsx
+      - apps/web/vitest.config.ts
+    protectedTests:
+      - apps/web/components/loan-detail.test.tsx
+    checks:
+      - pnpm --filter @pilla/web exec vitest run components/loan-detail.test.tsx --coverage --coverage.include=components/loan-detail.tsx --coverage.exclude=none
+      - pnpm --filter @pilla/web typecheck
+      - pnpm --filter @pilla/web lint
+    done:
+      - all tests in apps/web/components/loan-detail.test.tsx pass with at least 85% coverage of loan-detail.tsx (run_check 0)
+      - the value imports become these three lines
+      - 'import { cents, formatReais } from "@pilla/finance";'
+      - 'import Link from "next/link";'
+      - 'import { installmentStatusLabel, loanStandingLabel, loanStatusLabel } from "@/lib/labels";'
+      - the situation shows loanStatusLabel of status and, when standing is not null, also loanStandingLabel of standing
+      - only when status is ACTIVE, the link Registrar pagamento to "/emprestimos/" plus id plus "/pagamento"
+      - loan-detail.tsx has no '// @stub E7-T10' line and apps/web/vitest.config.ts has no line that excludes components/loan-detail.tsx
+    hints:
+      - the component already renders the h1, the summary and the table, so only the imports, the situation and the link change
+      - edit_file in loan-detail.tsx, never a new write_file of the whole file
+      - LoanDetailResponse has id as string, status as LoanStatus and standing as LoanStanding or null, and a null key in loanStandingLabel is a type error
+      - Link of next/link renders an anchor with href, and the component needs no "use client"
+      - one edit_file of apps/web/vitest.config.ts deletes the line with stub E7-T10, and one edit_file of loan-detail.tsx deletes the stub line
+      - the edit_file calls of loan-detail.tsx, the edit_file of vitest.config.ts, then run_check 0, 1 and 2
+    budget:
+      attempts: 4
+      toolCalls: 18
+      minutes: 10
+    readFirst:
+      - apps/web/components/loan-detail.tsx
+    sizeNote: loan-detail.tsx +15 linhas; tira o stub
+
+  # ---------------------------------------------------------------- E7-F04: registrar pagamento
+  - id: E7-T11
+    title: Write the tests for toPaymentDraft
+    kind: test-author
+    assignee: bia
+    rules: []
+    skills:
+      - escrever-teste
+    refs: [PRD-001 RF-20, RFC-004 §2, RFC-004 §5, docs/plano/decisoes-2026-11-17.md, docs/plano/decisoes-2026-11-19.md]
+    dependsOn: []
+    allowedPaths:
+      - apps/web/lib/payment-draft.test.ts
+    protectedTests: []
+    checks:
+      - '! pnpm --filter @pilla/web exec vitest run lib/payment-draft.test.ts'
+      - node scripts/check-test-quality.mjs apps/web/lib/payment-draft.test.ts
+      - pnpm --filter @pilla/web typecheck
+      - pnpm --filter @pilla/web lint
+    done:
+      - every test fails now against the stub in HEAD and would pass with a correct implementation (run_check 0)
+      - 'import { describe, expect, it } from "vitest";'
+      - 'import { MoneyError } from "@pilla/finance";'
+      - 'import { ZodError } from "zod";'
+      - 'import type { PaymentFormValues } from "./payment-draft";'
+      - 'import { toPaymentDraft } from "./payment-draft";'
+      - 'test "builds the RFC-004 payment": the example gives the payment of the hints, amountCents 115000, method "PIX", with no receipt key (RFC-004 §5, PRD-001 RF-20)'
+      - 'test "accepts the four methods": the example with "PIX", "BOLETO", "CASH" and "BANK_TRANSFER" gives the same payment with each method and never throws (decisão do Joel de 19/11: sem comprovante)'
+      - 'test "rejects a bad amount": amount "1150" and "1.150,5" throw MoneyError, and "0,00" and "-5,00" throw ZodError (RFC-004 §2)'
+      - 'test "rejects a bad date, account and loan": paidAt "2026-02-30", destinationKey "" and loanId "abc" throw ZodError (PRD-001 RF-20)'
+      - 'test "does not limit the date nor the amount": paidAt "2099-01-01" and "2000-01-01" and amount "90.000.000,00" give the payment, no error (decisões do Joel de 19/11: sem restrição de data nem valor máximo no MVP)'
+      - never edit apps/web/lib/payment-draft.ts
+    hints:
+      - the import lines of the done are the only imports of the file, each name in them is used, and nothing else is imported
+      - one write_file of the whole test file, then run_check 0, 1, 2 and 3
+      - 'at the top of the describe, two consts: loanId "01936f8e-7b2c-7cde-8f00-000000000002" and example typed PaymentFormValues with destinationKey "chave-pix@exemplo.com", paidAt "2026-12-13", amount "1.150,00" and method "PIX"'
+      - 'the call is toPaymentDraft(loanId, values) with two arguments and no file; it returns PaymentFields directly, not an object with payment and receipt'
+      - 'the payment of the first test, checked with toStrictEqual, is { loanId: "01936f8e-7b2c-7cde-8f00-000000000002", destinationKey: "chave-pix@exemplo.com", paidAt: "2026-12-13", amountCents: 115000, method: "PIX" }'
+      - the type annotation keeps method PIX from widening to string, and PaymentMethod is PIX, BOLETO, CASH or BANK_TRANSFER
+      - PaymentFields is inferred from zod, see common.ts, so amountCents is a plain number literal, never bigint
+      - 'in the no-limit test the amount "90.000.000,00" gives amountCents 9000000000, a plain number literal'
+      - each bad call sits inside a function given to expect, and toThrow takes the class only, MoneyError or ZodError, never an object
+      - the method test may use one it with the four methods written out as four calls (no loop), each checked with toStrictEqual
+    budget:
+      attempts: 4
+      toolCalls: 20
+      minutes: 10
+    readFirst:
+      - apps/web/lib/payment-draft.ts
+      - packages/schemas/src/api/payments/create-payment.ts
+      - packages/schemas/src/common.ts
+      - packages/finance/src/index.ts
+      - packages/finance/src/money.ts
+    sizeNote: um describe com 5 testes, ~65 linhas
+  - id: E7-T12
+    title: Implement toPaymentDraft
+    kind: implement
+    assignee: alice
+    rules: []
+    skills:
+      - editar-arquivo
+      - coding-guidelines
+    refs: [PRD-001 RF-20, RFC-004 §2, ADR-0013, docs/plano/decisoes-2026-11-19.md]
+    dependsOn: [E7-T11]
+    allowedPaths:
+      - apps/web/lib/payment-draft.ts
+      - apps/web/vitest.config.ts
+    protectedTests:
+      - apps/web/lib/payment-draft.test.ts
+    checks:
+      - pnpm --filter @pilla/web exec vitest run lib/payment-draft.test.ts --coverage --coverage.include=lib/payment-draft.ts --coverage.exclude=none --coverage.thresholds.lines=100 --coverage.thresholds.branches=100
+      - pnpm --filter @pilla/web typecheck
+      - pnpm --filter @pilla/web lint
+    done:
+      - all tests in apps/web/lib/payment-draft.test.ts pass with 100% line and branch coverage of payment-draft.ts (run_check 0)
+      - the import type line of payment-draft.ts stays, and the only value imports are these two lines
+      - 'import { parseReais } from "@pilla/finance";'
+      - 'import { paymentFieldsSchema } from "@pilla/schemas";'
+      - 'toPaymentDraft(loanId: string, values: PaymentFormValues): PaymentFields sends amount through parseReais and the fields through paymentFieldsSchema.parse, with no check of the date and no maximum amount'
+      - keep the types, the signature and the /** */ comments unchanged, except that the parameters lose the leading underscore
+      - payment-draft.ts has no '// @stub E7-T12' line and apps/web/vitest.config.ts has no line that excludes lib/payment-draft.ts
+    hints:
+      - parseReais gives Cents, a bigint, and Number turns it into the number the schema expects
+      - the result is the object { loanId, destinationKey, paidAt, amountCents, method } passed through paymentFieldsSchema.parse, which returns it
+      - add no rule of date or of maximum amount, only what paymentFieldsSchema already does
+      - one write_file of payment-draft.ts, then one edit_file of apps/web/vitest.config.ts that deletes the line with stub E7-T12, then run_check 0, 1 and 2
+    budget:
+      attempts: 4
+      toolCalls: 18
+      minutes: 10
+    readFirst:
+      - apps/web/lib/payment-draft.ts
+      - apps/web/lib/payment-draft.test.ts
+      - packages/schemas/src/api/payments/create-payment.ts
+      - packages/finance/src/index.ts
+    sizeNote: payment-draft.ts com ~35 linhas
+  - id: E7-T13
+    title: Write the tests for the PaymentForm component
+    kind: test-author
+    assignee: bia
+    rules: []
+    skills:
+      - escrever-teste
+      - accessibility
+    refs: [PRD-001 RF-20, PRD-001 RN-R09, RFC-004 §5, docs/plano/decisoes-2026-11-17.md, docs/plano/decisoes-2026-11-19.md]
+    dependsOn: [E7-T12]
+    allowedPaths:
+      - apps/web/components/payment-form.test.tsx
+    protectedTests: []
+    checks:
+      - '! pnpm --filter @pilla/web exec vitest run components/payment-form.test.tsx'
+      - node scripts/check-test-quality.mjs apps/web/components/payment-form.test.tsx
+      - pnpm --filter @pilla/web typecheck
+      - pnpm --filter @pilla/web lint
+    done:
+      - every test fails now against the stub in HEAD and would pass with a correct implementation (run_check 0)
+      - 'import { fireEvent, render, screen } from "@testing-library/react";'
+      - 'import { describe, expect, it } from "vitest";'
+      - 'import { vi } from "vitest";'
+      - 'import { exampleLoanDetail } from "@/lib/mock-data";'
+      - 'import { PaymentForm } from "./payment-form";'
+      - 'test "shows the loan and the fields": h1 and button "Registrar pagamento", "Contrato 2026-0012", "Saldo devedor R$ 4.600,00" and the 4 labels of the hints, the "Chave Pix de destino" being a text field, with no "Comprovante" (RFC-004 §5, PRD-001 RF-20)'
+      - 'test "registers the RFC-004 payment": the example gives the status "Pagamento registrado para conferência." and onSubmit gets the payment of the hints (RFC-004 §5, PRD-001 RF-20)'
+      - 'test "accepts cash": the example with Método "CASH" gives onSubmit the same payment with method "CASH", with no receipt asked (decisão do Joel de 19/11: sem comprovante)'
+      - 'test "rejects a bad amount or an empty Pix key": Valor "1150", and the Chave Pix de destino empty, each give the alert "Confira os campos do pagamento." and onSubmit is not called (decisões do Joel de 17/11)'
+      - 'test "blocks a closed contract": with status "PAID_OFF", "RENEWED", "RENEGOTIATED" and "CANCELLED" the screen shows the alert "Este contrato não aceita pagamento." and has no field Valor and no button "Registrar pagamento", and onSubmit is not called (PRD-001 RN-R09, decisão do Joel de 19/11: a tela bloqueia o formulário)'
+      - 'test "keeps the form for an open contract": with status "WRITTEN_OFF" the field Valor and the button "Registrar pagamento" are on screen and there is no such alert (PRD-001 RN-C20)'
+      - never edit apps/web/components/payment-form.tsx
+    hints:
+      - the import lines of the done are the only imports of the file, each name in them is used, and nothing else is imported
+      - one write_file of the whole test file, then run_check 0, 1, 2 and 3
+      - render PaymentForm with loan exampleLoanDetail and onSubmit a const made with vi.fn, once per test; there is no accounts prop and no mockAccounts
+      - the four labels are Chave Pix de destino, Data do pagamento, Valor and Método, each found with getByLabelText; Comprovante is checked with queryByLabelText and is null
+      - 'a helper fills the example with fireEvent.change on screen.getByLabelText: Chave Pix de destino gets chave-pix@exemplo.com typed as text, Data do pagamento gets 2026-12-13 and Valor gets 1.150,00, and Método already starts at PIX'
+      - 'the expected payment is { loanId: "01936f8e-7b2c-7cde-8f00-000000000002", destinationKey: "chave-pix@exemplo.com", paidAt: "2026-12-13", amountCents: 115000, method: "PIX" }, a PaymentFields with no receipt'
+      - 'a closed loan is { ...exampleLoanDetail, status: "PAID_OFF" } and so on, with the literal status; write the four renders out one after the other, one it per status'
+      - the Método select uses the keys of paymentMethodLabel as option values, so the cash test changes it to CASH, whose option text is Espécie
+      - Registrar pagamento is both the h1 and the button, so the heading is getByRole heading with level 1 and that name, the click is fireEvent.click on getByRole button with that name, never getByText
+      - the expected numbers are plain number, never bigint
+      - the submit is async, so await screen.findByRole with role status or alert, keep that element and check it with toHaveTextContent, never await expect of a findBy promise, and the onSubmit checks come after it
+      - the blocked screen is not async, so getByRole alert is enough there
+      - apps/web/app/page.test.tsx is the model, and there is no userEvent in the project, only @testing-library/react
+    budget:
+      attempts: 4
+      toolCalls: 24
+      minutes: 14
+    readFirst:
+      - apps/web/components/payment-form.tsx
+      - apps/web/lib/payment-draft.ts
+      - apps/web/lib/mock-data.ts
+      - apps/web/lib/labels.ts
+      - packages/schemas/src/api/payments/create-payment.ts
+      - packages/schemas/src/common.ts
+      - apps/web/app/page.test.tsx
+      - apps/web/vitest.setup.ts
+    sizeNote: um describe com 6 testes e uma função de preencher o exemplo, ~110 linhas
+  - id: E7-T14
+    title: Implement the PaymentForm component
+    kind: implement
+    assignee: alice
+    rules: []
+    skills:
+      - editar-arquivo
+      - react-best-practices
+      - react-best-practices#rerender-derived-state-no-effect
+    refs: [PRD-001 RF-20, PRD-001 RN-R09, ADR-0013, docs/plano/decisoes-2026-11-19.md]
+    dependsOn: [E7-T13]
+    allowedPaths:
+      - apps/web/components/payment-form.tsx
+      - apps/web/vitest.config.ts
+    protectedTests:
+      - apps/web/components/payment-form.test.tsx
+    checks:
+      - pnpm --filter @pilla/web exec vitest run components/payment-form.test.tsx --coverage --coverage.include=components/payment-form.tsx --coverage.exclude=none
+      - pnpm --filter @pilla/web typecheck
+      - pnpm --filter @pilla/web lint
+    done:
+      - all tests in apps/web/components/payment-form.test.tsx pass with at least 85% coverage of payment-form.tsx (run_check 0)
+      - the import type lines of @pilla/schemas and react stay, the import type line of @/lib/payment-draft is 'import type { PaymentFormValues } from "@/lib/payment-draft";', and the only value imports are the other four
+      - 'import { cents, formatReais } from "@pilla/finance";'
+      - 'import { useState } from "react";'
+      - 'import { useForm } from "react-hook-form";'
+      - 'import { paymentMethodLabel } from "@/lib/labels";'
+      - 'import { toPaymentDraft } from "@/lib/payment-draft";'
+      - the form uses useForm of react-hook-form typed with PaymentFormValues and register on each of the four fields; Chave Pix de destino is a text input, not a select, and there is no Comprovante field
+      - the submit calls toPaymentDraft(loan.id, values) inside try and catch; any error shows the alert "Confira os campos do pagamento." and onSubmit is not called
+      - when loan.status is PAID_OFF, RENEWED, RENEGOTIATED or CANCELLED (PRD-001 RN-R09) the component returns the heading, the contract and the balance lines and the alert "Este contrato não aceita pagamento." with no form and no button; ACTIVE, WRITTEN_OFF and DRAFT show the form
+      - keep "use client", the props interface (loan and optional onSubmit, no accounts), the signature and the /** */ comment unchanged, except that the props are destructured without the underscore aliases
+      - payment-form.tsx has no '// @stub E7-T14' line and apps/web/vitest.config.ts has no line that excludes components/payment-form.tsx
+    hints:
+      - the labels, the text field, the select options, the button and the messages are written in the /** */ comment of payment-form.tsx, copy them from there
+      - '"Contrato 2026-0012" and "Saldo devedor R$ 4.600,00" are each the whole text of one element, because the test finds them with getByText'
+      - cents takes a bigint and formatReais takes Cents, so outstandingCents goes through BigInt and cents first
+      - the closed check is a const list of the four closed statuses and loan.status tested against it, derived while rendering, no effect and no state
+      - the Método options come from the keys of paymentMethodLabel of @/lib/labels
+      - keep the outcome in useState and call the optional onSubmit with optional chaining
+      - one write_file of payment-form.tsx, then one edit_file of apps/web/vitest.config.ts that deletes the line with stub E7-T14, then run_check 0, 1 and 2
+    budget:
+      attempts: 5
+      toolCalls: 22
+      minutes: 15
+    readFirst:
+      - apps/web/components/payment-form.tsx
+      - apps/web/components/payment-form.test.tsx
+      - apps/web/lib/payment-draft.ts
+      - apps/web/lib/labels.ts
+      - packages/finance/src/index.ts
+    sizeNote: payment-form.tsx com ~100 linhas (grande para a Alice; fatiar fica para decisão do Joel)
+# Features (ADR-0014): planos em docs/plano/E7-F0<n>/plano.md. biaBudget entre 4 e 7 (teto liberado pelo Joel só
+# nesta madrugada, commit 85328f5): telas pequenas agrupadas num cartão da Bia com mais cenários. E7-F03 em 7: a Bia
+# também implementa E7-T09 e E7-T10 (exceção nao-compensa-alice, Joel 17/11).
+features:
+  - id: E7-F01
+    title: Person registration form and today in Brasília
+    cards: [E7-T01, E7-T02, E7-T03]
+    biaBudget: 4
+  - id: E7-F02
+    title: New loan form with default terms
+    cards: [E7-T04, E7-T05, E7-T06, E7-T07]
+    biaBudget: 6
+  - id: E7-F03
+    title: Loan list and loan detail with installments
+    cards: [E7-T08, E7-T09, E7-T15, E7-T10, E7-T16]
+    biaBudget: 7
+  - id: E7-F04
+    title: Register a payment with a destination Pix key
+    cards: [E7-T11, E7-T12, E7-T13, E7-T14]
+    biaBudget: 6

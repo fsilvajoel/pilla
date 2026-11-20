@@ -1,0 +1,183 @@
+{
+  "feature": "E6-F01",
+  "stages": {
+    "plan": {
+      "status": "done"
+    },
+    "tests": {
+      "status": "done"
+    },
+    "testReview": {
+      "status": "done",
+      "verdict": "aprovado"
+    },
+    "implement": {
+      "status": "done"
+    },
+    "review": {
+      "status": "done",
+      "verdict": "aprovado"
+    }
+  },
+  "sources": [
+    "apps/web/lib/simulation.ts",
+    "apps/web/lib/simulation-form.ts"
+  ],
+  "domainSources": [
+    "apps/web/lib/simulation.ts"
+  ],
+  "criteria": [
+    {
+      "id": "A1",
+      "camadas": [
+        "unit"
+      ]
+    },
+    {
+      "id": "A2",
+      "camadas": [
+        "unit"
+      ]
+    },
+    {
+      "id": "A3",
+      "camadas": [
+        "unit"
+      ]
+    },
+    {
+      "id": "A4",
+      "camadas": [
+        "unit"
+      ]
+    },
+    {
+      "id": "A6",
+      "camadas": [
+        "unit"
+      ]
+    }
+  ],
+  "tests": [
+    "apps/web/lib/simulation.test.ts",
+    "apps/web/lib/simulation-form.test.ts"
+  ],
+  "e2e": [],
+  "scenarios": [
+    {
+      "id": "C1",
+      "criterio": "A3",
+      "camada": "unit",
+      "arquivo": "apps/web/lib/simulation.test.ts",
+      "teste": "C1 (A3): gives DAY 7 for WEEKLY"
+    },
+    {
+      "id": "C1",
+      "criterio": "A3",
+      "camada": "unit",
+      "arquivo": "apps/web/lib/simulation.test.ts",
+      "teste": "C1 (A3): gives DAY 15 for BIWEEKLY"
+    },
+    {
+      "id": "C1",
+      "criterio": "A3",
+      "camada": "unit",
+      "arquivo": "apps/web/lib/simulation.test.ts",
+      "teste": "C1 (A3): gives MONTH 1 for MONTHLY"
+    },
+    {
+      "id": "C1",
+      "criterio": "A3",
+      "camada": "unit",
+      "arquivo": "apps/web/lib/simulation.test.ts",
+      "teste": "C1 (A3): gives MONTH 2 for BIMONTHLY"
+    },
+    {
+      "id": "C2",
+      "criterio": "A1",
+      "camada": "unit",
+      "arquivo": "apps/web/lib/simulation.test.ts",
+      "teste": "C2 (A1): RFC-004 §5 example gives interest 190000n total 690000n installmentAmount 115000n"
+    },
+    {
+      "id": "C2",
+      "criterio": "A1",
+      "camada": "unit",
+      "arquivo": "apps/web/lib/simulation.test.ts",
+      "teste": "C2 (A1): RFC-004 §5 example schedule has length 6 and first line matches"
+    },
+    {
+      "id": "C3",
+      "criterio": "A2",
+      "camada": "unit",
+      "arquivo": "apps/web/lib/simulation.test.ts",
+      "teste": "C3 (A2): CA-11 gives installmentAmount 27500n and total 110000n"
+    },
+    {
+      "id": "C4",
+      "criterio": "A6",
+      "camada": "unit",
+      "arquivo": "apps/web/lib/simulation.test.ts",
+      "teste": "C4 (A6): throws DueDateError when firstDueDate equals disbursementDate"
+    },
+    {
+      "id": "C5",
+      "criterio": "A4",
+      "camada": "unit",
+      "arquivo": "apps/web/lib/simulation-form.test.ts",
+      "teste": "C5 (A4): RFC-004 §5 form gives expected SimulateLoanRequest"
+    },
+    {
+      "id": "C5",
+      "criterio": "A4",
+      "camada": "unit",
+      "arquivo": "apps/web/lib/simulation-form.test.ts",
+      "teste": "C5 (A4): CA-11 form gives expected SimulateLoanRequest"
+    },
+    {
+      "id": "C6",
+      "criterio": "A4",
+      "camada": "unit",
+      "arquivo": "apps/web/lib/simulation-form.test.ts",
+      "teste": "C6 (A4): amount without comma throws MoneyError"
+    },
+    {
+      "id": "C6",
+      "criterio": "A4",
+      "camada": "unit",
+      "arquivo": "apps/web/lib/simulation-form.test.ts",
+      "teste": "C6 (A4): installmentCount zero throws ZodError"
+    }
+  ],
+  "gates": {
+    "expect-red": {
+      "status": "PASS",
+      "at": "2026-11-18T20:48:38.992Z",
+      "detail": "12 teste(s), todos falhando"
+    },
+    "tests-reviewed": {
+      "status": "PASS",
+      "at": "2026-11-19T01:53:38.233Z",
+      "detail": "2 teste(s) com sha assinado"
+    },
+    "coverage": {
+      "status": "PASS",
+      "at": "2026-11-19T01:53:43.623Z",
+      "detail": "100% nos arquivos da feature em apps/web (lib/simulation.ts, lib/simulation-form.ts)"
+    },
+    "mutation": {
+      "status": "PASS",
+      "at": "2026-11-19T01:28:00.235Z",
+      "detail": "score >= 80%: apps/web/lib/simulation.ts 100.00% (26/26)"
+    },
+    "e2e": {
+      "status": "PASS",
+      "at": "2026-11-19T01:53:43.737Z",
+      "detail": "nenhum e2e na feature (nenhum critério e2e)"
+    }
+  },
+  "testShas": {
+    "apps/web/lib/simulation.test.ts": "01e4d34d627438824b4d89709448791b53964198",
+    "apps/web/lib/simulation-form.test.ts": "46cffa50156713f5a8d3072c154290e3267cb3a7"
+  }
+}
