@@ -17,12 +17,6 @@ export type LoanActionResult =
       readonly fieldErrors: Readonly<Record<string, string>>;
     };
 
-/**
- * Lacuna: GET /loans/{id} ainda não devolve `version` (só as respostas de escrita devolvem). Um rascunho que
- * ninguém editou está na versão 1; se mudou, a API responde VERSION_CONFLICT e a tela pede para recarregar.
- */
-export const DRAFT_INITIAL_VERSION = 1;
-
 /** Ativar e Cancelar só existem em rascunho (E10 D12). */
 export function canActivate(status: LoanStatus): boolean {
   return status === "DRAFT";

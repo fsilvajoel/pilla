@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import type { ReactElement } from "react";
 import { LoanDetailView } from "@/components/loans/loan-detail-view";
 import { LoanDraftActions } from "@/components/loans/loan-draft-actions";
-import { DRAFT_INITIAL_VERSION, canActivate, canCancel } from "@/components/loans/loan-actions";
+import { canActivate, canCancel } from "@/components/loans/loan-actions";
 import { getLoan, listAccounts } from "@/lib/api/loans";
 import { ApiProblem } from "@/lib/api/problem";
 import { todayInBrt } from "@/lib/today";
@@ -25,7 +25,7 @@ export default async function ContratoPage({
       {draft && (
         <LoanDraftActions
           loanId={loan.id}
-          version={DRAFT_INITIAL_VERSION}
+          version={loan.version}
           today={todayInBrt(new Date())}
           accounts={accounts}
           onActivate={activateLoanAction}
