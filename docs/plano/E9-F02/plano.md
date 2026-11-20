@@ -134,7 +134,7 @@ Camada: Supertest sobre o app Nest em memória é `unit` (sem navegador, sem red
 ### A6: erro inesperado responde 500 sem vazar
 - entrada: rota fixture que lança `Error("senha=segredo-123")`; e, na propriedade, `Error` com mensagem qualquer
 - domínio: exceção não tratada
-- saída: status 500, `application/problem+json`, corpo `{ title: "Erro interno", status: 500, detail: "Erro interno do servidor.", code: "INTERNAL_ERROR" }` (P1) que passa em `problemSchema.safeParse`; o texto da resposta não contém a mensagem lançada, `stack` nem linha de stack (`/\n\s+at /`); a mensagem e o stack vão para `Logger.error`
+- saída: status 500, `application/problem+json`, corpo `{ title: "Erro interno", status: 500, detail: "Erro interno do servidor.", code: "INTERNAL_ERROR" }` (P1) que passa em `problemSchema.safeParse`; o texto da resposta não contém a mensagem lançada, `stack` nem linha de stack (`/\n\s+at /`); o log (`Logger.error`) recebe só o nome da classe da exceção e o código `INTERNAL_ERROR`; a mensagem e o stack não vão para o log (decisão do Joel, 20/11: log não grava segredo, e a primeira linha do stack repete a mensagem)
 - erro: nenhum
 - fonte: E9-T02 done; RFC-004 §2 (problem+json); P1 pendente para o `code`
 - camada: unit, prop
@@ -215,7 +215,7 @@ Camada: Supertest sobre o app Nest em memória é `unit` (sem navegador, sem red
 - C16 (A4, unit): `POST` com corpo `{"name":` (JSON truncado) e `Content-Type: application/json` responde 400 `VALIDATION_FAILED` sem a chave `errors` (risco R3)
 - C17 (A5, unit): `GET /api/v1/nao-existe` responde 404 com `application/problem+json` e corpo `{ title: "Não encontrado", status: 404, detail: "Recurso não encontrado.", code: "NOT_FOUND" }`
 - C18 (A5, unit): `GET /health` (sem prefixo) e `POST /api/v1/health` respondem 404 `NOT_FOUND`
-- C19 (A6, unit): `GET /api/v1/fixtures/boom` (lança `Error("senha=segredo-123")`) responde 500 `application/problem+json` com `code: "INTERNAL_ERROR"`, `title: "Erro interno"`, `detail: "Erro interno do servidor."`; o texto da resposta não contém `segredo-123`, `stack` nem linha de stack (`/\n\s+at /`); `Logger.error` foi chamado com a mensagem
+- C19 (A6, unit): `GET /api/v1/fixtures/boom` (lança `Error("senha=segredo-123")`) responde 500 `application/problem+json` com `code: "INTERNAL_ERROR"`, `title: "Erro interno"`, `detail: "Erro interno do servidor."`; o texto da resposta não contém `segredo-123`, `stack` nem linha de stack (`/\n\s+at /`); `Logger.error` foi chamado com o nome `Error` e o código `INTERNAL_ERROR`, e nenhum argumento contém `segredo-123`
 - C20 (A6, prop): para qualquer mensagem `m` (texto com pelo menos 8 caracteres), um `Error(m)` lançado devolve 500, corpo que passa em `problemSchema.safeParse` e texto da resposta sem `m`
 - C21 (A7, unit): `GET /api/v1/fixtures/conflict` (lança `ProblemException("VERSION_CONFLICT", "Versão desatualizada.")`) responde 409 com `code: "VERSION_CONFLICT"`, `title: "VERSION_CONFLICT"`, `detail: "Versão desatualizada."`; com `errors` informados, eles vão no corpo
 - C22 (A8, unit): `GET /api/v1/health` com PGlite migrado responde 200, `application/json`, corpo `{ status: "ok", database: "up" }` que passa em `healthResponseSchema.safeParse`
@@ -243,6 +243,6 @@ Rotas fixture dos testes (declaradas dentro do arquivo de teste, nunca em produ�
 
 ## Pendências
 
-- P1 (PM/Joel, contrato): o catálogo da RFC-004 §6 não tem `code` para erro 500, e `problemSchema` só aceita `code` cujo `errorStatus` bate com o `status`. Sugestão padrão: acrescentar `INTERNAL_ERROR` com status 500 à RFC-004 §6, a `errorCodeSchema` e a `errorStatus` (como o D8 fez com `DUPLICATE_CPF`), com `detail` "Erro interno do servidor.". Sem a resposta, A6, C19 e C20 ficam sem valor esperado.
-- P2 (Joel, dependências, `docs/travas.md` §7): aprovar `reflect-metadata` e `rxjs` (peers do Nest, runtime), `supertest` e `@types/supertest` (dev), com `docs/travas.md` e `pnpm-lock.yaml`; `fast-check` e `@nestjs/*` já são permitidos. Sem isso a instalação e o `check-allowed-deps` falham.
-- P3 (técnica, ajuste dos cartões; não é decisão de produto): E9-T03 não tem em `allowedPaths` o `apps/api/tsconfig.json` (`experimentalDecorators`), `pnpm-lock.yaml`, `docs/travas.md`, `packages/schemas/src/api/core/health.ts`, `packages/schemas/src/index.ts` e `docs/rfc/RFC-004-api-e-eventos.md` (P1). E9-T02 não tem `packages/schemas/src/api/core/health.test.ts`, nem os testes novos de `env`, `openapi` e `health.controller`. O `done` dos dois cartões não cita o OpenAPI, as variáveis de ambiente nem o schema de health. Ajuste no refinamento.
+- P1 (resolvida, Joel 19/11: aprovado): `INTERNAL_ERROR` com status 500 e `detail` "Erro interno do servidor.". A RFC-004 §6 já o lista; `errorCodeSchema` e `errorStatus` em `packages/schemas/src/api/problem.ts` ganham o code no E9-T03 (mesmo padrão do D8 com `DUPLICATE_CPF`).
+- P2 (resolvida, Joel 19/11: aprovado): `reflect-metadata`, `rxjs` (runtime), `supertest` e `@types/supertest` (dev) em `docs/travas.md` §7; instalados antes da etapa tests para o esboço compilar.
+- P3 (resolvida, aplicada na rodada 2): `allowedPaths`, `checks`, `protectedTests`, `readFirst` e `done` dos cartões E9-T02 e E9-T03 ajustados em `docs/plano/E9.yaml` (ver `revisao.md`). O E9-T03 também ganha `packages/schemas/src/api/problem.ts` (P1); a RFC-004 §6 já foi editada na rodada 2, fora do cartão.

@@ -138,3 +138,85 @@ Formato de cada entrada:
 - opções: a) aprovar como estão; b) outro padrão de ids ou de link ativo (dizer qual)
 - sugestão padrão: a) são o padrão usual de acessibilidade e de navegação de seção
 - resposta: a) aprovados os ids `<id>-error` e `<id>-description` e a regra do link ativo (19/11)
+
+## E9-T03 (E9-F02)
+- status: resolvida
+- data: 2026-11-19
+- pergunta: P1: qual `code` para o erro 500? A RFC-004 §6 não tem; `problemSchema` só aceita `code` que mapeie o `status`.
+- opções: a) `INTERNAL_ERROR`, status 500; b) outro nome (ex. `INTERNAL_SERVER_ERROR`)
+- sugestão padrão: a) `INTERNAL_ERROR`, como o D8 fez com `DUPLICATE_CPF`
+- resposta: a) `INTERNAL_ERROR` com status 500; RFC-004 §6 editada, `errorCodeSchema` e `errorStatus` no E9-T03 (19/11)
+
+## E9-T02 (E9-F02)
+- status: resolvida
+- data: 2026-11-19
+- pergunta: P2: aprova `reflect-metadata`, `rxjs`, `supertest` e `@types/supertest` em `docs/travas.md` §7?
+- opções: a) aprovar as quatro (`supertest` e `@types/supertest` em dev); b) recusar alguma
+- sugestão padrão: a) aprovar as quatro
+- resposta: a) aprovadas as quatro; `docs/travas.md` §7 atualizada (19/11)
+
+## E9-T05 (E9-F03)
+- status: resolvida
+- data: 2026-11-19
+- pergunta: a busca de pessoas por nome ignora acentos?
+- opções: a) sim (exige tratar acentos na consulta); b) não, só caixa
+- sugestão padrão: b) só caixa (menor)
+- resposta: a) a busca ignora acentos, por ora ("jose" encontra "José"); aplicada nos cartões E9-T04 e E9-T05 (19/11)
+
+## E10-T09 (E10-F05)
+- status: resolvida
+- data: 2026-11-20
+- pergunta: a mora incide sobre o valor original da parcela ou só sobre o saldo que restou depois de um pagamento parcial (RFC-002 §6)?
+- opções: a) só sobre o saldo em aberto da parcela; b) sobre o valor original até a quitação da parcela
+- sugestão padrão: a) sobre o saldo em aberto
+- resposta: a) sobre o saldo em aberto da parcela (aprovado pelo Joel em 20/11)
+## E10-T09 (E10-F05)
+- status: resolvida
+- data: 2026-11-20
+- pergunta: durante a carência, a parcela vencida aparece como OVERDUE (status da parcela) ou só depois que a carência acaba? O standing do contrato já usa a carência.
+- opções: a) OVERDUE logo após o vencimento, com a carência só isentando os encargos; b) OVERDUE só depois da carência
+- sugestão padrão: a) OVERDUE após o vencimento; standing e encargos respeitam a carência
+- resposta: a) OVERDUE logo após o vencimento; a carência só isenta encargos (aprovado pelo Joel em 20/11)
+## E10-T04 (E10-F02)
+- status: resolvida
+- data: 2026-11-20
+- pergunta: PEND-01: no MVP, existe uma única conta base ("Conta principal") criada pelo seed, ou já há mais contas desde o início?
+- opções: a) uma conta base com id fixo no seed; b) várias contas cadastradas pelo ADMIN (exige criar a tela de contas na E12)
+- sugestão padrão: a) uma conta base
+- resposta: a) uma conta base com id fixo no seed (aprovado pelo Joel em 20/11)
+## E11 (esqueleto)
+- status: resolvida
+- data: 2026-11-20
+- pergunta: as decisões de 19/11 §5 citam pagamento em contrato DRAFT, mas DRAFT não tem cronograma. Como alocar?
+- opções: a) proibir pagamento em DRAFT (409 `LOAN_NOT_EDITABLE`); b) aceitar e deixar PENDING_REVIEW até a ativação, alocando na confirmação
+- sugestão padrão: a) proibir
+- resposta: b) aceitar: pagamento em DRAFT fica PENDING_REVIEW até a ativação e aloca na confirmação (Joel em 20/11)
+## E12 (esqueleto)
+- status: resolvida
+- data: 2026-11-21
+- pergunta: RN-C10: ao ativar um contrato com valor maior que o caixa da conta, o sistema bloqueia ou pede confirmação? A E10 ativa sem checar (D6), porque o saldo só existe depois da E12.
+- opções: a) bloquear com 422; b) avisar e exigir confirmação explícita
+- sugestão padrão: b) avisar e pedir confirmação
+- resposta: b) avisar, sem bloquear (aprovado pelo Joel em 21/11)
+
+## E12 (esqueleto)
+- status: resolvida
+- data: 2026-11-20
+- pergunta: o painel (RF-32) lê uma tabela materializada `loan_positions` (RFC-005) ou uma consulta pública de lending calculada na hora (ADR-0005)?
+- opções: a) consulta pública calculada; b) `loan_positions` atualizada por eventos
+- sugestão padrão: a) consulta pública, até haver volume que justifique
+- resposta: a) consulta pública calculada na hora (Joel em 20/11)
+## E13 (esqueleto)
+- status: resolvida
+- data: 2026-11-20
+- pergunta: haverá uma rotina diária para emitir `InstallmentOverdue` (RFC-004 §7), ou o atraso só é calculado na leitura?
+- opções: a) sem rotina no MVP, atraso só na leitura; b) job diário que grava o evento no outbox
+- sugestão padrão: a) sem rotina no MVP
+- resposta: a) sem rotina no MVP; atraso só na leitura (Joel em 20/11)
+## E13 (esqueleto)
+- status: resolvida
+- data: 2026-11-20
+- pergunta: PEND-04: qual o número padrão de dias de carência em `default_terms`?
+- opções: a) 0 dias; b) 3 dias; c) outro valor
+- sugestão padrão: b) 3 dias
+- resposta: a) 0 dias de carência (Joel em 20/11)

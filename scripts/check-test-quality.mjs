@@ -123,7 +123,7 @@ export function checkTestQuality(src, file = "teste") {
     for (const [re, what] of [
       [/\.toBeInstanceOf\(\s*Object\s*\)/, "toBeInstanceOf(Object)"],
       [/\.toBeDefined\(\s*\)/, "toBeDefined()"],
-      [/\bexpect\(\s*(?:true|false|null|undefined|-?\d[\d_.]*)\s*\)/, "expect(<literal>)"],
+      [/(?<![.\w])expect\(\s*(?:true|false|null|undefined|-?\d[\d_.]*)\s*\)/, "expect(<literal>)"],
     ])
       if (re.test(code)) add("Q1", line, `${what} sempre passa: afirme o valor ou a propriedade esperada`);
     for (const m of code.matchAll(/\bexpect\(\s*([\w.]+)\s*\)\s*\.(?:toBe|toEqual|toStrictEqual)\(\s*([\w.]+)\s*\)/g))

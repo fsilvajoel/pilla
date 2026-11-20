@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { idSchema } from "../../common";
+import { idSchema, postalCodeSchema, stateSchema } from "../../common";
 
 const addressFields = {
   street: z.string().trim().min(1).max(150),
@@ -8,9 +8,9 @@ const addressFields = {
   district: z.string().trim().min(1).max(100),
   city: z.string().trim().min(1).max(100),
   /** UF em maiúsculas (RFC-005 `addresses.state char(2)`). */
-  state: z.string().regex(/^[A-Z]{2}$/),
+  state: stateSchema,
   /** CEP só com dígitos (RFC-005 `addresses.postal_code char(8)`). */
-  postalCode: z.string().regex(/^\d{8}$/),
+  postalCode: postalCodeSchema,
   isPrimary: z.boolean(),
 };
 

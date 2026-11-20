@@ -173,6 +173,7 @@ Resposta `200`:
 | 422 | `RECEIPT_REQUIRED` | RN-R06 |
 | 422 | `DUPLICATE_PIX_TRANSACTION` | mesmo `pixEndToEndId` já registrado |
 | 429 | `TOO_MANY_REQUESTS` | limite do portal/login |
+| 500 | `INTERNAL_ERROR` | erro inesperado; o `detail` é fixo ("Erro interno do servidor."), sem mensagem interna nem stack |
 
 Os textos em pt-BR de cada `code` ficam no arquivo de mensagens do sistema.
 

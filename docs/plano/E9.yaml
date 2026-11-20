@@ -75,28 +75,42 @@ cards:
     assignee: bia
     rules: []
     skills: [escrever-teste]
-    refs: [RFC-003 §4.2, RFC-004 §2, RFC-004 §6, docs/plano/E9.md D1]
+    refs: [RFC-003 §4.2, RFC-004 §2, RFC-004 §6, docs/plano/E9.md D1, docs/plano/E9-F02/plano.md, docs/adr/0017-estrategia-de-testes.md]
     dependsOn: [E9-T01]
     allowedPaths:
-      - apps/api/src/core/http/*.test.ts
+      - apps/api/src/core/http/env.test.ts
+      - apps/api/src/core/http/zod-validation.pipe.test.ts
+      - apps/api/src/core/http/problem-details.filter.test.ts
+      - apps/api/src/core/http/health.controller.test.ts
+      - apps/api/src/core/http/openapi.test.ts
       - apps/api/src/app.test.ts
+      - packages/schemas/src/api/core/health.test.ts
     protectedTests: []
     checks:
       - '! pnpm --filter @pilla/api exec vitest run src/core/http src/app.test.ts'
-      - node scripts/check-test-quality.mjs apps/api/src/core/http apps/api/src/app.test.ts
+      - '! pnpm --filter @pilla/schemas exec vitest run src/api/core/health.test.ts'
+      - node scripts/check-test-quality.mjs apps/api/src/core/http/env.test.ts apps/api/src/core/http/zod-validation.pipe.test.ts apps/api/src/core/http/problem-details.filter.test.ts apps/api/src/core/http/health.controller.test.ts apps/api/src/core/http/openapi.test.ts apps/api/src/app.test.ts packages/schemas/src/api/core/health.test.ts
       - pnpm --filter @pilla/api typecheck
     done:
-      - GET /api/v1/health answers 200 with the database status
-      - a body that fails the Zod schema answers 400 application/problem+json with code VALIDATION_FAILED and the field errors
-      - an unknown route answers 404 problem+json NOT_FOUND; an unexpected error answers 500 problem+json without stack
+      - 'env (A1, A2, C1 to C7): readApiEnv accepts PILLA_API_PORT 1024 to 65535 and a postgres(ql):// DATABASE_URL, and rejects the listed values with the exact messages, never echoing the value read'
+      - 'pipe (A3, C8 to C11): ZodValidationPipe returns the schema output or throws ProblemException VALIDATION_FAILED with one errors item per field'
+      - 'errors over Supertest (A4 to A7, C12 to C21): 400 VALIDATION_FAILED, 404 NOT_FOUND, 500 INTERNAL_ERROR without message or stack and a ProblemException code, all application/problem+json with the exact title and detail texts; fixture routes live only inside the tests'
+      - 'health (A8, A9, C22, C23): 200 {status ok, database up}; with the database closed, 200 {status degraded, database down}'
+      - 'app, bootstrap and OpenAPI (A10 to A12, C24 to C28): listens on 127.0.0.1 under /api/v1, rejects an invalid env, GET /api/v1/openapi.json matches the plan'
+      - 'health contract (A13, C29, C30): healthResponseSchema accepts the two valid objects and rejects the listed ones'
     budget: {attempts: 4, toolCalls: 25, minutes: 15}
+    readFirst:
+      - docs/plano/E9-F02/plano.md
+      - docs/plano/E9-F02/esboco-api.txt
+      - packages/schemas/src/api/problem.ts
+      - docs/adr/0017-estrategia-de-testes.md
   - id: E9-T03
     title: Bootstrap the NestJS app with the database provider, Zod pipe and problem+json filter
     kind: implement
-    assignee: alice
+    assignee: sonnet
     rules: []
     skills: [editar-arquivo, coding-guidelines, modular-design-principles]
-    refs: [RFC-003 §4.2, RFC-004 §2, ADR-0002, docs/plano/E9.md D1 D3]
+    refs: [RFC-003 §4.2, RFC-004 §2, RFC-004 §6, ADR-0002, docs/plano/E9.md D1 D3, docs/plano/E9-F02/plano.md]
     dependsOn: [E9-T02]
     allowedPaths:
       - apps/api/src/main.ts
@@ -104,40 +118,76 @@ cards:
       - apps/api/src/core/http/**
       - apps/api/src/db/**
       - apps/api/package.json
-    protectedTests: [apps/api/src/core/http/*.test.ts, apps/api/src/app.test.ts]
+      - apps/api/tsconfig.json
+      - pnpm-lock.yaml
+      - docs/travas.md
+      - packages/schemas/src/api/problem.ts
+      - packages/schemas/src/api/core/health.ts
+      - packages/schemas/src/index.ts
+    protectedTests:
+      - apps/api/src/core/http/env.test.ts
+      - apps/api/src/core/http/zod-validation.pipe.test.ts
+      - apps/api/src/core/http/problem-details.filter.test.ts
+      - apps/api/src/core/http/health.controller.test.ts
+      - apps/api/src/core/http/openapi.test.ts
+      - apps/api/src/app.test.ts
+      - packages/schemas/src/api/core/health.test.ts
     checks:
-      - pnpm --filter @pilla/api exec vitest run src/core/http src/app.test.ts
+      - pnpm --filter @pilla/api test
+      - pnpm --filter @pilla/schemas test
+      - pnpm --filter @pilla/schemas typecheck
+      - pnpm check:schemas
       - pnpm --filter @pilla/api typecheck
       - pnpm --filter @pilla/api lint
       - node scripts/check-allowed-deps.mjs
     done:
-      - the T02 tests pass; the app listens on 127.0.0.1:PILLA_API_PORT with prefix /api/v1
-      - the database provider reads DATABASE_URL from the environment; tests inject PGlite
+      - the T02 tests pass and apps/api keeps 100% coverage; the app listens on 127.0.0.1:PILLA_API_PORT with prefix /api/v1 (script start calls bootstrap(process.env))
+      - 'readApiEnv validates PILLA_API_PORT and DATABASE_URL with the exact messages of the plan; the app does not start with an invalid env'
+      - 'INTERNAL_ERROR (500) is added to errorCodeSchema and errorStatus in packages/schemas (P1, same pattern as DUPLICATE_CPF in D8) and the 500 body passes problemSchema'
+      - 'healthResponseSchema in packages/schemas (reexported by index.ts); GET /api/v1/health and GET /api/v1/openapi.json (OpenApiController) answer as in the plan'
+      - 'the database provider reads DATABASE_URL from the environment; tests inject PGlite; experimentalDecorators on and an explicit @Inject on every constructor parameter'
+      - 'reflect-metadata, rxjs, supertest and @types/supertest are in the lists of docs/travas.md and in apps/api/package.json (P2)'
       - Zod only at the HTTP edge, strong typing, no any
     budget: {attempts: 3, toolCalls: 40, minutes: 30}
+    readFirst:
+      - docs/plano/E9-F02/plano.md
+      - docs/plano/E9-F02/esboco-api.txt
+      - packages/schemas/src/api/problem.ts
+      - docs/rfc/RFC-004-api-e-eventos.md
+      - docs/travas.md
 
   # ---------------------------------------------------------------- E9-F03: rotas de pessoas
   - id: E9-T04
     title: Add the people API schemas (list, detail, update, problem codes) to @pilla/schemas
     kind: implement
-    assignee: alice
+    assignee: sonnet
     rules: []
     skills: [editar-arquivo]
-    refs: [RFC-004 §3, RFC-004 §6, PRD-001 RF-01, docs/plano/E9.md D8 D9]
+    refs: [RFC-004 §3, RFC-004 §6, PRD-001 RF-01, docs/plano/E9.md D8 D9, docs/plano/E9-F03/plano.md]
     dependsOn: [E9-T03]
     allowedPaths:
       - packages/schemas/src/api/people/**
+      - packages/schemas/src/api/problem.ts
       - packages/schemas/src/index.ts
       - docs/rfc/RFC-004*.md
+    readFirst:
+      - docs/plano/E9-F03/plano.md
+      - packages/schemas/src/api/people/create-person.ts
+      - packages/schemas/src/common.ts
+      - packages/schemas/src/api/problem.ts
+      - docs/rfc/RFC-004-api-e-eventos.md
+      - docs/prd/PRD-001-mvp-gestao-emprestimos.md
     protectedTests: []
     checks:
       - pnpm --filter @pilla/schemas test
       - pnpm --filter @pilla/schemas typecheck
       - node scripts/check-schemas.mjs
     done:
-      - schemas for PersonListQuery (search, limit, cursor), PersonListResponse, PersonResponse and UpdatePersonRequest exist next to create-person.ts
-      - the schema tests cover CPF check digits, masked CPF/phone normalized to digits, limit bounds (default 20, max 100) and the mixed letter+digit search kept as plain text
-      - RFC-004 §6 gains DUPLICATE_CPF 409 with detail "CPF já cadastrado." (D8)
+      - 'PersonListQuery (search, limit default 20, max 100, cursor), PersonListResponse, PersonResponse and UpdatePersonRequest exist next to create-person.ts; PersonSummary.cpf accepts only cpfSchema or null (A5, A6)'
+      - 'UpdatePersonRequest is strict, requires version as an integer >= 0, keeps cpf non-nullable and accepts null only for email, birthDate and notes (A9, C9)'
+      - 'PersonResponse is strict and omits null optional fields; PersonListResponse is strict and represents cpf as null when an imported person has no CPF (A1, A5, A8)'
+      - 'masked CPF/phone values are rejected, not normalized; CPF check digits and E.164 phone validation use cpfSchema and phoneSchema (A2, C2)'
+      - 'problemSchema accepts DUPLICATE_CPF with status 409 and RFC-004 §6 gains DUPLICATE_CPF 409 with detail "CPF já cadastrado." (D8, A3, C3)'
     budget: {attempts: 3, toolCalls: 25, minutes: 15}
   - id: E9-T05
     title: Write the tests for the people routes (POST, GET list/search, GET by id, PATCH)
@@ -145,43 +195,72 @@ cards:
     assignee: bia
     rules: []
     skills: [escrever-teste]
-    refs: [RFC-004 §3, RFC-004 §6, PRD-001 RF-01, PRD-001 RF-03, docs/plano/E9.md D8 D9]
+    refs: [RFC-004 §3, RFC-004 §6, PRD-001 RF-01, PRD-001 RF-03, docs/plano/E9.md D8 D9, docs/plano/E9-F03/plano.md]
     dependsOn: [E9-T04, E5-F02, E5-F05]
     allowedPaths:
       - apps/api/src/people/http/*.test.ts
+      - packages/schemas/src/api/people/people.test.ts
+    readFirst:
+      - docs/plano/E9-F03/plano.md
+      - packages/schemas/src/api/people/create-person.ts
+      - packages/schemas/src/api/people/person-list-query.ts
+      - packages/schemas/src/api/people/person-response.ts
+      - packages/schemas/src/api/people/update-person.ts
+      - packages/schemas/src/api/problem.ts
+      - apps/api/src/people/infra/person-list.ts
+      - apps/api/src/people/infra/person-update.ts
+      - apps/api/src/people/infra/person-repository.ts
     protectedTests: []
     checks:
       - '! pnpm --filter @pilla/api exec vitest run src/people/http'
+      - '! pnpm --filter @pilla/schemas exec vitest run src/api/people/people.test.ts'
       - node scripts/check-test-quality.mjs apps/api/src/people/http
+      - node scripts/check-test-quality.mjs packages/schemas/src/api/people/people.test.ts
       - pnpm --filter @pilla/api typecheck
     done:
-      - POST creates (201 + Location), invalid CPF gives 400, repeated CPF gives 409 DUPLICATE_CPF, unknown referrer gives 400
-      - GET list searches by name or CPF (listPersons rule, E5-F05 A11/A16 - name by case-insensitive substring, CPF by digit prefix ignoring dot and dash, union when the search is only digits; mixed letter+digit search is name substring only, never a CPF prefix), paginates by cursor and respects limit (default 20, max 100, above gives 400)
-      - POST and PATCH bodies are validated by the schema, not by the web - CPF with check digits, phone and PIX key format; masked CPF or phone input (dots, dash, parentheses) is normalized to digits; errors give 400 with the field list
-      - GET by id gives 200 or 404 NOT_FOUND
-      - PATCH without If-Match gives 428, stale version gives 409 VERSION_CONFLICT, success returns the new version in ETag
+      - 'POST creates exactly 201 with Location and PersonResponse (A1/C1), rejects invalid or masked CPF/phone and strict unknown fields with 400 VALIDATION_FAILED and the field list (A2/C2), rejects duplicate CPF with 409 DUPLICATE_CPF (A3/C3), and maps an unknown referrer to 404 NOT_FOUND (A4/C4)'
+      - 'GET list returns 200 with exact PersonListResponse for active-only and empty cases (A5/C5), ignores case and accents in name search, matches CPF by digit prefix, unions only-digit search and keeps mixed letter+digit as name-only (A6/C6)'
+      - 'GET list paginates with opaque cursor and limit 1-100/default 20 (A7/C7); limit 0, -1, 101, 1.5, 1e1, empty or abc and malformed cursor give 400 VALIDATION_FAILED at limit or cursor'
+      - 'GET by id returns the exact basic PersonResponse and omits the aggregate fields (A8/C8); an unknown UUID returns 404 NOT_FOUND'
+      - 'PATCH accepts only the documented partial fields plus version, clears email/birthDate/notes with null, rejects cpf null and unknown fields with 400, increments version to 4 and omits cleared optional fields (A9/C9)'
+      - 'PATCH uses version in the body and not If-Match/ETag/428: stale version gives 409 VERSION_CONFLICT and missing version gives 400 VALIDATION_FAILED (A10/C10)'
+      - 'PATCH duplicate CPF gives 409 DUPLICATE_CPF and leaves CPF and version unchanged (A11/C11)'
     budget: {attempts: 4, toolCalls: 30, minutes: 20}
   - id: E9-T06
     title: Implement the people controller and module on top of the existing repositories
     kind: implement
-    assignee: alice
+    assignee: sonnet
     rules: []
     skills: [editar-arquivo, coding-guidelines, tactical-ddd]
-    refs: [RFC-004 §3, ADR-0002, docs/plano/E9.md D1 D8 D9]
+    refs: [RFC-004 §3, ADR-0002, docs/plano/E9.md D1 D8 D9, docs/plano/E9-F03/plano.md]
     dependsOn: [E9-T05]
     allowedPaths:
       - apps/api/src/people/http/**
       - apps/api/src/people/people.module.ts
       - apps/api/src/people/application/**
+      - apps/api/src/people/infra/person-list.ts
       - apps/api/src/app.module.ts
-    protectedTests: [apps/api/src/people/http/*.test.ts]
+    readFirst:
+      - docs/plano/E9-F03/plano.md
+      - apps/api/src/people/infra/person-repository.ts
+      - apps/api/src/people/infra/person-update.ts
+      - apps/api/src/people/infra/person-list.ts
+      - apps/api/src/people/infra/person-write-error.ts
+      - apps/api/src/core/public/ids.ts
+      - packages/schemas/src/api/people/create-person.ts
+      - packages/schemas/src/api/problem.ts
+    protectedTests:
+      - apps/api/src/people/http/*.test.ts
+      - packages/schemas/src/api/people/people.test.ts
     checks:
       - pnpm --filter @pilla/api exec vitest run src/people
       - pnpm --filter @pilla/api typecheck
       - pnpm --filter @pilla/api lint
     done:
-      - the T05 tests pass and the E5 repository tests still pass
-      - the controller only translates HTTP; rules live in application/, access in infra/
+      - 'the T05 tests pass: C1-C11 return the exact status, problem+json, headers, bodies and persisted values of A1-A11'
+      - 'the E5-F02 and E5-F05 repository tests still pass, including listPersons case/accent search, CPF prefix, cursor, limit and updatePerson versioning'
+      - 'the controller only validates/translates HTTP; create/update/list/get rules live in application/ and database access lives in existing repositories plus the accent-folding adjustment in infra/person-list.ts'
+      - 'no If-Match, ETag or 428 behavior exists; PATCH reads version only from updatePersonRequest and updatePerson increments it on success'
     budget: {attempts: 3, toolCalls: 40, minutes: 30}
 
   # ---------------------------------------------------------------- E9-F04: endereços e PIX
@@ -191,43 +270,69 @@ cards:
     assignee: bia
     rules: []
     skills: [escrever-teste]
-    refs: [RFC-004 §3, PRD-001 RF-02]
+    refs: [PRD-001 RF-02, RFC-004 §§2-3, RFC-004 §6, RFC-005 §3, docs/plano/E9-F04/plano.md, packages/schemas/src/api/people/address.ts, packages/schemas/src/api/people/pix-key.ts]
     dependsOn: [E9-T06]
     allowedPaths:
       - apps/api/src/people/http/addresses.http.test.ts
       - apps/api/src/people/http/pix-keys.http.test.ts
+      - apps/api/src/people/infra/pix-keys.test.ts
     protectedTests: []
     checks:
       - '! pnpm --filter @pilla/api exec vitest run src/people/http/addresses.http.test.ts src/people/http/pix-keys.http.test.ts'
       - node scripts/check-test-quality.mjs apps/api/src/people/http
+    readFirst:
+      - docs/plano/E9-F04/plano.md
+      - packages/schemas/src/api/people/address.ts
+      - packages/schemas/src/api/people/pix-key.ts
+      - packages/schemas/src/common.ts
+      - apps/api/src/people/infra/pix-keys.test.ts
     done:
-      - POST/PATCH/DELETE for addresses and PIX keys answer per RFC-004 §3
-      - marking one as primary unmarks the previous one; the first one created is primary
-      - a PIX key is validated by type (CPF, e-mail, phone, random)
-      - deleting the primary promotes the most recent remaining one, or none
+      - 'C1-C12 prove A1-A5: POST/PATCH/DELETE addresses return exact status, Location, body and 400/404 errors; C1-C12 fail against the sketch'
+      - 'C13-C22 prove A6-A9: POST/PATCH/DELETE PIX keys return exact status, Location, body and 400/404 errors; C13-C22 fail against the sketch'
+      - 'C3-C6 and C15-C17 prove the first record is primary and setting another primary unmarks the previous record'
+      - 'C9-C10 and C18-C19 prove isPrimary false leaves no promotion and deleting the primary returns 204 with other records unpromoted'
+      - 'C11, C14 and C20 prove the address and PIX validation table; PIX value is enum-valid for type and trimmed 1-140 only, with no format validation'
+      - 'C22 and apps/api/src/people/infra/pix-keys.test.ts prove repeated PIX keys are accepted, the three rows exist, and the expected indexes omit pix_keys_type_value_key'
     budget: {attempts: 4, toolCalls: 30, minutes: 20}
   - id: E9-T08
     title: Implement the address and PIX key schemas, repositories and routes
     kind: implement
-    assignee: alice
+    assignee: sonnet
     rules: []
     skills: [editar-arquivo, coding-guidelines]
-    refs: [RFC-004 §3, PRD-001 RF-02]
+    refs: [PRD-001 RF-02, RFC-004 §§2-3, RFC-004 §6, RFC-005 §3, docs/plano/E9-F04/plano.md, packages/schemas/src/api/people/address.ts, packages/schemas/src/api/people/pix-key.ts]
     dependsOn: [E9-T07]
     allowedPaths:
-      - packages/schemas/src/api/people/**
-      - apps/api/src/people/**
+      - apps/api/src/people/application/**
+      - apps/api/src/people/infra/**
+      - apps/api/src/people/http/**
+      - apps/api/src/people/people.module.ts
+      - apps/api/src/people/infra/schema.ts
+      - apps/api/migrations/people/**
+      - docs/rfc/RFC-005-modelo-fisico-banco.md
     protectedTests:
       - apps/api/src/people/http/addresses.http.test.ts
       - apps/api/src/people/http/pix-keys.http.test.ts
       - apps/api/src/people/infra/addresses.test.ts
       - apps/api/src/people/infra/pix-keys.test.ts
+    readFirst:
+      - docs/plano/E9-F04/plano.md
+      - packages/schemas/src/api/people/address.ts
+      - packages/schemas/src/api/people/pix-key.ts
+      - apps/api/src/people/infra/pix-keys.test.ts
+      - apps/api/src/people/infra/schema.ts
+      - apps/api/migrations/people/0001_people_tables.sql
+      - docs/rfc/RFC-005-modelo-fisico-banco.md
     checks:
+      - pnpm --filter @pilla/api db:regen pix_keys_allow_repeat people
       - pnpm --filter @pilla/api exec vitest run src/people
-      - pnpm --filter @pilla/schemas test
       - pnpm --filter @pilla/api typecheck
     done:
-      - the T07 tests and the existing infra tests pass; the primary swap runs in one transaction
+      - 'C1-C12 pass with exact address responses and 400/404 errors, and C13-C22 pass with exact PIX responses and 400/404 errors'
+      - 'A3 and A7 primary swaps run in one transaction, the first record is primary, and no delete promotes a remaining record'
+      - 'A9 accepts repeated PIX values and there is no DUPLICATE_PIX_KEY/409/problem.ts; the migration and pixKeys schema remove pix_keys_type_value_key'
+      - 'pnpm --filter @pilla/api db:regen pix_keys_allow_repeat people creates only the coherent 0002 people migration and pnpm --filter @pilla/api exec vitest run src/people passes'
+      - 'pnpm --filter @pilla/api typecheck passes while protected HTTP and SQL tests remain unchanged except the test-author edits in pix-keys.test.ts'
     budget: {attempts: 3, toolCalls: 40, minutes: 30}
 
   # ---------------------------------------------------------------- E9-F05: ficha agregada
@@ -237,35 +342,50 @@ cards:
     assignee: bia
     rules: []
     skills: [escrever-teste]
-    refs: [RFC-004 §3, PRD-001 RF-03, PRD-001 RF-04, docs/plano/E9.md D7]
+    refs: [RFC-004 §2, RFC-004 §3, RFC-004 §6, PRD-001 RF-03, PRD-001 RF-04, RFC-005 §3, docs/plano/E9.md D7, docs/plano/E9-F05/plano.md]
     dependsOn: [E9-T08]
+    readFirst: [docs/plano/E9-F05/plano.md, packages/schemas/src/api/people/person-detail.ts, apps/api/src/people/http/people.http.test.ts]
     allowedPaths:
       - apps/api/src/people/http/person-sheet.http.test.ts
+      - apps/api/src/people/http/people.http.test.ts
     protectedTests: []
     checks:
       - '! pnpm --filter @pilla/api exec vitest run src/people/http/person-sheet.http.test.ts'
       - node scripts/check-test-quality.mjs apps/api/src/people/http/person-sheet.http.test.ts
     done:
-      - the sheet brings the person, addresses (primary first), PIX keys (primary first), the referrer (id and name) and the referrals
-      - contracts is an empty list until lending has an API (D7)
+      - C1/A1 passes and expects Ana 001 with cpf 52998224725, phone +5511987654321, version 1, referrer null, referrals addresses pixKeys empty and no email birthDate notes contracts
+      - C2/A2 passes with exact Ana 001, Carlos 002, Bruno 003, Diana 004, addresses 010/011 and PIX 012/013, primary first, literal timestamps and no contracts
+      - C3/A3 passes with addresses 010/011 and PIX 012/013 all isPrimary false ordered by createdAt asc then id asc
+      - C4/A4 passes inactive Ana 005 with no optional fields and a separate imported Bruno 003 with cpf null while Ana keeps a valid cpf
+      - C5/A5 passes with UUID v4 and text returning 400 VALIDATION_FAILED and nonexistent UUID v7 returning 404 NOT_FOUND exact
+      - C6/A6 passes the complete and empty-sheet cases at <= 4 PGlite client.query calls; the counter starts before HTTP and excludes seed
+      - C8 in apps/api/src/people/http/people.http.test.ts is updated to expect personDetailResponse and no longer expects a basic PersonResponse
+      - all T09 tests fail against the implementation stub with an assertion or contract error, never import syntax or type error
     budget: {attempts: 4, toolCalls: 25, minutes: 15}
   - id: E9-T10
     title: Implement the person sheet query
     kind: implement
-    assignee: alice
+    assignee: sonnet
     rules: []
     skills: [editar-arquivo, coding-guidelines]
-    refs: [RFC-004 §3, PRD-001 RF-04]
+    refs: [RFC-004 §2, RFC-004 §3, RFC-004 §6, PRD-001 RF-03, PRD-001 RF-04, RFC-005 §3, docs/plano/E9-F05/plano.md]
     dependsOn: [E9-T09]
+    readFirst: [docs/plano/E9-F05/plano.md, apps/api/src/people/http/person-sheet.http.test.ts, apps/api/src/people/http/people.http.test.ts]
     allowedPaths:
-      - packages/schemas/src/api/people/**
-      - apps/api/src/people/**
-    protectedTests: [apps/api/src/people/http/person-sheet.http.test.ts]
+      - apps/api/src/people/application/**
+      - apps/api/src/people/infra/**
+      - apps/api/src/people/http/**
+      - apps/api/src/people/people.module.ts
+    protectedTests: [apps/api/src/people/http/person-sheet.http.test.ts, apps/api/src/people/http/people.http.test.ts]
     checks:
       - pnpm --filter @pilla/api exec vitest run src/people
       - pnpm --filter @pilla/api typecheck
     done:
-      - the T09 tests pass with at most 4 queries per sheet (no N+1)
+      - C1-A1 and C2-A2 return the exact literals of the plan without contracts, with addresses and PIX primary first
+      - C3-A3 and C4-A4 preserve all isPrimary false, omit null optionals, preserve inactive summaries and return cpf null only in imported summaries
+      - C5-A5 validates UUID v7 and returns exact 400 VALIDATION_FAILED and 404 NOT_FOUND problem bodies
+      - C6-A6 counts PGlite client.query calls from before the HTTP request and returns <= 4 for complete and empty sheets
+      - T09 person-sheet HTTP test and protected C8 in people.http.test.ts pass while no protected test is edited by the implementer
     budget: {attempts: 3, toolCalls: 30, minutes: 20}
 
   # ---------------------------------------------------------------- E9-F06: design system web

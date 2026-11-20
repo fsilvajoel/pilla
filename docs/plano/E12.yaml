@@ -1,0 +1,129 @@
+delivery: E12
+title: Treasury (ledger from events, deposits, withdrawals, adjustments, statement, dashboard)
+# Esqueleto: detalhar checks, done, protectedTests, budget e readFirst antes de executar (formato de E10.yaml).
+cards:
+  # ---------------------------------------------------------------- E12-F01: consumidores do outbox
+  - id: E12-T01
+    title: Write the tests for the outbox consumers that post ledger entries
+    kind: test-author
+    assignee: claude
+    skills: [escrever-teste]
+    refs: [RFC-004 §7, RFC-005 §6, ADR-0006, docs/plano/E10.md D7, docs/plano/E12.md]
+    dependsOn: [E11-T08]
+    allowedPaths:
+      - apps/api/src/treasury/application/ledger-consumers.test.ts
+  - id: E12-T02
+    title: Implement the idempotent outbox consumers into ledger_entries
+    kind: implement
+    assignee: claude
+    skills: [editar-arquivo, coding-guidelines, modular-design-principles]
+    refs: [RFC-004 §7, RFC-005 §6, ADR-0006, docs/plano/E12.md]
+    dependsOn: [E12-T01]
+    allowedPaths:
+      - apps/api/src/treasury/application/**
+      - apps/api/src/treasury/infra/**
+      - apps/api/src/core/infra/outbox-dispatcher.ts
+  # ---------------------------------------------------------------- E12-F02: movimentações manuais
+  - id: E12-T03
+    title: Write the tests for deposit, withdrawal and adjustment entries
+    kind: test-author
+    assignee: bia
+    skills: [escrever-teste]
+    refs: [PRD-001 RF-30, RFC-004 §3, docs/plano/E12.md]
+    dependsOn: [E12-T02]
+    allowedPaths:
+      - apps/api/src/treasury/http/account-entries.http.test.ts
+  - id: E12-T04
+    title: Implement deposit, withdrawal and adjustment entries
+    kind: implement
+    assignee: baidu
+    skills: [editar-arquivo, coding-guidelines, modular-design-principles]
+    refs: [PRD-001 RF-30, RFC-004 §3, docs/plano/E12.md]
+    dependsOn: [E12-T03]
+    allowedPaths:
+      - apps/api/src/treasury/application/**
+      - apps/api/src/treasury/http/**
+  # ---------------------------------------------------------------- E12-F03: extrato
+  - id: E12-T05
+    title: Write the tests for the account statement
+    kind: test-author
+    assignee: bia
+    skills: [escrever-teste]
+    refs: [PRD-001 RF-31, RFC-004 §3, ADR-0005, docs/plano/E12.md]
+    dependsOn: [E12-T02]
+    allowedPaths:
+      - apps/api/src/treasury/http/account-statement.http.test.ts
+  - id: E12-T06
+    title: Implement the account statement with derived balance
+    kind: implement
+    assignee: baidu
+    skills: [editar-arquivo, coding-guidelines, modular-design-principles]
+    refs: [PRD-001 RF-31, ADR-0005, docs/plano/E12.md]
+    dependsOn: [E12-T05]
+    allowedPaths:
+      - apps/api/src/treasury/application/**
+      - apps/api/src/treasury/http/**
+      - apps/api/src/treasury/infra/**
+  # ---------------------------------------------------------------- E12-F04: painel
+  - id: E12-T07
+    title: Write the tests for the treasury dashboard figures
+    kind: test-author
+    assignee: claude
+    skills: [escrever-teste]
+    refs: [PRD-001 RF-32, ADR-0005, docs/plano/E12.md]
+    dependsOn: [E12-T06]
+    allowedPaths:
+      - apps/api/src/treasury/http/dashboard.http.test.ts
+  - id: E12-T08
+    title: Implement the treasury dashboard
+    kind: implement
+    assignee: claude
+    skills: [editar-arquivo, coding-guidelines, modular-design-principles]
+    refs: [PRD-001 RF-32, ADR-0005, docs/plano/E12.md]
+    dependsOn: [E12-T07]
+    allowedPaths:
+      - apps/api/src/treasury/**
+      - apps/api/src/lending/public/**
+  # ---------------------------------------------------------------- E12-F05: web
+  - id: E12-T09
+    title: Add the account statement, entries and dashboard screens
+    kind: implement
+    assignee: claude
+    skills: [shadcn, tailwind-css, react-best-practices, accessibility, coding-guidelines]
+    refs: [PRD-001 RF-30, PRD-001 RF-31, PRD-001 RF-32, docs/plano/E12.md]
+    dependsOn: [E12-T04, E12-T08, E10-T15, E9-T15]
+    allowedPaths:
+      - apps/web/lib/api/treasury.ts
+      - apps/web/app/(admin)/caixa/**
+      - apps/web/app/(admin)/painel/**
+      - apps/web/components/treasury/**
+  # ---------------------------------------------------------------- E12-F06: E2E
+  - id: E12-T10
+    title: Write the Playwright e2e of treasury entries, statement and dashboard
+    kind: test-author
+    assignee: claude
+    skills: [escrever-teste, accessibility]
+    refs: [PRD-001 RF-30, PRD-001 RF-31, PRD-001 RF-32, docs/plano/E12.md]
+    dependsOn: [E12-T09]
+    allowedPaths:
+      - apps/web/e2e/treasury.e2e.ts
+
+features:
+  - id: E12-F01
+    title: Outbox consumers into the ledger
+    cards: [E12-T01, E12-T02]
+  - id: E12-F02
+    title: Deposits, withdrawals and adjustments
+    cards: [E12-T03, E12-T04]
+  - id: E12-F03
+    title: Account statement
+    cards: [E12-T05, E12-T06]
+  - id: E12-F04
+    title: Treasury dashboard
+    cards: [E12-T07, E12-T08]
+  - id: E12-F05
+    title: Web treasury screens
+    cards: [E12-T09]
+  - id: E12-F06
+    title: Treasury end-to-end test
+    cards: [E12-T10]
