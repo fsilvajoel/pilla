@@ -1,13 +1,17 @@
-import type { JSX } from "react";
-import { PersonForm } from "@/components/person-form";
-import { mockPeople } from "@/lib/mock-data";
+import type { ReactElement } from "react";
+import { PageHeader } from "@/components/shared/page-header";
+import { PersonForm } from "@/components/people/person-form";
+import { Card, CardContent } from "@/components/ui/card";
 
-// Casca de rota (decisões do Joel de 17/11): dados de mentira até a API existir.
-export default function NewPersonPage(): JSX.Element {
+export default function NovaPessoaPage(): ReactElement {
   return (
-    <main>
-      <h1>Nova pessoa</h1>
-      <PersonForm people={mockPeople} />
-    </main>
+    <div className="flex flex-col gap-6 max-w-2xl">
+      <PageHeader title="Nova pessoa" description="Cadastre uma nova pessoa no sistema." />
+      <Card>
+        <CardContent className="pt-6">
+          <PersonForm />
+        </CardContent>
+      </Card>
+    </div>
   );
 }
