@@ -3,6 +3,7 @@ import { HealthController } from "./core/http/health.controller";
 import type { ApiEnv } from "./core/http/env";
 import { OpenApiController } from "./core/http/openapi";
 import { AccountsController } from "./treasury/http/accounts.controller";
+import { LendingModule } from "./lending/lending.module";
 import { PeopleModule } from "./people/people.module";
 import { createDatabase, DATABASE, DATABASE_HANDLE, type DatabaseHandle } from "./db/database";
 
@@ -18,7 +19,7 @@ export class AppModule implements OnApplicationShutdown {
     return {
       module: AppModule,
       global: true,
-      imports: [PeopleModule],
+      imports: [PeopleModule, LendingModule],
       controllers: [HealthController, OpenApiController, AccountsController],
       providers: [
         { provide: DATABASE_HANDLE, useFactory: (): DatabaseHandle => createDatabase(env.databaseUrl) },
