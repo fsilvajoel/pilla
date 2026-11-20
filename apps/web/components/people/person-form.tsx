@@ -11,6 +11,7 @@ import {
   updatePersonAction,
   type PersonActionFailure,
   type PersonPayload,
+  type PersonUpdatePayload,
 } from "@/app/(admin)/pessoas/actions";
 import { FormField } from "@/components/shared/form-field";
 import { Button } from "@/components/ui/button";
@@ -85,6 +86,24 @@ function toPayload(values: FormValues, referrer: PersonSummary | null): PersonPa
   };
 }
 
+/** Só o que mudou em relação à ficha: campo opcional esvaziado vira `null`; intocado é omitido. */
+function toUpdatePayload(
+  values: FormValues,
+  referrer: PersonSummary | null,
+  person: PersonDetailResponse,
+): PersonUpdatePayload {
+  const next = toPayload(values, referrer);
+  const payload: PersonUpdatePayload = {};
+  if (next.fullName !== person.fullName) payload.fullName = next.fullName;
+  if (next.cpf !== person.cpf) payload.cpf = next.cpf;
+  if (next.phone !== person.phone) payload.phone = next.phone;
+  if ((next.email ?? null) !== (person.email ?? null)) payload.email = next.email ?? null;
+  if ((next.birthDate ?? null) !== (person.birthDate ?? null)) payload.birthDate = next.birthDate ?? null;
+  if ((next.referredById ?? null) !== (person.referrer?.id ?? null)) payload.referredById = next.referredById ?? null;
+  if ((next.notes ?? null) !== (person.notes ?? null)) payload.notes = next.notes ?? null;
+  return payload;
+}
+
 function errorProps(message: string | undefined): { error?: string } {
   return message ? { error: message } : {};
 }
@@ -114,12 +133,11 @@ export function PersonForm({ person }: PersonFormProps): ReactElement {
 
   const submit = (values: FormValues): void => {
     setServerErrors({});
-    const payload = toPayload(values, referrer);
     startTransition(async () => {
       try {
         const result: PersonActionFailure = person
-          ? await updatePersonAction(person.id, person.version, payload)
-          : await createPersonAction(payload);
+          ? await updatePersonAction(person.id, person.version, toUpdatePayload(values, referrer, person))
+          : await createPersonAction(toPayload(values, referrer));
         setServerErrors(result.fieldErrors);
         toast.error(result.message);
       } catch {

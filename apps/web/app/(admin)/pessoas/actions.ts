@@ -17,6 +17,17 @@ export interface PersonPayload {
   notes?: string;
 }
 
+/** Corpo do PATCH: campo omitido = intocado; `null` = limpar o campo opcional. */
+export interface PersonUpdatePayload {
+  fullName?: string;
+  cpf?: string;
+  phone?: string;
+  email?: string | null;
+  birthDate?: string | null;
+  referredById?: string | null;
+  notes?: string | null;
+}
+
 export interface PersonActionFailure {
   ok: false;
   message: string;
@@ -25,6 +36,8 @@ export interface PersonActionFailure {
 
 const VERSION_CONFLICT_MESSAGE = "Esta ficha foi alterada por outra pessoa. Recarregue a página e tente novamente.";
 
+const DUPLICATE_CPF_MESSAGE = "CPF já cadastrado";
+
 function failure(message: string, fieldErrors: Record<string, string> = {}): PersonActionFailure {
   return { ok: false, message, fieldErrors };
 }
@@ -32,6 +45,7 @@ function failure(message: string, fieldErrors: Record<string, string> = {}): Per
 function fromError(error: unknown): PersonActionFailure {
   if (error instanceof ApiProblem) {
     if (error.code === "VERSION_CONFLICT") return failure(VERSION_CONFLICT_MESSAGE);
+    if (error.code === "DUPLICATE_CPF") return failure(DUPLICATE_CPF_MESSAGE, { cpf: DUPLICATE_CPF_MESSAGE });
     return failure(error.message, error.fieldMessages());
   }
   return failure("Erro inesperado. Tente novamente.");
@@ -55,7 +69,7 @@ export async function createPersonAction(payload: PersonPayload): Promise<Person
 export async function updatePersonAction(
   personId: string,
   version: number,
-  payload: PersonPayload,
+  payload: PersonUpdatePayload,
 ): Promise<PersonActionFailure> {
   const parsed = updatePersonRequest.safeParse({ ...payload, version });
   if (!parsed.success) return failure("Confira os campos do formulário.");
