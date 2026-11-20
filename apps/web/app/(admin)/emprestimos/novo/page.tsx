@@ -1,13 +1,17 @@
-import type { JSX } from "react";
-import { NewLoanForm } from "@/components/new-loan-form";
-import { mockDefaultTerms, mockPeople } from "@/lib/mock-data";
+import type { ReactElement } from "react";
+import { NewLoanForm } from "@/components/loans/new-loan-form";
+import { PageHeader } from "@/components/shared/page-header";
+import { listPeople } from "@/lib/api/people";
+import { createLoanAction } from "../actions";
+import { getDefaultTerms } from "./default-terms";
 
-// Casca de rota (decisões do Joel de 17/11): dados de mentira até a API existir.
-export default function NewLoanPage(): JSX.Element {
+export default async function NovoContratoPage(): Promise<ReactElement> {
+  const [defaults, { items }] = await Promise.all([getDefaultTerms(), listPeople({ limit: 100 })]);
+  const people = items.filter((person) => person.active);
   return (
-    <main>
-      <h1>Novo contrato</h1>
-      <NewLoanForm people={mockPeople} defaults={mockDefaultTerms} />
-    </main>
+    <div className="flex flex-col gap-6">
+      <PageHeader title="Novo contrato" />
+      <NewLoanForm people={people} defaults={defaults} onCreate={createLoanAction} />
+    </div>
   );
 }
