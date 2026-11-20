@@ -52,7 +52,10 @@
       "status": "pending"
     },
     "implement": {
-      "status": "pending"
+      "status": "done",
+      "worker": "orquestrador com subagentes Sonnet (fora do harness)",
+      "commit": "b8d0e66",
+      "note": "Implementado fora do fluxo do harness em 20/11. Gates conferidos por pnpm verify (typecheck, lint, cobertura 100%, 320 testes)."
     },
     "review": {
       "status": "pending"
