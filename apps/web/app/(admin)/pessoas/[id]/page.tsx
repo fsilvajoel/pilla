@@ -15,7 +15,7 @@ import {
   deletePixKeyAction,
   setPrimaryAddressAction,
   setPrimaryPixKeyAction,
-} from "./actions";
+} from "../actions";
 import type { PersonDetailResponse } from "@pilla/schemas";
 
 interface PageProps {
