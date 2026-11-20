@@ -18,6 +18,8 @@ interface AddressDialogProps {
   onOpenChange: (open: boolean) => void;
   onSubmit: (data: CreateAddressRequest) => void;
   isSubmitting: boolean;
+  /** Erro devolvido pela API no último envio (campo e/ou mensagem geral). */
+  serverError?: { readonly message: string; readonly fieldErrors: Readonly<Record<string, string>> } | null;
 }
 
 function isStateCode(value: string): value is BrazilianStateCode {
@@ -28,7 +30,13 @@ function errorProps(message: string | undefined): { error?: string } {
   return message === undefined ? {} : { error: message };
 }
 
-export function AddressDialog({ initialData, onOpenChange, onSubmit, isSubmitting }: AddressDialogProps): ReactElement {
+export function AddressDialog({
+  initialData,
+  onOpenChange,
+  onSubmit,
+  isSubmitting,
+  serverError,
+}: AddressDialogProps): ReactElement {
   const [street, setStreet] = useState(initialData?.street ?? "");
   const [number, setNumber] = useState(initialData?.number ?? "");
   const [complement, setComplement] = useState(initialData?.complement ?? "");
@@ -50,6 +58,10 @@ export function AddressDialog({ initialData, onOpenChange, onSubmit, isSubmittin
     setErrors(next);
     return Object.keys(next).length === 0;
   };
+
+  const serverFields = serverError?.fieldErrors ?? {};
+  const shown: Record<string, string | undefined> = { ...serverFields, ...errors };
+  const generalMessage = serverError && Object.keys(serverFields).length === 0 ? serverError.message : null;
 
   const handleSubmit = (e: SyntheticEvent): void => {
     e.preventDefault();
@@ -74,7 +86,7 @@ export function AddressDialog({ initialData, onOpenChange, onSubmit, isSubmittin
           <DialogTitle>{initialData ? "Editar endereço" : "Novo endereço"}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-          <FormField id="street" label="Rua" {...errorProps(errors.street)}>
+          <FormField id="street" label="Rua" {...errorProps(shown.street)}>
             <Input
               value={street}
               onChange={(e) => {
@@ -84,7 +96,7 @@ export function AddressDialog({ initialData, onOpenChange, onSubmit, isSubmittin
             />
           </FormField>
           <div className="grid grid-cols-2 gap-4">
-            <FormField id="number" label="Número" {...errorProps(errors.number)}>
+            <FormField id="number" label="Número" {...errorProps(shown.number)}>
               <Input
                 value={number}
                 onChange={(e) => {
@@ -103,7 +115,7 @@ export function AddressDialog({ initialData, onOpenChange, onSubmit, isSubmittin
               />
             </FormField>
           </div>
-          <FormField id="district" label="Bairro" {...errorProps(errors.district)}>
+          <FormField id="district" label="Bairro" {...errorProps(shown.district)}>
             <Input
               value={district}
               onChange={(e) => {
@@ -113,7 +125,7 @@ export function AddressDialog({ initialData, onOpenChange, onSubmit, isSubmittin
             />
           </FormField>
           <div className="grid grid-cols-2 gap-4">
-            <FormField id="city" label="Cidade" {...errorProps(errors.city)}>
+            <FormField id="city" label="Cidade" {...errorProps(shown.city)}>
               <Input
                 value={city}
                 onChange={(e) => {
@@ -122,7 +134,7 @@ export function AddressDialog({ initialData, onOpenChange, onSubmit, isSubmittin
                 placeholder="Cidade"
               />
             </FormField>
-            <FormField id="state" label="Estado" {...errorProps(errors.state)}>
+            <FormField id="state" label="Estado" {...errorProps(shown.state)}>
               <Select value={state} onValueChange={setState}>
                 <SelectTrigger>
                   <SelectValue placeholder="UF" />
@@ -137,7 +149,7 @@ export function AddressDialog({ initialData, onOpenChange, onSubmit, isSubmittin
               </Select>
             </FormField>
           </div>
-          <FormField id="postalCode" label="CEP" {...errorProps(errors.postalCode)}>
+          <FormField id="postalCode" label="CEP" {...errorProps(shown.postalCode)}>
             <Input
               value={postalCode}
               onChange={(e) => {
@@ -162,6 +174,11 @@ export function AddressDialog({ initialData, onOpenChange, onSubmit, isSubmittin
               Endereço principal
             </label>
           </div>
+          {generalMessage !== null && (
+            <p role="alert" className="text-sm text-destructive">
+              {generalMessage}
+            </p>
+          )}
           <DialogFooter>
             <Button
               type="button"

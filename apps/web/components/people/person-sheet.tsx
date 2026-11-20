@@ -21,14 +21,14 @@ import type {
 
 interface PersonSheetProps {
   person: PersonDetailResponse;
-  onAddAddress: (data: CreateAddressRequest) => Promise<void>;
-  onUpdateAddress: (id: string, data: UpdateAddressRequest) => Promise<void>;
-  onDeleteAddress: (id: string) => Promise<void>;
-  onSetPrimaryAddress: (id: string) => Promise<void>;
-  onAddPixKey: (data: CreatePixKeyRequest) => Promise<void>;
-  onUpdatePixKey: (id: string, data: UpdatePixKeyRequest) => Promise<void>;
-  onDeletePixKey: (id: string) => Promise<void>;
-  onSetPrimaryPixKey: (id: string) => Promise<void>;
+  onAddAddress: (data: CreateAddressRequest) => Promise<unknown>;
+  onUpdateAddress: (id: string, data: UpdateAddressRequest) => Promise<unknown>;
+  onDeleteAddress: (id: string) => Promise<unknown>;
+  onSetPrimaryAddress: (id: string) => Promise<unknown>;
+  onAddPixKey: (data: CreatePixKeyRequest) => Promise<unknown>;
+  onUpdatePixKey: (id: string, data: UpdatePixKeyRequest) => Promise<unknown>;
+  onDeletePixKey: (id: string) => Promise<unknown>;
+  onSetPrimaryPixKey: (id: string) => Promise<unknown>;
 }
 
 export function PersonSheet({

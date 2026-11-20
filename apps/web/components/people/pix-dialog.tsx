@@ -17,6 +17,8 @@ interface PixDialogProps {
   onOpenChange: (open: boolean) => void;
   onSubmit: (data: CreatePixKeyRequest) => void;
   isSubmitting: boolean;
+  /** Erro devolvido pela API no último envio (campo e/ou mensagem geral). */
+  serverError?: { readonly message: string; readonly fieldErrors: Readonly<Record<string, string>> } | null;
 }
 
 const pixKeyTypes: readonly { value: PixKeyType; label: string }[] = [
@@ -35,7 +37,13 @@ function errorProps(message: string | undefined): { error?: string } {
   return message === undefined ? {} : { error: message };
 }
 
-export function PixDialog({ initialData, onOpenChange, onSubmit, isSubmitting }: PixDialogProps): ReactElement {
+export function PixDialog({
+  initialData,
+  onOpenChange,
+  onSubmit,
+  isSubmitting,
+  serverError,
+}: PixDialogProps): ReactElement {
   const [type, setType] = useState<PixKeyType>(initialData?.type ?? "CPF");
   const [value, setValue] = useState(initialData?.value ?? "");
   const [isPrimary, setIsPrimary] = useState(initialData?.isPrimary ?? false);
@@ -48,6 +56,10 @@ export function PixDialog({ initialData, onOpenChange, onSubmit, isSubmitting }:
     setErrors(next);
     return Object.keys(next).length === 0;
   };
+
+  const serverFields = serverError?.fieldErrors ?? {};
+  const shown: Record<string, string | undefined> = { ...serverFields, ...errors };
+  const generalMessage = serverError && Object.keys(serverFields).length === 0 ? serverError.message : null;
 
   const handleSubmit = (e: SyntheticEvent): void => {
     e.preventDefault();
@@ -62,7 +74,7 @@ export function PixDialog({ initialData, onOpenChange, onSubmit, isSubmitting }:
           <DialogTitle>{initialData ? "Editar chave PIX" : "Nova chave PIX"}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-          <FormField id="type" label="Tipo" {...errorProps(errors.type)}>
+          <FormField id="type" label="Tipo" {...errorProps(shown.type)}>
             <Select
               value={type}
               onValueChange={(v) => {
@@ -85,7 +97,7 @@ export function PixDialog({ initialData, onOpenChange, onSubmit, isSubmitting }:
             id="value"
             label="Valor"
             description="CPF/CNPJ apenas números; e-mail ou telefone no formato padrão; chave aleatória gerada pelo banco."
-            {...errorProps(errors.value)}
+            {...errorProps(shown.value)}
           >
             <Input
               value={value}
@@ -110,6 +122,11 @@ export function PixDialog({ initialData, onOpenChange, onSubmit, isSubmitting }:
               Chave principal
             </label>
           </div>
+          {generalMessage !== null && (
+            <p role="alert" className="text-sm text-destructive">
+              {generalMessage}
+            </p>
+          )}
           <DialogFooter>
             <Button
               type="button"

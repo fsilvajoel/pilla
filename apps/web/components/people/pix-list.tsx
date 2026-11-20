@@ -9,10 +9,28 @@ import type { CreatePixKeyRequest, PixKey, PixKeyType, UpdatePixKeyRequest } fro
 
 interface PixListProps {
   pixKeys: readonly PixKey[];
-  onAddPixKey: (data: CreatePixKeyRequest) => Promise<void>;
-  onUpdatePixKey: (id: string, data: UpdatePixKeyRequest) => Promise<void>;
-  onDeletePixKey: (id: string) => Promise<void>;
-  onSetPrimaryPixKey: (id: string) => Promise<void>;
+  onAddPixKey: (data: CreatePixKeyRequest) => Promise<unknown>;
+  onUpdatePixKey: (id: string, data: UpdatePixKeyRequest) => Promise<unknown>;
+  onDeletePixKey: (id: string) => Promise<unknown>;
+  onSetPrimaryPixKey: (id: string) => Promise<unknown>;
+}
+
+export interface ServerError {
+  readonly message: string;
+  readonly fieldErrors: Readonly<Record<string, string>>;
+}
+
+function readFailure(result: unknown): ServerError | null {
+  if (typeof result !== "object" || result === null) return null;
+  if (!("ok" in result) || result.ok !== false) return null;
+  const message = "message" in result && typeof result.message === "string" ? result.message : null;
+  const fieldErrors: Record<string, string> = {};
+  if ("fieldErrors" in result && typeof result.fieldErrors === "object" && result.fieldErrors !== null) {
+    for (const [key, value] of Object.entries(result.fieldErrors)) {
+      if (typeof value === "string") fieldErrors[key] = value;
+    }
+  }
+  return { message: message ?? "Não foi possível concluir a operação.", fieldErrors };
 }
 
 type DialogState = { kind: "create" } | { kind: "edit"; pixKey: PixKey } | null;
@@ -28,11 +46,22 @@ export function PixList({
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
-  const run = (action: () => Promise<void>, onDone?: () => void): void => {
+  const [serverError, setServerError] = useState<ServerError | null>(null);
+
+  /** Roda a ação; falha da API vira mensagem (no dialog aberto ou toast) e onDone só roda em sucesso. */
+  const run = (action: () => Promise<unknown>, onDone?: () => void, inDialog = false): void => {
     startTransition(async () => {
       try {
-        await action();
-        onDone?.();
+        const failure = readFailure(await action());
+        if (failure === null) {
+          setServerError(null);
+          onDone?.();
+        } else if (inDialog) {
+          setServerError(failure);
+        } else {
+          toast.error(failure.message);
+          setDeletingId(null);
+        }
       } catch {
         toast.error("Não foi possível concluir a operação.");
       }
@@ -47,6 +76,7 @@ export function PixList({
       () => {
         setDialog(null);
       },
+      true,
     );
   };
 
@@ -84,6 +114,7 @@ export function PixList({
         <h3 className="text-lg font-medium">Chaves PIX</h3>
         <Button
           onClick={() => {
+            setServerError(null);
             setDialog({ kind: "create" });
           }}
         >
@@ -125,6 +156,7 @@ export function PixList({
                   variant="outline"
                   size="sm"
                   onClick={() => {
+                    setServerError(null);
                     setDialog({ kind: "edit", pixKey });
                   }}
                 >
@@ -154,6 +186,7 @@ export function PixList({
           }}
           onSubmit={handleSubmit}
           isSubmitting={isPending}
+          serverError={serverError}
         />
       )}
       <ConfirmDialog
