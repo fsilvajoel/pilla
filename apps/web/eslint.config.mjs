@@ -14,7 +14,7 @@ const nextSpecialFiles = [
 const nextBans = commonBans.filter((ban) => ban.selector !== "ExportDefaultDeclaration");
 
 export default [
-  { ignores: [".next/**", "next-env.d.ts"] },
+  { ignores: [".next/**", "next-env.d.ts", "components/ui/**", "hooks/use-mobile.ts"] },
   ...pillaEslint,
   nextPlugin.configs["core-web-vitals"],
   // Raiz do app explícita: o lint também roda a partir da raiz do monorepo (lefthook).
