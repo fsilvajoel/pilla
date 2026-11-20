@@ -1,6 +1,7 @@
 import {
   addressSchema,
   personDetailResponse,
+  personResponse,
   personListResponse,
   pixKeySchema,
   type Address,
@@ -9,6 +10,7 @@ import {
   type CreatePixKeyRequest,
   type PersonDetailResponse,
   type PersonListResponse,
+  type PersonResponse,
   type PixKey,
   type UpdateAddressRequest,
   type UpdatePersonRequest,
@@ -35,13 +37,13 @@ export function getPerson(id: string): Promise<PersonDetailResponse> {
 }
 
 /** POST /people (RF-01). */
-export function createPerson(body: CreatePersonRequest): Promise<PersonDetailResponse> {
-  return apiFetch({ method: "POST", path: "/people", body, schema: personDetailResponse });
+export function createPerson(body: CreatePersonRequest): Promise<PersonResponse> {
+  return apiFetch({ method: "POST", path: "/people", body, schema: personResponse });
 }
 
 /** PATCH /people/{id} (RF-01); `body.version` obrigatório (VERSION_CONFLICT em 409). */
-export function updatePerson(id: string, body: UpdatePersonRequest): Promise<PersonDetailResponse> {
-  return apiFetch({ method: "PATCH", path: `/people/${id}`, body, schema: personDetailResponse });
+export function updatePerson(id: string, body: UpdatePersonRequest): Promise<PersonResponse> {
+  return apiFetch({ method: "PATCH", path: `/people/${id}`, body, schema: personResponse });
 }
 
 /** POST /people/{personId}/addresses (RF-02). */
