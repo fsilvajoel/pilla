@@ -2,6 +2,7 @@ import { Inject, Injectable } from "@nestjs/common";
 import type {
   CreatePersonRequest,
   PersonListQuery,
+  PersonDetailResponse,
   PersonListResponse,
   PersonResponse,
   UpdatePersonRequest,
@@ -9,6 +10,7 @@ import type {
 import { ProblemException } from "../../core/http/problem-exception";
 import { newId } from "../../core/public/ids";
 import { DATABASE, type Database } from "../../db/database";
+import { getPersonSheet } from "./get-person-sheet";
 import { listPersons } from "../infra/person-list";
 import { findPersonById, insertPerson, type NewPersonRow } from "../infra/person-repository";
 import { updatePerson, type PersonChanges } from "../infra/person-update";
@@ -93,6 +95,12 @@ export class PeopleService {
     const row = await findPersonById(this.db, id);
     if (row === null) throw new ProblemException("NOT_FOUND", NOT_FOUND_DETAIL);
     return toResponse(row);
+  }
+
+  async getSheet(id: string): Promise<PersonDetailResponse> {
+    const sheet = await getPersonSheet(this.db, id);
+    if (sheet === null) throw new ProblemException("NOT_FOUND", NOT_FOUND_DETAIL);
+    return sheet;
   }
 
   async update(id: string, request: UpdatePersonRequest): Promise<PersonResponse> {
