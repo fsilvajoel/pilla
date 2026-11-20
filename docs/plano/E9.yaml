@@ -107,7 +107,7 @@ cards:
   - id: E9-T03
     title: Bootstrap the NestJS app with the database provider, Zod pipe and problem+json filter
     kind: implement
-    assignee: alice
+    assignee: sonnet
     rules: []
     skills: [editar-arquivo, coding-guidelines, modular-design-principles]
     refs: [RFC-003 §4.2, RFC-004 §2, RFC-004 §6, ADR-0002, docs/plano/E9.md D1 D3, docs/plano/E9-F02/plano.md]
@@ -160,7 +160,7 @@ cards:
   - id: E9-T04
     title: Add the people API schemas (list, detail, update, problem codes) to @pilla/schemas
     kind: implement
-    assignee: alice
+    assignee: sonnet
     rules: []
     skills: [editar-arquivo]
     refs: [RFC-004 §3, RFC-004 §6, PRD-001 RF-01, docs/plano/E9.md D8 D9, docs/plano/E9-F03/plano.md]
@@ -229,7 +229,7 @@ cards:
   - id: E9-T06
     title: Implement the people controller and module on top of the existing repositories
     kind: implement
-    assignee: alice
+    assignee: sonnet
     rules: []
     skills: [editar-arquivo, coding-guidelines, tactical-ddd]
     refs: [RFC-004 §3, ADR-0002, docs/plano/E9.md D1 D8 D9, docs/plano/E9-F03/plano.md]
@@ -297,7 +297,7 @@ cards:
   - id: E9-T08
     title: Implement the address and PIX key schemas, repositories and routes
     kind: implement
-    assignee: alice
+    assignee: sonnet
     rules: []
     skills: [editar-arquivo, coding-guidelines]
     refs: [PRD-001 RF-02, RFC-004 §§2-3, RFC-004 §6, RFC-005 §3, docs/plano/E9-F04/plano.md, packages/schemas/src/api/people/address.ts, packages/schemas/src/api/people/pix-key.ts]
@@ -365,7 +365,7 @@ cards:
   - id: E9-T10
     title: Implement the person sheet query
     kind: implement
-    assignee: alice
+    assignee: sonnet
     rules: []
     skills: [editar-arquivo, coding-guidelines]
     refs: [RFC-004 §2, RFC-004 §3, RFC-004 §6, PRD-001 RF-03, PRD-001 RF-04, RFC-005 §3, docs/plano/E9-F05/plano.md]

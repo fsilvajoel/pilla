@@ -192,12 +192,12 @@ Formato de cada entrada:
 - sugestão padrão: a) proibir
 - resposta: b) aceitar: pagamento em DRAFT fica PENDING_REVIEW até a ativação e aloca na confirmação (Joel em 20/11)
 ## E12 (esqueleto)
-- status: aberta
-- data: 2026-11-20
+- status: resolvida
+- data: 2026-11-21
 - pergunta: RN-C10: ao ativar um contrato com valor maior que o caixa da conta, o sistema bloqueia ou pede confirmação? A E10 ativa sem checar (D6), porque o saldo só existe depois da E12.
 - opções: a) bloquear com 422; b) avisar e exigir confirmação explícita
 - sugestão padrão: b) avisar e pedir confirmação
-- resposta:
+- resposta: b) avisar, sem bloquear (aprovado pelo Joel em 21/11)
 
 ## E12 (esqueleto)
 - status: resolvida

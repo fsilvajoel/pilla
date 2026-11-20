@@ -1,0 +1,139 @@
+delivery: E11
+title: Payments (register, preview allocation, confirm, reverse) on the NestJS API, screens wired to it
+# Esqueleto: cartões só com id, title, kind, assignee, dependsOn, refs, allowedPaths e skills (quando há web).
+# Detalhar checks, done, protectedTests, budget e readFirst antes de executar (formato de E10.yaml).
+cards:
+  # ---------------------------------------------------------------- E11-F01: prévia da alocação
+  - id: E11-T01
+    title: Write the tests for POST /payments/allocation-preview
+    kind: test-author
+    assignee: bia
+    skills: [escrever-teste]
+    refs: [PRD-001 RF-23, RFC-002 §3.6, RFC-004 §3, docs/plano/E11.md]
+    dependsOn: [E10-T10]
+    allowedPaths:
+      - apps/api/src/payments/http/allocation-preview.http.test.ts
+  - id: E11-T02
+    title: Implement the allocation preview
+    kind: implement
+    assignee: baidu
+    skills: [editar-arquivo, coding-guidelines, modular-design-principles]
+    refs: [PRD-001 RF-23, RFC-002 §3.6, ADR-0005, docs/plano/E11.md]
+    dependsOn: [E11-T01]
+    allowedPaths:
+      - apps/api/src/payments/application/**
+      - apps/api/src/payments/http/**
+      - apps/api/src/payments/payments.module.ts
+      - apps/api/src/lending/public/**
+      - apps/api/src/app.module.ts
+  # ---------------------------------------------------------------- E11-F02: registrar
+  - id: E11-T03
+    title: Write the tests for POST /payments (PENDING_REVIEW)
+    kind: test-author
+    assignee: claude
+    skills: [escrever-teste]
+    refs: [PRD-001 RF-20, RFC-004 §3, ADR-0006, docs/plano/E11.md]
+    dependsOn: [E11-T02]
+    allowedPaths:
+      - apps/api/src/payments/http/payments-create.http.test.ts
+    done:
+      - 'a payment on a DRAFT loan is accepted as PENDING_REVIEW and allocates nothing (decision of 20/11, option b)'
+  - id: E11-T04
+    title: Implement payment registration
+    kind: implement
+    assignee: baidu
+    skills: [editar-arquivo, coding-guidelines, modular-design-principles]
+    refs: [PRD-001 RF-20, RFC-004 §3, docs/plano/E11.md]
+    dependsOn: [E11-T03]
+    allowedPaths:
+      - apps/api/src/payments/application/**
+      - apps/api/src/payments/http/**
+      - apps/api/src/payments/infra/**
+  # ---------------------------------------------------------------- E11-F03: confirmar
+  - id: E11-T05
+    title: Write the tests for POST /payments/{id}/confirm (allocations, events, PAID_OFF)
+    kind: test-author
+    assignee: claude
+    skills: [escrever-teste]
+    refs: [PRD-001 RF-21, RFC-002 §3.6, RFC-004 §7, docs/plano/E10.md D3, docs/plano/E11.md]
+    dependsOn: [E11-T04]
+    allowedPaths:
+      - apps/api/src/payments/http/payments-confirm.http.test.ts
+    done:
+      - 'confirming a PENDING_REVIEW payment of a DRAFT loan: allocation happens at confirmation, when the loan is ACTIVE; while the loan is not ACTIVE the confirmation is refused'
+  - id: E11-T06
+    title: Implement payment confirmation
+    kind: implement
+    assignee: claude
+    skills: [editar-arquivo, coding-guidelines, modular-design-principles]
+    refs: [PRD-001 RF-21, RFC-004 §7, ADR-0006, docs/plano/E11.md]
+    dependsOn: [E11-T05]
+    allowedPaths:
+      - apps/api/src/payments/**
+      - apps/api/src/lending/public/**
+      - apps/api/src/lending/application/**
+  # ---------------------------------------------------------------- E11-F04: estornar
+  - id: E11-T07
+    title: Write the tests for POST /payments/{id}/reverse
+    kind: test-author
+    assignee: bia
+    skills: [escrever-teste]
+    refs: [PRD-001 RF-22, RFC-004 §7, ADR-0006, docs/plano/E11.md]
+    dependsOn: [E11-T06]
+    allowedPaths:
+      - apps/api/src/payments/http/payments-reverse.http.test.ts
+  - id: E11-T08
+    title: Implement payment reversal
+    kind: implement
+    assignee: baidu
+    skills: [editar-arquivo, coding-guidelines, modular-design-principles]
+    refs: [PRD-001 RF-22, RFC-004 §7, docs/plano/E11.md]
+    dependsOn: [E11-T07]
+    allowedPaths:
+      - apps/api/src/payments/**
+      - apps/api/src/lending/application/**
+  # ---------------------------------------------------------------- E11-F05: web
+  - id: E11-T09
+    title: Wire the payment form with allocation preview, the review queue, confirm and reverse
+    kind: implement
+    assignee: claude
+    skills: [shadcn, tailwind-css, react-best-practices, accessibility, coding-guidelines]
+    refs: [PRD-001 RF-20, PRD-001 RF-21, PRD-001 RF-22, PRD-001 RF-23, docs/plano/E11.md]
+    dependsOn: [E11-T08, E10-T16]
+    allowedPaths:
+      - apps/web/lib/api/payments.ts
+      - apps/web/app/(admin)/emprestimos/[id]/pagamento/**
+      - apps/web/app/(admin)/pagamentos/**
+      - apps/web/components/payments/**
+      - apps/web/components/payment-form.tsx
+      - apps/web/lib/payment-draft.ts
+  # ---------------------------------------------------------------- E11-F06: E2E
+  - id: E11-T10
+    title: Write the Playwright e2e of pay, confirm, reverse and payoff
+    kind: test-author
+    assignee: claude
+    skills: [escrever-teste, accessibility]
+    refs: [PRD-001 RF-20, PRD-001 RF-21, PRD-001 RF-22, docs/plano/E11.md]
+    dependsOn: [E11-T09]
+    allowedPaths:
+      - apps/web/e2e/payments.e2e.ts
+
+features:
+  - id: E11-F01
+    title: Allocation preview
+    cards: [E11-T01, E11-T02]
+  - id: E11-F02
+    title: Register payment
+    cards: [E11-T03, E11-T04]
+  - id: E11-F03
+    title: Confirm payment
+    cards: [E11-T05, E11-T06]
+  - id: E11-F04
+    title: Reverse payment
+    cards: [E11-T07, E11-T08]
+  - id: E11-F05
+    title: Web payment screens
+    cards: [E11-T09]
+  - id: E11-F06
+    title: Payments end-to-end test
+    cards: [E11-T10]

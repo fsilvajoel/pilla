@@ -1,0 +1,607 @@
+delivery: E10
+title: Loans end to end (draft, activate, renew, renegotiate, write-off, schedule) on the NestJS API, screens wired to it
+# Plano e decisões D1–D12 em docs/plano/E10.md; escopo e critérios de cada feature em docs/plano/E10-F0x/plano.md.
+# Cartões em inglês (ADR-0012). Dono recomendado: ver "Divisão entre trabalhadores" em E10.md.
+# bia: testes de domínio puro e de schema; claude (Sonnet/Opus): testes HTTP com PGlite, telas e E2E; baidu: backend.
+# Todo cartão que toca apps/web leva skills; cartão de tela leva também shadcn e tailwind-css (gate card-skills).
+cards:
+  # ---------------------------------------------------------------- E10-F01: conta nula em DRAFT + transições
+  - id: E10-T01
+    title: Write the tests for the loan status transitions and the nullable account_id
+    kind: test-author
+    assignee: bia
+    rules: [RN-C06, RN-R09]
+    skills: [escrever-teste]
+    refs: [RFC-001 M2, RFC-005 §4, ADR-0006, docs/plano/E10.md D4 D8 D9, docs/plano/E10-F01/plano.md, docs/adr/0017-estrategia-de-testes.md]
+    dependsOn: [E9-T03]
+    allowedPaths:
+      - apps/api/src/lending/domain/loan-transitions.test.ts
+    protectedTests: []
+    checks:
+      - '! pnpm --filter @pilla/api exec vitest run src/lending/domain/loan-transitions.test.ts'
+      - node scripts/check-test-quality.mjs apps/api/src/lending/domain/loan-transitions.test.ts
+      - pnpm --filter @pilla/api typecheck
+    done:
+      - 'transitions (A1 to A4, C1 to C8): canActivate, canCancel, canEdit only from DRAFT; canRenew, canRenegotiate, canWriteOff only from ACTIVE; every other status returns false, one case per status'
+    budget: {attempts: 4, toolCalls: 25, minutes: 15}
+    readFirst:
+      - docs/plano/E10-F01/plano.md
+      - apps/api/src/lending/domain/loan-status.ts
+      - docs/adr/0017-estrategia-de-testes.md
+  - id: E10-T01B
+    title: Write the database test for the nullable account_id (loans_account_id_check)
+    kind: test-author
+    assignee: claude
+    rules: [RN-C06, RN-R09]
+    skills: [escrever-teste]
+    refs: [RFC-001 M2, RFC-005 §4, ADR-0006, docs/plano/E10.md D4, docs/plano/E10-F01/plano.md, docs/adr/0017-estrategia-de-testes.md]
+    dependsOn: [E9-T03]
+    allowedPaths:
+      - apps/api/src/lending/infra/loans-account.test.ts   # novo
+    protectedTests: []
+    checks:
+      - '! pnpm --filter @pilla/api exec vitest run src/lending/infra/loans-account.test.ts'
+      - node scripts/check-test-quality.mjs apps/api/src/lending/infra/loans-account.test.ts
+      - pnpm --filter @pilla/api typecheck
+    done:
+      - 'nullable account (A5, C9 to C11): inserting a DRAFT and a CANCELLED loan with account_id null passes; an ACTIVE loan with account_id null is refused by loans_account_id_check'
+    budget: {attempts: 4, toolCalls: 25, minutes: 15}
+    readFirst:
+      - docs/plano/E10-F01/plano.md
+      - apps/api/src/lending/infra/schema.ts
+      - apps/api/src/lending/infra/loans.test.ts
+      - apps/api/src/db/test-db.ts
+  - id: E10-T02
+    title: Make loans.account_id nullable in DRAFT/CANCELLED and add the status transition rules
+    kind: implement
+    assignee: baidu
+    rules: [RN-C06, RN-R09]
+    skills: [editar-arquivo, coding-guidelines, modular-design-principles]
+    refs: [RFC-005 §4, RFC-005 §8, docs/plano/decisoes-2026-11-19.md, docs/plano/E10.md D4, docs/plano/E10-F01/plano.md]
+    dependsOn: [E10-T01, E10-T01B]
+    allowedPaths:
+      - apps/api/src/lending/domain/loan-transitions.ts
+      - apps/api/src/lending/infra/schema.ts
+      - apps/api/migrations/lending/**
+      - docs/rfc/RFC-005-modelo-fisico-banco.md
+    protectedTests:
+      - apps/api/src/lending/domain/loan-transitions.test.ts
+      - apps/api/src/lending/infra/loans-account.test.ts
+    checks:
+      - pnpm --filter @pilla/api exec vitest run src/lending
+      - pnpm --filter @pilla/api typecheck
+      - pnpm --filter @pilla/api lint
+      - pnpm depcruise
+    done:
+      - the protected tests pass and the older lending infra tests still pass (A1 to A5)
+      - the migration was generated with pnpm --filter @pilla/api db:regen loans-account-nullable lending (no hand-written SQL) and adds loans_account_id_check with the same predicate as disbursed_at
+      - RFC-005 §4 shows account_id as uuid null with the new check; no other line of the RFC changes
+      - loan-transitions.ts is pure (no import from infra, Nest or Zod) and uses LoanStatus from loan-status.ts
+    hints:
+      - copy the shape of the disbursed_at check already in schema.ts
+      - keep loans_account_id_idx
+    budget: {attempts: 3, toolCalls: 40, minutes: 30}
+    readFirst:
+      - docs/plano/E10-F01/plano.md
+      - apps/api/src/lending/infra/schema.ts
+      - apps/api/src/lending/domain/loan-status.ts
+      - apps/api/scripts/db-regen.mjs
+      - apps/api/migrations/lending
+    sizeNote: uma migração gerada, um arquivo de domínio curto
+
+  # ---------------------------------------------------------------- E10-F02: portas públicas
+  - id: E10-T03
+    title: Write the tests for the people, treasury and payments public read ports and GET /accounts
+    kind: test-author
+    assignee: claude
+    rules: [RN-T04, RN-R01]
+    skills: [escrever-teste]
+    refs: [RFC-001 M2, RFC-004 §3, RFC-005 §5, RFC-005 §6, docs/plano/E10.md D5, docs/plano/E10-F02/plano.md]
+    dependsOn: [E10-T02]
+    allowedPaths:
+      - apps/api/src/people/public/person-lookup.test.ts
+      - apps/api/src/treasury/public/account-lookup.test.ts
+      - apps/api/src/treasury/http/accounts.http.test.ts
+      - apps/api/src/payments/public/confirmed-allocations.test.ts
+    protectedTests: []
+    checks:
+      - '! pnpm --filter @pilla/api exec vitest run src/people/public src/treasury src/payments/public'
+      - node scripts/check-test-quality.mjs apps/api/src/people/public/person-lookup.test.ts apps/api/src/treasury/public/account-lookup.test.ts apps/api/src/treasury/http/accounts.http.test.ts apps/api/src/payments/public/confirmed-allocations.test.ts
+      - pnpm --filter @pilla/api typecheck
+    done:
+      - 'people (A1, C1, C2): findPersonNames returns the name of each existing id and omits unknown ids'
+      - 'treasury (A2 to A4, C3 to C7): isActiveAccount true only for an existing active account; GET /api/v1/accounts returns accountListResponse with active accounts first; the seed of the base account is idempotent'
+      - 'payments (A5, A6, C8 to C11): confirmedAllocationsByLoan sums only allocations of CONFIRMED payments with reversed_at null, grouped by installment; PENDING_REVIEW and REVERSED do not count'
+    budget: {attempts: 4, toolCalls: 25, minutes: 15}
+    readFirst:
+      - docs/plano/E10-F02/plano.md
+      - apps/api/src/treasury/infra/schema.ts
+      - apps/api/src/payments/infra/schema.ts
+      - apps/api/src/people/infra/person-repository.ts
+      - packages/schemas/src/api/treasury/account-summary.ts
+      - apps/api/src/db/test-db.ts
+  - id: E10-T04
+    title: Implement the public read ports, GET /accounts and the base account seed
+    kind: implement
+    assignee: baidu
+    rules: [RN-T04, RN-R01]
+    skills: [editar-arquivo, coding-guidelines, modular-design-principles]
+    refs: [RFC-001 M2, RFC-004 §3, ADR-0002, docs/plano/E10.md D5, docs/plano/E10-F02/plano.md]
+    dependsOn: [E10-T03]
+    allowedPaths:
+      - apps/api/src/people/public/**
+      - apps/api/src/treasury/public/**
+      - apps/api/src/treasury/http/**
+      - apps/api/src/treasury/application/**
+      - apps/api/src/treasury/infra/account-repository.ts
+      - apps/api/src/payments/public/**
+      - apps/api/src/payments/infra/allocation-reader.ts
+      - apps/api/src/app.module.ts
+      - apps/api/scripts/seed.mts   # novo
+      - apps/api/package.json   # script db:seed (novo)
+    protectedTests:
+      - apps/api/src/people/public/person-lookup.test.ts
+      - apps/api/src/treasury/public/account-lookup.test.ts
+      - apps/api/src/treasury/http/accounts.http.test.ts
+      - apps/api/src/payments/public/confirmed-allocations.test.ts
+    checks:
+      - pnpm --filter @pilla/api exec vitest run src/people/public src/treasury src/payments/public
+      - pnpm --filter @pilla/api typecheck
+      - pnpm --filter @pilla/api lint
+      - pnpm depcruise
+    done:
+      - the protected tests pass (A1 to A6)
+      - each port lives in <module>/public and returns plain types (no Drizzle row, no Zod); depcruise passes
+      - a new script db:seed (apps/api/scripts/seed.mts plus the entry in apps/api/package.json, both new) creates one active base account "Conta principal" with a fixed id and stays idempotent
+    budget: {attempts: 3, toolCalls: 40, minutes: 30}
+    readFirst:
+      - docs/plano/E10-F02/plano.md
+      - apps/api/src/treasury/infra/schema.ts
+      - apps/api/src/payments/infra/schema.ts
+      - apps/api/src/app.module.ts
+      - .dependency-cruiser.cjs
+
+  # ---------------------------------------------------------------- E10-F03: criar, editar e cancelar DRAFT
+  - id: E10-T05
+    title: Write the tests for POST /loans, PATCH /loans/{id}, POST /loans/{id}/cancel and GET /settings/default-terms
+    kind: test-author
+    assignee: claude
+    rules: [RN-C01, RN-C02, RN-C06, RN-C11, RN-C12]
+    skills: [escrever-teste]
+    refs: [PRD-001 RF-11, PRD-001 RF-17, PRD-001 RF-41, RFC-004 §3, RFC-004 §6, ADR-0008, docs/plano/E10.md D9 D10, docs/plano/E10-F03/plano.md]
+    dependsOn: [E10-T04]
+    allowedPaths:
+      - packages/schemas/src/api/lending/update-loan.test.ts
+      - apps/api/src/lending/http/loans-draft.http.test.ts
+      - apps/api/src/lending/http/default-terms.http.test.ts
+    protectedTests: []
+    checks:
+      - '! pnpm --filter @pilla/api exec vitest run src/lending/http/loans-draft.http.test.ts src/lending/http/default-terms.http.test.ts'
+      - '! pnpm --filter @pilla/schemas exec vitest run src/api/lending/update-loan.test.ts'
+      - node scripts/check-test-quality.mjs packages/schemas/src/api/lending/update-loan.test.ts apps/api/src/lending/http/loans-draft.http.test.ts apps/api/src/lending/http/default-terms.http.test.ts
+      - pnpm --filter @pilla/api typecheck
+    done:
+      - 'create (A1 to A4, C1 to C8): 201 DRAFT with loanNumber AAAA-NNNN, account_id null and the three charges, grace_period_days and rounding_step copied from default_terms (ADR-0008); unknown personId 422 VALIDATION_FAILED on personId; one audit row'
+      - 'edit (A5 to A7, C9 to C13): PATCH with If-Match changes a DRAFT; wrong version 409 VERSION_CONFLICT; non DRAFT 409 LOAN_NOT_EDITABLE'
+      - 'cancel (A8, A9, C14 to C16): DRAFT becomes CANCELLED with status_changed_at; any other status 409 LOAN_NOT_EDITABLE; no outbox row'
+      - 'default terms (A10, C17): GET /api/v1/settings/default-terms returns the row with the greatest effective_from as defaultTermsResponse'
+      - 'schema (A11, C18 to C20): updateLoanRequest accepts a partial of the create fields and rejects personId and unknown keys'
+    budget: {attempts: 4, toolCalls: 25, minutes: 15}
+    readFirst:
+      - docs/plano/E10-F03/plano.md
+      - packages/schemas/src/api/lending/create-loan.ts
+      - apps/api/src/lending/infra/schema.ts
+      - apps/api/src/core/public/audit.ts
+      - apps/api/src/db/test-db.ts
+  - id: E10-T06
+    title: Implement create, edit and cancel of DRAFT loans and the default terms read
+    kind: implement
+    assignee: baidu
+    rules: [RN-C01, RN-C02, RN-C06, RN-C11, RN-C12]
+    skills: [editar-arquivo, coding-guidelines, modular-design-principles]
+    refs: [PRD-001 RF-11, PRD-001 RF-17, RFC-004 §3, ADR-0006, ADR-0008, docs/plano/E10.md D1 D9 D10, docs/plano/E10-F03/plano.md]
+    dependsOn: [E10-T05]
+    allowedPaths:
+      - packages/schemas/src/api/lending/update-loan.ts
+      - packages/schemas/src/index.ts
+      - apps/api/src/lending/application/**
+      - apps/api/src/lending/http/**
+      - apps/api/src/lending/infra/loan-repository.ts
+      - apps/api/src/lending/infra/default-terms-repository.ts
+      - apps/api/src/lending/lending.module.ts
+      - apps/api/src/app.module.ts
+    protectedTests:
+      - packages/schemas/src/api/lending/update-loan.test.ts
+      - apps/api/src/lending/http/loans-draft.http.test.ts
+      - apps/api/src/lending/http/default-terms.http.test.ts
+    checks:
+      - pnpm --filter @pilla/api exec vitest run src/lending
+      - pnpm --filter @pilla/schemas exec vitest run src/api/lending
+      - pnpm --filter @pilla/api typecheck
+      - pnpm --filter @pilla/api lint
+      - pnpm check:schemas
+      - pnpm depcruise
+    done:
+      - the protected tests pass (A1 to A11)
+      - loan number comes from loan_number_sequences in the same transaction as the insert
+      - 'the response carries the RN-C11 warning: active and overdue loans of the person (count only, standing computed later in F05)'
+    budget: {attempts: 3, toolCalls: 40, minutes: 30}
+    readFirst:
+      - docs/plano/E10-F03/plano.md
+      - apps/api/src/lending/infra/schema.ts
+      - apps/api/src/core/http/problem-exception.ts
+      - apps/api/src/core/public/audit.ts
+
+  # ---------------------------------------------------------------- E10-F04: ativar
+  - id: E10-T07
+    title: Write the tests for POST /loans/{id}/activate (installments, outbox, origin status)
+    kind: test-author
+    assignee: claude
+    rules: [RN-C03, RN-C04, RN-C05, RN-C16]
+    skills: [escrever-teste]
+    refs: [PRD-001 RF-12, RFC-002 §3.4, RFC-004 §3, RFC-004 §6, RFC-004 §7, docs/plano/E10.md D6 D7 D8 D11, docs/plano/E10-F04/plano.md]
+    dependsOn: [E10-T06]
+    allowedPaths:
+      - apps/api/src/lending/http/loans-activate.http.test.ts
+    protectedTests: []
+    checks:
+      - '! pnpm --filter @pilla/api exec vitest run src/lending/http/loans-activate.http.test.ts'
+      - node scripts/check-test-quality.mjs apps/api/src/lending/http/loans-activate.http.test.ts
+      - pnpm --filter @pilla/api typecheck
+    done:
+      - 'activate (A1 to A3, C1 to C5): DRAFT becomes ACTIVE with disbursed_at and account_id; installments equal the @pilla/finance schedule of CA-01 (T-14); one LoanActivated in core.outbox in the same transaction'
+      - 'refusals (A4 to A6, C6 to C10): unknown or inactive account 422 on accountId; firstDueDate not after disbursedAt 422 FIRST_DUE_DATE_BEFORE_DISBURSEMENT; non DRAFT 409 LOAN_NOT_EDITABLE; wrong If-Match 409 VERSION_CONFLICT; nothing is written on refusal'
+      - 'origin (A7, A8, C11 to C13): activating a RENEWAL DRAFT sets the origin to RENEWED and writes LoanRenewed, without a disbursement flag; an origin that is no longer ACTIVE gives 409 LOAN_NOT_EDITABLE'
+    budget: {attempts: 4, toolCalls: 25, minutes: 15}
+    readFirst:
+      - docs/plano/E10-F04/plano.md
+      - packages/schemas/src/api/lending/activate-loan.ts
+      - packages/schemas/src/events/loan-activated.ts
+      - packages/finance/src/schedule.ts
+      - apps/api/src/core/infra/schema.ts
+  - id: E10-T08
+    title: Implement loan activation with schedule generation and the outbox events
+    kind: implement
+    assignee: baidu
+    rules: [RN-C03, RN-C04, RN-C05, RN-C16]
+    skills: [editar-arquivo, coding-guidelines, modular-design-principles]
+    refs: [PRD-001 RF-12, RFC-002 §3.4, RFC-004 §7, ADR-0006, docs/plano/E10.md D6 D7 D8, docs/plano/E10-F04/plano.md]
+    dependsOn: [E10-T07]
+    allowedPaths:
+      - apps/api/src/lending/application/**
+      - apps/api/src/lending/http/**
+      - apps/api/src/lending/infra/**
+      - apps/api/src/core/infra/outbox-writer.ts
+    protectedTests:
+      - apps/api/src/lending/http/loans-activate.http.test.ts
+      - apps/api/src/lending/http/loans-draft.http.test.ts
+      - apps/api/src/lending/domain/loan-transitions.test.ts
+    checks:
+      - pnpm --filter @pilla/api exec vitest run src/lending
+      - pnpm --filter @pilla/api typecheck
+      - pnpm --filter @pilla/api lint
+      - pnpm depcruise
+    done:
+      - the protected tests pass (A1 to A8)
+      - the schedule comes only from @pilla/finance (no math in apps/api)
+      - the event payloads parse with the Zod of packages/schemas/src/events before being written
+    budget: {attempts: 3, toolCalls: 40, minutes: 30}
+    readFirst:
+      - docs/plano/E10-F04/plano.md
+      - packages/finance/src/schedule.ts
+      - packages/finance/src/index.ts
+      - apps/api/src/core/infra/schema.ts
+
+  # ---------------------------------------------------------------- E10-F05: consultas e cotação de quitação
+  - id: E10-T09
+    title: Write the tests for GET /loans, GET /loans/{id} and GET /loans/{id}/payoff-quote
+    kind: test-author
+    assignee: claude
+    rules: [RN-C08, RN-E01, RN-E02, RN-E03, RN-R08]
+    skills: [escrever-teste]
+    refs: [PRD-001 RF-15, PRD-001 RF-18, RFC-002 §3.5, RFC-002 §3.7, RFC-004 §3, ADR-0005, docs/plano/E10.md D3 D5 D11, docs/plano/E10-F05/plano.md]
+    dependsOn: [E10-T08]
+    allowedPaths:
+      - packages/schemas/src/api/lending/payoff-quote.test.ts
+      - apps/api/src/lending/http/loans-read.http.test.ts
+      - apps/api/src/lending/http/payoff-quote.http.test.ts
+    protectedTests: []
+    checks:
+      - '! pnpm --filter @pilla/api exec vitest run src/lending/http/loans-read.http.test.ts src/lending/http/payoff-quote.http.test.ts'
+      - '! pnpm --filter @pilla/schemas exec vitest run src/api/lending/payoff-quote.test.ts'
+      - node scripts/check-test-quality.mjs packages/schemas/src/api/lending/payoff-quote.test.ts apps/api/src/lending/http/loans-read.http.test.ts apps/api/src/lending/http/payoff-quote.http.test.ts
+      - pnpm --filter @pilla/api typecheck
+    done:
+      - 'list (A1 to A3, C1 to C6): filters personId, status and standing; cursor pagination; personName from people/public; outstandingCents and nextDueDate computed'
+      - 'detail (A4 to A6, C7 to C12): installments with paidCents from confirmed allocations only, lateChargesCents at today in Brasília (late charge on the open balance of the installment, not on its original amount) and status OPEN/PARTIAL/PAID/OVERDUE/OVERDUE_PARTIAL; a late-charge rule on the open balance of the installment (see docs/plano/E10-F05/plano.md); OVERDUE right after the due date, the grace period only exempts late charges (grace_period_days = 0 by default); standing OVERDUE follows the same rule'
+      - 'payoff (A7 to A9, C13 to C16): amount equals principal + interest open + charges at ?date= with no discount; date before disbursedAt 422; non ACTIVE status 409 LOAN_NOT_EDITABLE'
+      - 'schema (A10, C17, C18): payoffQuoteResponse has date, amountCents and the three components, all integers'
+    budget: {attempts: 4, toolCalls: 25, minutes: 15}
+    readFirst:
+      - docs/plano/E10-F05/plano.md
+      - packages/schemas/src/api/lending/loan-views.ts
+      - packages/schemas/src/api/lending/payoff-quote.ts
+      - packages/finance/src/late-charges.ts
+      - packages/finance/src/balance.ts
+  - id: E10-T10
+    title: Implement the loan list, detail with schedule and charges, and the payoff quote
+    kind: implement
+    assignee: baidu
+    rules: [RN-C08, RN-E01, RN-E02, RN-E03, RN-R08]
+    skills: [editar-arquivo, coding-guidelines, modular-design-principles]
+    refs: [PRD-001 RF-15, PRD-001 RF-18, RFC-002 §3.7, ADR-0005, docs/plano/E10.md D3 D11, docs/plano/E10-F05/plano.md]
+    dependsOn: [E10-T09]
+    allowedPaths:
+      - packages/schemas/src/api/lending/payoff-quote.ts
+      - apps/api/src/lending/application/**
+      - apps/api/src/lending/http/**
+      - apps/api/src/lending/infra/loan-queries.ts
+    protectedTests:
+      - packages/schemas/src/api/lending/payoff-quote.test.ts
+      - apps/api/src/lending/http/loans-read.http.test.ts
+      - apps/api/src/lending/http/payoff-quote.http.test.ts
+    checks:
+      - pnpm --filter @pilla/api exec vitest run src/lending
+      - pnpm --filter @pilla/schemas exec vitest run src/api/lending
+      - pnpm --filter @pilla/api typecheck
+      - pnpm --filter @pilla/api lint
+      - pnpm check:schemas
+      - pnpm depcruise
+    done:
+      - the protected tests pass (A1 to A10)
+      - no computed value is stored (ADR-0005); charges and status come from @pilla/finance
+      - late charge is computed on the open balance of the installment and OVERDUE starts right after the due date (docs/plano/E10-F05/plano.md)
+    budget: {attempts: 3, toolCalls: 40, minutes: 30}
+    readFirst:
+      - docs/plano/E10-F05/plano.md
+      - packages/finance/src/late-charges.ts
+      - packages/finance/src/balance.ts
+      - packages/finance/src/allocation.ts
+
+  # ---------------------------------------------------------------- E10-F06: renovar e renegociar
+  - id: E10-T11
+    title: Write the tests for POST /loans/{id}/renew and POST /loans/{id}/renegotiate
+    kind: test-author
+    assignee: claude
+    rules: [RN-C13, RN-C14, RN-C15, RN-C16, RN-C17, RN-C18]
+    skills: [escrever-teste]
+    refs: [PRD-001 RF-13, PRD-001 RF-14, RFC-004 §3, RFC-004 §6, RFC-004 §7, docs/plano/E10.md D8, docs/plano/E10-F06/plano.md]
+    dependsOn: [E10-T10]
+    allowedPaths:
+      - packages/schemas/src/api/lending/renew-loan.test.ts
+      - packages/schemas/src/api/lending/renegotiate-loan.test.ts
+      - apps/api/src/lending/http/loans-renew.http.test.ts
+      - apps/api/src/lending/http/loans-renegotiate.http.test.ts
+    protectedTests: []
+    checks:
+      - '! pnpm --filter @pilla/api exec vitest run src/lending/http/loans-renew.http.test.ts src/lending/http/loans-renegotiate.http.test.ts'
+      - '! pnpm --filter @pilla/schemas exec vitest run src/api/lending/renew-loan.test.ts src/api/lending/renegotiate-loan.test.ts'
+      - node scripts/check-test-quality.mjs packages/schemas/src/api/lending/renew-loan.test.ts packages/schemas/src/api/lending/renegotiate-loan.test.ts apps/api/src/lending/http/loans-renew.http.test.ts apps/api/src/lending/http/loans-renegotiate.http.test.ts
+      - pnpm --filter @pilla/api typecheck
+    done:
+      - 'renew (A1 to A4, C1 to C7): ACTIVE with interest and charges due paid gives 201 DRAFT, origin_type RENEWAL, principal = open principal; open interest or charges 422 RENEWAL_REQUIRES_INTEREST_PAID; origin stays ACTIVE'
+      - 'renegotiate (A5 to A7, C8 to C12): 201 DRAFT, origin_type RENEGOTIATION, principal = balance at the date, capitalized_amount_cents = balance minus open principal; origin stays ACTIVE'
+      - 'both (A8, C13, C14): non ACTIVE origin 409 LOAN_NOT_EDITABLE; no ledger, no payment, no outbox row on the DRAFT creation'
+      - 'schemas (A9, C15 to C18): renewLoanRequest and renegotiateLoanRequest require firstDueDate and accept rate, count and frequency adjustments only'
+    budget: {attempts: 4, toolCalls: 25, minutes: 15}
+    readFirst:
+      - docs/plano/E10-F06/plano.md
+      - packages/schemas/src/events/loan-renewed.ts
+      - packages/schemas/src/events/loan-renegotiated.ts
+      - apps/api/src/lending/infra/schema.ts
+  - id: E10-T12
+    title: Implement loan renewal and renegotiation (new DRAFT, origin changes on activation)
+    kind: implement
+    assignee: claude
+    rules: [RN-C13, RN-C14, RN-C15, RN-C16, RN-C17, RN-C18]
+    skills: [editar-arquivo, coding-guidelines, modular-design-principles]
+    refs: [PRD-001 RF-13, PRD-001 RF-14, RFC-004 §3, RFC-004 §7, docs/plano/E10.md D8, docs/plano/E10-F06/plano.md]
+    dependsOn: [E10-T11]
+    allowedPaths:
+      - packages/schemas/src/api/lending/renew-loan.ts
+      - packages/schemas/src/api/lending/renegotiate-loan.ts
+      - packages/schemas/src/index.ts
+      - apps/api/src/lending/application/**
+      - apps/api/src/lending/http/**
+      - apps/api/src/lending/infra/**
+    protectedTests:
+      - packages/schemas/src/api/lending/renew-loan.test.ts
+      - packages/schemas/src/api/lending/renegotiate-loan.test.ts
+      - apps/api/src/lending/http/loans-renew.http.test.ts
+      - apps/api/src/lending/http/loans-renegotiate.http.test.ts
+      - apps/api/src/lending/http/loans-activate.http.test.ts
+    checks:
+      - pnpm --filter @pilla/api exec vitest run src/lending
+      - pnpm --filter @pilla/schemas exec vitest run src/api/lending
+      - pnpm --filter @pilla/api typecheck
+      - pnpm --filter @pilla/api lint
+      - pnpm check:schemas
+      - pnpm depcruise
+    done:
+      - the protected tests pass (A1 to A9) and the activation tests still pass
+      - balance and open principal come from the F05 queries; no duplicated math
+    budget: {attempts: 3, toolCalls: 40, minutes: 30}
+    readFirst:
+      - docs/plano/E10-F06/plano.md
+      - docs/plano/E10-F05/plano.md
+      - packages/finance/src/balance.ts
+
+  # ---------------------------------------------------------------- E10-F07: baixa como perda
+  - id: E10-T13
+    title: Write the tests for POST /loans/{id}/write-off
+    kind: test-author
+    assignee: claude
+    rules: [RN-C19]
+    skills: [escrever-teste]
+    refs: [PRD-001 RF-16, RFC-004 §3, RFC-004 §7, docs/plano/E10-F07/plano.md]
+    dependsOn: [E10-T10]
+    allowedPaths:
+      - apps/api/src/lending/http/loans-write-off.http.test.ts
+    protectedTests: []
+    checks:
+      - '! pnpm --filter @pilla/api exec vitest run src/lending/http/loans-write-off.http.test.ts'
+      - node scripts/check-test-quality.mjs apps/api/src/lending/http/loans-write-off.http.test.ts
+      - pnpm --filter @pilla/api typecheck
+    done:
+      - 'write-off (A1 to A3, C1 to C4): ACTIVE becomes WRITTEN_OFF with write_off_reason and one LoanWrittenOff whose outstandingPrincipalCents is the open principal'
+      - 'refusals (A4, C5 to C7): blank reason 400 VALIDATION_FAILED on reason; non ACTIVE 409 LOAN_NOT_EDITABLE; wrong If-Match 409 VERSION_CONFLICT'
+    budget: {attempts: 4, toolCalls: 25, minutes: 15}
+    readFirst:
+      - docs/plano/E10-F07/plano.md
+      - packages/schemas/src/api/lending/write-off-loan.ts
+      - packages/schemas/src/events/loan-written-off.ts
+      - apps/api/src/lending/infra/loans.test.ts
+  - id: E10-T14
+    title: Implement the loan write-off
+    kind: implement
+    assignee: baidu
+    rules: [RN-C19]
+    skills: [editar-arquivo, coding-guidelines, modular-design-principles]
+    refs: [PRD-001 RF-16, RFC-004 §7, ADR-0006, docs/plano/E10-F07/plano.md]
+    dependsOn: [E10-T13]
+    allowedPaths:
+      - apps/api/src/lending/application/**
+      - apps/api/src/lending/http/**
+    protectedTests:
+      - apps/api/src/lending/http/loans-write-off.http.test.ts
+    checks:
+      - pnpm --filter @pilla/api exec vitest run src/lending
+      - pnpm --filter @pilla/api typecheck
+      - pnpm --filter @pilla/api lint
+      - pnpm depcruise
+    done:
+      - the protected tests pass (A1 to A4)
+    budget: {attempts: 3, toolCalls: 30, minutes: 20}
+    readFirst:
+      - docs/plano/E10-F07/plano.md
+
+  # ---------------------------------------------------------------- E10-F08: web novo, lista, detalhe
+  - id: E10-T15
+    title: Implement the server-side API client for lending and accounts
+    kind: implement
+    assignee: claude
+    rules: []
+    skills: [react-best-practices, coding-guidelines, security-best-practices]
+    refs: [ADR-0013, RFC-004 §3, docs/plano/E10.md D1, docs/plano/E10-F08/plano.md]
+    dependsOn: [E9-T15, E10-T10]
+    allowedPaths:
+      - apps/web/lib/api/**
+    protectedTests: []
+    checks:
+      - pnpm --filter @pilla/web typecheck
+      - pnpm --filter @pilla/web lint
+    done:
+      - typed functions for every lending route of E10 and GET /accounts, on top of the E9 wrapper; responses parsed with @pilla/schemas; problem+json as ApiProblem
+    budget: {attempts: 3, toolCalls: 30, minutes: 20}
+  - id: E10-T16
+    title: Wire /emprestimos/novo, /emprestimos and /emprestimos/[id] to the API, with Activate and Cancel on DRAFT
+    kind: implement
+    assignee: claude
+    rules: [RN-C06, RN-C11]
+    skills: [shadcn, tailwind-css, react-best-practices, accessibility, coding-guidelines]
+    refs: [PRD-001 RF-11, PRD-001 RF-12, PRD-001 RF-17, PRD-001 RF-18, PRD-001 RF-41, docs/plano/decisoes-2026-11-17.md, docs/plano/decisoes-2026-11-19.md, docs/plano/E10.md D11 D12, docs/plano/E10-F08/plano.md]
+    dependsOn: [E9-T13, E10-T15]
+    allowedPaths:
+      - apps/web/app/(admin)/emprestimos/page.tsx
+      - apps/web/app/(admin)/emprestimos/novo/page.tsx
+      - apps/web/app/(admin)/emprestimos/[id]/page.tsx
+      - apps/web/app/(admin)/emprestimos/**/actions.ts
+      - apps/web/app/(admin)/emprestimos/**/loading.tsx
+      - apps/web/components/loans/**
+      - apps/web/components/loan-list.tsx
+      - apps/web/components/loan-detail.tsx
+      - apps/web/components/new-loan-form.tsx
+      - apps/web/lib/labels.ts
+    protectedTests: []
+    checks:
+      - pnpm --filter @pilla/web typecheck
+      - pnpm --filter @pilla/web lint
+    done:
+      - /emprestimos/novo prefills the charges from GET /settings/default-terms and posts to the API; on success shows "Contrato criado em rascunho." and goes to the detail
+      - /emprestimos lists from the API with the status and standing filters; empty state "Nenhum contrato."
+      - /emprestimos/[id] shows the schedule with status, paid and charges per installment; in DRAFT shows "Ativar" (date, default today in Brasília, and account select) and "Cancelar" (confirmation only); outside DRAFT neither shows
+      - lending code no longer imports lib/mock-data.ts
+      - 'visual review in the browser: the three routes open; loading, empty and error states render; no console error'
+    budget: {attempts: 3, toolCalls: 40, minutes: 30}
+
+  # ---------------------------------------------------------------- E10-F09: web renovar, renegociar, baixar, quitação
+  - id: E10-T17
+    title: Add the renew, renegotiate, write-off and payoff quote screens
+    kind: implement
+    assignee: claude
+    rules: [RN-C08, RN-C14, RN-C17, RN-C19]
+    skills: [shadcn, tailwind-css, react-best-practices, accessibility, coding-guidelines]
+    refs: [PRD-001 RF-13, PRD-001 RF-14, PRD-001 RF-15, PRD-001 RF-16, docs/plano/E10.md D3 D8 D12, docs/plano/E10-F09/plano.md]
+    dependsOn: [E10-T12, E10-T14, E10-T16]
+    allowedPaths:
+      - apps/web/app/(admin)/emprestimos/[id]/renovar/**
+      - apps/web/app/(admin)/emprestimos/[id]/renegociar/**
+      - apps/web/app/(admin)/emprestimos/[id]/baixa/**
+      - apps/web/app/(admin)/emprestimos/[id]/quitacao/**
+      - apps/web/app/(admin)/emprestimos/[id]/page.tsx
+      - apps/web/components/loans/**
+      - apps/web/lib/labels.ts
+    protectedTests: []
+    checks:
+      - pnpm --filter @pilla/web typecheck
+      - pnpm --filter @pilla/web lint
+    done:
+      - the detail of an ACTIVE loan links to Renovar, Renegociar, Baixar como perda and Cotação de quitação; other statuses hide them
+      - renew and renegotiate show the new principal (and the capitalized part) before confirming, then go to the new DRAFT
+      - RENEWAL_REQUIRES_INTEREST_PAID shows a message in pt-BR next to the button
+      - write-off requires a reason; payoff quote takes a date (default today) and shows the total and its three components
+      - 'visual review in the browser: every route opens; error states render; no console error'
+    budget: {attempts: 3, toolCalls: 40, minutes: 30}
+
+  # ---------------------------------------------------------------- E10-F10: E2E
+  - id: E10-T18
+    title: Write the Playwright e2e of the loan lifecycle against the real API and Postgres
+    kind: test-author
+    assignee: claude
+    rules: []
+    skills: [escrever-teste, accessibility]
+    refs: [PRD-001 RF-11, PRD-001 RF-12, PRD-001 RF-13, PRD-001 RF-16, PRD-001 RF-17, PRD-001 RF-18, docs/plano/E10.md, docs/plano/E10-F10/plano.md]
+    dependsOn: [E10-T17]
+    allowedPaths:
+      - apps/web/e2e/loans.e2e.ts
+    protectedTests: []
+    checks:
+      - pnpm --filter @pilla/web e2e
+    done:
+      - with compose up, migrate and seed - create a DRAFT for a seeded person, edit it, activate with the base account, see 6 installments on the detail
+      - create a second DRAFT and cancel it; write off a third loan with a reason and see WRITTEN_OFF
+      - renew is refused with the pt-BR message while interest is open (no payment exists yet in E10)
+      - no console errors
+    budget: {attempts: 3, toolCalls: 40, minutes: 30}
+
+features:
+  - id: E10-F01
+    title: Nullable account in DRAFT and the loan status transitions
+    cards: [E10-T01, E10-T02]
+  - id: E10-F02
+    title: Public read ports (people, accounts, confirmed allocations) and GET /accounts
+    cards: [E10-T03, E10-T04]
+  - id: E10-F03
+    title: Create, edit and cancel DRAFT loans; read default terms
+    cards: [E10-T05, E10-T06]
+  - id: E10-F04
+    title: Activate with disbursement (installments and LoanActivated)
+    cards: [E10-T07, E10-T08]
+  - id: E10-F05
+    title: Loan list, detail with schedule and charges, payoff quote
+    cards: [E10-T09, E10-T10]
+  - id: E10-F06
+    title: Renew and renegotiate
+    cards: [E10-T11, E10-T12]
+  - id: E10-F07
+    title: Write-off as loss
+    cards: [E10-T13, E10-T14]
+  - id: E10-F08
+    title: Web lending client, new loan, list and detail with Activate/Cancel
+    cards: [E10-T15, E10-T16]
+  - id: E10-F09
+    title: Web renew, renegotiate, write-off and payoff quote screens
+    cards: [E10-T17]
+  - id: E10-F10
+    title: Loans end-to-end test (Playwright, real API and Postgres)
+    cards: [E10-T18]

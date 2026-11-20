@@ -1,0 +1,87 @@
+delivery: E13
+title: Default terms editing and the operational alerts (due today, this week, overdue, pending review)
+# Esqueleto: detalhar checks, done, protectedTests, budget e readFirst antes de executar (formato de E10.yaml).
+cards:
+  # ---------------------------------------------------------------- E13-F01: editar parâmetros padrão
+  - id: E13-T01
+    title: Write the tests for PUT /settings/default-terms
+    kind: test-author
+    assignee: bia
+    skills: [escrever-teste]
+    refs: [PRD-001 RF-40, ADR-0006, ADR-0008, docs/plano/E13.md]
+    dependsOn: [E10-T06]
+    allowedPaths:
+      - apps/api/src/lending/http/default-terms-update.http.test.ts
+      - packages/schemas/src/api/lending/update-default-terms.test.ts
+  - id: E13-T02
+    title: Implement default terms editing as a new effective row
+    kind: implement
+    assignee: baidu
+    skills: [editar-arquivo, coding-guidelines, modular-design-principles]
+    refs: [PRD-001 RF-40, ADR-0006, ADR-0008, docs/plano/E13.md]
+    dependsOn: [E13-T01]
+    allowedPaths:
+      - packages/schemas/src/api/lending/update-default-terms.ts
+      - packages/schemas/src/index.ts
+      - apps/api/src/lending/application/**
+      - apps/api/src/lending/http/**
+      - apps/api/src/lending/infra/default-terms-repository.ts
+  # ---------------------------------------------------------------- E13-F02: alertas
+  - id: E13-T03
+    title: Write the tests for the alerts query
+    kind: test-author
+    assignee: claude
+    skills: [escrever-teste]
+    refs: [PRD-001 RF-50, ADR-0005, RFC-002 §3.5, docs/plano/E13.md]
+    dependsOn: [E10-T10, E11-T04]
+    allowedPaths:
+      - apps/api/src/lending/http/alerts.http.test.ts
+  - id: E13-T04
+    title: Implement the alerts query (due, overdue, pending review)
+    kind: implement
+    assignee: baidu
+    skills: [editar-arquivo, coding-guidelines, modular-design-principles]
+    refs: [PRD-001 RF-50, ADR-0005, docs/plano/E13.md]
+    dependsOn: [E13-T03]
+    allowedPaths:
+      - apps/api/src/lending/application/**
+      - apps/api/src/lending/http/**
+      - apps/api/src/payments/public/**
+  # ---------------------------------------------------------------- E13-F03: web
+  - id: E13-T05
+    title: Add the default terms form and the alerts screen
+    kind: implement
+    assignee: claude
+    skills: [shadcn, tailwind-css, react-best-practices, accessibility, coding-guidelines]
+    refs: [PRD-001 RF-40, PRD-001 RF-41, PRD-001 RF-50, docs/plano/E13.md]
+    dependsOn: [E13-T02, E13-T04, E10-T15, E9-T15]
+    allowedPaths:
+      - apps/web/lib/api/lending.ts
+      - apps/web/app/(admin)/configuracoes/**
+      - apps/web/app/(admin)/alertas/**
+      - apps/web/components/settings/**
+      - apps/web/components/alerts/**
+  # ---------------------------------------------------------------- E13-F04: E2E
+  - id: E13-T06
+    title: Write the Playwright e2e of default terms and alerts
+    kind: test-author
+    assignee: claude
+    skills: [escrever-teste, accessibility]
+    refs: [PRD-001 RF-40, PRD-001 RF-50, docs/plano/E13.md]
+    dependsOn: [E13-T05]
+    allowedPaths:
+      - apps/web/e2e/settings-alerts.e2e.ts
+
+features:
+  - id: E13-F01
+    title: Edit default terms
+    cards: [E13-T01, E13-T02]
+  - id: E13-F02
+    title: Operational alerts query
+    cards: [E13-T03, E13-T04]
+  - id: E13-F03
+    title: Web default terms and alerts screens
+    cards: [E13-T05]
+  - id: E13-F04
+    title: Settings and alerts end-to-end test
+    cards: [E13-T06]
