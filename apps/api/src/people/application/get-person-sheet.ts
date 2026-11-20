@@ -26,8 +26,8 @@ function toSheet(rows: PersonSheetRows): PersonDetailResponse {
   return {
     id: person.id,
     fullName: person.fullName,
-    // O contrato exige CPF na pessoa principal; CPF nulo só existe nos resumos (pessoa importada).
-    cpf: cpfSchema.parse(person.cpf),
+    // Pessoa importada pode não ter CPF; o contrato aceita nulo.
+    cpf: person.cpf === null ? null : cpfSchema.parse(person.cpf),
     phone: person.phone,
     ...(person.email === null ? {} : { email: person.email }),
     ...(person.birthDate === null ? {} : { birthDate: person.birthDate }),

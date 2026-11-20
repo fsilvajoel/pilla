@@ -191,6 +191,14 @@ function expectJson(res: HttpResult): void {
 }
 
 describe("GET /api/v1/people/:id (ficha)", () => {
+  it("ficha de pessoa importada sem CPF devolve cpf nulo, sem erro 500", async () => {
+    await seedPerson({ ...ana, cpf: null });
+    const res = await getSheet(ANA_ID);
+
+    expectJson(res);
+    expect(res.body).toEqual({ ...anaBase, cpf: null, referrer: null, referrals: [], addresses: [], pixKeys: [] });
+  });
+
   it("C1 (A1): pessoa sem relacionamentos devolve a ficha vazia, sem opcionais e sem contracts", async () => {
     await seedPerson(ana);
     const res = await getSheet(ANA_ID);
