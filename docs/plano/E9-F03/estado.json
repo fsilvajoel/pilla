@@ -12,7 +12,17 @@
       "worker": "copilot"
     },
     "tests": {
-      "status": "pending"
+      "status": "done",
+      "worker": "sonnet (substitui bia)",
+      "commit": "PENDING",
+      "attempts": [
+        {
+          "n": 1,
+          "at": "2026-11-20",
+          "result": "red",
+          "detail": "contrato: 35 falham/20 passam (os 20 verdes testam o createPersonRequest e o resumo ja existentes); http: 44 falham/0 passam (404 por rota inexistente). Falhas por asserção sobre esboço."
+        }
+      ]
     },
     "testReview": {
       "status": "pending"

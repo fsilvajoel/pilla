@@ -30,3 +30,6 @@ export * from "./api/lending/loan-views";
 export * from "./api/payments/create-payment";
 export * from "./api/treasury/account-summary";
 export * from "./api/core/health";
+export * from "./api/people/person-list-query";
+export * from "./api/people/person-response";
+export * from "./api/people/update-person";
