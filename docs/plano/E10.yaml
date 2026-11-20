@@ -603,6 +603,27 @@ cards:
       - the web sends loan.version in If-Match for activate, cancel and write-off, with no fixed initial version
     budget: {attempts: 3, toolCalls: 40, minutes: 30}
 
+  - id: E10-T20
+    title: Seed the default loan terms so GET /settings/default-terms answers on a fresh database
+    kind: implement
+    assignee: claude
+    rules: []
+    skills: [coding-guidelines]
+    refs: [docs/plano/E10.md, docs/plano/E10-F03/plano.md, docs/plano/E10-F10/plano.md]
+    dependsOn: [E10-T18]
+    allowedPaths:
+      - apps/api/scripts/seed.mts
+      - apps/api/src/lending/infra/**
+    protectedTests: []
+    checks:
+      - pnpm --filter @pilla/api typecheck
+      - pnpm --filter @pilla/api lint
+      - pnpm --filter @pilla/api test
+    done:
+      - seed inserts one lending.default_terms row with fixed id, idempotent (ON CONFLICT DO NOTHING)
+      - on a fresh database after db:seed, GET /api/v1/settings/default-terms answers 200
+    budget: {attempts: 3, toolCalls: 30, minutes: 20}
+
 features:
   - id: E10-F01
     title: Nullable account in DRAFT and the loan status transitions
