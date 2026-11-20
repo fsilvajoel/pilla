@@ -14,7 +14,7 @@
     "tests": {
       "status": "done",
       "worker": "sonnet (substitui bia)",
-      "commit": "PENDING",
+      "commit": "237dd27",
       "attempts": [
         {
           "n": 1,
