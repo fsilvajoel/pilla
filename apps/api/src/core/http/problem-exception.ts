@@ -1,16 +1,18 @@
-// stub E9-F02: substituído no E9-T03.
 import { HttpException } from "@nestjs/common";
-import type { ErrorCode } from "@pilla/schemas";
+import { errorStatus, type ErrorCode } from "@pilla/schemas";
 
 export type ProblemFieldError = { readonly field: string; readonly message: string };
 
+// Erro de negócio ou de entrada com `code` do catálogo (RFC-004 §6); o filtro o vira application/problem+json.
 export class ProblemException extends HttpException {
   readonly code: ErrorCode;
   readonly detail: string;
   readonly errors: readonly ProblemFieldError[] | undefined;
 
-  constructor(_code: ErrorCode, _detail: string, _errors?: readonly ProblemFieldError[]) {
-    super("esboço", 500);
-    throw new Error("esboço: não implementado");
+  constructor(code: ErrorCode, detail: string, errors?: readonly ProblemFieldError[]) {
+    super({ code, detail }, errorStatus[code]);
+    this.code = code;
+    this.detail = detail;
+    this.errors = errors;
   }
 }

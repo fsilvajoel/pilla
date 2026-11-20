@@ -1,13 +1,29 @@
-// stub E9-F02: substituído no E9-T03.
-import type { DynamicModule } from "@nestjs/common";
+import { Inject, Module, type DynamicModule, type OnApplicationShutdown } from "@nestjs/common";
+import { HealthController } from "./core/http/health.controller";
 import type { ApiEnv } from "./core/http/env";
+import { OpenApiController } from "./core/http/openapi";
+import { createDatabase, DATABASE, DATABASE_HANDLE, type DatabaseHandle } from "./db/database";
 
-export class AppModule {
-  static forRoot(_env: ApiEnv): DynamicModule {
-    throw new Error("esboço: não implementado");
+@Module({})
+export class AppModule implements OnApplicationShutdown {
+  private readonly handle: DatabaseHandle;
+
+  constructor(@Inject(DATABASE_HANDLE) handle: DatabaseHandle) {
+    this.handle = handle;
+  }
+
+  static forRoot(env: ApiEnv): DynamicModule {
+    return {
+      module: AppModule,
+      controllers: [HealthController, OpenApiController],
+      providers: [
+        { provide: DATABASE_HANDLE, useFactory: (): DatabaseHandle => createDatabase(env.databaseUrl) },
+        { provide: DATABASE, useFactory: (handle: DatabaseHandle) => handle.db, inject: [DATABASE_HANDLE] },
+      ],
+    };
   }
 
   onApplicationShutdown(): Promise<void> {
-    throw new Error("esboço: não implementado");
+    return this.handle.close();
   }
 }

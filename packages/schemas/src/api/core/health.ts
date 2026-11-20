@@ -1,5 +1,8 @@
-// stub E9-F02: o schema recusa tudo até o E9-T03; o tipo já é o final (contrato primeiro, ADR-0017).
 import { z } from "zod";
 
-export type HealthResponse = { readonly status: "ok" | "degraded"; readonly database: "up" | "down" };
-export const healthResponseSchema: z.ZodType<HealthResponse> = z.never();
+// Resposta de GET /api/v1/health: o estado do banco vai no corpo, sempre com HTTP 200.
+export const healthResponseSchema = z.strictObject({
+  status: z.enum(["ok", "degraded"]),
+  database: z.enum(["up", "down"]),
+});
+export type HealthResponse = z.infer<typeof healthResponseSchema>;
