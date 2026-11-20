@@ -37,8 +37,8 @@ workers:
   pepe: { adapter: api-tools, base_url: "https://openrouter.ai/api/v1", model: "nvidia/nemotron-3.5-lightning:free", key_env: OPEN_ROUTER_API_KEY, key_file: .env, quota_url: "https://openrouter.ai/api/v1/key", quota_remaining: ".data.free_model_daily_requests.remaining", quota_reserve: 20, max_attempts: 2, max_steps: 30, timeout_s: 300 }
   # Vera: revisora dos testes (bake-off 19/11: 5/5 defeitos, 1 falso positivo). Modelo diferente do da Bia.
   vera: { adapter: api-tools, base_url: "https://openrouter.ai/api/v1", model: "nvidia/nemotron-3.5-super-vl:free", key_env: OPEN_ROUTER_API_KEY2, key_file: .env, quota_url: "https://openrouter.ai/api/v1/key", quota_remaining: ".data.free_model_daily_requests.remaining", quota_reserve: 20, max_attempts: 6, max_steps: 30, timeout_s: 300 }
-  # Baidu: implementer de backend.
-  baidu: { adapter: api-tools, base_url: "https://openrouter.ai/api/v1", model: "baidu/ernie-5.5-flash-preview:free", key_env: OPEN_ROUTER_API_KEY2, key_file: .env, quota_url: "https://openrouter.ai/api/v1/key", quota_remaining: ".data.free_model_daily_requests.remaining", quota_reserve: 20, max_attempts: 6, max_steps: 40, timeout_s: 300 }
+  # Baidu: implementer de backend. Chave 3 (20/11, Joel liberou; US$1 de saldo), para não esgotar a chave 2 da Vera.
+  baidu: { adapter: api-tools, base_url: "https://openrouter.ai/api/v1", model: "baidu/ernie-5.5-flash-preview:free", key_env: OPEN_ROUTER_API_KEY3, key_file: .env, quota_url: "https://openrouter.ai/api/v1/key", quota_remaining: ".data.free_model_daily_requests.remaining", quota_reserve: 20, max_attempts: 6, max_steps: 40, timeout_s: 300 }
   # Copilot CLI (adapter/cli-agent.md), já autenticado na VM: refiner (refinamento funcional, escrita restrita a
   # plano, cartões da feature e pm_queue) e planner (decisão do Joel, 19/11: Claude e Copilot planejam juntos).
   # planner roda em modo leitura (padrão do dispatch.py para papéis fora de refiner/implementer): o Copilot devolve
