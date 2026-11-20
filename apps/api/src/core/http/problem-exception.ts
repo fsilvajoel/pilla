@@ -1,13 +1,19 @@
-// stub E9-F02: esboço do contrato (docs/plano/E9-F02/esboco-api.txt); sai da cobertura até o E9-T03 implementar
+// Exceção que as features lançam para responder qualquer `code` do catálogo (RFC-004 §6).
 import { HttpException } from "@nestjs/common";
+import { errorStatus } from "@pilla/schemas";
 import type { ErrorCode } from "@pilla/schemas";
+
 export type ProblemFieldError = { readonly field: string; readonly message: string };
+
 export class ProblemException extends HttpException {
   readonly code: ErrorCode;
   readonly detail: string;
   readonly errors: readonly ProblemFieldError[] | undefined;
-  constructor(_code: ErrorCode, _detail: string, _errors?: readonly ProblemFieldError[]) {
-    super("esboço", 500);
-    throw new Error("esboço: não implementado");
+
+  constructor(code: ErrorCode, detail: string, errors?: readonly ProblemFieldError[]) {
+    super(detail, errorStatus[code]);
+    this.code = code;
+    this.detail = detail;
+    this.errors = errors;
   }
 }
