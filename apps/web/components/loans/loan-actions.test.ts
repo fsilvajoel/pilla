@@ -4,8 +4,12 @@ import {
   canActivate,
   canCancel,
   canRegisterPayment,
+  canRollover,
   checkActivateLoan,
   checkCreateLoan,
+  checkRenegotiateLoan,
+  checkRenewLoan,
+  checkWriteOffLoan,
   formatDateBr,
   parseLoanFilters,
   toLoanActionError,
@@ -51,5 +55,30 @@ describe("loan-actions", () => {
       standing: "OVERDUE",
     });
     expect(parseLoanFilters({ status: "XX", standing: "Y" })).toEqual({});
+  });
+
+  it("renovar, renegociar, baixar e cotar só em ACTIVE", () => {
+    expect(canRollover("ACTIVE")).toBe(true);
+    for (const s of ["DRAFT", "PAID_OFF", "RENEWED", "RENEGOTIATED", "WRITTEN_OFF", "CANCELLED"] as const) {
+      expect(canRollover(s)).toBe(false);
+    }
+  });
+
+  it("valida renovação, renegociação e baixa", () => {
+    expect(checkRenewLoan({ firstDueDate: "2026-12-20" }).ok).toBe(true);
+    expect(checkRenewLoan({}).ok).toBe(false);
+    expect(checkRenegotiateLoan({ firstDueDate: "2026-12-20", installmentCount: 4 }).ok).toBe(true);
+    expect(checkRenegotiateLoan({ firstDueDate: "20/12/2026" }).ok).toBe(false);
+    expect(checkWriteOffLoan({ reason: "Cliente sumiu" }).ok).toBe(true);
+    const empty = checkWriteOffLoan({ reason: "" });
+    expect(empty.ok).toBe(false);
+    if (!empty.ok) expect(Object.keys(empty.fieldErrors)).toContain("reason");
+  });
+
+  it("traduz RENEWAL_REQUIRES_INTEREST_PAID", () => {
+    const refused = toLoanActionError(
+      parseProblem(422, { title: "x", status: 422, code: "RENEWAL_REQUIRES_INTEREST_PAID", detail: "d" }),
+    );
+    expect(refused.message).toContain("juros ou encargos vencidos");
   });
 });

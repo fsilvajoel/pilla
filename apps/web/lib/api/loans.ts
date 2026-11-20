@@ -12,7 +12,10 @@ import {
   type LoanStanding,
   type LoanStatus,
   type PayoffQuoteResponse,
+  type RenegotiateLoanRequest,
+  type RenewLoanRequest,
   type UpdateLoanRequest,
+  type WriteOffLoanRequest,
 } from "@pilla/schemas";
 import { z } from "zod";
 import { apiFetch } from "./client";
@@ -49,6 +52,14 @@ export const createLoanResponse = loanDraftResponse.extend({
   warning: z.object({ activeLoansCount: z.number().int() }),
 });
 export type CreateLoanResponse = z.infer<typeof createLoanResponse>;
+
+/** POST /loans/{id}/renew e /renegotiate: o novo DRAFT mais a ligação com a origem e a parte capitalizada. */
+export const rolloverDraftResponse = loanDraftResponse.extend({
+  originLoanId: idSchema,
+  originType: z.string(),
+  capitalizedAmountCents: z.number(),
+});
+export type RolloverDraftResponse = z.infer<typeof rolloverDraftResponse>;
 
 export interface ListLoansParams {
   personId?: string;
@@ -118,4 +129,25 @@ export function getPayoffQuote(id: string, date: string): Promise<PayoffQuoteRes
 /** GET /accounts: opções da conta de desembolso/destino (RF-20). */
 export function listAccounts(): Promise<AccountListResponse> {
   return apiFetch({ path: "/accounts", schema: accountListResponse });
+}
+
+/** POST /loans/{id}/renew: cria o DRAFT de renovação (RF-13); sem `If-Match`, a origem não muda agora (D8). */
+export function renewLoan(id: string, body: RenewLoanRequest): Promise<RolloverDraftResponse> {
+  return apiFetch({ method: "POST", path: `/loans/${id}/renew`, body, schema: rolloverDraftResponse });
+}
+
+/** POST /loans/{id}/renegotiate: cria o DRAFT de renegociação com o saldo capitalizado (RF-14). */
+export function renegotiateLoan(id: string, body: RenegotiateLoanRequest): Promise<RolloverDraftResponse> {
+  return apiFetch({ method: "POST", path: `/loans/${id}/renegotiate`, body, schema: rolloverDraftResponse });
+}
+
+/** POST /loans/{id}/write-off: baixa como perda com motivo; `version` vai em `If-Match` (RF-16). */
+export function writeOffLoan(id: string, version: number, body: WriteOffLoanRequest): Promise<LoanDraftResponse> {
+  return apiFetch({
+    method: "POST",
+    path: `/loans/${id}/write-off`,
+    body,
+    headers: ifMatch(version),
+    schema: loanDraftResponse,
+  });
 }

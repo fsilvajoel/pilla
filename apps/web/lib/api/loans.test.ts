@@ -10,7 +10,10 @@ import {
   getPayoffQuote,
   listAccounts,
   listLoans,
+  renegotiateLoan,
+  renewLoan,
   updateLoan,
+  writeOffLoan,
 } from "./loans";
 
 const ID = "01890a5d-ac96-774b-bcce-b302099a8057";
@@ -103,6 +106,19 @@ describe("lending client", () => {
     await activateLoan(ID, 4, { disbursedAt: "2026-11-20", accountId: ID });
     expect(last().init.headers).toMatchObject({ "if-match": "4" });
     expect(last().init.body).toBe(JSON.stringify({ disbursedAt: "2026-11-20", accountId: ID }));
+  });
+
+  it("renewLoan, renegotiateLoan e writeOffLoan chamam as rotas de transição", async () => {
+    respond({ ...draft, originLoanId: ID, originType: "RENEWAL", capitalizedAmountCents: 0 });
+    const renewed = await renewLoan(ID, { firstDueDate: "2026-12-20" });
+    expect(renewed.capitalizedAmountCents).toBe(0);
+    expect(last().url).toBe(`http://api.test/loans/${ID}/renew`);
+    await renegotiateLoan(ID, { firstDueDate: "2026-12-20" });
+    expect(last().url).toBe(`http://api.test/loans/${ID}/renegotiate`);
+    respond(draft);
+    await writeOffLoan(ID, 5, { reason: "Perda" });
+    expect(last().url).toBe(`http://api.test/loans/${ID}/write-off`);
+    expect(last().init.headers).toMatchObject({ "if-match": "5" });
   });
 
   it("resposta fora do schema vira ApiProblem", async () => {

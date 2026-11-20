@@ -7,12 +7,19 @@ import { PageHeader } from "@/components/shared/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { installmentStatusLabel, loanStandingLabel, loanStatusLabel } from "@/lib/labels";
-import { canRegisterPayment, formatDateBr } from "./loan-actions";
+import { canRegisterPayment, canRollover, formatDateBr } from "./loan-actions";
 
 type Installment = LoanDetailResponse["installments"][number];
 
 const plain = (value: number): string => formatReais(cents(BigInt(value)));
 const money = (value: number): string => `R$ ${plain(value)}`;
+
+const ROLLOVER_LINKS = [
+  { path: "renovar", label: "Renovar" },
+  { path: "renegociar", label: "Renegociar" },
+  { path: "baixa", label: "Baixar como perda" },
+  { path: "quitacao", label: "Cotação de quitação" },
+] as const;
 
 const columns: readonly DataTableColumn<Installment>[] = [
   { key: "number", header: "Nº", cell: (i) => i.number },
@@ -48,10 +55,20 @@ export function LoanDetailView({ loan, children }: LoanDetailViewProps): ReactEl
         title={`Contrato ${loan.loanNumber}`}
         description={`${loan.personName} · ${loanStatusLabel[loan.status]}${loan.standing ? ` · ${loanStandingLabel[loan.standing]}` : ""}`}
         actions={
-          canRegisterPayment(loan.status) ? (
-            <Button asChild>
-              <Link href={`/emprestimos/${loan.id}/pagamento`}>Registrar pagamento</Link>
-            </Button>
+          canRegisterPayment(loan.status) || canRollover(loan.status) ? (
+            <div className="flex flex-wrap gap-2">
+              {canRegisterPayment(loan.status) && (
+                <Button asChild>
+                  <Link href={`/emprestimos/${loan.id}/pagamento`}>Registrar pagamento</Link>
+                </Button>
+              )}
+              {canRollover(loan.status) &&
+                ROLLOVER_LINKS.map((item) => (
+                  <Button key={item.path} asChild variant="outline">
+                    <Link href={`/emprestimos/${loan.id}/${item.path}`}>{item.label}</Link>
+                  </Button>
+                ))}
+            </div>
           ) : undefined
         }
       />

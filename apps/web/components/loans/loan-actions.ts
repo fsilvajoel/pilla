@@ -1,9 +1,15 @@
 import {
   activateLoanRequest,
   createLoanRequest,
+  renegotiateLoanRequest,
+  renewLoanRequest,
+  writeOffLoanRequest,
   type ActivateLoanRequest,
   type CreateLoanRequest,
   type LoanStatus,
+  type RenegotiateLoanRequest,
+  type RenewLoanRequest,
+  type WriteOffLoanRequest,
 } from "@pilla/schemas";
 import { toActionError } from "@/lib/people-action-result";
 
@@ -31,9 +37,16 @@ export function canRegisterPayment(status: LoanStatus): boolean {
   return status === "ACTIVE";
 }
 
+/** Renovar, renegociar, baixar e cotar só existem em contrato ACTIVE (E10 D12). */
+export function canRollover(status: LoanStatus): boolean {
+  return status === "ACTIVE";
+}
+
 const MESSAGES: Readonly<Record<string, string>> = {
   VERSION_CONFLICT: "Este contrato foi alterado por outra pessoa. Recarregue a página e tente de novo.",
   LOAN_NOT_EDITABLE: "Só contratos em rascunho podem ser ativados ou cancelados.",
+  RENEWAL_REQUIRES_INTEREST_PAID:
+    "Há juros ou encargos vencidos em aberto. Pague-os antes de renovar ou use a renegociação.",
   INSUFFICIENT_ACCOUNT_BALANCE: "A conta escolhida não tem saldo para este desembolso.",
 };
 
@@ -68,6 +81,27 @@ export function checkCreateLoan(input: unknown): Checked<CreateLoanRequest> {
 
 export function checkActivateLoan(input: unknown): Checked<ActivateLoanRequest> {
   const parsed = activateLoanRequest.safeParse(input);
+  return parsed.success
+    ? { ok: true, data: parsed.data }
+    : { ok: false, fieldErrors: fieldErrorsOf(parsed.error.issues) };
+}
+
+export function checkRenewLoan(input: unknown): Checked<RenewLoanRequest> {
+  const parsed = renewLoanRequest.safeParse(input);
+  return parsed.success
+    ? { ok: true, data: parsed.data }
+    : { ok: false, fieldErrors: fieldErrorsOf(parsed.error.issues) };
+}
+
+export function checkRenegotiateLoan(input: unknown): Checked<RenegotiateLoanRequest> {
+  const parsed = renegotiateLoanRequest.safeParse(input);
+  return parsed.success
+    ? { ok: true, data: parsed.data }
+    : { ok: false, fieldErrors: fieldErrorsOf(parsed.error.issues) };
+}
+
+export function checkWriteOffLoan(input: unknown): Checked<WriteOffLoanRequest> {
+  const parsed = writeOffLoanRequest.safeParse(input);
   return parsed.success
     ? { ok: true, data: parsed.data }
     : { ok: false, fieldErrors: fieldErrorsOf(parsed.error.issues) };
