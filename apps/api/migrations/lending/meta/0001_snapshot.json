@@ -1,0 +1,612 @@
+{
+  "id": "b034f248-b88e-42f9-9c67-b03b462e41b5",
+  "prevId": "ffc48664-9116-43a7-98c2-91d64e5939df",
+  "version": "7",
+  "dialect": "postgresql",
+  "tables": {
+    "lending.default_terms": {
+      "name": "default_terms",
+      "schema": "lending",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "late_fee_bps": {
+          "name": "late_fee_bps",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "late_interest_monthly_bps": {
+          "name": "late_interest_monthly_bps",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "grace_period_days": {
+          "name": "grace_period_days",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "suggested_monthly_rate_bps": {
+          "name": "suggested_monthly_rate_bps",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "rounding_step_cents": {
+          "name": "rounding_step_cents",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 500
+        },
+        "effective_from": {
+          "name": "effective_from",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_by": {
+          "name": "created_by",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "default_terms_effective_from_idx": {
+          "name": "default_terms_effective_from_idx",
+          "columns": [
+            {
+              "expression": "effective_from",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "default_terms_late_fee_bps_check": {
+          "name": "default_terms_late_fee_bps_check",
+          "value": "\"lending\".\"default_terms\".\"late_fee_bps\" >= 0"
+        },
+        "default_terms_late_interest_monthly_bps_check": {
+          "name": "default_terms_late_interest_monthly_bps_check",
+          "value": "\"lending\".\"default_terms\".\"late_interest_monthly_bps\" >= 0"
+        },
+        "default_terms_grace_period_days_check": {
+          "name": "default_terms_grace_period_days_check",
+          "value": "\"lending\".\"default_terms\".\"grace_period_days\" >= 0"
+        },
+        "default_terms_suggested_monthly_rate_bps_check": {
+          "name": "default_terms_suggested_monthly_rate_bps_check",
+          "value": "\"lending\".\"default_terms\".\"suggested_monthly_rate_bps\" >= 0"
+        },
+        "default_terms_rounding_step_cents_check": {
+          "name": "default_terms_rounding_step_cents_check",
+          "value": "\"lending\".\"default_terms\".\"rounding_step_cents\" > 0"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "lending.installments": {
+      "name": "installments",
+      "schema": "lending",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "loan_id": {
+          "name": "loan_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "number": {
+          "name": "number",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "due_date": {
+          "name": "due_date",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "principal_cents": {
+          "name": "principal_cents",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "interest_cents": {
+          "name": "interest_cents",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "total_cents": {
+          "name": "total_cents",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "installments_due_date_idx": {
+          "name": "installments_due_date_idx",
+          "columns": [
+            {
+              "expression": "due_date",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "installments_loan_id_loans_id_fk": {
+          "name": "installments_loan_id_loans_id_fk",
+          "tableFrom": "installments",
+          "tableTo": "loans",
+          "schemaTo": "lending",
+          "columnsFrom": [
+            "loan_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "installments_loan_id_number_key": {
+          "name": "installments_loan_id_number_key",
+          "nullsNotDistinct": false,
+          "columns": [
+            "loan_id",
+            "number"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "installments_number_check": {
+          "name": "installments_number_check",
+          "value": "\"lending\".\"installments\".\"number\" >= 1"
+        },
+        "installments_principal_cents_check": {
+          "name": "installments_principal_cents_check",
+          "value": "\"lending\".\"installments\".\"principal_cents\" >= 0"
+        },
+        "installments_interest_cents_check": {
+          "name": "installments_interest_cents_check",
+          "value": "\"lending\".\"installments\".\"interest_cents\" >= 0"
+        },
+        "installments_total_cents_check": {
+          "name": "installments_total_cents_check",
+          "value": "\"lending\".\"installments\".\"total_cents\" = \"lending\".\"installments\".\"principal_cents\" + \"lending\".\"installments\".\"interest_cents\""
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "lending.loan_number_sequences": {
+      "name": "loan_number_sequences",
+      "schema": "lending",
+      "columns": {
+        "year": {
+          "name": "year",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "last_value": {
+          "name": "last_value",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "loan_number_sequences_last_value_check": {
+          "name": "loan_number_sequences_last_value_check",
+          "value": "\"lending\".\"loan_number_sequences\".\"last_value\" >= 0"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "lending.loans": {
+      "name": "loans",
+      "schema": "lending",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "loan_number": {
+          "name": "loan_number",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "person_id": {
+          "name": "person_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "type": {
+          "name": "type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "principal_cents": {
+          "name": "principal_cents",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "monthly_interest_rate_bps": {
+          "name": "monthly_interest_rate_bps",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "installment_count": {
+          "name": "installment_count",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "frequency_unit": {
+          "name": "frequency_unit",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "frequency_interval": {
+          "name": "frequency_interval",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "first_due_date": {
+          "name": "first_due_date",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "contracted_at": {
+          "name": "contracted_at",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "disbursed_at": {
+          "name": "disbursed_at",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "account_id": {
+          "name": "account_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "origin_loan_id": {
+          "name": "origin_loan_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "origin_type": {
+          "name": "origin_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "capitalized_amount_cents": {
+          "name": "capitalized_amount_cents",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "late_fee_bps": {
+          "name": "late_fee_bps",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "late_interest_monthly_bps": {
+          "name": "late_interest_monthly_bps",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "grace_period_days": {
+          "name": "grace_period_days",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "rounding_step_cents": {
+          "name": "rounding_step_cents",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "write_off_reason": {
+          "name": "write_off_reason",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "internal_notes": {
+          "name": "internal_notes",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "status_changed_at": {
+          "name": "status_changed_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "version": {
+          "name": "version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 1
+        }
+      },
+      "indexes": {
+        "loans_person_id_status_idx": {
+          "name": "loans_person_id_status_idx",
+          "columns": [
+            {
+              "expression": "person_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "loans_status_idx": {
+          "name": "loans_status_idx",
+          "columns": [
+            {
+              "expression": "status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "loans_origin_loan_id_idx": {
+          "name": "loans_origin_loan_id_idx",
+          "columns": [
+            {
+              "expression": "origin_loan_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "loans_account_id_idx": {
+          "name": "loans_account_id_idx",
+          "columns": [
+            {
+              "expression": "account_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "loans_origin_loan_id_fkey": {
+          "name": "loans_origin_loan_id_fkey",
+          "tableFrom": "loans",
+          "tableTo": "loans",
+          "schemaTo": "lending",
+          "columnsFrom": [
+            "origin_loan_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "loans_loan_number_key": {
+          "name": "loans_loan_number_key",
+          "nullsNotDistinct": false,
+          "columns": [
+            "loan_number"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "loans_loan_number_check": {
+          "name": "loans_loan_number_check",
+          "value": "\"lending\".\"loans\".\"loan_number\" ~ '^[0-9]{4}-[0-9]{4,}$'"
+        },
+        "loans_type_check": {
+          "name": "loans_type_check",
+          "value": "\"lending\".\"loans\".\"type\" IN ('INSTALLMENT', 'SINGLE_PAYMENT', 'INTEREST_ONLY', 'CUSTOM')"
+        },
+        "loans_status_check": {
+          "name": "loans_status_check",
+          "value": "\"lending\".\"loans\".\"status\" IN ('DRAFT', 'ACTIVE', 'PAID_OFF', 'RENEWED', 'RENEGOTIATED', 'WRITTEN_OFF', 'CANCELLED')"
+        },
+        "loans_principal_cents_check": {
+          "name": "loans_principal_cents_check",
+          "value": "\"lending\".\"loans\".\"principal_cents\" > 0"
+        },
+        "loans_monthly_interest_rate_bps_check": {
+          "name": "loans_monthly_interest_rate_bps_check",
+          "value": "\"lending\".\"loans\".\"monthly_interest_rate_bps\" >= 0"
+        },
+        "loans_installment_count_check": {
+          "name": "loans_installment_count_check",
+          "value": "(\"lending\".\"loans\".\"installment_count\" IS NOT NULL AND \"lending\".\"loans\".\"installment_count\" >= 1) OR (\"lending\".\"loans\".\"installment_count\" IS NULL AND \"lending\".\"loans\".\"type\" = 'INTEREST_ONLY')"
+        },
+        "loans_frequency_unit_check": {
+          "name": "loans_frequency_unit_check",
+          "value": "\"lending\".\"loans\".\"frequency_unit\" IN ('DAY', 'MONTH')"
+        },
+        "loans_frequency_interval_check": {
+          "name": "loans_frequency_interval_check",
+          "value": "\"lending\".\"loans\".\"frequency_interval\" >= 1"
+        },
+        "loans_disbursed_at_check": {
+          "name": "loans_disbursed_at_check",
+          "value": "\"lending\".\"loans\".\"status\" IN ('DRAFT', 'CANCELLED') OR \"lending\".\"loans\".\"disbursed_at\" IS NOT NULL"
+        },
+        "loans_account_id_check": {
+          "name": "loans_account_id_check",
+          "value": "\"lending\".\"loans\".\"status\" IN ('DRAFT', 'CANCELLED') OR \"lending\".\"loans\".\"account_id\" IS NOT NULL"
+        },
+        "loans_origin_type_check": {
+          "name": "loans_origin_type_check",
+          "value": "\"lending\".\"loans\".\"origin_type\" IN ('RENEWAL', 'RENEGOTIATION', 'IMPORT')"
+        },
+        "loans_capitalized_amount_cents_check": {
+          "name": "loans_capitalized_amount_cents_check",
+          "value": "\"lending\".\"loans\".\"capitalized_amount_cents\" >= 0"
+        },
+        "loans_late_fee_bps_check": {
+          "name": "loans_late_fee_bps_check",
+          "value": "\"lending\".\"loans\".\"late_fee_bps\" >= 0"
+        },
+        "loans_late_interest_monthly_bps_check": {
+          "name": "loans_late_interest_monthly_bps_check",
+          "value": "\"lending\".\"loans\".\"late_interest_monthly_bps\" >= 0"
+        },
+        "loans_grace_period_days_check": {
+          "name": "loans_grace_period_days_check",
+          "value": "\"lending\".\"loans\".\"grace_period_days\" >= 0"
+        },
+        "loans_rounding_step_cents_check": {
+          "name": "loans_rounding_step_cents_check",
+          "value": "\"lending\".\"loans\".\"rounding_step_cents\" > 0"
+        }
+      },
+      "isRLSEnabled": false
+    }
+  },
+  "enums": {},
+  "schemas": {
+    "lending": "lending"
+  },
+  "sequences": {},
+  "roles": {},
+  "policies": {},
+  "views": {},
+  "_meta": {
+    "columns": {},
+    "schemas": {},
+    "tables": {}
+  }
+}

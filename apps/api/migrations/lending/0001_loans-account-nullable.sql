@@ -1,0 +1,2 @@
+ALTER TABLE "lending"."loans" ALTER COLUMN "account_id" DROP NOT NULL;--> statement-breakpoint
+ALTER TABLE "lending"."loans" ADD CONSTRAINT "loans_account_id_check" CHECK ("lending"."loans"."status" IN ('DRAFT', 'CANCELLED') OR "lending"."loans"."account_id" IS NOT NULL);
