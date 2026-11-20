@@ -30,6 +30,14 @@ describe("listPersons (C7-C17, C19)", () => {
     ]);
   };
 
+  it("treats a search of only punctuation as a name search with no digits", async () => {
+    await insertPerson("01970000-0000-7000-8000-000000000201", "Caio Lima", "52998224725", "+5511987654201", true);
+
+    const result = await listPersons(db, { search: " . - ", limit: 20, cursor: null, active: null });
+
+    expect(result).toEqual({ items: [], nextCursor: null });
+  });
+
   it("C7 (A7): returns exactly the item with null cpf", async () => {
     await insertPerson("01970000-0000-7000-8000-000000000200", "Caio Lima", null, "+5511987654200", true);
 

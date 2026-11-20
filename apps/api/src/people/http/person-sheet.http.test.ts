@@ -199,6 +199,18 @@ describe("GET /api/v1/people/:id (ficha)", () => {
     expect(res.body).toEqual({ ...anaBase, cpf: null, referrer: null, referrals: [], addresses: [], pixKeys: [] });
   });
 
+  it("ficha traz e-mail, nascimento e observações quando preenchidos", async () => {
+    await seedPerson(ana);
+    await client.query(
+      "update people.persons set email = 'ana@example.com', birth_date = '1990-05-17', notes = 'Cliente antiga' where id = $1",
+      [ANA_ID],
+    );
+    const res = await getSheet(ANA_ID);
+
+    expectJson(res);
+    expect(res.body).toMatchObject({ email: "ana@example.com", birthDate: "1990-05-17", notes: "Cliente antiga" });
+  });
+
   it("C1 (A1): pessoa sem relacionamentos devolve a ficha vazia, sem opcionais e sem contracts", async () => {
     await seedPerson(ana);
     const res = await getSheet(ANA_ID);

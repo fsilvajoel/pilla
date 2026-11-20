@@ -41,7 +41,7 @@ const PLAIN = "AAAAAEEEEIIIIOOOOOUUUUCNaaaaaeeeeiiiiooooouuuucn";
 function foldText(value: string): string {
   return Array.from(value, (char) => {
     const at = ACCENTED.indexOf(char);
-    return at < 0 ? char : (PLAIN[at] ?? char);
+    return at < 0 ? char : PLAIN.charAt(at);
   })
     .join("")
     .toLowerCase();
