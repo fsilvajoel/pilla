@@ -4,6 +4,7 @@ import {
   loanActivatedV1,
   loanRenegotiatedV1,
   loanRenewedV1,
+  loanWrittenOffV1,
   type ActivateLoanRequest,
   type RenegotiateLoanRequest,
   type RenewLoanRequest,
@@ -19,6 +20,7 @@ import {
   type LoanStanding,
   type PayoffQuoteResponse,
   type UpdateLoanRequest,
+  type WriteOffLoanRequest,
 } from "@pilla/schemas";
 import { ProblemException } from "../../core/http/problem-exception";
 import type { AuditEntry } from "../../core/public/audit";
@@ -289,6 +291,39 @@ export class LoansService {
   // Renegociar (E10-F06): o novo DRAFT leva o saldo devedor; o que excede o principal é capitalizado (RN-C17).
   async renegotiate(id: string, request: RenegotiateLoanRequest): Promise<RolloverDraftResponse> {
     return this.draftFromOrigin(id, request, "RENEGOTIATION");
+  }
+
+  // Baixa como perda (E10-F07, RN-C19): ACTIVE vira WRITTEN_OFF com o motivo; o evento leva o principal em aberto.
+  // Sem movimentação de dinheiro; o efeito contábil é do consumidor (E12).
+  async writeOff(id: string, expectedVersion: number | null, request: WriteOffLoanRequest): Promise<LoanDraftResponse> {
+    // Leituras fora da transação (o PGlite tem uma só conexão); a trava e as conferências ficam dentro.
+    const installments = await this.installmentsOf(id);
+    const allocations = await confirmedAllocationsByLoan(this.db, id);
+    return loanRepository(this.db).inTransaction(async (store) => {
+      const current = await store.findForUpdate(id);
+      if (current === null) throw new ProblemException("NOT_FOUND", NOT_FOUND_DETAIL);
+      if (expectedVersion === null || expectedVersion !== current.version) {
+        throw new ProblemException("VERSION_CONFLICT", "Versão desatualizada.");
+      }
+      if (current.status !== "ACTIVE") {
+        throw new ProblemException("LOAN_NOT_EDITABLE", "Só contrato ativo pode ser baixado como perda.");
+      }
+      const now = new Date();
+      const figures = rolloverFigures(current, installments, allocations, isoDate(todayInBrasilia(now)));
+      const written = await store.writeOff(id, request.reason);
+      await store.audit(auditEntry("loan.written_off", id, current, written, now));
+      await store.outbox(
+        loanWrittenOffV1.parse({
+          id: newId(),
+          type: "LoanWrittenOff",
+          version: 1,
+          occurredAt: now.toISOString(),
+          aggregateId: id,
+          payload: { loanId: id, outstandingPrincipalCents: figures.openPrincipalCents, reason: request.reason },
+        }),
+      );
+      return toResponse(written);
+    });
   }
 
   async getDefaultTerms(): Promise<DefaultTermsResponse> {

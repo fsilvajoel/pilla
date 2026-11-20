@@ -7,6 +7,7 @@ import {
   renegotiateLoanRequest,
   renewLoanRequest,
   updateLoanRequest,
+  writeOffLoanRequest,
   type ActivateLoanRequest,
   type CreateLoanRequest,
   type LoanDetailResponse,
@@ -16,6 +17,7 @@ import {
   type RenegotiateLoanRequest,
   type RenewLoanRequest,
   type UpdateLoanRequest,
+  type WriteOffLoanRequest,
 } from "@pilla/schemas";
 import { ZodValidationPipe } from "../../core/http/zod-validation.pipe";
 import { loanListQuery, type LoanListQuery } from "./loan-list-query";
@@ -125,5 +127,15 @@ export class LoansController {
     const loan = await this.service.renegotiate(id, body);
     response.setHeader("Location", `/api/v1/loans/${loan.id}`);
     return loan;
+  }
+
+  @Post(":id/write-off")
+  @HttpCode(200)
+  writeOff(
+    @Param("id", new ZodValidationPipe<string>(idSchema)) id: string,
+    @Headers("if-match") ifMatch: string | undefined,
+    @Body(new ZodValidationPipe<WriteOffLoanRequest>(writeOffLoanRequest)) body: WriteOffLoanRequest,
+  ): Promise<LoanDraftResponse> {
+    return this.service.writeOff(id, ifMatchVersion(ifMatch), body);
   }
 }

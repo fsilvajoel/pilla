@@ -38,6 +38,8 @@ export type LoanStore = {
   activate(id: string, disbursedAt: string, accountId: string): Promise<LoanRow>;
   /** Passa a origem de ACTIVE para o status final (RENEWED ou RENEGOTIATED), soma 1 em version. */
   settleOrigin(id: string, status: "RENEWED" | "RENEGOTIATED"): Promise<LoanRow>;
+  /** Passa o ACTIVE para WRITTEN_OFF com o motivo, soma 1 em version e grava status_changed_at. */
+  writeOff(id: string, reason: string): Promise<LoanRow>;
   insertInstallments(rows: NewInstallmentRow[]): Promise<void>;
   /** Grava o evento no core.outbox na mesma transação (D7). */
   outbox(event: OutboxEvent): Promise<void>;
@@ -120,6 +122,20 @@ function storeOf(tx: PgDatabase<PgQueryResultHKT>): LoanStore {
         .where(eq(loans.id, id))
         .returning();
       return firstRow(rows, "origin settle");
+    },
+    async writeOff(id, reason) {
+      const rows = await tx
+        .update(loans)
+        .set({
+          status: "WRITTEN_OFF",
+          writeOffReason: reason,
+          statusChangedAt: sql`now()`,
+          version: sql`${loans.version} + 1`,
+          updatedAt: sql`now()`,
+        })
+        .where(eq(loans.id, id))
+        .returning();
+      return firstRow(rows, "loan write-off");
     },
     async insertInstallments(rows) {
       await tx.insert(installments).values(rows);
