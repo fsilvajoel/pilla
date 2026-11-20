@@ -43,6 +43,8 @@ const detail = {
   pixKeys: [pixKey],
 };
 
+const created = { id: ID, fullName: "Ana", cpf: CPF, phone: "+5511987654321", active: true, version: 1 };
+
 function ok(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), { status });
 }
@@ -104,7 +106,7 @@ describe("lib/api/people", () => {
   });
 
   it("createPerson: POST /people com corpo JSON", async () => {
-    fetchMock.mockResolvedValue(ok(detail, 201));
+    fetchMock.mockResolvedValue(ok(created, 201));
     const body = { fullName: "Ana", cpf: CPF, phone: "+5511987654321" };
     await createPerson(body);
     const { url, init } = call();
@@ -114,7 +116,7 @@ describe("lib/api/people", () => {
   });
 
   it("updatePerson: PATCH /people/{id}", async () => {
-    fetchMock.mockResolvedValue(ok(detail));
+    fetchMock.mockResolvedValue(ok(created));
     await updatePerson(ID, { fullName: "Ana B", version: 1 });
     const { url, init } = call();
     expect(url).toBe(`http://api.test/people/${ID}`);
