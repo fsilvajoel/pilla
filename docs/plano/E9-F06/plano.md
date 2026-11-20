@@ -192,3 +192,7 @@ Itens do done do E9-T11 que não são comportamento testável por unit e ficam c
 3. **Badge `success`/`warning`: aprovadas** as cores propostas.
 4. **`AdminShell` e `AdminNav` em `shared/`: aprovado.** São testados em `shared/`; o done do E9-T13 cita isso e o `layout.tsx` só compõe os dois.
 5. **Ids `<id>-error` e `<id>-description` do `FormField` e regra do link ativo do `AdminNav`: aprovados** (resposta a) em `docs/plano/pendencias-pm.md`, 19/11).
+
+## Registro E9-T11
+
+- A CLI do shadcn não adicionou o componente `form` (registro `radix-nova` usa `field`); o T11 usa `field` e registra a troca aqui.
