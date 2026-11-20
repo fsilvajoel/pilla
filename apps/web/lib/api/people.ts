@@ -32,10 +32,8 @@ export function listPeople(params: ListPeopleParams = {}): Promise<PersonListRes
 }
 
 /** GET /people/{id} (RF-04). 404 chega como `ApiProblem` com `status === 404`. */
-export async function getPerson(id: string): Promise<PersonDetailResponse> {
-  // A API ainda devolve só os dados básicos (sem indicador, endereços e PIX): os agregados entram vazios até a ficha completa (E9-T09/T10).
-  const person = await apiFetch({ path: `/people/${id}`, schema: personResponse });
-  return personDetailResponse.parse({ ...person, referrer: null, referrals: [], addresses: [], pixKeys: [] });
+export function getPerson(id: string): Promise<PersonDetailResponse> {
+  return apiFetch({ path: `/people/${id}`, schema: personDetailResponse });
 }
 
 /** POST /people (RF-01). */
