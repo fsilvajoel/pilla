@@ -10,6 +10,7 @@ import { createLoanRequest, defaultTermsResponse } from "./lending/create-loan";
 import { loanDetailResponse, loanListResponse } from "./lending/loan-views";
 import { payoffQuoteQuery } from "./lending/payoff-quote";
 import { simulateLoanRequest, simulateLoanResponse } from "./lending/simulate-loan";
+import { updateLoanRequest } from "./lending/update-loan";
 import { writeOffLoanRequest } from "./lending/write-off-loan";
 import { allocationPreviewRequest } from "./payments/allocation-preview";
 import { createPaymentRequest } from "./payments/create-payment";
@@ -321,6 +322,21 @@ const cases: BodyCase[] = [
     body: loan,
     optional: { internalNotes: "cliente antigo" },
     invalid: { personId: "", principalCents: 0, lateFeeBps: -200, gracePeriodDays: 1.5, internalNotes: "  " },
+  },
+  {
+    name: "updateLoanRequest",
+    schema: updateLoanRequest,
+    body: {},
+    optional: { ...simulation, ...charges, internalNotes: "cliente antigo" },
+    invalid: {
+      type: "BULLET",
+      principalCents: 0,
+      monthlyInterestRateBps: 6.33,
+      installmentCount: 0,
+      frequency: { unit: "YEAR", interval: 1 },
+      firstDueDate: "2026-12-32",
+      internalNotes: "  ",
+    },
   },
   {
     name: "loanListResponse",
