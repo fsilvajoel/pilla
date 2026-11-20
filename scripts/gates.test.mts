@@ -890,3 +890,82 @@ describe("main", () => {
     expect(failed.output).toMatch(/^FAIL tests-reviewed F1: testes sem revisão assinada\n {2}- estado sem `testShas`/);
   });
 });
+
+describe("exemptSources", () => {
+  const EXEMPT = { file: "pkg/src/layout.tsx", class: "dispensa-estilo", reason: "só grade e espaçamento" };
+  const EXEMPT_STATE = { ...BASE, sources: [PROD_FILE], exemptSources: [EXEMPT] };
+  const GATES = ["expect-red", "coverage", "mutation"] as const;
+
+  beforeEach(() => {
+    writeFileSync(join(root, "pkg", "src", "layout.tsx"), "export const L = null;\n");
+  });
+
+  it("accepts a valid dispensation and leaves the exempt file out of the measured files", () => {
+    writeState({ ...EXEMPT_STATE, domainSources: [PROD_FILE] });
+    const fake: FakeVitest = { report: { passed: 0, failed: 1 }, calls: [] };
+    expect(runGate("expect-red", { root, feature: FEATURE, run: fakeRunner(fake) }).pass).toBe(true);
+    const cov: FakeVitest = { report: { passed: 1, failed: 0 }, linesTotal: 10, calls: [] };
+    expect(runGate("coverage", { root, feature: FEATURE, run: fakeRunner(cov) }).pass).toBe(true);
+    const included = cov.calls[0]?.args.filter((arg) => arg.startsWith("--coverage.include=")) ?? [];
+    expect(included).toEqual(["--coverage.include=src/a.ts"]);
+    const mut: FakeVitest = { report: { passed: 1, failed: 0 }, mutants: { "src/a.ts": mutants(9, 0) }, calls: [] };
+    expect(runGate("mutation", { root, feature: FEATURE, run: fakeRunner(mut) }).pass).toBe(true);
+  });
+
+  it("drops an exempt file from the name-rule coverage when the state has no sources", () => {
+    writeState({ ...BASE, exemptSources: [{ ...EXEMPT, file: PROD_FILE }] });
+    const cov: FakeVitest = { report: { passed: 1, failed: 0 }, calls: [] };
+    const outcome = runGate("coverage", { root, feature: FEATURE, run: fakeRunner(cov) });
+    expect(outcome.pass).toBe(true);
+    expect(cov.calls[0]?.args).toContain("--coverage.enabled=false");
+  });
+
+  it.each(GATES)("%s fails when the file is also in sources", (gate) => {
+    writeState({ ...EXEMPT_STATE, sources: [PROD_FILE, EXEMPT.file], domainSources: [PROD_FILE] });
+    const outcome = runGate(gate, { root, feature: FEATURE, run: fakeRunner({ calls: [] }) });
+    expect(outcome.pass).toBe(false);
+    expect(outcome.problems).toEqual(["pkg/src/layout.tsx: em `exemptSources` e em `sources` ao mesmo tempo"]);
+    expect(gateEntry(gate).status).toBe("FAIL");
+  });
+
+  it.each(GATES)("%s fails with an invalid class or an empty reason", (gate) => {
+    writeState({
+      ...EXEMPT_STATE,
+      domainSources: [PROD_FILE],
+      exemptSources: [
+        { ...EXEMPT, class: "tdd" },
+        { ...EXEMPT, file: "pkg/src/b.tsx", reason: "  " },
+      ],
+    });
+    const outcome = runGate(gate, { root, feature: FEATURE, run: fakeRunner({ calls: [] }) });
+    expect(outcome.pass).toBe(false);
+    expect(outcome.problems).toEqual([
+      "pkg/src/layout.tsx: `class` de `exemptSources` deve ser dispensa-estilo ou dispensa-biblioteca",
+      "pkg/src/b.tsx: `reason` de `exemptSources` não pode ser vazio",
+    ]);
+  });
+
+  it("fails on a malformed item or a non-list", () => {
+    writeState({ ...EXEMPT_STATE, exemptSources: "x" });
+    expect(runGate("expect-red", { root, feature: FEATURE, run: fakeRunner({ calls: [] }) }).problems).toEqual([
+      "`exemptSources` do estado deve ser uma lista de {file, class, reason}",
+    ]);
+    writeState({ ...EXEMPT_STATE, exemptSources: [{ class: "dispensa-estilo", reason: "x" }] });
+    expect(runGate("expect-red", { root, feature: FEATURE, run: fakeRunner({ calls: [] }) }).problems).toEqual([
+      "item de `exemptSources` sem `file`",
+    ]);
+  });
+
+  it("fails mutation when an exempt file is a domain file", () => {
+    writeState({ ...EXEMPT_STATE, sources: [PROD_FILE], domainSources: [EXEMPT.file] });
+    const outcome = runGate("mutation", { root, feature: FEATURE, run: fakeRunner({ calls: [] }) });
+    expect(outcome.pass).toBe(false);
+    expect(outcome.problems).toContain("pkg/src/layout.tsx: arquivo dispensado (`exemptSources`) não pode ser domínio");
+  });
+
+  it("behaves as before when exemptSources is absent or empty", () => {
+    writeState({ ...BASE, exemptSources: [] });
+    const fake: FakeVitest = { report: { passed: 0, failed: 1 }, calls: [] };
+    expect(runGate("expect-red", { root, feature: FEATURE, run: fakeRunner(fake) }).pass).toBe(true);
+  });
+});

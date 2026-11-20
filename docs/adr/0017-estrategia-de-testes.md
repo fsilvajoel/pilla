@@ -2,7 +2,7 @@
 
 | Campo | Valor |
 |---|---|
-| Status | Proposto |
+| Status | Aceito (19/11/2026) |
 | Data | 2026-11-19 |
 | Origem | Regras de teste do Joel (19/11); núcleo neutro no Ada (`capability/testing.md`, classificação TDD); [RFC-004](../rfc/RFC-004-api-e-eventos.md) (zod como fonte) |
 
@@ -46,15 +46,20 @@ para e2e.
   reviewer reprova).
 - Obrigatório: coluna "Teste" no plano para todo arquivo de produção; `exemptSources` no `estado.json`.
 
-Pendências (não implementadas nesta ADR):
-- `scripts/gates.mts` ainda não lê `exemptSources` (validar que não cruza com `sources` e que há motivo);
-  hoje basta não listar o arquivo dispensado em `sources`;
-- feature só de layout (nenhum arquivo `tdd`) falha em expect-red e cobertura: decidir se vira tarefa fora do
-  workflow de feature;
-- OpenAPI gerado do zod (`z.toJSONSchema` do zod 4 ou zod-openapi), conforme RFC-004;
-- Supertest para teste de contrato de rota quando a camada HTTP (NestJS) existir;
-- MSW (ou Prism) para mock da API no web, quando o web consumir a API real;
-- comandos `e2e` (`pnpm --filter @pilla/web e2e`) e `contract` em `commands` do `harness.project.yaml`.
+**Feature só de layout.** Feature sem nenhum arquivo `tdd` não entra no fluxo de feature do Ada (expect-red e
+cobertura exigem ao menos um arquivo com teste): vira tarefa fora do fluxo, só com revisão visual no navegador.
+Se aparecer lógica, ela é extraída para um arquivo `tdd` e a feature volta ao fluxo. A regra está no núcleo do
+Ada (`workflow/README.md`).
+
+**Gate.** `scripts/gates.mts` lê `exemptSources` do `estado.json`: cada item exige `class` válida e `reason` não
+vazio, e o arquivo não pode estar também em `sources` (nem em `domainSources`); violação reprova o gate. Expect-red,
+cobertura e mutação ignoram os arquivos dispensados.
+
+**Entram junto com o NestJS** (quando o web passar a consumir a API real): Supertest para teste de contrato de
+rota, MSW (ou Prism) para mock da API no web e o OpenAPI gerado do zod (`z.toJSONSchema` do zod 4 ou
+zod-openapi), conforme RFC-004.
+
+Pendência: comandos `contract` e `e2e` (`pnpm --filter @pilla/web e2e`) em `commands` do `harness.project.yaml`.
 
 ## Alternativas consideradas
 - Orval / openapi-typescript gerando tipos do OpenAPI — inverteria a fonte da verdade (RFC-004: OpenAPI sai do

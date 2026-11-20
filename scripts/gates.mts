@@ -296,6 +296,55 @@ function checkRelative(file: string): string | undefined {
     : undefined;
 }
 
+export type ExemptClass = "dispensa-estilo" | "dispensa-biblioteca";
+const EXEMPT_CLASSES: readonly ExemptClass[] = ["dispensa-estilo", "dispensa-biblioteca"];
+
+export interface ExemptSource {
+  readonly file: string;
+  readonly class: ExemptClass;
+  readonly reason: string;
+}
+
+function isExemptClass(value: Json | undefined): value is ExemptClass {
+  return typeof value === "string" && EXEMPT_CLASSES.some((item) => item === value);
+}
+
+/**
+ * Dispensas de TDD (`exemptSources`): cada item tem `file`, `class` válida e `reason` não vazio, e o arquivo não
+ * pode estar também em `sources`. Ausente = nenhuma dispensa. Violação lança GateError.
+ */
+export function exemptOf(state: JsonObject): ExemptSource[] {
+  const value = state["exemptSources"];
+  if (value === undefined) return [];
+  if (!Array.isArray(value)) {
+    throw new GateError(["`exemptSources` do estado deve ser uma lista de {file, class, reason}"]);
+  }
+  const sources = stringList(state, "sources") ?? [];
+  const items: ExemptSource[] = [];
+  const problems: string[] = [];
+  for (const item of value) {
+    if (!isJsonObject(item) || stringAt(item, "file") === undefined) {
+      problems.push("item de `exemptSources` sem `file`");
+      continue;
+    }
+    const file = stringAt(item, "file") ?? "";
+    const bad = checkRelative(file);
+    if (bad !== undefined) problems.push(bad);
+    const cls = item["class"];
+    const reason = item["reason"];
+    if (!isExemptClass(cls)) {
+      problems.push(`${file}: \`class\` de \`exemptSources\` deve ser ${EXEMPT_CLASSES.join(" ou ")}`);
+    } else if (typeof reason !== "string" || reason.trim().length === 0) {
+      problems.push(`${file}: \`reason\` de \`exemptSources\` não pode ser vazio`);
+    } else {
+      items.push({ file, class: cls, reason });
+    }
+    if (sources.includes(file)) problems.push(`${file}: em \`exemptSources\` e em \`sources\` ao mesmo tempo`);
+  }
+  if (problems.length > 0) throw new GateError(problems);
+  return items;
+}
+
 /** Pasta do pacote do teste: o diretório mais próximo com package.json, abaixo da raiz. */
 export function packageOf(root: string, file: string): string {
   let dir = dirname(resolve(root, file));
@@ -599,12 +648,16 @@ function measuredFiles(
 ): { groups: Map<string, string[]>; problems: string[] } {
   const sources = stringList(state, "sources");
   if (sources !== undefined) return sourcesByPackage(opts.root, sources, suiteGroups, "sources");
+  const exempt = exemptOf(state).map((item) => item.file);
   const groups = new Map<string, string[]>();
   const problems: string[] = [];
   for (const [pkg, pkgTests] of groupByPackage(opts.root, tests)) {
     const prod = productionFiles(pkg, relative(opts.root, pkg), pkgTests);
     problems.push(...prod.problems);
-    groups.set(pkg, prod.files);
+    groups.set(
+      pkg,
+      prod.files.filter((file) => !exempt.includes(relative(opts.root, join(pkg, file)))),
+    );
   }
   return { groups, problems };
 }
@@ -829,7 +882,14 @@ function mutation(opts: GateOptions, state: JsonObject, tests: readonly string[]
     return fail("mutation", "pré-condição", [`gates.mutation.tool "${String(tool)}" sem suporte (use stryker)`]);
   }
   const sources = stringList(state, "sources") ?? [];
-  const outside = domain.filter((file) => !sources.includes(file)).map((file) => `${file}: fora de \`sources\``);
+  const exempt = exemptOf(state).map((item) => item.file);
+  const dispensed = domain
+    .filter((file) => exempt.includes(file))
+    .map((file) => `${file}: arquivo dispensado (\`exemptSources\`) não pode ser domínio`);
+  const outside = [
+    ...dispensed,
+    ...domain.filter((file) => !sources.includes(file)).map((file) => `${file}: fora de \`sources\``),
+  ];
   const suiteGroups = groupByPackage(opts.root, featureSuite(opts.root, state, tests));
   const byPkg = sourcesByPackage(opts.root, domain, suiteGroups, "domainSources");
   if (outside.length > 0 || byPkg.problems.length > 0) {
@@ -987,6 +1047,7 @@ export function runGate(gate: GateName, opts: GateOptions): GateOutcome {
     if (gate === "e2e") {
       outcome = e2e(opts, state);
     } else {
+      exemptOf(state);
       const files = testFiles(state);
       checkFilesExist(opts.root, files);
       if (gate === "expect-red") outcome = expectRed(opts, files);
