@@ -28,6 +28,7 @@ export * from "./api/people/create-person";
 export * from "./api/people/update-person";
 export * from "./api/people/person-list-query";
 export * from "./api/people/person-detail";
+export * from "./api/people/person-response";
 export * from "./api/people/address";
 export * from "./api/people/pix-key";
 export * from "./api/lending/create-loan";

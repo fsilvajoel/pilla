@@ -19,6 +19,7 @@ import { addressSchema, createAddressRequest, updateAddressRequest } from "./peo
 import { personListQuery } from "./people/person-list-query";
 import { personDetailResponse } from "./people/person-detail";
 import { createPixKeyRequest, pixKeySchema, updatePixKeyRequest } from "./people/pix-key";
+import { personResponse } from "./people/person-response";
 import { updatePersonRequest } from "./people/update-person";
 import { problemSchema } from "./problem";
 import { accountEntryRequest } from "./treasury/account-entry";
@@ -223,10 +224,16 @@ const cases: BodyCase[] = [
       phone: "+5511987654321",
       email: "maria@example.com",
       birthDate: "1980-05-20",
-      referredById: id(3),
       notes: "indicada",
     },
     invalid: { version: -1, fullName: " ", cpf: "52998224726", phone: "11987654321", email: "maria" },
+  },
+  {
+    name: "personResponse",
+    schema: personResponse,
+    body: { ...person, version: 1 },
+    optional: { email: "maria@example.com", birthDate: "1980-05-20", notes: "indicada" },
+    invalid: { version: -1, email: "maria", birthDate: "20/05/1980" },
   },
   {
     name: "personDetailResponse",

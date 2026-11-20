@@ -14,6 +14,6 @@ export const personListQuery = z.strictObject({
     .transform((text) => Number(text))
     .pipe(z.int().min(1).max(100))
     .default(20),
-  cursor: z.string().min(1).max(500).optional(),
+  cursor: z.string().min(1).max(500).nullable().optional(),
 });
 export type PersonListQuery = z.infer<typeof personListQuery>;
