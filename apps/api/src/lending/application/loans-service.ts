@@ -1,23 +1,35 @@
 import { Inject, Injectable } from "@nestjs/common";
-import { bps, cents, generateSchedule, isoDate, type ScheduleInput } from "@pilla/finance";
+import { bps, cents, daysBetween, generateSchedule, isoDate, type ScheduleInput } from "@pilla/finance";
 import {
   loanActivatedV1,
   loanRenegotiatedV1,
   loanRenewedV1,
   type ActivateLoanRequest,
   type CreateLoanRequest,
+  frequencySchema,
+  loanDetailResponse,
+  loanListItemSchema,
+  loanTypeSchema,
+  payoffQuoteResponse,
   type DefaultTermsResponse,
+  type LoanDetailResponse,
+  type LoanListResponse,
+  type LoanStanding,
+  type PayoffQuoteResponse,
   type UpdateLoanRequest,
 } from "@pilla/schemas";
 import { ProblemException } from "../../core/http/problem-exception";
 import type { AuditEntry } from "../../core/public/audit";
 import { newId } from "../../core/public/ids";
 import { DATABASE, type Database } from "../../db/database";
-import { personExists } from "../../people/public/person-lookup";
+import { confirmedAllocationsByLoan } from "../../payments/public/confirmed-allocations";
+import { findPersonNames, personExists } from "../../people/public/person-lookup";
 import { isActiveAccount } from "../../treasury/public/account-lookup";
 import { findCurrentDefaultTerms } from "../infra/default-terms-repository";
+import { selectInstallmentsByLoan, selectLoan, selectLoanPage } from "../infra/loan-queries";
 import { loanRepository, type LoanDraftChanges, type LoanStore } from "../infra/loan-repository";
-import type { LoanRow } from "../infra/schema";
+import type { InstallmentRow, LoanRow } from "../infra/schema";
+import { assessLoan, quotePayoff, type LoanAssessment } from "./loan-assessment";
 
 const NOT_FOUND_DETAIL = "Recurso não encontrado.";
 const TIME_ZONE = "America/Sao_Paulo";
@@ -44,6 +56,31 @@ export type LoanDraftResponse = {
   disbursedAt: string | null;
   version: number;
 };
+
+/** Filtros e página de GET /loans (já validados na borda). */
+export type LoanListParams = {
+  personId: string | null;
+  status: string | null;
+  standing: LoanStanding | null;
+  limit: number;
+  cursor: string | null;
+};
+
+function decodeCursor(cursor: string): string {
+  const loanNumber = Buffer.from(cursor, "base64").toString("utf8");
+  if (!/^\d{4}-\d{4,}$/.test(loanNumber)) {
+    throw new ProblemException("VALIDATION_FAILED", "Dados inválidos.", [
+      { field: "cursor", message: "Cursor inválido." },
+    ]);
+  }
+  return loanNumber;
+}
+
+function personNameOf(names: Map<string, string>, personId: string): string {
+  const name = names.get(personId);
+  if (name === undefined) throw new ProblemException("INTERNAL_ERROR", "Pessoa do contrato não encontrada.");
+  return name;
+}
 
 /** Aviso de RN-C11: contratos da pessoa já em andamento (só contagem; a situação em atraso vem na F05). */
 export type CreateLoanResponse = LoanDraftResponse & { warning: { activeLoansCount: number } };
@@ -242,6 +279,113 @@ export class LoansService {
       suggestedMonthlyRateBps: row.suggestedMonthlyRateBps,
       roundingStepCents: row.roundingStepCents,
     };
+  }
+
+  // Lista (E10-F05): filtros de pessoa e status no banco; a situação (standing) é calculada, então a página
+  // é montada lendo lotes até juntar `limit + 1` contratos que passam no filtro.
+  async list(params: LoanListParams): Promise<LoanListResponse> {
+    const today = isoDate(todayInBrasilia(new Date()));
+    const matches: { loan: LoanRow; assessment: LoanAssessment }[] = [];
+    let after = params.cursor === null ? null : decodeCursor(params.cursor);
+    let exhausted = false;
+    while (!exhausted && matches.length <= params.limit) {
+      const batch = await selectLoanPage(this.db, {
+        personId: params.personId,
+        status: params.status,
+        after,
+        take: params.limit + 1,
+      });
+      exhausted = batch.length <= params.limit;
+      const installmentsByLoan = await selectInstallmentsByLoan(
+        this.db,
+        batch.filter((loan) => loan.status === "ACTIVE").map((loan) => loan.id),
+      );
+      for (const loan of batch) {
+        after = loan.loanNumber;
+        const allocations = loan.status === "ACTIVE" ? await confirmedAllocationsByLoan(this.db, loan.id) : [];
+        const assessment = assessLoan(loan, installmentsByLoan.get(loan.id) ?? [], allocations, today);
+        if (params.standing === null || assessment.standing === params.standing) matches.push({ loan, assessment });
+      }
+    }
+    const page = matches.slice(0, params.limit);
+    const names = await findPersonNames(this.db, [...new Set(page.map(({ loan }) => loan.personId))]);
+    const last = page[page.length - 1];
+    return {
+      items: page.map(({ loan, assessment }) =>
+        loanListItemSchema.parse({
+          id: loan.id,
+          loanNumber: loan.loanNumber,
+          personName: personNameOf(names, loan.personId),
+          principalCents: loan.principalCents,
+          outstandingCents: assessment.outstandingCents,
+          status: loan.status,
+          standing: assessment.standing,
+          nextDueDate: assessment.nextDueDate,
+        }),
+      ),
+      // `matches` passa de `limit` só quando há página seguinte, e então `page` não é vazia (limit >= 1).
+      nextCursor:
+        matches.length > params.limit ? Buffer.from(String(last?.loan.loanNumber), "utf8").toString("base64") : null,
+    };
+  }
+
+  async detail(id: string): Promise<LoanDetailResponse> {
+    const loan = await this.requireLoan(id);
+    const installments = await this.installmentsOf(id);
+    const allocations = await confirmedAllocationsByLoan(this.db, id);
+    const assessment = assessLoan(loan, installments, allocations, isoDate(todayInBrasilia(new Date())));
+    const names = await findPersonNames(this.db, [loan.personId]);
+    return loanDetailResponse.parse({
+      id: loan.id,
+      loanNumber: loan.loanNumber,
+      personId: loan.personId,
+      personName: personNameOf(names, loan.personId),
+      type: loanTypeSchema.parse(loan.type),
+      status: loan.status,
+      standing: assessment.standing,
+      principalCents: loan.principalCents,
+      monthlyInterestRateBps: loan.monthlyInterestRateBps,
+      installmentCount: loan.installmentCount,
+      frequency: frequencySchema.parse({ unit: loan.frequencyUnit, interval: loan.frequencyInterval }),
+      firstDueDate: loan.firstDueDate,
+      contractedAt: loan.contractedAt,
+      disbursedAt: loan.disbursedAt,
+      lateFeeBps: loan.lateFeeBps,
+      lateInterestMonthlyBps: loan.lateInterestMonthlyBps,
+      gracePeriodDays: loan.gracePeriodDays,
+      roundingStepCents: loan.roundingStepCents,
+      totalCents: assessment.totalCents,
+      interestCents: assessment.interestCents,
+      paidCents: assessment.paidCents,
+      outstandingCents: assessment.outstandingCents,
+      installments: assessment.installments,
+    });
+  }
+
+  async payoffQuote(id: string, date: string): Promise<PayoffQuoteResponse> {
+    const loan = await this.requireLoan(id);
+    if (loan.status !== "ACTIVE") {
+      throw new ProblemException("LOAN_NOT_EDITABLE", "Só contrato ativo tem cotação de quitação.");
+    }
+    // ACTIVE sempre tem desembolso (CHECK loans_disbursed_at_check); String(null) não é data e vira erro 500.
+    if (daysBetween(isoDate(String(loan.disbursedAt)), isoDate(date)) < 0) {
+      throw new ProblemException("VALIDATION_FAILED", "Dados inválidos.", [
+        { field: "date", message: "A data não pode ser anterior ao desembolso." },
+      ]);
+    }
+    const installments = await this.installmentsOf(id);
+    const allocations = await confirmedAllocationsByLoan(this.db, id);
+    return payoffQuoteResponse.parse({ date, ...quotePayoff(loan, installments, allocations, isoDate(date)) });
+  }
+
+  private async installmentsOf(loanId: string): Promise<InstallmentRow[]> {
+    return (await selectInstallmentsByLoan(this.db, [loanId])).get(loanId) ?? [];
+  }
+
+  private async requireLoan(id: string): Promise<LoanRow> {
+    const loan = await selectLoan(this.db, id);
+    if (loan === null) throw new ProblemException("NOT_FOUND", NOT_FOUND_DETAIL);
+    return loan;
   }
 
   // Trava o contrato, confere versão e DRAFT, aplica a mudança e grava a auditoria na mesma transação.

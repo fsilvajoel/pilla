@@ -8,7 +8,7 @@ import { attachmentUploadUrlRequest } from "./core/attachment-upload-url";
 import { activateLoanRequest } from "./lending/activate-loan";
 import { createLoanRequest, defaultTermsResponse } from "./lending/create-loan";
 import { loanDetailResponse, loanListResponse } from "./lending/loan-views";
-import { payoffQuoteQuery } from "./lending/payoff-quote";
+import { payoffQuoteQuery, payoffQuoteResponse } from "./lending/payoff-quote";
 import { simulateLoanRequest, simulateLoanResponse } from "./lending/simulate-loan";
 import { updateLoanRequest } from "./lending/update-loan";
 import { writeOffLoanRequest } from "./lending/write-off-loan";
@@ -174,6 +174,24 @@ const cases: BodyCase[] = [
     schema: payoffQuoteQuery,
     body: { date: "2027-03-01" },
     invalid: { date: "01/03/2027" },
+  },
+  {
+    name: "payoffQuoteResponse",
+    schema: payoffQuoteResponse,
+    body: {
+      date: "2027-03-01",
+      amountCents: 432000,
+      principalCents: 360000,
+      interestCents: 60000,
+      lateChargesCents: 12000,
+    },
+    invalid: {
+      date: "01/03/2027",
+      amountCents: 4320.5,
+      principalCents: -1,
+      interestCents: "60000",
+      lateChargesCents: null,
+    },
   },
   {
     name: "allocationPreviewRequest",

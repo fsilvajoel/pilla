@@ -1,14 +1,20 @@
-import { Body, Controller, Headers, HttpCode, Inject, Param, Patch, Post, Res } from "@nestjs/common";
+import { Body, Controller, Get, Headers, HttpCode, Inject, Param, Patch, Post, Query, Res } from "@nestjs/common";
 import {
   activateLoanRequest,
   createLoanRequest,
   idSchema,
+  payoffQuoteQuery,
   updateLoanRequest,
   type ActivateLoanRequest,
   type CreateLoanRequest,
+  type LoanDetailResponse,
+  type LoanListResponse,
+  type PayoffQuoteQuery,
+  type PayoffQuoteResponse,
   type UpdateLoanRequest,
 } from "@pilla/schemas";
 import { ZodValidationPipe } from "../../core/http/zod-validation.pipe";
+import { loanListQuery, type LoanListQuery } from "./loan-list-query";
 import { LoansService, type CreateLoanResponse, type LoanDraftResponse } from "../application/loans-service";
 
 type HeaderSetter = { setHeader(name: string, value: string): unknown };
@@ -26,6 +32,30 @@ export class LoansController {
 
   constructor(@Inject(LoansService) service: LoansService) {
     this.service = service;
+  }
+
+  @Get()
+  list(@Query(new ZodValidationPipe<LoanListQuery>(loanListQuery)) query: LoanListQuery): Promise<LoanListResponse> {
+    return this.service.list({
+      personId: query.personId ?? null,
+      status: query.status ?? null,
+      standing: query.standing ?? null,
+      limit: query.limit,
+      cursor: query.cursor ?? null,
+    });
+  }
+
+  @Get(":id")
+  detail(@Param("id", new ZodValidationPipe<string>(idSchema)) id: string): Promise<LoanDetailResponse> {
+    return this.service.detail(id);
+  }
+
+  @Get(":id/payoff-quote")
+  payoffQuote(
+    @Param("id", new ZodValidationPipe<string>(idSchema)) id: string,
+    @Query(new ZodValidationPipe<PayoffQuoteQuery>(payoffQuoteQuery)) query: PayoffQuoteQuery,
+  ): Promise<PayoffQuoteResponse> {
+    return this.service.payoffQuote(id, query.date);
   }
 
   @Post()
