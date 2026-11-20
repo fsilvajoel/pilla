@@ -122,3 +122,19 @@ Formato de cada entrada:
 - sugestão padrão: a) erro na infra com cenário novo no T15
 - resposta: a) erro na infra com `Error("invalid cursor")`; a borda HTTP traduz para 400 `VALIDATION_FAILED` depois
 - aplicada no critério A17 e no cenário C19 (cartões E5-T15 e E5-T16)
+
+## E9-T11 (E9-F06)
+- status: resolvida
+- data: 2026-11-19
+- pergunta: `sonner` (Toaster, já previsto no plano e no T13 done) e `next-themes` (puxado pela CLI no componente `sonner`) não estão em "Dependências permitidas" de `docs/travas.md` §7, e o `check-allowed-deps` recusa. Aprova as duas no runtime web?
+- opções: a) aprovar `sonner` e `next-themes`, e o T11 acrescenta as duas à lista da `docs/travas.md` (entra no `allowedPaths`); b) aprovar só `sonner` (Toaster com `theme="light"` fixo, sem `next-themes`, editando o `sonner.tsx` gerado como variante planejada); c) não usar Toaster no MVP (tira `sonner` da lista do T11 e do done do T13)
+- sugestão padrão: a) é o caminho padrão da CLI do shadcn, sem editar arquivo gerado; as duas são pequenas e mantidas
+- resposta: a) aprovadas `sonner` e `next-themes`; `docs/travas.md` §7 e o T11 atualizados (19/11)
+
+## E9-F06 (ids e link ativo)
+- status: resolvida
+- data: 2026-11-19
+- pergunta: aprova os ids `<id>-error` e `<id>-description` do `FormField` (para `aria-describedby`), e a regra do link ativo do `AdminNav` (`pathname === href` ou prefixo `href + "/"`)? Não vêm de decisão nem de RFC; são proposta do planner, ressalva da revisão.
+- opções: a) aprovar como estão; b) outro padrão de ids ou de link ativo (dizer qual)
+- sugestão padrão: a) são o padrão usual de acessibilidade e de navegação de seção
+- resposta: a) aprovados os ids `<id>-error` e `<id>-description` e a regra do link ativo (19/11)

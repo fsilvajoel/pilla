@@ -1,0 +1,93 @@
+{
+  "feature": "E9-F06",
+  "stages": {
+    "plan": {
+      "status": "done"
+    },
+    "refinement": {
+      "status": "done",
+      "verdict": "ajustado",
+      "round": 2
+    },
+    "tests": {
+      "status": "pending"
+    },
+    "testReview": {
+      "status": "pending"
+    },
+    "implement": {
+      "status": "pending"
+    },
+    "review": {
+      "status": "pending"
+    }
+  },
+  "sources": [
+    "apps/web/components/shared/page-header.tsx",
+    "apps/web/components/shared/empty-state.tsx",
+    "apps/web/components/shared/form-field.tsx",
+    "apps/web/components/shared/data-table.tsx",
+    "apps/web/components/shared/confirm-dialog.tsx",
+    "apps/web/components/shared/status-badge.tsx",
+    "apps/web/components/shared/admin-nav.tsx",
+    "apps/web/components/shared/admin-shell.tsx",
+    "apps/web/app/(admin)/layout.tsx"
+  ],
+  "domainSources": [],
+  "criteria": [
+    {
+      "id": "A1",
+      "camadas": [
+        "unit"
+      ]
+    },
+    {
+      "id": "A2",
+      "camadas": [
+        "unit"
+      ]
+    },
+    {
+      "id": "A3",
+      "camadas": [
+        "unit"
+      ]
+    },
+    {
+      "id": "A4",
+      "camadas": [
+        "unit",
+        "prop"
+      ]
+    },
+    {
+      "id": "A5",
+      "camadas": [
+        "unit"
+      ]
+    },
+    {
+      "id": "A6",
+      "camadas": [
+        "unit",
+        "prop"
+      ]
+    },
+    {
+      "id": "A7",
+      "camadas": [
+        "unit"
+      ]
+    }
+  ],
+  "tests": [
+    "apps/web/components/shared/page-header.test.tsx",
+    "apps/web/components/shared/empty-state.test.tsx",
+    "apps/web/components/shared/form-field.test.tsx",
+    "apps/web/components/shared/data-table.test.tsx",
+    "apps/web/components/shared/confirm-dialog.test.tsx",
+    "apps/web/components/shared/status-badge.test.tsx",
+    "apps/web/components/shared/admin-shell.test.tsx"
+  ],
+  "e2e": []
+}

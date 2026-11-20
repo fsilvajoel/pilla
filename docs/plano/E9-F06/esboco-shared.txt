@@ -1,0 +1,113 @@
+Esboço do contrato da E9-F06 (etapa plan). Cada bloco vira o arquivo indicado antes do E9-T12.
+Todos lançam Error("esboço: não implementado"); excluir da cobertura com o comentário `stub E9-F06` até o E9-T13.
+Só importam tipos de react e lucide-react, para compilar antes de components/ui existir.
+
+=== apps/web/components/shared/page-header.tsx ===
+import type { ReactElement, ReactNode } from "react";
+
+export type PageHeaderProps = { title: string; description?: string; actions?: ReactNode };
+
+export function PageHeader(_props: PageHeaderProps): ReactElement {
+  throw new Error("esboço: não implementado");
+}
+
+=== apps/web/components/shared/empty-state.tsx ===
+import type { LucideIcon } from "lucide-react";
+import type { ReactElement, ReactNode } from "react";
+
+export type EmptyStateProps = { text: string; icon?: LucideIcon; action?: ReactNode };
+
+export function EmptyState(_props: EmptyStateProps): ReactElement {
+  throw new Error("esboço: não implementado");
+}
+
+=== apps/web/components/shared/form-field.tsx ===
+import type { ReactElement } from "react";
+
+export type FormFieldProps = {
+  id: string;
+  label: string;
+  error?: string;
+  description?: string;
+  children: ReactElement;
+};
+
+export function FormField(_props: FormFieldProps): ReactElement {
+  throw new Error("esboço: não implementado");
+}
+
+=== apps/web/components/shared/data-table.tsx ===
+import type { ReactElement, ReactNode } from "react";
+
+export type DataTableColumn<Row> = { key: string; header: string; cell: (row: Row) => ReactNode };
+
+export type DataTableProps<Row> = {
+  columns: readonly DataTableColumn<Row>[];
+  rows: readonly Row[];
+  getRowKey: (row: Row) => string;
+  emptyText: string;
+};
+
+export function DataTable<Row>(_props: DataTableProps<Row>): ReactElement {
+  throw new Error("esboço: não implementado");
+}
+
+=== apps/web/components/shared/confirm-dialog.tsx ===
+"use client";
+
+import type { ReactElement } from "react";
+
+export type ConfirmDialogProps = {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  title: string;
+  description: string;
+  confirmLabel: string;
+  cancelLabel: string;
+  onConfirm: () => void;
+  destructive?: boolean;
+};
+
+export function ConfirmDialog(_props: ConfirmDialogProps): ReactElement {
+  throw new Error("esboço: não implementado");
+}
+
+=== apps/web/components/shared/status-badge.tsx ===
+import type { ReactElement } from "react";
+
+export type BadgeVariant = "default" | "secondary" | "destructive" | "outline" | "success" | "warning";
+
+export type StatusBadgeMap<K extends string> = Record<K, { label: string; variant: BadgeVariant }>;
+
+export type StatusBadgeProps<K extends string> = { status: K; map: StatusBadgeMap<K> };
+
+export function StatusBadge<K extends string>(_props: StatusBadgeProps<K>): ReactElement {
+  throw new Error("esboço: não implementado");
+}
+
+=== apps/web/components/shared/admin-nav.tsx ===
+"use client";
+import type { ReactElement } from "react";
+
+export const ADMIN_NAV_ITEMS: readonly { label: string; href: string }[] = [
+  { label: "Pessoas", href: "/pessoas" },
+  { label: "Empréstimos", href: "/emprestimos" },
+];
+
+export function AdminNav(): ReactElement {
+  throw new Error("esboço: não implementado");
+}
+
+=== apps/web/components/shared/admin-shell.tsx ===
+import type { ReactElement, ReactNode } from "react";
+
+export function AdminShell(_props: { children: ReactNode }): ReactElement {
+  throw new Error("esboço: não implementado");
+}
+
+=== apps/web/app/(admin)/layout.tsx ===
+import type { ReactElement, ReactNode } from "react";
+
+export default function AdminLayout(_props: { children: ReactNode }): ReactElement {
+  throw new Error("esboço: não implementado");
+}

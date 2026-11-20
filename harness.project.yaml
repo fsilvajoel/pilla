@@ -17,7 +17,7 @@ roles:
   # Time OpenRouter (19/11): quem faz o quê é só esta tabela. Copilot fica definido em workers, fora da escala.
   # planner: Pepe rascunha e o planner Claude critica e assina (um revisa o outro). refiner: Pepe.
   planner: { agent: .claude/agents/planner.md, worker: pepe }
-  refiner: { agent: .claude/agents/refiner.md, worker: pepe }
+  refiner: { agent: .claude/agents/refiner.md, worker: pepe, second_opinion: pepe }
   # test-writer: Bia (api-chat, laço run_card.py).
   test-writer: { agent: .claude/agents/test-writer.md, worker: bia }
   # reviewer: Vera só na revisão dos testes (etapa 3, stages.testReview); revisão final segue com o agent Claude.
@@ -32,8 +32,9 @@ workers:
   bia: { adapter: api-chat, base_url: "https://openrouter.ai/api/v1", model: "nvidia/nemotron-3-ultra-550b-a55b:free", key_env: OPEN_ROUTER_API_KEY, key_file: .env, quota_url: "https://openrouter.ai/api/v1/key", quota_remaining: ".data.free_model_daily_requests.remaining", quota_reserve: 20, max_attempts: 6, timeout_s: 300 }
   # Time OpenRouter (19/11), dividido entre as chaves: KEY = Bia e Pepe; KEY2 = Baidu e Vera.
   # api-tools (adapter/api-tools.md): mesmas ferramentas para todos (ler, listar, buscar, commands.*, escrita no escopo do papel).
-  # Pepe: deepseek-v4.1-flash, PAGO (~US$0,013 por plano; bake-off 19/11: 8/10 vs glm-5.3 6/10). Sem cota free: quota_* omitido.
-  pepe: { adapter: api-tools, base_url: "https://openrouter.ai/api/v1", model: "deepseek/deepseek-v4.1-flash", key_env: OPEN_ROUTER_API_KEY, key_file: .env, max_attempts: 2, max_steps: 30, timeout_s: 300 }
+  # Pepe (Joel, 19/11): nemotron-3.5-lightning, grátis (tier free, cota compartilhada com a Bia na KEY). Antes: deepseek-v4.1-flash, pago (~US$0,013 por plano; falhou por max_steps nos refinamentos da E9).
+  # Segunda opinião do refinador (como o Copilot era): o Opus escreve, o pepe revisa (roles.refiner.second_opinion).
+  pepe: { adapter: api-tools, base_url: "https://openrouter.ai/api/v1", model: "nvidia/nemotron-3.5-lightning:free", key_env: OPEN_ROUTER_API_KEY, key_file: .env, quota_url: "https://openrouter.ai/api/v1/key", quota_remaining: ".data.free_model_daily_requests.remaining", quota_reserve: 20, max_attempts: 2, max_steps: 30, timeout_s: 300 }
   # Vera: revisora dos testes (bake-off 19/11: 5/5 defeitos, 1 falso positivo). Modelo diferente do da Bia.
   vera: { adapter: api-tools, base_url: "https://openrouter.ai/api/v1", model: "nvidia/nemotron-3.5-super-vl:free", key_env: OPEN_ROUTER_API_KEY2, key_file: .env, quota_url: "https://openrouter.ai/api/v1/key", quota_remaining: ".data.free_model_daily_requests.remaining", quota_reserve: 20, max_attempts: 6, max_steps: 30, timeout_s: 300 }
   # Baidu: implementer de backend.

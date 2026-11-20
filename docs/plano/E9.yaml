@@ -10,30 +10,62 @@ cards:
     title: Add the dev Postgres (docker compose), migrate and seed scripts
     kind: implement
     assignee: claude
-    rules: []
-    skills: [editar-arquivo, security-best-practices]
-    refs: [RFC-003 §4.8, docs/plano/E9.md D2]
+    rules: [RN-P01, RN-P02]
+    skills: [security-best-practices]
+    refs: [RFC-003 §4.8, RFC-005 §3, RFC-005 §8, PRD-001 RF-01, PRD-001 RF-02, PRD-001 RF-03, docs/plano/E9.md D2 D3 D4, docs/plano/E9-F01/plano.md]
     dependsOn: []
     allowedPaths:
       - infra/docker-compose.yml
       - apps/api/scripts/migrate.mts
       - apps/api/scripts/seed.mts
       - apps/api/package.json
+      - pnpm-lock.yaml
       - .env.example
       - docs/dev/banco-local.md
+      - docs/travas.md
     protectedTests: []
     checks:
       - docker compose -f infra/docker-compose.yml up -d --wait
-      - pnpm --filter @pilla/api db:migrate
-      - pnpm --filter @pilla/api db:seed
+      - pnpm --filter @pilla/api db:migrate && pnpm --filter @pilla/api db:migrate
+      - pnpm --filter @pilla/api db:seed && pnpm --filter @pilla/api db:seed
       - node scripts/check-env-example.mjs
+      - node scripts/check-allowed-deps.mjs
     done:
-      - Docker is installed on the dev environment (outside the repo) and the compose runs PostgreSQL bound to 127.0.0.1 with a named volume
-      - db:migrate applies the drizzle migrations to DATABASE_URL and is idempotent
-      - db:seed inserts 5 to 10 fictional people (valid CPFs, addresses, PIX keys, one referral) and is idempotent
-      - every new variable is in .env and .env.example in the same commit; no real secret in git
-      - docs/dev/banco-local.md explains up, migrate, seed and reset in pt-BR
+      - Docker is installed on the dev environment (outside the repo) and the compose runs PostgreSQL 17 bound to 127.0.0.1 with the named volume pilla-pgdata and a healthcheck (A1, C1; P4)
+      - docker compose config shows the published port as 127.0.0.1:${POSTGRES_PORT}:5432 and no port on 0.0.0.0; a POSTGRES_PORT that is not numeric or is above 65535 is refused (A1, C3; P4)
+      - a missing POSTGRES_* variable makes docker compose fail naming the variable (A1, C2)
+      - db:migrate applies the drizzle migrations of every folder of migrationFolders to DATABASE_URL and is idempotent: the second run exits 0 with no new row in drizzle.migrations_<folder> (A2, C4)
+      - db:migrate with DATABASE_URL empty, blank or not a postgres:// URL exits 1 with a message in stderr and opens no connection (A2, C5)
+      - db:seed inserts 6 fictional people (valid CPFs, E.164 phones, 8 addresses, 8 PIX keys, exactly one referral) in one transaction and is idempotent: the second run exits 0 with the same counts 6 / 8 / 8 (A3, C6, C7)
+      - db:seed on a database without migrations exits 1 and leaves no row; a missing DATABASE_URL exits 1 (A3, C8)
+      - db:seed refuses a DATABASE_URL whose host is not 127.0.0.1 or localhost (exit 1, clear message, no connection) (A3, C8; P3)
+      - every new variable is in .env and .env.example in the same commit; no real secret in git (A4)
+      - check-env-example.mjs exits 0 with the new keys and exits 1 listing a key that is in only one of the two files (A4, C9)
+      - docs/dev/banco-local.md explains up, migrate, seed and reset in pt-BR with the exact commands, the .env.example variables and the 1024-65535 range of POSTGRES_PORT (A5, C10; P4)
+      - pg and @types/pg are installed in apps/api/package.json with pnpm-lock.yaml updated and @types/pg in the Dev list of docs/travas.md, so check-allowed-deps.mjs exits 0 (P2)
+    hints:
+      - 'load the root .env with node --env-file=../../.env (the cwd of pnpm --filter is apps/api) and run with tsx, as in "db:migrate": "node --env-file=../../.env --import tsx scripts/migrate.mts"; .mts with extensionless relative imports needs tsx'
+      - the migrator is drizzle-orm/node-postgres/migrator with migrationsFolder "migrations/<folder>", migrationsSchema "drizzle" and migrationsTable "migrations_<folder>"; reuse migrationFolders of src/db/migrate.ts so the order is not duplicated
+      - 'seed: INSERT ... ON CONFLICT DO NOTHING by id, one transaction, people before addresses and PIX, the referred person after the referrer (FK persons_referred_by_id_fkey); optional fields left out, never undefined (lesson of E5-F02)'
+      - no any; close the pg Pool in finally; never log DATABASE_URL or the password
+      - 'compose: ${VAR:?message} on the required variables, the fixed tag postgres:17 (P4), the named volume pilla-pgdata and a healthcheck for up -d --wait'
+      - 'seed data: Ana Souza 12345678909, Bruno Lima 11144477735 (referred by Ana), Carla Dias 10020030088, Diego Rocha 21436587107, Elisa Prado 31415926590, Fábio Nunes 27182818205; phones +5511999990001 to +5511999990006; fixed literal uuid ids chosen by the implementer; 8 addresses and 8 PIX keys, at least 1 of each per person and exactly 1 primary per person (a person with only one is primary)'
+      - the host refusal (P3) reads the host of DATABASE_URL, accepts only 127.0.0.1 and localhost and exits 1 with a message in stderr before opening a connection
+      - the 1024-65535 range of POSTGRES_PORT (P4) goes in the comment of .env.example and in docs/dev/banco-local.md; the refusal of a non numeric value or of a value above 65535 comes from compose or Postgres (C3)
+      - '@types/pg goes in devDependencies of apps/api/package.json and in the Dev list of docs/travas.md, otherwise node scripts/check-allowed-deps.mjs fails (P2, travas §7)'
     budget: {attempts: 3, toolCalls: 40, minutes: 30}
+    readFirst:
+      - docs/plano/E9-F01/plano.md
+      - docs/plano/E9.md
+      - docs/rfc/RFC-003-stack-tecnologica.md
+      - docs/rfc/RFC-005-modelo-fisico-banco.md
+      - apps/api/src/db/migrate.ts
+      - apps/api/src/people/infra/schema.ts
+      - apps/api/migrations/people
+      - .env.example
+      - scripts/check-env-example.mjs
+      - docs/travas.md
+      - docs/memoria/README.md
     sizeNote: compose ~25 linhas, dois scripts curtos, doc curta
 
   # ---------------------------------------------------------------- E9-F02: base da API NestJS
@@ -104,7 +136,7 @@ cards:
       - node scripts/check-schemas.mjs
     done:
       - schemas for PersonListQuery (search, limit, cursor), PersonListResponse, PersonResponse and UpdatePersonRequest exist next to create-person.ts
-      - RFC-004 §6 gains CPF_ALREADY_REGISTERED 409 (D8)
+      - RFC-004 §6 gains DUPLICATE_CPF 409 with detail "CPF já cadastrado." (D8)
     budget: {attempts: 3, toolCalls: 25, minutes: 15}
   - id: E9-T05
     title: Write the tests for the people routes (POST, GET list/search, GET by id, PATCH)
@@ -122,7 +154,7 @@ cards:
       - node scripts/check-test-quality.mjs apps/api/src/people/http
       - pnpm --filter @pilla/api typecheck
     done:
-      - POST creates (201 + Location), invalid CPF gives 400, repeated CPF gives 409 CPF_ALREADY_REGISTERED, unknown referrer gives 400
+      - POST creates (201 + Location), invalid CPF gives 400, repeated CPF gives 409 DUPLICATE_CPF, unknown referrer gives 400
       - GET list searches by name (accent and case insensitive) or CPF, paginates by cursor and respects limit
       - GET by id gives 200 or 404 NOT_FOUND
       - PATCH without If-Match gives 428, stale version gives 409 VERSION_CONFLICT, success returns the new version in ETag
@@ -240,50 +272,87 @@ cards:
     kind: implement
     assignee: claude
     rules: []
-    skills: [shadcn, tailwind-css, accessibility, editar-arquivo]
-    refs: [ADR-0013, docs/plano/E9.md D5 D6]
+    skills: [shadcn, tailwind-css, react-best-practices, accessibility]
+    refs: [ADR-0013, docs/plano/E9.md D5 D6, docs/plano/E9-F06/plano.md]
     dependsOn: []
+    readFirst:
+      - docs/plano/E9-F06/plano.md
+      - docs/plano/E9.md
+      - apps/web/components.json
+      - apps/web/app/globals.css
+      - apps/web/lib/utils.ts
     allowedPaths:
       - apps/web/app/globals.css
       - apps/web/components.json
       - apps/web/components/ui/**
+      - apps/web/hooks/**
       - apps/web/package.json
       - pnpm-lock.yaml
+      - docs/travas.md
+      - docs/plano/E9-F06/plano.md
     protectedTests: []
     checks:
       - pnpm --filter @pilla/web typecheck
       - pnpm --filter @pilla/web lint
       - pnpm --filter @pilla/web build
+      - node scripts/check-allowed-deps.mjs
+      - '! grep -qE "^\.dark" apps/web/app/globals.css'
     done:
-      - 'components added only with pnpm dlx shadcn@latest add: button input label textarea select form card table badge dialog alert-dialog dropdown-menu sheet sidebar separator skeleton sonner tabs tooltip pagination breadcrumb avatar'
-      - globals.css has light tokens with a light green primary and AA contrast for primary-foreground; no dark theme
-      - planned variants only - Button keeps the shadcn variants; Badge gains success and warning (for status), documented in the plan
+      - 'components added only with pnpm dlx shadcn@latest add: button input label textarea select form card table badge dialog alert-dialog dropdown-menu sheet sidebar separator skeleton sonner tabs tooltip pagination breadcrumb avatar; if the CLI refuses form, field is added instead and the swap is recorded in the plan (plan risk)'
+      - 'globals.css :root tokens use exactly the oklch values of the plan table "Paleta" (background, foreground, primary, primary-foreground, muted-foreground, accent, accent-foreground, success, success-foreground, warning, warning-foreground, destructive, ring), the sidebar-* tokens follow the same light green; no .dark block and no dark theme (D5, decisions 2-3)'
+      - AA contrast of primary-foreground on primary is checked by hand by the reviewer, no script (decision 1)
+      - planned variants only - Button keeps the shadcn variants; Badge gains success and warning (for status) with a short pt-BR comment in badge.tsx pointing to the plan; no other hand edit in components/ui
+      - sonner and next-themes are runtime deps approved by the Joel on 19/11 and listed in docs/travas.md; check-allowed-deps passes
     budget: {attempts: 3, toolCalls: 30, minutes: 20}
   - id: E9-T12
     title: Write the tests for the shared composite components
     kind: test-author
     assignee: bia
     rules: []
-    skills: [escrever-teste, shadcn, react-best-practices]
-    refs: [docs/plano/E9.md D6]
-    dependsOn: [E9-T11]
+    skills: [accessibility, react-best-practices]
+    refs: [docs/plano/E9.md D6, docs/plano/E9-F06/plano.md, docs/plano/E9-F06/esboco-shared.txt]
+    dependsOn: []
+    readFirst:
+      - docs/plano/E9-F06/plano.md
+      - docs/plano/E9-F06/esboco-shared.txt
+      - apps/web/vitest.config.ts
+      - apps/web/vitest.setup.ts
     allowedPaths:
-      - apps/web/components/shared/*.test.tsx
+      - apps/web/components/shared/page-header.test.tsx
+      - apps/web/components/shared/empty-state.test.tsx
+      - apps/web/components/shared/form-field.test.tsx
+      - apps/web/components/shared/data-table.test.tsx
+      - apps/web/components/shared/confirm-dialog.test.tsx
+      - apps/web/components/shared/status-badge.test.tsx
+      - apps/web/components/shared/admin-shell.test.tsx
     protectedTests: []
     checks:
       - '! pnpm --filter @pilla/web exec vitest run components/shared'
       - node scripts/check-test-quality.mjs apps/web/components/shared
     done:
-      - PageHeader (title, description, actions), EmptyState (icon, text, action), FormField (label, control, error message), DataTable (columns, rows, empty), ConfirmDialog (confirm/cancel), StatusBadge (map of status to Badge variant)
+      - page-header.test.tsx covers C1-C2 (A1)
+      - empty-state.test.tsx covers C3-C4 (A2)
+      - form-field.test.tsx covers C5-C7 (A3), with ids cpf-error and cpf-description
+      - data-table.test.tsx covers C8-C9 and C10 as a fast-check property (A4)
+      - confirm-dialog.test.tsx covers C11-C13 and C20 (A5)
+      - status-badge.test.tsx covers C14 and C15 as a fast-check property (A6); data-variant values checked against the generated badge.tsx in the test review, after E9-T11
+      - admin-shell.test.tsx covers C16-C19 (A7, AdminShell, AdminNav and AdminLayout), with a matchMedia stub and a next/navigation mock inside the file
+      - every test names its C<n>; all fail against the stub (expect-red), none by import or type error
     budget: {attempts: 4, toolCalls: 30, minutes: 20}
   - id: E9-T13
     title: Implement the shared composites and the ADMIN shell (sidebar layout)
     kind: implement
     assignee: claude
     rules: []
-    skills: [shadcn, tailwind-css, react-best-practices, accessibility, coding-guidelines]
-    refs: [ADR-0013, docs/plano/E9.md D5 D6]
+    skills: [shadcn, tailwind-css, react-best-practices, accessibility]
+    refs: [ADR-0013, docs/plano/E9.md D5 D6, docs/plano/E9-F06/plano.md]
     dependsOn: [E9-T12]
+    readFirst:
+      - docs/plano/E9-F06/plano.md
+      - docs/plano/E9-F06/esboco-shared.txt
+      - apps/web/components/shared/
+      - apps/web/components/ui/
+      - apps/web/app/globals.css
     allowedPaths:
       - apps/web/components/shared/**
       - apps/web/app/(admin)/layout.tsx
@@ -292,9 +361,13 @@ cards:
       - pnpm --filter @pilla/web exec vitest run components/shared
       - pnpm --filter @pilla/web typecheck
       - pnpm --filter @pilla/web lint
+      - pnpm --filter @pilla/web build
+      - '! grep -rnE "style=|#[0-9a-fA-F]{3,8}\b|rgb\(|oklch\(" apps/web/components/shared --include=*.tsx --exclude=*.test.tsx'
     done:
-      - the T12 tests pass; composites only compose components/ui, no new raw styles
-      - the ADMIN layout uses the shadcn sidebar with Pessoas and Empréstimos, and the Toaster (sonner)
+      - the T12 tests pass unchanged; every file in the plan "Arquivos de produção" reaches 100% coverage (coverage gate)
+      - composites only compose components/ui; no style= attribute and no literal color (hex, rgb, oklch) in shared/, colors only through the globals.css tokens (D5)
+      - the ADMIN layout uses the shadcn sidebar with Pessoas and Empréstimos, and the Toaster (sonner) with theme="light"; AdminShell and AdminNav live in shared/ (tested there) and app/(admin)/layout.tsx only composes them
+      - stubs replaced; no "esboço" error and no "stub E9-F06" coverage exclusion left
     budget: {attempts: 3, toolCalls: 40, minutes: 30}
 
   # ---------------------------------------------------------------- E9-F07: cliente da API no web
@@ -394,7 +467,7 @@ cards:
       - node scripts/check-test-quality.mjs apps/web/components/people/person-form.test.tsx
     done:
       - React Hook Form + Zod (CreatePersonRequest) with CPF and phone masks; field errors from the API problem appear under the field
-      - CPF_ALREADY_REGISTERED shows "Já existe uma pessoa com este CPF." on the CPF field; VERSION_CONFLICT shows a toast asking to reload
+      - DUPLICATE_CPF shows "CPF já cadastrado." on the CPF field; VERSION_CONFLICT shows a toast asking to reload
       - referrer is chosen by searching people
     budget: {attempts: 4, toolCalls: 30, minutes: 20}
   - id: E9-T19
