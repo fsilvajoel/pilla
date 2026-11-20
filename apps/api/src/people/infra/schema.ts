@@ -11,7 +11,6 @@ import {
   text,
   uniqueIndex,
   uuid,
-  unique,
 } from "drizzle-orm/pg-core";
 import { instant } from "../../db/columns";
 
@@ -87,7 +86,7 @@ export const addresses = people.table(
 
 export type AddressRow = typeof addresses.$inferSelect;
 
-// Chave Pix da pessoa (RFC-005 §3): a mesma chave não se repete; no máximo uma principal por pessoa.
+// Chave Pix da pessoa (RFC-005 §3): a mesma chave pode se repetir (MVP); no máximo uma principal por pessoa.
 export const pixKeys = people.table(
   "pix_keys",
   {
@@ -107,7 +106,6 @@ export const pixKeys = people.table(
     uniqueIndex("pix_keys_one_primary_idx")
       .on(t.ownerPersonId)
       .where(sql`${t.isPrimary}`),
-    unique("pix_keys_type_value_key").on(t.type, t.value),
   ],
 );
 

@@ -72,7 +72,7 @@
 
 **addresses**: `id`, `person_id FK`, `street`, `number`, `complement`, `district`, `city`, `state char(2)`, `postal_code char(8)`, `is_primary` · `UNIQUE (person_id) WHERE is_primary`.
 
-**pix_keys**: `id`, `owner_person_id FK`, `type` (`CPF`, `CNPJ`, `EMAIL`, `PHONE`, `RANDOM`), `value`, `is_primary` · `UNIQUE (type, value)` · `UNIQUE (owner_person_id) WHERE is_primary`.
+**pix_keys**: `id`, `owner_person_id FK`, `type` (`CPF`, `CNPJ`, `EMAIL`, `PHONE`, `RANDOM`), `value`, `is_primary` · `UNIQUE (owner_person_id) WHERE is_primary` (a mesma chave `(type, value)` pode se repetir: MVP).
 
 ## 4. `lending`
 
