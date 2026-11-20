@@ -10,10 +10,13 @@
     "test": "vitest run --coverage",
     "mutation": "stryker run",
     "db:generate": "drizzle-kit generate --config drizzle-kit/core.config.ts",
-    "db:regen": "node scripts/db-regen.mjs"
+    "db:regen": "node scripts/db-regen.mjs",
+    "db:migrate": "node --env-file=../../.env --import tsx scripts/migrate.mts",
+    "db:seed": "node --env-file=../../.env --import tsx scripts/seed.mts"
   },
   "dependencies": {
-    "drizzle-orm": "^0.45.4"
+    "drizzle-orm": "^0.45.4",
+    "pg": "^8.23.1"
   },
   "devDependencies": {
     "@electric-sql/pglite": "0.5.14",
@@ -21,8 +24,10 @@
     "@stryker-mutator/core": "^10.1.1",
     "@stryker-mutator/vitest-runner": "^10.1.1",
     "@types/node": "~26.6.6",
+    "@types/pg": "^8.23.1",
     "@vitest/coverage-v8": "^5.1.0",
     "drizzle-kit": "^0.31.11",
+    "tsx": "^4.23.15",
     "vitest": "^5.1.0"
   }
 }
