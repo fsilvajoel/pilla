@@ -1,3 +1,4 @@
+import { formatCpf } from "@/components/people/format";
 import type { ReactElement } from "react";
 import { notFound } from "next/navigation";
 import { PersonSheet } from "@/components/people/person-sheet";
@@ -39,7 +40,7 @@ export default async function PessoaPage({ params }: PageProps): Promise<ReactEl
     <div className="flex flex-col gap-6">
       <PageHeader
         title={person.fullName}
-        description={`CPF: ${person.cpf.replace(/^(\d{3})(\d{3})(\d{3})(\d{2})$/, "$1.$2.$3-$4")}`}
+        description={`CPF: ${formatCpf(person.cpf)}`}
         actions={
           <Button asChild variant="outline">
             <Link href={`/pessoas/${person.id}/editar`}>Editar pessoa</Link>

@@ -95,11 +95,10 @@ function toUpdatePayload(
   const next = toPayload(values, referrer);
   const payload: PersonUpdatePayload = {};
   if (next.fullName !== person.fullName) payload.fullName = next.fullName;
-  if (next.cpf !== person.cpf) payload.cpf = next.cpf;
+  if (next.cpf !== (person.cpf ?? "")) payload.cpf = next.cpf;
   if (next.phone !== person.phone) payload.phone = next.phone;
   if ((next.email ?? null) !== (person.email ?? null)) payload.email = next.email ?? null;
   if ((next.birthDate ?? null) !== (person.birthDate ?? null)) payload.birthDate = next.birthDate ?? null;
-  if ((next.referredById ?? null) !== (person.referrer?.id ?? null)) payload.referredById = next.referredById ?? null;
   if ((next.notes ?? null) !== (person.notes ?? null)) payload.notes = next.notes ?? null;
   return payload;
 }
@@ -123,7 +122,7 @@ export function PersonForm({ person }: PersonFormProps): ReactElement {
     mode: "onBlur",
     defaultValues: {
       fullName: person?.fullName ?? "",
-      cpf: person ? formatCpf(person.cpf) : "",
+      cpf: person?.cpf ? formatCpf(person.cpf) : "",
       phone: person ? formatPhone(person.phone.replace(/^\+55/, "")) : "",
       email: person?.email ?? "",
       birthDate: fromIsoDate(person?.birthDate),
@@ -210,12 +209,17 @@ export function PersonForm({ person }: PersonFormProps): ReactElement {
         />
       </FormField>
 
-      <ReferrerSearch
-        value={referrer}
-        onChange={setReferrer}
-        disabled={pending}
-        {...(person ? { excludeId: person.id } : {})}
-      />
+      {person ? (
+        // Indicação fixa depois do cadastro (decisão do Joel, 20/11): na edição só leitura.
+        <div className="space-y-2">
+          <span className="text-sm font-medium">Indicado por</span>
+          <p className="text-sm text-muted-foreground">
+            {person.referrer ? `${person.referrer.fullName} (${formatCpf(person.referrer.cpf)})` : "—"}
+          </p>
+        </div>
+      ) : (
+        <ReferrerSearch value={referrer} onChange={setReferrer} disabled={pending} />
+      )}
 
       <FormField id="notes" label="Observações (opcional)" {...errorProps(fieldError("notes"))}>
         <Textarea {...register("notes")} rows={4} disabled={pending} />

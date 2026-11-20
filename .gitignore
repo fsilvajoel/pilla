@@ -18,6 +18,9 @@ playwright-report/
 *.tsbuildinfo
 .vitest/
 .next/
+.next-real/
+.next-people/
+.next-e2e/
 next-env.d.ts
 
 apps/web/AGENTS.md

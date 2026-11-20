@@ -17,14 +17,16 @@ export interface PersonPayload {
   notes?: string;
 }
 
-/** Corpo do PATCH: campo omitido = intocado; `null` = limpar o campo opcional. */
+/**
+ * Corpo do PATCH: campo omitido = intocado; `null` = limpar o campo opcional.
+ * Sem `referredById`: pela decisão do Joel (20/11) a indicação é fixa depois do cadastro.
+ */
 export interface PersonUpdatePayload {
   fullName?: string;
   cpf?: string;
   phone?: string;
   email?: string | null;
   birthDate?: string | null;
-  referredById?: string | null;
   notes?: string | null;
 }
 

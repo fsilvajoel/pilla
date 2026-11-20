@@ -8,7 +8,8 @@ import { pixKeySchema } from "./pix-key";
 export const personDetailResponse = z.strictObject({
   id: idSchema,
   fullName: z.string().min(1),
-  cpf: cpfSchema,
+  /** null em pessoa importada sem CPF */
+  cpf: cpfSchema.nullable(),
   phone: phoneSchema,
   email: z.email().optional(),
   birthDate: isoDateSchema.optional(),

@@ -2,6 +2,7 @@ import {
   addressSchema,
   personDetailResponse,
   personListResponse,
+  personResponse,
   pixKeySchema,
   type Address,
   type CreateAddressRequest,
@@ -9,6 +10,7 @@ import {
   type CreatePixKeyRequest,
   type PersonDetailResponse,
   type PersonListResponse,
+  type PersonResponse,
   type PixKey,
   type UpdateAddressRequest,
   type UpdatePersonRequest,
@@ -30,18 +32,20 @@ export function listPeople(params: ListPeopleParams = {}): Promise<PersonListRes
 }
 
 /** GET /people/{id} (RF-04). 404 chega como `ApiProblem` com `status === 404`. */
-export function getPerson(id: string): Promise<PersonDetailResponse> {
-  return apiFetch({ path: `/people/${id}`, schema: personDetailResponse });
+export async function getPerson(id: string): Promise<PersonDetailResponse> {
+  // A API ainda devolve só os dados básicos (sem indicador, endereços e PIX): os agregados entram vazios até a ficha completa (E9-T09/T10).
+  const person = await apiFetch({ path: `/people/${id}`, schema: personResponse });
+  return personDetailResponse.parse({ ...person, referrer: null, referrals: [], addresses: [], pixKeys: [] });
 }
 
 /** POST /people (RF-01). */
-export function createPerson(body: CreatePersonRequest): Promise<PersonDetailResponse> {
-  return apiFetch({ method: "POST", path: "/people", body, schema: personDetailResponse });
+export function createPerson(body: CreatePersonRequest): Promise<PersonResponse> {
+  return apiFetch({ method: "POST", path: "/people", body, schema: personResponse });
 }
 
 /** PATCH /people/{id} (RF-01); `body.version` obrigatório (VERSION_CONFLICT em 409). */
-export function updatePerson(id: string, body: UpdatePersonRequest): Promise<PersonDetailResponse> {
-  return apiFetch({ method: "PATCH", path: `/people/${id}`, body, schema: personDetailResponse });
+export function updatePerson(id: string, body: UpdatePersonRequest): Promise<PersonResponse> {
+  return apiFetch({ method: "PATCH", path: `/people/${id}`, body, schema: personResponse });
 }
 
 /** POST /people/{personId}/addresses (RF-02). */
