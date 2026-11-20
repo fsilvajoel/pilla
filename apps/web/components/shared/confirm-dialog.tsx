@@ -1,6 +1,16 @@
 "use client";
 
 import type { ReactElement } from "react";
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogCancel,
+  AlertDialogAction,
+} from "@/components/ui/alert-dialog";
 
 export type ConfirmDialogProps = {
   open: boolean;
@@ -13,6 +23,30 @@ export type ConfirmDialogProps = {
   destructive?: boolean;
 };
 
-export function ConfirmDialog(_props: ConfirmDialogProps): ReactElement {
-  throw new Error("esboço: não implementado");
+export function ConfirmDialog({
+  open,
+  onOpenChange,
+  title,
+  description,
+  confirmLabel,
+  cancelLabel,
+  onConfirm,
+  destructive,
+}: ConfirmDialogProps): ReactElement {
+  return (
+    <AlertDialog open={open} onOpenChange={onOpenChange}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>{title}</AlertDialogTitle>
+          <AlertDialogDescription>{description}</AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>{cancelLabel}</AlertDialogCancel>
+          <AlertDialogAction onClick={onConfirm} data-variant={destructive ? "destructive" : "default"}>
+            {confirmLabel}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
 }
