@@ -1,8 +1,10 @@
 import { Body, Controller, Headers, HttpCode, Inject, Param, Patch, Post, Res } from "@nestjs/common";
 import {
+  activateLoanRequest,
   createLoanRequest,
   idSchema,
   updateLoanRequest,
+  type ActivateLoanRequest,
   type CreateLoanRequest,
   type UpdateLoanRequest,
 } from "@pilla/schemas";
@@ -52,5 +54,15 @@ export class LoansController {
     @Headers("if-match") ifMatch: string | undefined,
   ): Promise<LoanDraftResponse> {
     return this.service.cancel(id, ifMatchVersion(ifMatch));
+  }
+
+  @Post(":id/activate")
+  @HttpCode(200)
+  activate(
+    @Param("id", new ZodValidationPipe<string>(idSchema)) id: string,
+    @Headers("if-match") ifMatch: string | undefined,
+    @Body(new ZodValidationPipe<ActivateLoanRequest>(activateLoanRequest)) body: ActivateLoanRequest,
+  ): Promise<LoanDraftResponse> {
+    return this.service.activate(id, ifMatchVersion(ifMatch), body);
   }
 }

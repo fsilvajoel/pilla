@@ -1,10 +1,20 @@
 import { Inject, Injectable } from "@nestjs/common";
-import type { CreateLoanRequest, DefaultTermsResponse, UpdateLoanRequest } from "@pilla/schemas";
+import { bps, cents, generateSchedule, isoDate, type ScheduleInput } from "@pilla/finance";
+import {
+  loanActivatedV1,
+  loanRenegotiatedV1,
+  loanRenewedV1,
+  type ActivateLoanRequest,
+  type CreateLoanRequest,
+  type DefaultTermsResponse,
+  type UpdateLoanRequest,
+} from "@pilla/schemas";
 import { ProblemException } from "../../core/http/problem-exception";
 import type { AuditEntry } from "../../core/public/audit";
 import { newId } from "../../core/public/ids";
 import { DATABASE, type Database } from "../../db/database";
 import { personExists } from "../../people/public/person-lookup";
+import { isActiveAccount } from "../../treasury/public/account-lookup";
 import { findCurrentDefaultTerms } from "../infra/default-terms-repository";
 import { loanRepository, type LoanDraftChanges, type LoanStore } from "../infra/loan-repository";
 import type { LoanRow } from "../infra/schema";
@@ -31,6 +41,7 @@ export type LoanDraftResponse = {
   gracePeriodDays: number;
   roundingStepCents: number;
   internalNotes?: string;
+  disbursedAt: string | null;
   version: number;
 };
 
@@ -56,6 +67,7 @@ function toResponse(row: LoanRow): LoanDraftResponse {
     gracePeriodDays: row.gracePeriodDays,
     roundingStepCents: row.roundingStepCents,
     ...(row.internalNotes === null ? {} : { internalNotes: row.internalNotes }),
+    disbursedAt: row.disbursedAt,
     version: row.version,
   };
 }
@@ -154,6 +166,72 @@ export class LoansService {
     return this.inDraft(id, expectedVersion, "loan.cancelled", (store) => store.cancel(id));
   }
 
+  // Ativa o DRAFT (E10-F04): parcelas pelo @pilla/finance, evento no outbox e, em renovação ou renegociação,
+  // a origem passa a RENEWED/RENEGOTIATED na mesma transação (D8).
+  async activate(id: string, expectedVersion: number | null, request: ActivateLoanRequest): Promise<LoanDraftResponse> {
+    if (!(await isActiveAccount(this.db, request.accountId))) {
+      throw new ProblemException("VALIDATION_FAILED", "Dados inválidos.", [
+        { field: "accountId", message: "Conta não encontrada ou inativa." },
+      ]);
+    }
+    return loanRepository(this.db).inTransaction(async (store) => {
+      const current = await store.findForUpdate(id);
+      if (current === null) throw new ProblemException("NOT_FOUND", NOT_FOUND_DETAIL);
+      if (expectedVersion === null || expectedVersion !== current.version) {
+        throw new ProblemException("VERSION_CONFLICT", "Versão desatualizada.");
+      }
+      if (current.status !== "DRAFT") {
+        throw new ProblemException("LOAN_NOT_EDITABLE", "Só contrato em rascunho pode ser ativado.");
+      }
+      if (current.firstDueDate <= request.disbursedAt) {
+        throw new ProblemException(
+          "FIRST_DUE_DATE_BEFORE_DISBURSEMENT",
+          "O primeiro vencimento deve ser posterior ao desembolso.",
+        );
+      }
+      const origin = current.originLoanId === null ? null : await store.findForUpdate(current.originLoanId);
+      if (current.originLoanId !== null && (origin === null || origin.status !== "ACTIVE")) {
+        throw new ProblemException("LOAN_NOT_EDITABLE", "O contrato de origem não está mais ativo.");
+      }
+      const schedule = generateSchedule(scheduleInputOf(current, request.disbursedAt));
+      const now = new Date();
+      const activated = await store.activate(id, request.disbursedAt, request.accountId);
+      await store.insertInstallments(
+        schedule.map((item) => ({
+          id: newId(),
+          loanId: id,
+          number: item.number,
+          dueDate: item.dueDate,
+          principalCents: Number(item.principal),
+          interestCents: Number(item.interest),
+          totalCents: Number(item.total),
+        })),
+      );
+      await store.audit(auditEntry("loan.activated", id, current, activated, now));
+      await store.outbox(
+        loanActivatedV1.parse({
+          id: newId(),
+          type: "LoanActivated",
+          version: 1,
+          occurredAt: now.toISOString(),
+          aggregateId: id,
+          payload: {
+            loanId: id,
+            personId: activated.personId,
+            accountId: request.accountId,
+            principalCents: activated.principalCents,
+            disbursedAt: request.disbursedAt,
+            ...(activated.originLoanId === null || activated.originType === null
+              ? {}
+              : { originLoanId: activated.originLoanId, originType: activated.originType }),
+          },
+        }),
+      );
+      if (origin !== null) await settleOrigin(store, origin, activated, now);
+      return toResponse(activated);
+    });
+  }
+
   async getDefaultTerms(): Promise<DefaultTermsResponse> {
     const row = await findCurrentDefaultTerms(this.db);
     if (row === null) throw new ProblemException("NOT_FOUND", NOT_FOUND_DETAIL);
@@ -187,4 +265,51 @@ export class LoansService {
       return toResponse(updated);
     });
   }
+}
+
+function scheduleInputOf(row: LoanRow, disbursedAt: string): ScheduleInput {
+  const terms = {
+    principal: cents(BigInt(row.principalCents)),
+    monthlyInterestRate: bps(BigInt(row.monthlyInterestRateBps)),
+    firstDueDate: isoDate(row.firstDueDate),
+    frequency: {
+      unit: row.frequencyUnit === "DAY" ? ("DAY" as const) : ("MONTH" as const),
+      interval: row.frequencyInterval,
+    },
+    disbursementDate: isoDate(disbursedAt),
+    roundingStep: cents(BigInt(row.roundingStepCents)),
+  };
+  if (row.type === "INSTALLMENT") {
+    if (row.installmentCount === null) throw new ProblemException("INTERNAL_ERROR", "Contrato sem número de parcelas.");
+    return { ...terms, type: "INSTALLMENT", count: row.installmentCount };
+  }
+  if (row.type === "SINGLE_PAYMENT") return { ...terms, type: "SINGLE_PAYMENT" };
+  throw new ProblemException("VALIDATION_FAILED", "Dados inválidos.", [
+    { field: "type", message: "Tipo de contrato sem cronograma automático." },
+  ]);
+}
+
+// Origem de renovação ou renegociação: vira RENEWED/RENEGOTIATED e grava o evento (D8; sem DISBURSEMENT, RN-C16).
+async function settleOrigin(store: LoanStore, origin: LoanRow, successor: LoanRow, now: Date): Promise<void> {
+  const renegotiation = successor.originType === "RENEGOTIATION";
+  const settled = await store.settleOrigin(origin.id, renegotiation ? "RENEGOTIATED" : "RENEWED");
+  await store.audit(auditEntry(renegotiation ? "loan.renegotiated" : "loan.renewed", origin.id, origin, settled, now));
+  const envelope = { id: newId(), version: 1, occurredAt: now.toISOString(), aggregateId: origin.id };
+  await store.outbox(
+    renegotiation
+      ? loanRenegotiatedV1.parse({
+          ...envelope,
+          type: "LoanRenegotiated",
+          payload: {
+            loanId: origin.id,
+            successorLoanId: successor.id,
+            capitalizedCents: successor.capitalizedAmountCents,
+          },
+        })
+      : loanRenewedV1.parse({
+          ...envelope,
+          type: "LoanRenewed",
+          payload: { loanId: origin.id, successorLoanId: successor.id },
+        }),
+  );
 }
