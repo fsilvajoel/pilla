@@ -27,46 +27,57 @@ import type {
   PersonSummary,
 } from "@pilla/schemas";
 
-export async function addAddressAction(personId: string, data: CreateAddressRequest): Promise<void> {
-  await addAddress(personId, data);
-  revalidatePath(`/pessoas/${personId}`);
+function revalidateAll(paths: readonly string[]): void {
+  for (const path of paths) {
+    if (path.includes("[id]")) revalidatePath(path, "page");
+    else revalidatePath(path);
+  }
 }
 
-export async function updateAddressAction(addressId: string, data: UpdateAddressRequest): Promise<void> {
-  await updateAddress(addressId, data);
-  revalidatePath("/pessoas/[id]", "page");
+/** Executa a mutação sem lançar: 4xx e fieldErrors voltam como resultado; em 404 a lista é revalidada. */
+async function runMutation(paths: readonly string[], mutate: () => Promise<unknown>): Promise<PersonActionResult> {
+  try {
+    await mutate();
+    revalidateAll(paths);
+    return { ok: true, id: "" };
+  } catch (error) {
+    const result = toActionError(error);
+    if (result.code === "NOT_FOUND") revalidateAll(paths);
+    return result;
+  }
 }
 
-export async function deleteAddressAction(addressId: string): Promise<void> {
-  await deleteAddress(addressId);
-  revalidatePath("/pessoas/[id]", "page");
+export async function addAddressAction(personId: string, data: CreateAddressRequest): Promise<PersonActionResult> {
+  return runMutation([`/pessoas/${personId}`], () => addAddress(personId, data));
 }
 
-export async function addPixKeyAction(personId: string, data: CreatePixKeyRequest): Promise<void> {
-  await addPixKey(personId, data);
-  revalidatePath(`/pessoas/${personId}`);
+export async function updateAddressAction(addressId: string, data: UpdateAddressRequest): Promise<PersonActionResult> {
+  return runMutation(["/pessoas/[id]"], () => updateAddress(addressId, data));
 }
 
-export async function updatePixKeyAction(pixKeyId: string, data: UpdatePixKeyRequest): Promise<void> {
-  await updatePixKey(pixKeyId, data);
-  revalidatePath("/pessoas/[id]", "page");
+export async function deleteAddressAction(addressId: string): Promise<PersonActionResult> {
+  return runMutation(["/pessoas/[id]"], () => deleteAddress(addressId));
 }
 
-export async function deletePixKeyAction(pixKeyId: string): Promise<void> {
-  await deletePixKey(pixKeyId);
-  revalidatePath("/pessoas/[id]", "page");
+export async function addPixKeyAction(personId: string, data: CreatePixKeyRequest): Promise<PersonActionResult> {
+  return runMutation([`/pessoas/${personId}`], () => addPixKey(personId, data));
 }
 
-// The API handles primary swap automatically when isPrimary=true is sent
-// So we just call update with isPrimary=true
-export async function setPrimaryAddressAction(personId: string, addressId: string): Promise<void> {
-  await updateAddress(addressId, { isPrimary: true });
-  revalidatePath(`/pessoas/${personId}`);
+export async function updatePixKeyAction(pixKeyId: string, data: UpdatePixKeyRequest): Promise<PersonActionResult> {
+  return runMutation(["/pessoas/[id]"], () => updatePixKey(pixKeyId, data));
 }
 
-export async function setPrimaryPixKeyAction(personId: string, pixKeyId: string): Promise<void> {
-  await updatePixKey(pixKeyId, { isPrimary: true });
-  revalidatePath(`/pessoas/${personId}`);
+export async function deletePixKeyAction(pixKeyId: string): Promise<PersonActionResult> {
+  return runMutation(["/pessoas/[id]"], () => deletePixKey(pixKeyId));
+}
+
+// A API troca o principal sozinha quando isPrimary=true.
+export async function setPrimaryAddressAction(personId: string, addressId: string): Promise<PersonActionResult> {
+  return runMutation([`/pessoas/${personId}`], () => updateAddress(addressId, { isPrimary: true }));
+}
+
+export async function setPrimaryPixKeyAction(personId: string, pixKeyId: string): Promise<PersonActionResult> {
+  return runMutation([`/pessoas/${personId}`], () => updatePixKey(pixKeyId, { isPrimary: true }));
 }
 
 /** Cria a pessoa (RF-01, RF-03). A entrada é revalidada aqui com o schema da API. */

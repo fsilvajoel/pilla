@@ -9,10 +9,28 @@ import type { Address, CreateAddressRequest, UpdateAddressRequest } from "@pilla
 
 interface AddressListProps {
   addresses: readonly Address[];
-  onAddAddress: (data: CreateAddressRequest) => Promise<void>;
-  onUpdateAddress: (id: string, data: UpdateAddressRequest) => Promise<void>;
-  onDeleteAddress: (id: string) => Promise<void>;
-  onSetPrimaryAddress: (id: string) => Promise<void>;
+  onAddAddress: (data: CreateAddressRequest) => Promise<unknown>;
+  onUpdateAddress: (id: string, data: UpdateAddressRequest) => Promise<unknown>;
+  onDeleteAddress: (id: string) => Promise<unknown>;
+  onSetPrimaryAddress: (id: string) => Promise<unknown>;
+}
+
+export interface ServerError {
+  readonly message: string;
+  readonly fieldErrors: Readonly<Record<string, string>>;
+}
+
+function readFailure(result: unknown): ServerError | null {
+  if (typeof result !== "object" || result === null) return null;
+  if (!("ok" in result) || result.ok !== false) return null;
+  const message = "message" in result && typeof result.message === "string" ? result.message : null;
+  const fieldErrors: Record<string, string> = {};
+  if ("fieldErrors" in result && typeof result.fieldErrors === "object" && result.fieldErrors !== null) {
+    for (const [key, value] of Object.entries(result.fieldErrors)) {
+      if (typeof value === "string") fieldErrors[key] = value;
+    }
+  }
+  return { message: message ?? "Não foi possível concluir a operação.", fieldErrors };
 }
 
 type DialogState = { kind: "create" } | { kind: "edit"; address: Address } | null;
@@ -28,11 +46,22 @@ export function AddressList({
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
-  const run = (action: () => Promise<void>, onDone?: () => void): void => {
+  const [serverError, setServerError] = useState<ServerError | null>(null);
+
+  /** Roda a ação; falha da API vira mensagem (no dialog aberto ou toast) e onDone só roda em sucesso. */
+  const run = (action: () => Promise<unknown>, onDone?: () => void, inDialog = false): void => {
     startTransition(async () => {
       try {
-        await action();
-        onDone?.();
+        const failure = readFailure(await action());
+        if (failure === null) {
+          setServerError(null);
+          onDone?.();
+        } else if (inDialog) {
+          setServerError(failure);
+        } else {
+          toast.error(failure.message);
+          setDeletingId(null);
+        }
       } catch {
         toast.error("Não foi possível concluir a operação.");
       }
@@ -47,6 +76,7 @@ export function AddressList({
       () => {
         setDialog(null);
       },
+      true,
     );
   };
 
@@ -71,6 +101,7 @@ export function AddressList({
         <h3 className="text-lg font-medium">Endereços</h3>
         <Button
           onClick={() => {
+            setServerError(null);
             setDialog({ kind: "create" });
           }}
         >
@@ -120,6 +151,7 @@ export function AddressList({
                   variant="outline"
                   size="sm"
                   onClick={() => {
+                    setServerError(null);
                     setDialog({ kind: "edit", address });
                   }}
                 >
@@ -149,6 +181,7 @@ export function AddressList({
           }}
           onSubmit={handleSubmit}
           isSubmitting={isPending}
+          serverError={serverError}
         />
       )}
       <ConfirmDialog
