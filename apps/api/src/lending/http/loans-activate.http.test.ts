@@ -69,6 +69,7 @@ beforeAll(async () => {
     .compile();
   app = moduleRef.createNestApplication();
   configureApp(app);
+  app.useLogger(false);
   await app.listen(0, "127.0.0.1");
   baseUrl = await app.getUrl();
 });
@@ -99,6 +100,10 @@ async function seedLoan(
   status: string,
   origin?: { loanId: string; type: "RENEWAL" | "RENEGOTIATION" },
   capitalizedCents = 0,
+  shape: { type: string; installmentCount: number | null; unit?: string } = {
+    type: "INSTALLMENT",
+    installmentCount: 6,
+  },
 ): Promise<void> {
   const settled = status === "DRAFT" || status === "CANCELLED";
   await client.query(
@@ -107,7 +112,7 @@ async function seedLoan(
         frequency_unit, frequency_interval, first_due_date, contracted_at, disbursed_at, account_id,
         origin_loan_id, origin_type, capitalized_amount_cents,
         late_fee_bps, late_interest_monthly_bps, grace_period_days, rounding_step_cents)
-     values ($1, $2, $3, 'INSTALLMENT', $4, 500000, 633, 6, 'MONTH', 1, '2026-12-14', '2026-11-10', $5, $6,
+     values ($1, $2, $3, $10, $4, 500000, 633, $11, $12, 1, '2026-12-14', '2026-11-10', $5, $6,
         $7, $8, $9, 250, 120, 0, 500)`,
     [
       id,
@@ -119,6 +124,9 @@ async function seedLoan(
       origin?.loanId ?? null,
       origin?.type ?? null,
       capitalizedCents,
+      shape.type,
+      shape.installmentCount,
+      shape.unit ?? "MONTH",
     ],
   );
 }
@@ -342,5 +350,101 @@ describe("POST /api/v1/loans/{id}/activate: origem (A7, A8)", () => {
     expect(await dbLoan(ORIGIN_ID)).toMatchObject({ status: "PAID_OFF", version: 1 });
     expect(await outbox()).toHaveLength(0);
     expect(await dbInstallments(DRAFT_ID)).toHaveLength(0);
+  });
+});
+
+describe("POST /api/v1/loans/{id}/activate: tipos de contrato (cobertura dos ramos do cronograma)", () => {
+  it("C14: a SINGLE_PAYMENT loan gets one installment with the whole principal", async () => {
+    await seedLoan(DRAFT_ID, "2026-0001", "DRAFT", undefined, 0, { type: "SINGLE_PAYMENT", installmentCount: 1 });
+    const res = await activate(DRAFT_ID, "1", goodBody);
+    expect(res.status).toBe(200);
+    const rows = await dbInstallments(DRAFT_ID);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]?.principal_cents).toBe(500000);
+    expect(rows[0]?.due_date).toBe("2026-12-14");
+  });
+
+  it("C15: a type without automatic schedule answers 400 VALIDATION_FAILED on type, writing nothing", async () => {
+    await seedLoan(DRAFT_ID, "2026-0001", "DRAFT", undefined, 0, { type: "INTEREST_ONLY", installmentCount: null });
+    const res = await activate(DRAFT_ID, "1", goodBody);
+    expect(res.status).toBe(400);
+    expect((res.body as LoanBody).errors?.map((e) => e.field)).toEqual(["type"]);
+    await expectNothingWritten(DRAFT_ID, "DRAFT", 1);
+  });
+
+  it("C16: an INSTALLMENT row without installment count (broken data) answers 500, writing nothing", async () => {
+    await client.query("alter table lending.loans drop constraint loans_installment_count_check");
+    await seedLoan(DRAFT_ID, "2026-0001", "DRAFT", undefined, 0, { type: "INSTALLMENT", installmentCount: null });
+    const res = await activate(DRAFT_ID, "1", goodBody);
+    expect(res.status).toBe(500);
+    await expectNothingWritten(DRAFT_ID, "DRAFT", 1);
+  });
+});
+
+describe("PATCH /api/v1/loans/{id}: troca para SINGLE_PAYMENT", () => {
+  it("C17: switching an installment draft to SINGLE_PAYMENT without count 1 answers 400 on installmentCount", async () => {
+    await seedLoan(DRAFT_ID, "2026-0001", "DRAFT");
+    const res = await request(baseUrl)
+      .patch(`/api/v1/loans/${DRAFT_ID}`)
+      .set("If-Match", "1")
+      .send({ type: "SINGLE_PAYMENT" });
+    expect(res.status).toBe(400);
+    expect((res.body as LoanBody).errors?.map((e) => e.field)).toEqual(["installmentCount"]);
+    expect(await dbLoan(DRAFT_ID)).toMatchObject({ status: "DRAFT", version: 1 });
+  });
+});
+
+describe("rascunho: ramos restantes de criar e editar", () => {
+  const draftBody = {
+    personId: PERSON_ID,
+    type: "INSTALLMENT",
+    principalCents: 500000,
+    monthlyInterestRateBps: 633,
+    installmentCount: 6,
+    frequency: { unit: "MONTH", interval: 1 },
+    firstDueDate: "2026-12-14",
+    lateFeeBps: 250,
+    lateInterestMonthlyBps: 120,
+    gracePeriodDays: 0,
+  };
+  const insertTerms = () =>
+    client.query(
+      `insert into lending.default_terms
+         (id, late_fee_bps, late_interest_monthly_bps, grace_period_days, suggested_monthly_rate_bps, rounding_step_cents, effective_from, created_by)
+       values ('01970000-0000-7000-8000-0000000000d1', 200, 100, 0, 1000, 500, '2026-01-01T00:00:00Z', $1)`,
+      [PERSON_ID],
+    );
+
+  it("C18: a loan with a DAY frequency is activated with the schedule in days", async () => {
+    await seedLoan(DRAFT_ID, "2026-0001", "DRAFT", undefined, 0, {
+      type: "INSTALLMENT",
+      installmentCount: 6,
+      unit: "DAY",
+    });
+    const res = await activate(DRAFT_ID, "1", goodBody);
+    expect(res.status).toBe(200);
+    expect((await dbInstallments(DRAFT_ID)).map((r) => r.due_date).slice(0, 2)).toEqual(["2026-12-14", "2026-12-15"]);
+  });
+
+  it("C19: creating without default terms answers 500, writing nothing", async () => {
+    const res = await request(baseUrl).post("/api/v1/loans").send(draftBody);
+    expect(res.status).toBe(500);
+    expect((await client.query("select 1 from lending.loans")).rows).toHaveLength(0);
+  });
+
+  it("C20: internal notes are kept on create and the frequency can be changed on edit", async () => {
+    await insertTerms();
+    const created = await request(baseUrl)
+      .post("/api/v1/loans")
+      .send({ ...draftBody, internalNotes: "cliente antigo" });
+    const loan = created.body as LoanBody & { internalNotes?: string };
+    expect(created.status).toBe(201);
+    expect(loan.internalNotes).toBe("cliente antigo");
+    const edited = await request(baseUrl)
+      .patch(`/api/v1/loans/${loan.id}`)
+      .set("If-Match", "1")
+      .send({ frequency: { unit: "DAY", interval: 30 } });
+    expect(edited.status).toBe(200);
+    expect((edited.body as { frequency: unknown }).frequency).toEqual({ unit: "DAY", interval: 30 });
   });
 });
