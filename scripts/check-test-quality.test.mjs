@@ -27,6 +27,7 @@ test("Q1 asserção que sempre passa", () => {
   assert.deepEqual(rules(wrap(`it("a", () => { expect(f(1)).toBeDefined(); });`)), ["Q1"]);
   assert.deepEqual(rules(wrap(`it("a", () => { expect(true).toBe(true); });`)), ["Q1"]);
   assert.deepEqual(rules(wrap(`it("a", () => { expect(x).toBe(x); });`)), ["Q1"]);
+  assert.deepEqual(rules(wrap(`it("a", async () => { await request(app).get("/x").expect(200); });`)), []);
 });
 
 test("Q2 teste sem expect", () => {
