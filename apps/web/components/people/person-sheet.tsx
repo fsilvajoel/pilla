@@ -134,7 +134,7 @@ export function PersonSheet({
             text="Nenhum contrato cadastrado para esta pessoa."
             action={
               <Button asChild variant="outline">
-                <Link href={`/pessoas/${person.id}/contratos/novo`}>Criar contrato</Link>
+                <Link href="/emprestimos/novo">Criar contrato</Link>
               </Button>
             }
           />
