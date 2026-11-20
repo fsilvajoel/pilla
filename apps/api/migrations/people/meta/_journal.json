@@ -15,6 +15,13 @@
       "when": 1794779918272,
       "tag": "0001_people_tables",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1795184787160,
+      "tag": "0002_pix_keys_drop_type_value_key",
+      "breakpoints": true
     }
   ]
 }

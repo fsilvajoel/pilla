@@ -74,9 +74,15 @@ describe("people.pix_keys (RFC-005 §3)", () => {
     await expect(add("01970000-0000-7000-8000-ffffffffffff", "EMAIL")).rejects.toThrow(/foreign key constraint/);
   });
 
-  it("refuses the same type and value twice, even for another person", async () => {
+  it("accepts the same type and value twice, even for another person", async () => {
     await add(await person(), "PHONE", "+5511988887777");
-    await expect(add(await person(), "PHONE", "+5511988887777")).rejects.toThrow(/unique constraint/);
+    const first = await add(await person(), "PHONE", "+5511988887777");
+    const second = await add(await person(), "PHONE", "+5511988887777");
+    expect([first.affectedRows, second.affectedRows]).toEqual([1, 1]);
+    const { rows } = await client.query(
+      "select id from people.pix_keys where type = 'PHONE' and value = '+5511988887777'",
+    );
+    expect(rows).toHaveLength(3);
   });
 
   it("accepts many keys per person but only one primary", async () => {
@@ -93,7 +99,6 @@ describe("people.pix_keys (RFC-005 §3)", () => {
     expect(rows.map((r) => r.indexdef)).toEqual([
       "CREATE UNIQUE INDEX pix_keys_one_primary_idx ON people.pix_keys USING btree (owner_person_id) WHERE is_primary",
       "CREATE UNIQUE INDEX pix_keys_pkey ON people.pix_keys USING btree (id)",
-      "CREATE UNIQUE INDEX pix_keys_type_value_key ON people.pix_keys USING btree (type, value)",
     ]);
   });
 });

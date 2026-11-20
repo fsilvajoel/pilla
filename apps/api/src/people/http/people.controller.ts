@@ -5,6 +5,7 @@ import {
   personListQuery,
   updatePersonRequest,
   type CreatePersonRequest,
+  type PersonDetailResponse,
   type PersonListQuery,
   type PersonListResponse,
   type PersonResponse,
@@ -42,8 +43,8 @@ export class PeopleController {
   }
 
   @Get(":id")
-  get(@Param("id", new PeopleValidationPipe<string>(idSchema)) id: string): Promise<PersonResponse> {
-    return this.service.get(id);
+  get(@Param("id", new PeopleValidationPipe<string>(idSchema)) id: string): Promise<PersonDetailResponse> {
+    return this.service.getSheet(id);
   }
 
   @Patch(":id")

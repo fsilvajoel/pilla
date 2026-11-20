@@ -1,7 +1,7 @@
 import type { PGlite } from "@electric-sql/pglite";
 import type { INestApplication } from "@nestjs/common";
 import { Test } from "@nestjs/testing";
-import { personListResponse, problemSchema } from "@pilla/schemas";
+import { personDetailResponse, personListResponse, problemSchema } from "@pilla/schemas";
 import request from "supertest";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { AppModule } from "../../app.module";
@@ -411,23 +411,24 @@ describe("GET /api/v1/people", () => {
 });
 
 describe("GET /api/v1/people/:id", () => {
-  it("C8 (A8): devolve o PersonResponse básico exato, sem campos agregados", async () => {
+  const emptySheet = { referrer: null, referrals: [], addresses: [], pixKeys: [] };
+
+  it("C8 (A8): devolve a ficha (personDetailResponse) exata, com agregados vazios", async () => {
     await seedAna();
     const res = await send("get", `/api/v1/people/${ANA_ID}`);
 
     expect(res.status).toBe(200);
     expect(res.contentType).toMatch(/^application\/json/);
-    expect(res.body).toEqual(anaBasic);
-    for (const aggregate of ["addresses", "pixKeys", "referrer", "referrals"]) {
-      expect(res.body).not.toHaveProperty(aggregate);
-    }
+    expect(personDetailResponse.safeParse(res.body).success).toBe(true);
+    expect(res.body).toEqual({ ...anaBasic, ...emptySheet });
+    expect(res.body).not.toHaveProperty("contracts");
   });
 
   it("C8 (A8): omite opcionais nulos e inclui os preenchidos", async () => {
     await seed({ id: ANA_ID, fullName: "Ana Costa", cpf: ANA_CPF, email: "ana@example.com", notes: "obs" });
     const res = await send("get", `/api/v1/people/${ANA_ID}`);
 
-    expect(res.body).toEqual({ ...anaBasic, email: "ana@example.com", notes: "obs" });
+    expect(res.body).toEqual({ ...anaBasic, ...emptySheet, email: "ana@example.com", notes: "obs" });
     expect(res.body).not.toHaveProperty("birthDate");
   });
 
