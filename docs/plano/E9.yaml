@@ -575,6 +575,50 @@ cards:
       - repeated CPF shows the field error; no console errors
     budget: {attempts: 3, toolCalls: 40, minutes: 30}
 
+  # ---------------------------------------------------------------- E9-F12/F13: ficha (links e erros)
+  - id: E9-T23
+    title: Fix the dead "Criar contrato" link on the person sheet (route /pessoas/[id]/contratos/novo does not exist)
+    kind: implement
+    assignee: claude
+    rules: []
+    skills: [react-best-practices, coding-guidelines]
+    refs: [docs/plano/E9.md D4]
+    dependsOn: [E9-T21]
+    allowedPaths:
+      - apps/web/components/people/person-sheet.tsx
+    protectedTests: []
+    checks:
+      - pnpm --filter @pilla/web typecheck
+      - pnpm --filter @pilla/web lint
+    done:
+      - the "Criar contrato" button points to an existing route (/emprestimos/novo) or is removed; no link on the sheet leads to 404
+    budget: {attempts: 2, toolCalls: 15, minutes: 10}
+
+  - id: E9-T24
+    title: Show API errors (field errors, 404, 409) in address and PIX dialogs instead of the generic toast
+    kind: implement
+    assignee: claude
+    rules: []
+    skills: [react-best-practices, accessibility, coding-guidelines]
+    refs: [PRD-001 RF-02, docs/plano/E9.md D6 D7]
+    dependsOn: [E9-T21]
+    allowedPaths:
+      - apps/web/components/people/address-list.tsx
+      - apps/web/components/people/address-dialog.tsx
+      - apps/web/components/people/pix-list.tsx
+      - apps/web/components/people/pix-dialog.tsx
+      - apps/web/app/(admin)/pessoas/actions.ts
+    protectedTests: []
+    checks:
+      - pnpm --filter @pilla/web typecheck
+      - pnpm --filter @pilla/web lint
+      - pnpm --filter @pilla/web test
+    done:
+      - the 6 address/PIX actions return PersonActionResult-style results via toActionError (no throw), so the 4xx message and fieldErrors reach the client
+      - dialogs show fieldErrors under the fields and a message for non-field errors; dialog stays open on error
+      - delete or set-primary on an item already removed (404) shows a clear message and refreshes the list
+    budget: {attempts: 3, toolCalls: 30, minutes: 25}
+
 features:
   - id: E9-F01
     title: Dev database (docker compose, migrations, seed)
@@ -609,3 +653,9 @@ features:
   - id: E9-F11
     title: People end-to-end test (Playwright, real API and Postgres)
     cards: [E9-T22]
+  - id: E9-F12
+    title: Dead link on the person sheet
+    cards: [E9-T23]
+  - id: E9-F13
+    title: API error feedback in address and PIX dialogs
+    cards: [E9-T24]
