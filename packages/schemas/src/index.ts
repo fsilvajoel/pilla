@@ -29,3 +29,4 @@ export * from "./api/lending/create-loan";
 export * from "./api/lending/loan-views";
 export * from "./api/payments/create-payment";
 export * from "./api/treasury/account-summary";
+export * from "./api/core/health";

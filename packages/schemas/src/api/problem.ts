@@ -19,6 +19,7 @@ export const errorCodeSchema = z.enum([
   "RECEIPT_REQUIRED",
   "DUPLICATE_PIX_TRANSACTION",
   "TOO_MANY_REQUESTS",
+  "INTERNAL_ERROR",
 ]);
 export type ErrorCode = z.infer<typeof errorCodeSchema>;
 
@@ -39,6 +40,7 @@ export const errorStatus: Record<ErrorCode, number> = {
   RECEIPT_REQUIRED: 422,
   DUPLICATE_PIX_TRANSACTION: 422,
   TOO_MANY_REQUESTS: 429,
+  INTERNAL_ERROR: 500,
 };
 
 export const problemSchema = z
