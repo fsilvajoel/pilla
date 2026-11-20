@@ -1,0 +1,117 @@
+{
+  "feature": "E9-F03",
+  "stages": {
+    "plan": {
+      "status": "done",
+      "worker": "copilot"
+    },
+    "refinement": {
+      "status": "done",
+      "verdict": "ajustado",
+      "round": 1,
+      "worker": "copilot"
+    },
+    "tests": {
+      "status": "pending"
+    },
+    "testReview": {
+      "status": "pending"
+    },
+    "implement": {
+      "status": "pending"
+    },
+    "review": {
+      "status": "pending"
+    }
+  },
+  "sources": [
+    "packages/schemas/src/api/people/create-person.ts",
+    "packages/schemas/src/api/people/person-list-query.ts",
+    "packages/schemas/src/api/people/person-response.ts",
+    "packages/schemas/src/api/people/update-person.ts",
+    "packages/schemas/src/api/problem.ts",
+    "apps/api/src/people/infra/person-list.ts",
+    "apps/api/src/people/application/create-person.ts",
+    "apps/api/src/people/application/list-people.ts",
+    "apps/api/src/people/application/get-person.ts",
+    "apps/api/src/people/application/update-person.ts",
+    "apps/api/src/people/http/people.controller.ts",
+    "apps/api/src/people/people.module.ts",
+    "apps/api/src/app.module.ts"
+  ],
+  "domainSources": [],
+  "exemptSources": [],
+  "criteria": [
+    {
+      "id": "A1",
+      "camadas": [
+        "unit"
+      ]
+    },
+    {
+      "id": "A2",
+      "camadas": [
+        "unit"
+      ]
+    },
+    {
+      "id": "A3",
+      "camadas": [
+        "unit"
+      ]
+    },
+    {
+      "id": "A4",
+      "camadas": [
+        "unit"
+      ]
+    },
+    {
+      "id": "A5",
+      "camadas": [
+        "unit"
+      ]
+    },
+    {
+      "id": "A6",
+      "camadas": [
+        "unit"
+      ]
+    },
+    {
+      "id": "A7",
+      "camadas": [
+        "unit"
+      ]
+    },
+    {
+      "id": "A8",
+      "camadas": [
+        "unit"
+      ]
+    },
+    {
+      "id": "A9",
+      "camadas": [
+        "unit"
+      ]
+    },
+    {
+      "id": "A10",
+      "camadas": [
+        "unit"
+      ]
+    },
+    {
+      "id": "A11",
+      "camadas": [
+        "unit"
+      ]
+    }
+  ],
+  "tests": [
+    "packages/schemas/src/api/people/people.test.ts",
+    "apps/api/src/people/http/people.http.test.ts"
+  ],
+  "e2e": []
+}
