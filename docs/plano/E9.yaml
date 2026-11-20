@@ -305,39 +305,28 @@ cards:
       - sonner and next-themes are runtime deps approved by the Joel on 19/11 and listed in docs/travas.md; check-allowed-deps passes
     budget: {attempts: 3, toolCalls: 30, minutes: 20}
   - id: E9-T12
-    title: Write the tests for the shared composite components
+    title: Behavior tests for logic isolated from the shared composites, after the visual review
     kind: test-author
     assignee: bia
     rules: []
     skills: [accessibility, react-best-practices]
-    refs: [docs/plano/E9.md D6, docs/plano/E9-F06/plano.md, docs/plano/E9-F06/esboco-shared.txt]
-    dependsOn: []
+    refs: [docs/adr/0017-estrategia-de-testes.md, docs/plano/E9.md D6, docs/plano/E9-F06/plano.md]
+    dependsOn: [E9-T13]
     readFirst:
       - docs/plano/E9-F06/plano.md
-      - docs/plano/E9-F06/esboco-shared.txt
+      - apps/web/components/shared/
       - apps/web/vitest.config.ts
       - apps/web/vitest.setup.ts
     allowedPaths:
-      - apps/web/components/shared/page-header.test.tsx
-      - apps/web/components/shared/empty-state.test.tsx
-      - apps/web/components/shared/form-field.test.tsx
-      - apps/web/components/shared/data-table.test.tsx
-      - apps/web/components/shared/confirm-dialog.test.tsx
-      - apps/web/components/shared/status-badge.test.tsx
-      - apps/web/components/shared/admin-shell.test.tsx
+      - apps/web/components/shared/**/*.test.tsx
     protectedTests: []
     checks:
-      - '! pnpm --filter @pilla/web exec vitest run components/shared'
+      - pnpm --filter @pilla/web exec vitest run components/shared
       - node scripts/check-test-quality.mjs apps/web/components/shared
     done:
-      - page-header.test.tsx covers C1-C2 (A1)
-      - empty-state.test.tsx covers C3-C4 (A2)
-      - form-field.test.tsx covers C5-C7 (A3), with ids cpf-error and cpf-description
-      - data-table.test.tsx covers C8-C9 and C10 as a fast-check property (A4)
-      - confirm-dialog.test.tsx covers C11-C13 and C20 (A5)
-      - status-badge.test.tsx covers C14 and C15 as a fast-check property (A6); data-variant values checked against the generated badge.tsx in the test review, after E9-T11
-      - admin-shell.test.tsx covers C16-C19 (A7, AdminShell and AdminNav; AdminLayout is dispensa-estilo, no test), with a matchMedia stub and a next/navigation mock inside the file
-      - every test names its C<n>; all fail against the stub (expect-red), none by import or type error
+      - 'ADR-0017 order for UI: T13 mounts the composites with shadcn and the visual review in the browser comes first; only the logic the review isolates into its own tdd file (conditional display, aria wiring, active-link rule, status map) gets a behavior test here, written after the review'
+      - 'the plan criteria A1-A7 are the checklist of that logic; each test names its A<n>; no test by CSS class or component structure'
+      - 'closed with no test if the review finds no logic to isolate'
     budget: {attempts: 4, toolCalls: 30, minutes: 20}
   - id: E9-T13
     title: Implement the shared composites and the ADMIN shell (sidebar layout)
@@ -346,7 +335,7 @@ cards:
     rules: []
     skills: [shadcn, tailwind-css, react-best-practices, accessibility]
     refs: [ADR-0013, docs/plano/E9.md D5 D6, docs/plano/E9-F06/plano.md]
-    dependsOn: [E9-T12]
+    dependsOn: []
     readFirst:
       - docs/plano/E9-F06/plano.md
       - docs/plano/E9-F06/esboco-shared.txt
@@ -356,15 +345,14 @@ cards:
     allowedPaths:
       - apps/web/components/shared/**
       - apps/web/app/(admin)/layout.tsx
-    protectedTests: [apps/web/components/shared/*.test.tsx]
+    protectedTests: []
     checks:
-      - pnpm --filter @pilla/web exec vitest run components/shared
       - pnpm --filter @pilla/web typecheck
       - pnpm --filter @pilla/web lint
       - pnpm --filter @pilla/web build
       - '! grep -rnE "style=|#[0-9a-fA-F]{3,8}\b|rgb\(|oklch\(" apps/web/components/shared --include=*.tsx --exclude=*.test.tsx'
     done:
-      - the T12 tests pass unchanged; every file in the plan "Arquivos de produção" reaches 100% coverage (coverage gate)
+      - visual review in the browser against the plan (A1-A7 as checklist); outside the feature flow (ADR-0017, all files dispensa-estilo), no expect-red or coverage gate
       - composites only compose components/ui; no style= attribute and no literal color (hex, rgb, oklch) in shared/, colors only through the globals.css tokens (D5)
       - the ADMIN layout uses the shadcn sidebar with Pessoas and Empréstimos, and the Toaster (sonner) with theme="light"; AdminShell and AdminNav live in shared/ (tested there) and app/(admin)/layout.tsx only composes them
       - stubs replaced; no "esboço" error and no "stub E9-F06" coverage exclusion left

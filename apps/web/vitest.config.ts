@@ -17,7 +17,7 @@ export default defineConfig({
         "components/ui/**", // código gerado pelo shadcn/ui; coberto pelos testes das telas que o usam
         "lib/utils.ts", // cn() do shadcn/ui: só repassa para clsx + tailwind-merge
         "app/\\(admin\\)/**/page.tsx", // parênteses escapados: no glob, "(admin)" sem escape é grupo e não casa o nome da pasta; casca de rota do ADMIN: só monta o componente com os dados de mentira
-        "app/\\(admin\\)/layout.tsx", // dispensa-estilo E9-F06 (exemptSources): só devolve <AdminShell>, testado em shared/admin-shell
+        "app/\\(admin\\)/layout.tsx", // dispensa-estilo E9-F06 (exemptSources): só devolve <AdminShell>; revisão visual
         "components/shared/page-header.tsx", // stub E9-F06: sai quando o E9-T13 implementar
         "components/shared/empty-state.tsx", // stub E9-F06: sai quando o E9-T13 implementar
         "components/shared/form-field.tsx", // stub E9-F06: sai quando o E9-T13 implementar

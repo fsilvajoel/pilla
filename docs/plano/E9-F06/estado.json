@@ -10,90 +10,72 @@
       "round": 2
     },
     "tests": {
-      "status": "pending"
+      "status": "skipped",
+      "note": "fora do fluxo de feature (ADR-0017): só revisão visual"
     },
     "testReview": {
-      "status": "pending"
+      "status": "skipped",
+      "note": "fora do fluxo de feature (ADR-0017): só revisão visual"
     },
     "implement": {
-      "status": "pending"
+      "status": "skipped",
+      "note": "fora do fluxo de feature (ADR-0017): só revisão visual"
     },
     "review": {
-      "status": "pending"
+      "status": "skipped",
+      "note": "fora do fluxo de feature (ADR-0017): só revisão visual"
     }
   },
-  "sources": [
-    "apps/web/components/shared/page-header.tsx",
-    "apps/web/components/shared/empty-state.tsx",
-    "apps/web/components/shared/form-field.tsx",
-    "apps/web/components/shared/data-table.tsx",
-    "apps/web/components/shared/confirm-dialog.tsx",
-    "apps/web/components/shared/status-badge.tsx",
-    "apps/web/components/shared/admin-nav.tsx",
-    "apps/web/components/shared/admin-shell.tsx"
-  ],
+  "sources": [],
   "domainSources": [],
-  "criteria": [
-    {
-      "id": "A1",
-      "camadas": [
-        "unit"
-      ]
-    },
-    {
-      "id": "A2",
-      "camadas": [
-        "unit"
-      ]
-    },
-    {
-      "id": "A3",
-      "camadas": [
-        "unit"
-      ]
-    },
-    {
-      "id": "A4",
-      "camadas": [
-        "unit",
-        "prop"
-      ]
-    },
-    {
-      "id": "A5",
-      "camadas": [
-        "unit"
-      ]
-    },
-    {
-      "id": "A6",
-      "camadas": [
-        "unit",
-        "prop"
-      ]
-    },
-    {
-      "id": "A7",
-      "camadas": [
-        "unit"
-      ]
-    }
-  ],
-  "tests": [
-    "apps/web/components/shared/page-header.test.tsx",
-    "apps/web/components/shared/empty-state.test.tsx",
-    "apps/web/components/shared/form-field.test.tsx",
-    "apps/web/components/shared/data-table.test.tsx",
-    "apps/web/components/shared/confirm-dialog.test.tsx",
-    "apps/web/components/shared/status-badge.test.tsx",
-    "apps/web/components/shared/admin-shell.test.tsx"
-  ],
+  "tests": [],
   "e2e": [],
   "exemptSources": [
     {
+      "file": "apps/web/components/shared/page-header.tsx",
+      "class": "dispensa-estilo",
+      "reason": "só layout e composição visual de componentes do shadcn, sem regra própria; fica fora do fluxo de feature (ADR-0017), com revisão visual no navegador; a lógica que a revisão isolar vira arquivo tdd depois"
+    },
+    {
+      "file": "apps/web/components/shared/empty-state.tsx",
+      "class": "dispensa-estilo",
+      "reason": "só layout e composição visual de componentes do shadcn, sem regra própria; fica fora do fluxo de feature (ADR-0017), com revisão visual no navegador; a lógica que a revisão isolar vira arquivo tdd depois"
+    },
+    {
+      "file": "apps/web/components/shared/form-field.tsx",
+      "class": "dispensa-estilo",
+      "reason": "só layout e composição visual de componentes do shadcn, sem regra própria; fica fora do fluxo de feature (ADR-0017), com revisão visual no navegador; a lógica que a revisão isolar vira arquivo tdd depois"
+    },
+    {
+      "file": "apps/web/components/shared/data-table.tsx",
+      "class": "dispensa-estilo",
+      "reason": "só layout e composição visual de componentes do shadcn, sem regra própria; fica fora do fluxo de feature (ADR-0017), com revisão visual no navegador; a lógica que a revisão isolar vira arquivo tdd depois"
+    },
+    {
+      "file": "apps/web/components/shared/confirm-dialog.tsx",
+      "class": "dispensa-estilo",
+      "reason": "só layout e composição visual de componentes do shadcn, sem regra própria; fica fora do fluxo de feature (ADR-0017), com revisão visual no navegador; a lógica que a revisão isolar vira arquivo tdd depois"
+    },
+    {
+      "file": "apps/web/components/shared/status-badge.tsx",
+      "class": "dispensa-estilo",
+      "reason": "só layout e composição visual de componentes do shadcn, sem regra própria; fica fora do fluxo de feature (ADR-0017), com revisão visual no navegador; a lógica que a revisão isolar vira arquivo tdd depois"
+    },
+    {
+      "file": "apps/web/components/shared/admin-nav.tsx",
+      "class": "dispensa-estilo",
+      "reason": "só layout e composição visual de componentes do shadcn, sem regra própria; fica fora do fluxo de feature (ADR-0017), com revisão visual no navegador; a lógica que a revisão isolar vira arquivo tdd depois"
+    },
+    {
+      "file": "apps/web/components/shared/admin-shell.tsx",
+      "class": "dispensa-estilo",
+      "reason": "só layout e composição visual de componentes do shadcn, sem regra própria; fica fora do fluxo de feature (ADR-0017), com revisão visual no navegador; a lógica que a revisão isolar vira arquivo tdd depois"
+    },
+    {
       "file": "apps/web/app/(admin)/layout.tsx",
       "class": "dispensa-estilo",
-      "reason": "só devolve <AdminShell>{children}</AdminShell>, sem condição, cálculo nem estado; o comportamento da casca é testado em admin-shell.test.tsx (A7); conferência visual no navegador"
+      "reason": "só devolve <AdminShell>{children}</AdminShell>, sem condição nem estado; revisão visual no navegador"
     }
-  ]
+  ],
+  "outOfFlow": true
 }

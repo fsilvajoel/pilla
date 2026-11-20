@@ -52,7 +52,7 @@ Esboço em `docs/plano/E9-F06/esboco-shared.txt` (assinaturas que lançam `Error
 
 ## Arquivos de produção
 
-Classificação TDD (ADR-0017): `apps/web/app/(admin)/layout.tsx` é `dispensa-estilo` e vai para `exemptSources` (só devolve `<AdminShell>`; sem condição nem estado); os demais ficam `tdd` (exibição condicional, `cloneElement`/aria, vazio/linhas, callbacks, mapa de variante, link ativo). `AdminShell` fica `tdd` porque A7 verifica comportamento observável (marca, `main`, navegação, Toaster). O layout, dispensado, também sai da cobertura em `vitest.config.ts`. Os demais viram `sources`; nenhum é domínio (apresentação e cola), portanto `domainSources` é vazio e não há critério `mut`. Ficam fora de `sources`: `apps/web/components/ui/**` (gerado pela CLI, já excluído da cobertura em `vitest.config.ts`) e `apps/web/app/globals.css` (CSS, sem cobertura de linhas).
+**Fora do fluxo de feature (ADR-0017, decisão do Joel de 19/11).** A E9-F06 é só tela e composição: todos os arquivos de `shared/` e `app/(admin)/layout.tsx` são `dispensa-estilo` (em `exemptSources`), os primitivos de `components/ui/**` são `dispensa-biblioteca` (gerados pela CLI). Sem arquivo `tdd`, não há expect-red, cobertura nem mutação: a feature vai só para revisão visual no navegador (E9-T13), conforme "Fora do fluxo" do Ada. `sources`, `tests` e `criteria` do estado ficam vazios; os critérios A1 a A7 abaixo viram a lista de conferência visual. Depois da revisão, a lógica que aparecer (exibição condicional, ligação aria, regra do link ativo, mapa de status) é extraída para arquivo `tdd` e ganha teste de comportamento no E9-T12, que passa a vir depois do E9-T13. Os esboços ficam excluídos da cobertura em `vitest.config.ts` (`stub E9-F06`) até o T13. Ficam fora de `sources`: `apps/web/components/ui/**` (gerado pela CLI, já excluído da cobertura em `vitest.config.ts`) e `apps/web/app/globals.css` (CSS, sem cobertura de linhas).
 
 | Arquivo | Domínio |
 |---|---|
@@ -64,7 +64,7 @@ Classificação TDD (ADR-0017): `apps/web/app/(admin)/layout.tsx` é `dispensa-e
 | `apps/web/components/shared/status-badge.tsx` | não |
 | `apps/web/components/shared/admin-nav.tsx` | não |
 | `apps/web/components/shared/admin-shell.tsx` | não |
-| `apps/web/app/(admin)/layout.tsx` | não (`dispensa-estilo`, em `exemptSources`, fora de `sources`) |
+| `apps/web/app/(admin)/layout.tsx` | não (`dispensa-estilo`) |
 
 ## Domínio das entradas
 
