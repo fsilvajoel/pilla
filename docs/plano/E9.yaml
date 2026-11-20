@@ -136,6 +136,7 @@ cards:
       - node scripts/check-schemas.mjs
     done:
       - schemas for PersonListQuery (search, limit, cursor), PersonListResponse, PersonResponse and UpdatePersonRequest exist next to create-person.ts
+      - the schema tests cover CPF check digits, masked CPF/phone normalized to digits, limit bounds (default 20, max 100) and the mixed letter+digit search kept as plain text
       - RFC-004 §6 gains DUPLICATE_CPF 409 with detail "CPF já cadastrado." (D8)
     budget: {attempts: 3, toolCalls: 25, minutes: 15}
   - id: E9-T05
@@ -155,7 +156,8 @@ cards:
       - pnpm --filter @pilla/api typecheck
     done:
       - POST creates (201 + Location), invalid CPF gives 400, repeated CPF gives 409 DUPLICATE_CPF, unknown referrer gives 400
-      - GET list searches by name (accent and case insensitive) or CPF, paginates by cursor and respects limit
+      - GET list searches by name or CPF (listPersons rule, E5-F05 A11/A16 - name by case-insensitive substring, CPF by digit prefix ignoring dot and dash, union when the search is only digits; mixed letter+digit search is name substring only, never a CPF prefix), paginates by cursor and respects limit (default 20, max 100, above gives 400)
+      - POST and PATCH bodies are validated by the schema, not by the web - CPF with check digits, phone and PIX key format; masked CPF or phone input (dots, dash, parentheses) is normalized to digits; errors give 400 with the field list
       - GET by id gives 200 or 404 NOT_FOUND
       - PATCH without If-Match gives 428, stale version gives 409 VERSION_CONFLICT, success returns the new version in ETag
     budget: {attempts: 4, toolCalls: 30, minutes: 20}
@@ -277,10 +279,8 @@ cards:
     dependsOn: []
     readFirst:
       - docs/plano/E9-F06/plano.md
-      - docs/plano/E9.md
       - apps/web/components.json
       - apps/web/app/globals.css
-      - apps/web/lib/utils.ts
     allowedPaths:
       - apps/web/app/globals.css
       - apps/web/components.json
@@ -298,36 +298,13 @@ cards:
       - node scripts/check-allowed-deps.mjs
       - '! grep -qE "^\.dark" apps/web/app/globals.css'
     done:
-      - 'components added only with pnpm dlx shadcn@latest add: button input label textarea select form card table badge dialog alert-dialog dropdown-menu sheet sidebar separator skeleton sonner tabs tooltip pagination breadcrumb avatar; if the CLI refuses form, field is added instead and the swap is recorded in the plan (plan risk)'
-      - 'globals.css :root tokens use exactly the oklch values of the plan table "Paleta" (background, foreground, primary, primary-foreground, muted-foreground, accent, accent-foreground, success, success-foreground, warning, warning-foreground, destructive, ring), the sidebar-* tokens follow the same light green; no .dark block and no dark theme (D5, decisions 2-3)'
-      - AA contrast of primary-foreground on primary is checked by hand by the reviewer, no script (decision 1)
-      - planned variants only - Button keeps the shadcn variants; Badge gains success and warning (for status) with a short pt-BR comment in badge.tsx pointing to the plan; no other hand edit in components/ui
-      - sonner and next-themes are runtime deps approved by the Joel on 19/11 and listed in docs/travas.md; check-allowed-deps passes
+      - 'components added only with pnpm dlx shadcn@latest add: button input label textarea select form card table badge dialog alert-dialog dropdown-menu sheet sidebar separator skeleton sonner tabs tooltip pagination breadcrumb avatar (form -> field if the CLI refuses, recorded in the plan)'
+      - globals.css :root tokens are exactly the oklch values of the plan table "Paleta"; sidebar-* follow the same light green; no .dark block (D5)
+      - Badge gains success and warning variants with a short pt-BR comment; no other hand edit in components/ui
+      - sonner and next-themes listed in docs/travas.md; check-allowed-deps passes
+      - 'visual review in the browser: no console error, primary-foreground on primary has AA contrast (by hand)'
     budget: {attempts: 3, toolCalls: 30, minutes: 20}
-  - id: E9-T12
-    title: Behavior tests for logic isolated from the shared composites, after the visual review
-    kind: test-author
-    assignee: bia
-    rules: []
-    skills: [accessibility, react-best-practices]
-    refs: [docs/adr/0017-estrategia-de-testes.md, docs/plano/E9.md D6, docs/plano/E9-F06/plano.md]
-    dependsOn: [E9-T13]
-    readFirst:
-      - docs/plano/E9-F06/plano.md
-      - apps/web/components/shared/
-      - apps/web/vitest.config.ts
-      - apps/web/vitest.setup.ts
-    allowedPaths:
-      - apps/web/components/shared/**/*.test.tsx
-    protectedTests: []
-    checks:
-      - pnpm --filter @pilla/web exec vitest run components/shared
-      - node scripts/check-test-quality.mjs apps/web/components/shared
-    done:
-      - 'ADR-0017 order for UI: T13 mounts the composites with shadcn and the visual review in the browser comes first; only the logic the review isolates into its own tdd file (conditional display, aria wiring, active-link rule, status map) gets a behavior test here, written after the review'
-      - 'the plan criteria A1-A7 are the checklist of that logic; each test names its A<n>; no test by CSS class or component structure'
-      - 'closed with no test if the review finds no logic to isolate'
-    budget: {attempts: 4, toolCalls: 30, minutes: 20}
+
   - id: E9-T13
     title: Implement the shared composites and the ADMIN shell (sidebar layout)
     kind: implement
@@ -340,8 +317,6 @@ cards:
       - docs/plano/E9-F06/plano.md
       - docs/plano/E9-F06/esboco-shared.txt
       - apps/web/components/shared/
-      - apps/web/components/ui/
-      - apps/web/app/globals.css
     allowedPaths:
       - apps/web/components/shared/**
       - apps/web/app/(admin)/layout.tsx
@@ -350,122 +325,71 @@ cards:
       - pnpm --filter @pilla/web typecheck
       - pnpm --filter @pilla/web lint
       - pnpm --filter @pilla/web build
-      - '! grep -rnE "style=|#[0-9a-fA-F]{3,8}\b|rgb\(|oklch\(" apps/web/components/shared --include=*.tsx --exclude=*.test.tsx'
+      - '! grep -rnE "style=|#[0-9a-fA-F]{3,8}\b|rgb\(|oklch\(" apps/web/components/shared --include=*.tsx'
     done:
-      - visual review in the browser against the plan (A1-A7 as checklist); outside the feature flow (ADR-0017, all files dispensa-estilo), no expect-red or coverage gate
-      - composites only compose components/ui; no style= attribute and no literal color (hex, rgb, oklch) in shared/, colors only through the globals.css tokens (D5)
-      - the ADMIN layout uses the shadcn sidebar with Pessoas and Empréstimos, and the Toaster (sonner) with theme="light"; AdminShell and AdminNav live in shared/ (tested there) and app/(admin)/layout.tsx only composes them
       - stubs replaced; no "esboço" error and no "stub E9-F06" coverage exclusion left
+      - composites only compose components/ui; no style= and no literal color in shared/, colors only through globals.css tokens (D5)
+      - ADMIN layout uses the shadcn sidebar with Pessoas and Empréstimos and the Toaster (sonner, theme light); AdminShell and AdminNav live in shared/, layout.tsx only composes them
+      - 'visual review in the browser (plan A1-A7 as checklist): route opens, empty/loading/error states render, no console error'
     budget: {attempts: 3, toolCalls: 40, minutes: 30}
 
+
   # ---------------------------------------------------------------- E9-F07: cliente da API no web
-  - id: E9-T14
-    title: Write the tests for the typed server-side API client
-    kind: test-author
-    assignee: bia
-    rules: []
-    skills: [escrever-teste]
-    refs: [ADR-0013, RFC-004 §2, docs/plano/E9.md D4]
-    dependsOn: [E9-T06]
-    allowedPaths:
-      - apps/web/lib/api/*.test.ts
-    protectedTests: []
-    checks:
-      - '! pnpm --filter @pilla/web exec vitest run lib/api'
-      - node scripts/check-test-quality.mjs apps/web/lib/api
-    done:
-      - responses are parsed with the @pilla/schemas Zod; problem+json becomes a typed ApiProblem with code and field errors
-      - the base URL comes from PILLA_API_URL; the client is server-only
-    budget: {attempts: 4, toolCalls: 25, minutes: 15}
   - id: E9-T15
     title: Implement the server-side API client for people
     kind: implement
     assignee: claude
     rules: []
     skills: [react-best-practices, coding-guidelines, security-best-practices]
-    refs: [ADR-0013, docs/plano/E9.md D4]
-    dependsOn: [E9-T14]
+    refs: [ADR-0013, RFC-004 §2, docs/plano/E9.md D4]
+    dependsOn: [E9-T06]
     allowedPaths:
       - apps/web/lib/api/**
       - apps/web/package.json
       - .env.example
-    protectedTests: [apps/web/lib/api/*.test.ts]
-    checks:
-      - pnpm --filter @pilla/web exec vitest run lib/api
-      - pnpm --filter @pilla/web typecheck
-      - node scripts/check-env-example.mjs
-    done:
-      - the T14 tests pass; lib/mock-data.ts is no longer used by people code
-    budget: {attempts: 3, toolCalls: 30, minutes: 20}
-
-  # ---------------------------------------------------------------- E9-F08: lista e busca
-  - id: E9-T16
-    title: Write the tests for the people list screen
-    kind: test-author
-    assignee: bia
-    rules: []
-    skills: [escrever-teste, shadcn, react-best-practices]
-    refs: [PRD-001 RF-04, RFC-004 §3, ADR-0013, docs/plano/E9.md D8]
-    dependsOn: [E9-T13, E9-T15]
-    allowedPaths:
-      - apps/web/components/people/people-list.test.tsx
     protectedTests: []
     checks:
-      - '! pnpm --filter @pilla/web exec vitest run components/people/people-list.test.tsx'
-      - node scripts/check-test-quality.mjs apps/web/components/people/people-list.test.tsx
+      - pnpm --filter @pilla/web typecheck
+      - pnpm --filter @pilla/web lint
+      - node scripts/check-env-example.mjs
     done:
-      - the list shows name, masked CPF, phone and a link to the sheet; empty result shows EmptyState with "Nova pessoa"
-      - the search box writes ?search= in the URL; "Carregar mais" uses the cursor
-    budget: {attempts: 4, toolCalls: 25, minutes: 15}
+      - server-only fetch wrapper; base URL from PILLA_API_URL; responses parsed with the @pilla/schemas Zod; problem+json becomes a typed ApiProblem (code, field errors)
+      - lib/mock-data.ts is no longer used by people code
+    budget: {attempts: 3, toolCalls: 30, minutes: 20}
+
+
+  # ---------------------------------------------------------------- E9-F08: lista e busca
   - id: E9-T17
     title: Implement /pessoas (list and search) with shared components
     kind: implement
     assignee: claude
     rules: []
     skills: [shadcn, tailwind-css, react-best-practices, accessibility]
-    refs: [ADR-0013, docs/plano/E9.md D4 D6]
-    dependsOn: [E9-T16]
+    refs: [PRD-001 RF-04, ADR-0013, docs/plano/E9.md D4 D6 D8]
+    dependsOn: [E9-T13, E9-T15]
     allowedPaths:
       - apps/web/components/people/**
       - apps/web/app/(admin)/pessoas/page.tsx
       - apps/web/app/(admin)/pessoas/loading.tsx
-    protectedTests: [apps/web/components/people/people-list.test.tsx]
+    protectedTests: []
     checks:
-      - pnpm --filter @pilla/web exec vitest run components/people
       - pnpm --filter @pilla/web typecheck
       - pnpm --filter @pilla/web lint
     done:
-      - the T16 tests pass; the page is a Server Component reading the API; loading uses Skeleton
+      - Server Component reading the API; list shows name, masked CPF, phone and a link to the sheet; search box writes ?search= and passes it as is to the API; "Carregar mais" uses the cursor; loading uses Skeleton
+      - 'visual review in the browser: /pessoas opens; empty (EmptyState with "Nova pessoa"), loading and error states render; no console error'
     budget: {attempts: 3, toolCalls: 30, minutes: 20}
 
+
   # ---------------------------------------------------------------- E9-F09: cadastro e edição
-  - id: E9-T18
-    title: Write the tests for the person form (create and edit)
-    kind: test-author
-    assignee: bia
-    rules: []
-    skills: [escrever-teste, shadcn, react-best-practices]
-    refs: [PRD-001 RF-01, PRD-001 RF-03, ADR-0013, docs/plano/E9.md D8 D9]
-    dependsOn: [E9-T13, E9-T15]
-    allowedPaths:
-      - apps/web/components/people/person-form.test.tsx
-    protectedTests: []
-    checks:
-      - '! pnpm --filter @pilla/web exec vitest run components/people/person-form.test.tsx'
-      - node scripts/check-test-quality.mjs apps/web/components/people/person-form.test.tsx
-    done:
-      - React Hook Form + Zod (CreatePersonRequest) with CPF and phone masks; field errors from the API problem appear under the field
-      - DUPLICATE_CPF shows "CPF já cadastrado." on the CPF field; VERSION_CONFLICT shows a toast asking to reload
-      - referrer is chosen by searching people
-    budget: {attempts: 4, toolCalls: 30, minutes: 20}
   - id: E9-T19
     title: Rebuild the person form with shadcn and Server Actions (/pessoas/nova and /pessoas/[id]/editar)
     kind: implement
     assignee: claude
     rules: []
     skills: [shadcn, tailwind-css, react-best-practices, accessibility, coding-guidelines]
-    refs: [ADR-0013, docs/plano/E9.md D4 D6 D9]
-    dependsOn: [E9-T18]
+    refs: [PRD-001 RF-01, PRD-001 RF-03, ADR-0013, docs/plano/E9.md D4 D6 D8 D9]
+    dependsOn: [E9-T13, E9-T15]
     allowedPaths:
       - apps/web/components/people/**
       - apps/web/components/person-form.tsx
@@ -473,62 +397,43 @@ cards:
       - apps/web/app/(admin)/pessoas/nova/**
       - apps/web/app/(admin)/pessoas/[id]/editar/**
       - apps/web/app/(admin)/pessoas/actions.ts
-    protectedTests: [apps/web/components/people/person-form.test.tsx]
+    protectedTests: []
     checks:
-      - pnpm --filter @pilla/web exec vitest run components
       - pnpm --filter @pilla/web typecheck
       - pnpm --filter @pilla/web lint
     done:
-      - the T18 tests pass; the old components/person-form.* moves to components/people/ (old test removed)
-      - save calls a Server Action, then revalidatePath and redirect to the sheet with a success toast
+      - React Hook Form with the CreatePersonRequest Zod from @pilla/schemas (no rule copied into the web); CPF and phone masks are display only; API problem field errors appear under the field; referrer chosen by searching people
+      - save calls a Server Action, then revalidatePath and redirect to the sheet with a success toast; DUPLICATE_CPF shows the API detail on the CPF field; VERSION_CONFLICT shows a toast asking to reload
+      - old components/person-form.* moves to components/people/ (old test removed)
+      - 'visual review in the browser: both routes open; empty, loading and error states render; no console error'
     budget: {attempts: 3, toolCalls: 40, minutes: 30}
 
+
   # ---------------------------------------------------------------- E9-F10: ficha
-  - id: E9-T20
-    title: Write the tests for the person sheet screen with address and PIX management
-    kind: test-author
-    assignee: bia
-    rules: []
-    skills: [escrever-teste, shadcn, react-best-practices]
-    refs: [PRD-001 RF-02, PRD-001 RF-04, docs/plano/E9.md D7]
-    dependsOn: [E9-T10, E9-T13, E9-T15]
-    allowedPaths:
-      - apps/web/components/people/person-sheet.test.tsx
-      - apps/web/components/people/address-list.test.tsx
-      - apps/web/components/people/pix-key-list.test.tsx
-    protectedTests: []
-    checks:
-      - '! pnpm --filter @pilla/web exec vitest run components/people/person-sheet.test.tsx components/people/address-list.test.tsx components/people/pix-key-list.test.tsx'
-      - node scripts/check-test-quality.mjs apps/web/components/people
-    done:
-      - the sheet shows data, referrer (link), referrals (links), the empty "Nenhum contrato" block and the Editar button
-      - addresses and PIX keys - add and edit in a Dialog, remove with ConfirmDialog, primary marked with Badge and "Tornar principal"
-    budget: {attempts: 4, toolCalls: 30, minutes: 20}
   - id: E9-T21
     title: Implement /pessoas/[id] (sheet) with address and PIX management
     kind: implement
     assignee: claude
     rules: []
     skills: [shadcn, tailwind-css, react-best-practices, accessibility, coding-guidelines]
-    refs: [ADR-0013, docs/plano/E9.md D4 D6 D7]
-    dependsOn: [E9-T20]
+    refs: [PRD-001 RF-02, PRD-001 RF-04, ADR-0013, docs/plano/E9.md D4 D6 D7]
+    dependsOn: [E9-T10, E9-T13, E9-T15]
     allowedPaths:
       - apps/web/components/people/**
       - apps/web/app/(admin)/pessoas/[id]/page.tsx
       - apps/web/app/(admin)/pessoas/[id]/loading.tsx
       - apps/web/app/(admin)/pessoas/[id]/not-found.tsx
       - apps/web/app/(admin)/pessoas/actions.ts
-    protectedTests:
-      - apps/web/components/people/person-sheet.test.tsx
-      - apps/web/components/people/address-list.test.tsx
-      - apps/web/components/people/pix-key-list.test.tsx
+    protectedTests: []
     checks:
-      - pnpm --filter @pilla/web exec vitest run components/people
       - pnpm --filter @pilla/web typecheck
       - pnpm --filter @pilla/web lint
     done:
-      - the T20 tests pass; 404 from the API renders not-found
+      - sheet shows data, referrer and referrals (links), the empty "Nenhum contrato" block and the Editar button; 404 from the API renders not-found
+      - addresses and PIX keys - add and edit in a Dialog, remove with ConfirmDialog, primary marked with Badge and "Tornar principal" (the API decides the primary swap)
+      - 'visual review in the browser: route opens; empty, loading and error states render; no console error'
     budget: {attempts: 3, toolCalls: 40, minutes: 30}
+
 
   # ---------------------------------------------------------------- E9-F11: e2e
   - id: E9-T22
@@ -568,19 +473,19 @@ features:
     cards: [E9-T09, E9-T10]
   - id: E9-F06
     title: Web design system (light green palette, shadcn components, shared composites, ADMIN shell)
-    cards: [E9-T11, E9-T12, E9-T13]
+    cards: [E9-T11, E9-T13]
   - id: E9-F07
     title: Typed server-side API client in the web app
-    cards: [E9-T14, E9-T15]
+    cards: [E9-T15]
   - id: E9-F08
     title: People list and search screen
-    cards: [E9-T16, E9-T17]
+    cards: [E9-T17]
   - id: E9-F09
     title: Person create and edit screens
-    cards: [E9-T18, E9-T19]
+    cards: [E9-T19]
   - id: E9-F10
     title: Person sheet screen with address and PIX management
-    cards: [E9-T20, E9-T21]
+    cards: [E9-T21]
   - id: E9-F11
     title: People end-to-end test (Playwright, real API and Postgres)
     cards: [E9-T22]

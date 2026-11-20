@@ -11,11 +11,11 @@
     },
     "tests": {
       "status": "skipped",
-      "note": "fora do fluxo de feature (ADR-0017): só revisão visual"
+      "note": "fora do fluxo de feature (ADR-0017): só revisão visual; E9-T12 removido em 19/11/2026 (sem teste de front nesta fase)"
     },
     "testReview": {
       "status": "skipped",
-      "note": "fora do fluxo de feature (ADR-0017): só revisão visual"
+      "note": "fora do fluxo de feature (ADR-0017): só revisão visual; E9-T12 removido em 19/11/2026 (sem teste de front nesta fase)"
     },
     "implement": {
       "status": "skipped",

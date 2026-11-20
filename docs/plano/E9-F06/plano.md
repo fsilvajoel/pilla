@@ -1,19 +1,18 @@
 # Plano E9-F06: design system web (paleta verde clara, componentes shadcn, compostos shared/, casca do ADMIN)
 
-Plano da feature (etapa 1 do workflow feature). Fontes: `docs/plano/E9.md` (D5, D6, D10), cartões E9-T11, E9-T12 e E9-T13 em `docs/plano/E9.yaml`, ADR-0013. A feature não depende de nenhuma outra e corre em paralelo ao backend.
+Plano da feature (etapa 1 do workflow feature). Fontes: `docs/plano/E9.md` (D5, D6, D10), cartões E9-T11 e E9-T13 em `docs/plano/E9.yaml`, ADR-0013. A feature não depende de nenhuma outra e corre em paralelo ao backend.
 
 ## Escopo
 
 Entra:
 - **E9-T11 (implement, tela, Claude):** tokens claros em `apps/web/app/globals.css` com verde claro de destaque (D5); componentes primitivos instalados só pela CLI (`pnpm dlx shadcn@latest add ...`) em `apps/web/components/ui/`; variantes planejadas do `Badge` (`success` e `warning`) e os tokens `--success`, `--warning` (e `-foreground`) que elas usam.
-- **E9-T12 (test-author, Bia):** testes dos compostos de `apps/web/components/shared/` (um `*.test.tsx` por composto).
 - **E9-T13 (implement, tela, Claude):** compostos `PageHeader`, `EmptyState`, `FormField`, `DataTable`, `ConfirmDialog`, `StatusBadge` e a casca do ADMIN (`AdminShell` + `app/(admin)/layout.tsx`) com a sidebar do shadcn (Pessoas e Empréstimos) e o `Toaster` (sonner).
 
 Fora: telas de pessoas (F08 a F10), cliente da API (F07), tema escuro (D5: só tema claro), login e guard (D3), componentes de domínio em `components/people/` (D6, nascem nas telas), refatorar as telas e os componentes antigos que já existem (`person-form.tsx`, `loan-*.tsx` etc.).
 
-Tipo dos cartões: T11 e T13 são **tela** (layout e composição visual): levam `shadcn` e `tailwind-css` (e `react-best-practices`, `accessibility`, conforme o E9.yaml). T12 é test-author de componente: leva `accessibility` (tabela de skills de `cartao.md`) e `react-best-practices`, sem `shadcn` (decisão do PM em 19/11: o test-writer não precisa das regras de estilo, e a skill estourava o teto de skills); `escrever-teste` já vem do papel test-writer e não se repete no cartão.
+Tipo dos cartões: T11 e T13 são **tela** (layout e composição visual): levam `shadcn` e `tailwind-css` (e `react-best-practices`, `accessibility`, conforme o E9.yaml).
 
-Cartões: `docs/plano/E9.yaml`, IDs E9-T11, E9-T12, E9-T13.
+Cartões: `docs/plano/E9.yaml`, IDs E9-T11 e E9-T13. O E9-T12 (testes dos compostos) foi removido em 19/11/2026: nenhum teste de frontend nesta fase (ADR-0017, emenda 19/11/2026).
 
 ## Componentes shadcn previstos (nomes do registro)
 
@@ -38,7 +37,7 @@ O verde `--primary` sobre o branco tem contraste 1,55: serve de preenchimento co
 
 ## Contrato
 
-Esboço em `docs/plano/E9-F06/esboco-shared.txt` (assinaturas que lançam `Error("esboço: não implementado")`; o orquestrador copia cada bloco para o arquivo indicado antes do E9-T12 e exclui da cobertura com o comentário `stub E9-F06` enquanto não for implementado). Os esboços importam só tipos de `react` e `lucide-react`, para compilar antes do E9-T11. Todos exportam nomeado (sem `export default`), são Server Components, salvo `AdminNav` (`"use client"`, usa `usePathname`) e `ConfirmDialog` (`"use client"`, recebe os callbacks `onConfirm` e `onOpenChange`).
+Esboço em `docs/plano/E9-F06/esboco-shared.txt` (assinaturas que lançam `Error("esboço: não implementado")`; o orquestrador copia cada bloco para o arquivo indicado antes do E9-T13 e exclui da cobertura com o comentário `stub E9-F06` enquanto não for implementado). Os esboços importam só tipos de `react` e `lucide-react`, para compilar antes do E9-T11. Todos exportam nomeado (sem `export default`), são Server Components, salvo `AdminNav` (`"use client"`, usa `usePathname`) e `ConfirmDialog` (`"use client"`, recebe os callbacks `onConfirm` e `onOpenChange`).
 
 - `apps/web/components/shared/page-header.tsx`: `PageHeader(props: PageHeaderProps): ReactElement`; `PageHeaderProps = { title: string; description?: string; actions?: ReactNode }`.
 - `apps/web/components/shared/empty-state.tsx`: `EmptyState(props: EmptyStateProps): ReactElement`; `EmptyStateProps = { text: string; icon?: LucideIcon; action?: ReactNode }`.
@@ -52,7 +51,7 @@ Esboço em `docs/plano/E9-F06/esboco-shared.txt` (assinaturas que lançam `Error
 
 ## Arquivos de produção
 
-**Fora do fluxo de feature (ADR-0017, decisão do Joel de 19/11).** A E9-F06 é só tela e composição: todos os arquivos de `shared/` e `app/(admin)/layout.tsx` são `dispensa-estilo` (em `exemptSources`), os primitivos de `components/ui/**` são `dispensa-biblioteca` (gerados pela CLI). Sem arquivo `tdd`, não há expect-red, cobertura nem mutação: a feature vai só para revisão visual no navegador (E9-T13), conforme "Fora do fluxo" do Ada. `sources`, `tests` e `criteria` do estado ficam vazios; os critérios A1 a A7 abaixo viram a lista de conferência visual. Depois da revisão, a lógica que aparecer (exibição condicional, ligação aria, regra do link ativo, mapa de status) é extraída para arquivo `tdd` e ganha teste de comportamento no E9-T12, que passa a vir depois do E9-T13. Os esboços ficam excluídos da cobertura em `vitest.config.ts` (`stub E9-F06`) até o T13. Ficam fora de `sources`: `apps/web/components/ui/**` (gerado pela CLI, já excluído da cobertura em `vitest.config.ts`) e `apps/web/app/globals.css` (CSS, sem cobertura de linhas).
+**Fora do fluxo de feature (ADR-0017, decisão do Joel de 19/11).** A E9-F06 é só tela e composição: todos os arquivos de `shared/` e `app/(admin)/layout.tsx` são `dispensa-estilo` (em `exemptSources`), os primitivos de `components/ui/**` são `dispensa-biblioteca` (gerados pela CLI). Sem arquivo `tdd`, não há expect-red, cobertura nem mutação: a feature vai só para revisão visual no navegador (E9-T13), conforme "Fora do fluxo" do Ada. `sources`, `tests` e `criteria` do estado ficam vazios; os critérios A1 a A7 abaixo viram a lista de conferência visual. Sem teste de frontend nesta fase (emenda de 19/11/2026 à ADR-0017): o E9-T12 foi removido; regra que a revisão encontrar vai para a API ou fica anotada para a fase futura de testes de front. Os esboços ficam excluídos da cobertura em `vitest.config.ts` (`stub E9-F06`) até o T13. Ficam fora de `sources`: `apps/web/components/ui/**` (gerado pela CLI, já excluído da cobertura em `vitest.config.ts`) e `apps/web/app/globals.css` (CSS, sem cobertura de linhas).
 
 | Arquivo | Domínio |
 |---|---|
@@ -72,42 +71,39 @@ A feature não tem entrada externa (campo de tela do usuário, parâmetro de API
 
 | Entrada | Formato aceito | Mínimo | Máximo | Exemplos rejeitados (ou de borda) | Erro esperado | Fonte |
 |---|---|---|---|---|---|---|
-| `DataTable.rows` | lista de linhas | 0 linhas | sem limite (paginação é da tela) | lista vazia | não é erro: mostra `emptyText`, sem linha de dados | D6 (T12 done: "rows, empty") |
+| `DataTable.rows` | lista de linhas | 0 linhas | sem limite (paginação é da tela) | lista vazia | não é erro: mostra `emptyText`, sem linha de dados | D6 ("rows, empty") |
 | `DataTable.columns` | lista de colunas com `key` única | 1 | sem limite | duas colunas com a mesma `key` | fora do escopo (tipos) | D6 |
-| `FormField.error` | texto ou ausente | ausente | sem limite | `undefined`, `""` | ausente ou `""` = sem mensagem e sem `aria-invalid` | D6 (T12 done: "error message") |
+| `FormField.error` | texto ou ausente | ausente | sem limite | `undefined`, `""` | ausente ou `""` = sem mensagem e sem `aria-invalid` | D6 ("error message") |
 | `PageHeader.description` e `actions` | opcionais | ausente | sem limite | ausente | ausente = não renderiza o bloco | D6 |
-| `ConfirmDialog.open` | booleano | `false` | `true` | `false` | `false` = nada no DOM | D6 (T12 done: "confirm/cancel") |
-| `StatusBadge.status` | chave do mapa | uma chave | sem limite | chave fora do mapa | erro de compilação (genérico `K`) | D6 (T12 done: "map of status to Badge variant") |
+| `ConfirmDialog.open` | booleano | `false` | `true` | `false` | `false` = nada no DOM | D6 ("confirm/cancel") |
+| `StatusBadge.status` | chave do mapa | uma chave | sem limite | chave fora do mapa | erro de compilação (genérico `K`) | D6 ("map of status to Badge variant") |
 
 Não há limite numérico nem de formato vindo de PRD/RFC: é feature de interface. Os textos exatos de rótulos das telas (sidebar: "Pessoas", "Empréstimos") vêm do T13 done.
 
 ## Riscos
 
-- Teste de componente com `Sidebar` precisa de `window.matchMedia` (hook `use-mobile`), que o jsdom não traz; `vitest.setup.ts` não está no `allowedPaths`. O teste do `AdminShell` define o stub de `matchMedia` no próprio arquivo.
-- `AdminNav` usa `usePathname`: o teste mocka `next/navigation`.
 - O registro do shadcn pode não ter `form` no estilo `radix-nova` (nas versões recentes o primitivo é `field`). Se a CLI recusar `form`, o T11 usa `field` e registra a troca; `FormField` não depende de `form`/react-hook-form (usa só `Label` e `cloneElement`), para não acoplar o composto à lib de formulário.
 - `sonner` (e `next-themes`) entram como dependência nova em `apps/web/package.json`, prevista no `allowedPaths` do T11 e na lista do done; mas nenhuma das duas está em "Dependências permitidas" de `docs/travas.md` (§7: dependência nova exige aprovação do Joel), e o `check-allowed-deps` recusaria. Pergunta aberta em `pendencias-pm.md` (E9-T11); o T11 só roda depois da resposta. `Toaster` fora de `ThemeProvider` usa o tema `system`; como o MVP é só claro, o T13 passa `theme="light"`.
 - Variante `Badge` `success`/`warning` é edição do arquivo gerado: só esta é permitida (D6). Reinstalar `badge` pela CLI a apagaria; o T11 deve registrar isso num comentário curto no arquivo.
-- Coverage do web usa limite global de 85%, mas o gate de cobertura da feature exige 100% por arquivo de `sources`: os testes cobrem todos os ramos (com e sem `description`, `actions`, `error`, `icon`, link ativo e inativo).
 - Contraste AA sem teste automático (ver Decisões, 1).
-- Os atributos `data-variant` (A5, A6, C20) só existem depois do T11, que gera `button.tsx` e `badge.tsx`; a conferência deles é feita na revisão dos testes, depois do T11.
+- Os atributos `data-variant` (A5, A6, C20) só existem depois do T11, que gera `button.tsx` e `badge.tsx`; a conferência deles é visual, no T13.
 
 ## Dependências
 
 - Nenhuma feature. Pré-condições já no repositório: `components.json` (estilo `radix-nova`, aliases `@/components/ui`), Tailwind 4 e `tw-animate-css` instalados, `lib/utils.ts` com `cn()`.
-- Internas: E9-T12 não depende de E9-T11 (o esboço não importa `components/ui`, então os testes falham por asserção, não por import, antes da implementação; a conferência de `data-variant` contra `badge.tsx` vai para a revisão dos testes, depois do T11); E9-T13 depende de E9-T12.
+- Internas: nenhuma (T11 e T13 independentes).
 - Consumida por E9-F07 a F10 (`shared/` e casca).
 
 ## Critérios de aceite
 
-Molde fixo: entrada, domínio, saída, erro, fonte, camada. Todos os testes ficam em `apps/web/components/shared/` (único caminho de teste do `allowedPaths` do E9-T12).
+Molde fixo: entrada, domínio, saída, erro, fonte, camada. Sem teste automatizado: a conferência é visual (E9-T13).
 
 ### A1: PageHeader mostra título, descrição e ações
 - entrada: `title="Pessoas"`, `description="Cadastro de clientes"`, `actions=<button>Nova pessoa</button>`; e uma segunda renderização só com `title="Pessoas"`.
 - domínio: `PageHeader.description` e `actions` presentes e ausentes.
 - saída: com tudo, um `heading` de nível 1 com o nome "Pessoas", o texto "Cadastro de clientes" e o botão "Nova pessoa"; só com título, o heading e nenhum outro texto nem botão.
 - erro: nenhum.
-- fonte: D6 (compostos `shared/`); E9-T12 done (title, description, actions).
+- fonte: D6 (compostos `shared/`); D6 (title, description, actions).
 - camada: unit
 
 ### A2: EmptyState mostra ícone, texto e ação
@@ -115,7 +111,7 @@ Molde fixo: entrada, domínio, saída, erro, fonte, camada. Todos os testes fica
 - domínio: `EmptyState.icon` e `action` presentes e ausentes.
 - saída: com tudo, o texto, um `svg` de ícone com `aria-hidden="true"` e o botão "Cadastrar"; só com texto, o texto sem `svg` e sem botão.
 - erro: nenhum.
-- fonte: D6; E9-T12 done (icon, text, action).
+- fonte: D6; D6 (icon, text, action).
 - camada: unit
 
 ### A3: FormField liga rótulo, controle e mensagem de erro
@@ -123,7 +119,7 @@ Molde fixo: entrada, domínio, saída, erro, fonte, camada. Todos os testes fica
 - domínio: `FormField.error` presente, ausente e `""`.
 - saída: `getByLabelText("CPF")` devolve o `<input id="cpf">`; com erro, o texto "CPF inválido" aparece com `role="alert"` e `id="cpf-error"`, o input tem `aria-invalid="true"` e `aria-describedby` contém `cpf-error`; sem erro e com `error=""`, não há `role="alert"` e o input não tem `aria-invalid="true"`; com `description`, o texto aparece com `id="cpf-description"` e `aria-describedby` o cita.
 - erro: nenhum.
-- fonte: D6; E9-T12 done (label, control, error message); WCAG 2.1 (skill accessibility). Os ids `cpf-error` e `cpf-description` foram aprovados pelo PM em 19/11 (Decisões, 5).
+- fonte: D6; D6 (label, control, error message); WCAG 2.1 (skill accessibility). Os ids `cpf-error` e `cpf-description` foram aprovados pelo PM em 19/11 (Decisões, 5).
 - camada: unit
 
 ### A4: DataTable mostra cabeçalhos, linhas na ordem e o texto de vazio
@@ -131,7 +127,7 @@ Molde fixo: entrada, domínio, saída, erro, fonte, camada. Todos os testes fica
 - domínio: `DataTable.rows` com 0, 2 e N linhas; `columns` com 1 ou mais colunas.
 - saída: 2 `columnheader` ("Nome", "Telefone") e, no corpo, 2 linhas com as células "Ana", "+5511999990001", "Bia", "+5511999990002" nessa ordem; com `rows=[]`, os cabeçalhos continuam, o texto "Nenhum resultado" aparece e não há linha de dados. Propriedade: para qualquer lista de linhas com ids distintos (0 a 20), com N > 0 o corpo (`rowgroup` do `tbody`) tem exatamente N `row`; com 0, tem exatamente 1 `row`, a de vazio, com o texto de vazio; o texto de vazio aparece se e somente se `rows.length === 0`.
 - erro: nenhum.
-- fonte: D6; E9-T12 done (columns, rows, empty).
+- fonte: D6; D6 (columns, rows, empty).
 - camada: unit, prop
 
 ### A5: ConfirmDialog confirma e cancela
@@ -139,7 +135,7 @@ Molde fixo: entrada, domínio, saída, erro, fonte, camada. Todos os testes fica
 - domínio: `ConfirmDialog.open` verdadeiro e falso; `destructive` ausente e `true` (prop do contrato; exigida pela cobertura de 100%).
 - saída: aberto, `alertdialog` com o nome "Excluir endereço?", o texto da descrição e os botões "Excluir" e "Cancelar"; clicar "Excluir" chama `onConfirm` 1 vez; clicar "Cancelar" chama `onOpenChange` com `false` e `onConfirm` 0 vezes; fechado, nenhum `alertdialog` no DOM. Com `destructive=true`, o botão "Excluir" tem `data-variant="destructive"`; sem `destructive`, `data-variant="default"` (atributo conferido contra o `button.tsx` gerado).
 - erro: nenhum.
-- fonte: D6; E9-T12 done (confirm/cancel); contrato `ConfirmDialogProps.destructive` (esboço).
+- fonte: D6; D6 (confirm/cancel); contrato `ConfirmDialogProps.destructive` (esboço).
 - camada: unit
 
 ### A6: StatusBadge mostra o rótulo e a variante do mapa
@@ -147,7 +143,7 @@ Molde fixo: entrada, domínio, saída, erro, fonte, camada. Todos os testes fica
 - domínio: `StatusBadge.status` = cada chave do mapa; `map` com as 6 variantes de `BadgeVariant`.
 - saída: o texto exibido é `label` da chave (`"Ativo"`, `"Inativo"`, `"Pendente"`) e o elemento carrega a variante da chave (`data-variant="success"`, `"secondary"`, `"warning"`; atributo conferido contra o `badge.tsx` gerado). Propriedade: para qualquer mapa de 1 a 6 chaves e qualquer chave dele, o texto exibido é o `label` dessa chave.
 - erro: nenhum em runtime (chave fora do mapa é erro de tipo).
-- fonte: D6; E9-T12 done (map of status to Badge variant); E9-T11 done (variantes `success` e `warning`).
+- fonte: D6; D6 (map of status to Badge variant); E9-T11 done (variantes `success` e `warning`).
 - camada: unit, prop
 
 ### A7: casca do ADMIN com sidebar, navegação e Toaster
@@ -158,7 +154,7 @@ Molde fixo: entrada, domínio, saída, erro, fonte, camada. Todos os testes fica
 - fonte: E9-T13 done ("shadcn sidebar with Pessoas and Empréstimos, and the Toaster"); ADR-0013; rotas existentes `app/(admin)/pessoas` e `app/(admin)/emprestimos`.
 - camada: unit
 
-## Cenários
+## Cenários (checklist de revisão visual, sem teste automatizado)
 
 - C1 (A1, unit): `PageHeader` com título, descrição e ação mostra o heading "Pessoas", "Cadastro de clientes" e o botão "Nova pessoa" (fonte D6).
 - C2 (A1, unit): `PageHeader` só com título mostra o heading e não renderiza descrição nem ação.
@@ -183,15 +179,7 @@ Molde fixo: entrada, domínio, saída, erro, fonte, camada. Todos os testes fica
 
 ## Arquivos de teste previstos
 
-Pacote `@pilla/web` (`pnpm --filter @pilla/web exec vitest run components/shared`); todos unit, e prop onde indicado:
-- `apps/web/components/shared/page-header.test.tsx` (C1, C2)
-- `apps/web/components/shared/empty-state.test.tsx` (C3, C4)
-- `apps/web/components/shared/form-field.test.tsx` (C5, C6, C7)
-- `apps/web/components/shared/data-table.test.tsx` (C8, C9; C10 prop com fast-check)
-- `apps/web/components/shared/confirm-dialog.test.tsx` (C11, C12, C13, C20)
-- `apps/web/components/shared/status-badge.test.tsx` (C14; C15 prop)
-- `apps/web/components/shared/admin-shell.test.tsx` (C16 a C19; stub de `matchMedia` e mock de `next/navigation` no arquivo)
-- e2e: nenhum (sem critério e2e; a navegação de ponta a ponta é da E9-F11).
+Nenhum nesta fase (emenda de 19/11/2026 à ADR-0017); os cenários C1 a C20 são conferidos no navegador.
 
 ## Verificação sem critério A<n>
 

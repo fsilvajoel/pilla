@@ -61,6 +61,14 @@ zod-openapi), conforme RFC-004.
 
 Pendência: comandos `contract` e `e2e` (`pnpm --filter @pilla/web e2e`) em `commands` do `harness.project.yaml`.
 
+## Emenda 19/11/2026
+
+Decisão do Joel, endurece esta ADR nesta fase:
+- Nada de frontend (`apps/web`: telas, componentes visuais, casca) recebe teste, nem antes nem depois da tela. Teste de front fica para o futuro.
+- Teste só onde há lógica a validar, principalmente backend (`apps/api`, `packages/schemas`, `packages/finance`). O E2E do fluxo crítico (E9-F11, Playwright) continua.
+- Regra que estaria no front e precisa de validação mora na API ou no zod, com teste lá.
+- Cartões enxutos: só o necessário para executar. Tela fecha com critérios objetivos mais revisão visual no navegador (rota abre, estados vazio/carregando/erro, sem erro no console).
+
 ## Alternativas consideradas
 - Orval / openapi-typescript gerando tipos do OpenAPI — inverteria a fonte da verdade (RFC-004: OpenAPI sai do
   zod); `z.infer` já dá os tipos.
