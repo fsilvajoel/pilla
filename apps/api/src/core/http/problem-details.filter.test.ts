@@ -1,12 +1,13 @@
-import { describe, it, expect, beforeAll, afterAll } from "vitest";
+import { describe, it, expect, beforeAll, afterAll, afterEach, vi } from "vitest";
+import { fc } from "@fast-check/vitest";
 import request from "supertest";
 import type { INestApplication } from "@nestjs/common";
 import { Test } from "@nestjs/testing";
 import { ProblemException } from "./problem-exception";
-import { HttpException, HttpStatus } from "@nestjs/common";
+import { HttpException, HttpStatus, Logger } from "@nestjs/common";
 import { ZodValidationPipe } from "./zod-validation.pipe";
 import { z } from "zod";
-import { Controller, Post, Get, Body, Query, UsePipes } from "@nestjs/common";
+import { Controller, Post, Get, Body, Query } from "@nestjs/common";
 import { configureApp } from "./configure-app";
 import { problemSchema } from "@pilla/schemas";
 import { HealthController } from "./health.controller";
@@ -39,20 +40,31 @@ const fixtureQuerySchema = z.strictObject({
 @Controller("fixtures")
 class FixtureController {
   @Post("echo")
-  @UsePipes(new ZodValidationPipe(fixtureBodySchema))
-  echo(@Body() body: z.infer<typeof fixtureBodySchema>) {
+  echo(@Body(new ZodValidationPipe(fixtureBodySchema)) body: z.infer<typeof fixtureBodySchema>) {
     return body;
   }
 
   @Get("list")
-  @UsePipes(new ZodValidationPipe(fixtureQuerySchema))
-  list(@Query() query: z.infer<typeof fixtureQuerySchema>) {
+  list(@Query(new ZodValidationPipe(fixtureQuerySchema)) query: z.infer<typeof fixtureQuerySchema>) {
     return { limit: query.limit };
   }
 
   @Get("boom")
   boom() {
     throw new Error("senha=segredo-123");
+  }
+
+  // Lança a mensagem recebida na query, para exercitar mensagens variadas (C20).
+  @Get("boom-message")
+  boomMessage(@Query("msg") msg: string) {
+    throw new Error(msg);
+  }
+
+  @Get("conflict-errors")
+  conflictErrors() {
+    throw new ProblemException("VERSION_CONFLICT", "Versão desatualizada.", [
+      { field: "version", message: "Esperada a versão 3." },
+    ]);
   }
 
   @Get("missing")
@@ -222,7 +234,12 @@ describe("ProblemDetailsFilter over Supertest (A4-A7)", () => {
   });
 
   describe("C19-C20 (A6): 500 INTERNAL_ERROR sem vazar", () => {
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
     it("C19 (A6, unit): erro com segredo não vaza na resposta", async () => {
+      const logSpy = vi.spyOn(Logger.prototype, "error").mockImplementation(() => undefined);
       const res = await request(httpServer(app))
         .get("/api/v1/fixtures/boom")
         .expect(500)
@@ -239,29 +256,34 @@ describe("ProblemDetailsFilter over Supertest (A4-A7)", () => {
       expect(text).not.toContain("segredo-123");
       expect(text).not.toContain("stack");
       expect(text).not.toMatch(/\n\s+at /);
+      // Log: só tipo e código (decisão do PM, 20/11); nenhum argumento carrega a mensagem do erro.
+      expect(logSpy).toHaveBeenCalledTimes(1);
+      const logged = logSpy.mock.calls.flat().map(String).join(" ");
+      expect(logged).toContain("Error");
+      expect(logged).toContain("INTERNAL_ERROR");
+      expect(logged).not.toContain("segredo-123");
     });
 
-    it("C20 (A6, unit): múltiplas mensagens de erro não vazam", async () => {
-      const messages = [
-        "senha=abc123",
-        "token=xyz789",
-        "chave=secreta",
-        "Erro de conexão com banco",
-        "Falha interna inesperada",
-      ];
-      for (const msg of messages) {
-        // The fixture route /boom throws a fixed message; we verify the contract
-        // that no internal message leaks by checking the response structure.
-        const res = await request(httpServer(app))
-          .get("/api/v1/fixtures/boom")
-          .expect(500)
-          .expect("Content-Type", /application\/problem\+json/);
+    it("C20 (A6, prop): mensagens lançadas de verdade não vazam na resposta", async () => {
+      await fc.assert(
+        fc.asyncProperty(fc.stringMatching(/^seg-[0-9a-f]{8,12}$/), async (msg) => {
+          const res = await request(httpServer(app))
+            .get("/api/v1/fixtures/boom-message")
+            .query({ msg })
+            .expect(500)
+            .expect("Content-Type", /application\/problem\+json/);
 
-        expect(problemBody(res).code).toBe("INTERNAL_ERROR");
-        expect(problemSchema.safeParse(res.body).success).toBe(true);
-        const text = JSON.stringify(res.body);
-        expect(text).not.toContain(msg);
-      }
+          expect(res.body).toEqual({
+            title: "Erro interno",
+            status: 500,
+            detail: "Erro interno do servidor.",
+            code: "INTERNAL_ERROR",
+          });
+          expect(problemSchema.safeParse(res.body).success).toBe(true);
+          expect(res.text).not.toContain(msg);
+        }),
+        { numRuns: 15 },
+      );
     });
   });
 
@@ -277,6 +299,24 @@ describe("ProblemDetailsFilter over Supertest (A4-A7)", () => {
         status: 409,
         detail: "Versão desatualizada.",
         code: "VERSION_CONFLICT",
+      });
+      expect(problemSchema.safeParse(res.body).success).toBe(true);
+    });
+  });
+
+  describe("C21 (A7) com errors", () => {
+    it("C21 (A7, unit): code fora de VALIDATION_FAILED com errors informados leva os errors no corpo", async () => {
+      const res = await request(httpServer(app))
+        .get("/api/v1/fixtures/conflict-errors")
+        .expect(409)
+        .expect("Content-Type", /application\/problem\+json/);
+
+      expect(res.body).toEqual({
+        title: "VERSION_CONFLICT",
+        status: 409,
+        detail: "Versão desatualizada.",
+        code: "VERSION_CONFLICT",
+        errors: [{ field: "version", message: "Esperada a versão 3." }],
       });
       expect(problemSchema.safeParse(res.body).success).toBe(true);
     });

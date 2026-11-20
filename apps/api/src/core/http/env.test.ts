@@ -118,15 +118,24 @@ describe("readApiEnv (A1, A2)", () => {
     it("C7 (A2, prop): senha nunca aparece na mensagem de erro", () => {
       fc.assert(
         fc.property(
-          fc.string({ minLength: 1, maxLength: 20 }).filter((s) => !/[:@/?#%\s]/.test(s)),
+          fc
+            .string({ minLength: 1, maxLength: 20 })
+            .filter((s) => !/[:@/?#%\s]/.test(s))
+            // Prefixo que a mensagem constante nunca contém (senão "a" ou "_" casariam com o texto fixo).
+            .map((s) => `zq9${s}`),
           (password) => {
-            const url = `postgres://u:${password}@h:5432/db`;
-            try {
-              readApiEnv({ PILLA_API_PORT: validPort, DATABASE_URL: url });
-            } catch (e) {
-              const msg = (e as Error).message;
-              expect(msg).not.toContain(password);
-            }
+            // Porta 99999 é inválida na URL: a leitura tem de lançar sempre.
+            const url = `postgres://u:${password}@h:99999/db`;
+            let message = "";
+            expect(() => {
+              try {
+                readApiEnv({ PILLA_API_PORT: validPort, DATABASE_URL: url });
+              } catch (e) {
+                message = (e as Error).message;
+                throw e;
+              }
+            }).toThrow("DATABASE_URL inválida: informe postgres://usuario:senha@host:porta/banco.");
+            expect(message).not.toContain(password);
           },
         ),
       );

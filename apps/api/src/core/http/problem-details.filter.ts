@@ -34,9 +34,9 @@ function toProblem(exception: unknown, logger: Logger): Problem {
     if (exception.getStatus() === 404) return standardProblem("NOT_FOUND");
     if (exception.getStatus() === 400) return standardProblem("VALIDATION_FAILED");
   }
-  // Mensagem e stack só no log do servidor; nunca no corpo.
-  const message = exception instanceof Error ? exception.message : String(exception);
-  logger.error(message, exception instanceof Error ? exception.stack : undefined);
+  // Log só com tipo da exceção e código; mensagem e stack podem conter segredos (decisão do PM, 20/11).
+  const type = exception instanceof Error ? exception.name : typeof exception;
+  logger.error(`${type} -> INTERNAL_ERROR`);
   return standardProblem("INTERNAL_ERROR");
 }
 

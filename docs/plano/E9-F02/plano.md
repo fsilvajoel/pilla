@@ -134,7 +134,7 @@ Camada: Supertest sobre o app Nest em memória é `unit` (sem navegador, sem red
 ### A6: erro inesperado responde 500 sem vazar
 - entrada: rota fixture que lança `Error("senha=segredo-123")`; e, na propriedade, `Error` com mensagem qualquer
 - domínio: exceção não tratada
-- saída: status 500, `application/problem+json`, corpo `{ title: "Erro interno", status: 500, detail: "Erro interno do servidor.", code: "INTERNAL_ERROR" }` (P1) que passa em `problemSchema.safeParse`; o texto da resposta não contém a mensagem lançada, `stack` nem linha de stack (`/\n\s+at /`); a mensagem e o stack vão para `Logger.error`
+- saída: status 500, `application/problem+json`, corpo `{ title: "Erro interno", status: 500, detail: "Erro interno do servidor.", code: "INTERNAL_ERROR" }` (P1) que passa em `problemSchema.safeParse`; o texto da resposta não contém a mensagem lançada, `stack` nem linha de stack (`/\n\s+at /`); o log (`Logger.error`) recebe só o nome da classe da exceção e o código `INTERNAL_ERROR`; a mensagem e o stack não vão para o log (decisão do Joel, 20/11: log não grava segredo, e a primeira linha do stack repete a mensagem)
 - erro: nenhum
 - fonte: E9-T02 done; RFC-004 §2 (problem+json); P1 pendente para o `code`
 - camada: unit, prop
@@ -215,7 +215,7 @@ Camada: Supertest sobre o app Nest em memória é `unit` (sem navegador, sem red
 - C16 (A4, unit): `POST` com corpo `{"name":` (JSON truncado) e `Content-Type: application/json` responde 400 `VALIDATION_FAILED` sem a chave `errors` (risco R3)
 - C17 (A5, unit): `GET /api/v1/nao-existe` responde 404 com `application/problem+json` e corpo `{ title: "Não encontrado", status: 404, detail: "Recurso não encontrado.", code: "NOT_FOUND" }`
 - C18 (A5, unit): `GET /health` (sem prefixo) e `POST /api/v1/health` respondem 404 `NOT_FOUND`
-- C19 (A6, unit): `GET /api/v1/fixtures/boom` (lança `Error("senha=segredo-123")`) responde 500 `application/problem+json` com `code: "INTERNAL_ERROR"`, `title: "Erro interno"`, `detail: "Erro interno do servidor."`; o texto da resposta não contém `segredo-123`, `stack` nem linha de stack (`/\n\s+at /`); `Logger.error` foi chamado com a mensagem
+- C19 (A6, unit): `GET /api/v1/fixtures/boom` (lança `Error("senha=segredo-123")`) responde 500 `application/problem+json` com `code: "INTERNAL_ERROR"`, `title: "Erro interno"`, `detail: "Erro interno do servidor."`; o texto da resposta não contém `segredo-123`, `stack` nem linha de stack (`/\n\s+at /`); `Logger.error` foi chamado com o nome `Error` e o código `INTERNAL_ERROR`, e nenhum argumento contém `segredo-123`
 - C20 (A6, prop): para qualquer mensagem `m` (texto com pelo menos 8 caracteres), um `Error(m)` lançado devolve 500, corpo que passa em `problemSchema.safeParse` e texto da resposta sem `m`
 - C21 (A7, unit): `GET /api/v1/fixtures/conflict` (lança `ProblemException("VERSION_CONFLICT", "Versão desatualizada.")`) responde 409 com `code: "VERSION_CONFLICT"`, `title: "VERSION_CONFLICT"`, `detail: "Versão desatualizada."`; com `errors` informados, eles vão no corpo
 - C22 (A8, unit): `GET /api/v1/health` com PGlite migrado responde 200, `application/json`, corpo `{ status: "ok", database: "up" }` que passa em `healthResponseSchema.safeParse`

@@ -9,6 +9,7 @@ import { DATABASE_HANDLE } from "./db/database";
 import type { DatabaseHandle } from "./db/database";
 import { migratedTestDb } from "./db/test-db";
 import { healthResponseSchema } from "@pilla/schemas";
+import { createServer } from "node:net";
 import type { AddressInfo, Server } from "node:net";
 import type { App } from "supertest/types";
 
@@ -96,9 +97,23 @@ describe("App, bootstrap e composição (A10, A11)", () => {
 
   describe("C26 (A11, unit): bootstrap escuta em 127.0.0.1:porta", () => {
     let app: INestApplication;
-    const freePort = 15432;
+    let freePort = 0;
+
+    // Pede uma porta livre ao SO (porta 0), lê o número e fecha o servidor.
+    async function pickFreePort(): Promise<number> {
+      const probe = createServer();
+      await new Promise<void>((resolve) => probe.listen(0, "127.0.0.1", resolve));
+      const { port } = probe.address() as AddressInfo;
+      await new Promise<void>((resolve) =>
+        probe.close(() => {
+          resolve();
+        }),
+      );
+      return port;
+    }
 
     beforeAll(async () => {
+      freePort = await pickFreePort();
       app = await bootstrap({
         PILLA_API_PORT: String(freePort),
         DATABASE_URL: "postgres://u:p@127.0.0.1:5432/pilla",
