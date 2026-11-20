@@ -26,6 +26,7 @@ export * from "./api/core/attachment-upload-url";
 export * from "./api/treasury/account-entry";
 export * from "./api/people/create-person";
 export * from "./api/people/update-person";
+export * from "./api/people/person-list-query";
 export * from "./api/people/person-detail";
 export * from "./api/people/address";
 export * from "./api/people/pix-key";

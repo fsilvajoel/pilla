@@ -22,6 +22,10 @@ export const reasonSchema = z.string().trim().min(1).max(500);
 
 /** Telefone E.164 (RFC-005 `persons.phone`, decisões do Joel de 17/11): "+5511987654321". */
 export const phoneSchema = z.string().regex(/^[+][1-9][0-9]{7,14}$/);
+/** UF em maiúsculas (RFC-005 `addresses.state char(2)`): "SP". */
+export const stateSchema = z.string().regex(/^[A-Z]{2}$/);
+/** CEP só com dígitos (RFC-005 `addresses.postal_code char(8)`): "01001000". */
+export const postalCodeSchema = z.string().regex(/^\d{8}$/);
 /** Número do contrato `AAAA-NNNN` (RFC-005 `loans.loan_number`): "2026-0012". */
 export const loanNumberSchema = z.string().regex(/^\d{4}-\d{4}$/);
 

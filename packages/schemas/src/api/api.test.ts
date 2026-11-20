@@ -16,6 +16,7 @@ import { createPaymentRequest } from "./payments/create-payment";
 import { reversePaymentRequest } from "./payments/reverse-payment";
 import { createPersonRequest, personListResponse } from "./people/create-person";
 import { addressSchema, createAddressRequest, updateAddressRequest } from "./people/address";
+import { personListQuery } from "./people/person-list-query";
 import { personDetailResponse } from "./people/person-detail";
 import { createPixKeyRequest, pixKeySchema, updatePixKeyRequest } from "./people/pix-key";
 import { updatePersonRequest } from "./people/update-person";
@@ -289,6 +290,13 @@ const cases: BodyCase[] = [
     invalid: pixKeyInvalid,
   },
   {
+    name: "personListQuery",
+    schema: personListQuery,
+    body: {},
+    optional: { search: "joão 123", limit: "50", cursor: "abc" },
+    invalid: { search: "x".repeat(101), limit: "101", cursor: "" },
+  },
+  {
     name: "personListResponse",
     schema: personListResponse,
     body: { items: [person], nextCursor: null },
@@ -485,5 +493,79 @@ describe("phoneSchema and loanNumberSchema (RFC-005)", () => {
     ["26-0012", false],
   ])("loan number %s is valid: %s", (loanNumber, valid) => {
     expect(loanNumberSchema.safeParse(loanNumber).success).toBe(valid);
+  });
+});
+
+describe("personListQuery rules (RF-04)", () => {
+  it("defaults the limit to 20", () => {
+    expect(personListQuery.parse({})).toEqual({ limit: 20 });
+  });
+
+  it.each([
+    ["1", 1],
+    ["100", 100],
+    ["20", 20],
+  ])("accepts limit %s", (text, limit) => {
+    expect(personListQuery.parse({ limit: text }).limit).toBe(limit);
+  });
+
+  it.each(["0", "101", " 6 ", "1e1", "6.5", "-1", "abc", ""])("rejects limit %j", (text) => {
+    expect(personListQuery.safeParse({ limit: text }).success).toBe(false);
+  });
+
+  it.each(["maria", "JOÃO da silva", "529.982", "52998", "maria 52998", "a1b2"])(
+    "keeps the search %j as plain text",
+    (search) => {
+      expect(personListQuery.parse({ search }).search).toBe(search);
+    },
+  );
+
+  it("trims the search", () => {
+    expect(personListQuery.parse({ search: "  maria  " }).search).toBe("maria");
+  });
+});
+
+describe("masked CPF and phone in person bodies (RF-01)", () => {
+  const base = { fullName: "Maria da Silva", cpf: "529.982.247-25", phone: "+55 (11) 98765-4321" };
+
+  it("createPersonRequest normalizes CPF and phone", () => {
+    const parsed = createPersonRequest.parse(base);
+    expect(parsed.cpf).toBe("52998224725");
+    expect(parsed.phone).toBe("+5511987654321");
+  });
+
+  it("updatePersonRequest normalizes CPF and phone", () => {
+    const parsed = updatePersonRequest.parse({ ...base, version: 2 });
+    expect(parsed.cpf).toBe("52998224725");
+    expect(parsed.phone).toBe("+5511987654321");
+  });
+
+  it("still checks the digits after removing the mask", () => {
+    expect(createPersonRequest.safeParse({ ...base, cpf: "529.982.247-26" }).success).toBe(false);
+    expect(createPersonRequest.safeParse({ ...base, phone: "(11) 98765-4321" }).success).toBe(false);
+  });
+
+  it.each([null, "texto", [1]])("lets the schema reject a body that is not an object (%j)", (body) => {
+    expect(createPersonRequest.safeParse(body).success).toBe(false);
+  });
+
+  it("ignores non-string cpf and phone", () => {
+    expect(createPersonRequest.safeParse({ ...base, cpf: 52998224725, phone: 5511987654321 }).success).toBe(false);
+  });
+});
+
+describe("DUPLICATE_CPF problem code (D8)", () => {
+  const duplicate = { title: "CPF duplicado", detail: "CPF já cadastrado.", code: "DUPLICATE_CPF" };
+
+  it("maps to 409 and only to 409", () => {
+    expect(problemSchema.safeParse({ ...duplicate, status: 409 }).success).toBe(true);
+    expect(problemSchema.safeParse({ ...duplicate, status: 422 }).success).toBe(false);
+  });
+});
+
+describe("INTERNAL_ERROR problem code", () => {
+  it("maps to 500", () => {
+    const internal = { title: "Erro interno", detail: "Erro interno do servidor.", code: "INTERNAL_ERROR" };
+    expect(problemSchema.safeParse({ ...internal, status: 500 }).success).toBe(true);
   });
 });

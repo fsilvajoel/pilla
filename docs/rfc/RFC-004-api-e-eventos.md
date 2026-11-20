@@ -163,6 +163,7 @@ Resposta `200`:
 | 403 | `FORBIDDEN` | papel sem permissão / recurso de outra pessoa |
 | 404 | `NOT_FOUND` | inexistente (portal usa 404 também para "não é seu") |
 | 409 | `VERSION_CONFLICT` | `If-Match` desatualizado |
+| 409 | `DUPLICATE_CPF` | CPF já cadastrado; `detail` "CPF já cadastrado." (D8, aprovado por Joel em 20/11/2026) |
 | 422 | `LOAN_NOT_EDITABLE` | editar contrato fora de DRAFT |
 | 422 | `INSUFFICIENT_ACCOUNT_BALANCE` | RN-C10 |
 | 422 | `FIRST_DUE_DATE_BEFORE_DISBURSEMENT` | RN-C04 |
