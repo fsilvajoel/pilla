@@ -51,6 +51,11 @@ beforeEach(async () => {
   await client.query("delete from lending.loans");
   await client.query("delete from core.outbox");
   await client.query("delete from core.audit_log");
+  await client.query("delete from people.persons");
+  await client.query(
+    "insert into people.persons (id, full_name, cpf, phone) values ($1, 'Ana Souza', '52998224725', '+5511987654321')",
+    [PERSON],
+  );
 });
 afterEach(() => {
   vi.useRealTimers();
