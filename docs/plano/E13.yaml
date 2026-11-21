@@ -1,87 +1,476 @@
 delivery: E13
 title: Default terms editing and the operational alerts (due today, this week, overdue, pending review)
-# Esqueleto: detalhar checks, done, protectedTests, budget e readFirst antes de executar (formato de E10.yaml).
+# Plano e decisões D1–D10 em docs/plano/E13.md; escopo e critérios de cada feature em docs/plano/E13-F0x/plano.md.
+# Cartões em inglês (ADR-0012). Dono recomendado: ver "Divisão entre trabalhadores" em E13.md.
+# bia: testes de schema/domínio puro; claude (Sonnet): testes HTTP com PGlite, telas e E2E; baidu: backend.
+# Todo cartão que toca apps/web leva skills; cartão de tela leva também shadcn e tailwind-css (gate card-skills).
+# Não depende da E11: F01, F02A, F03A, F03B, F04A. Depende da E11-T04 (POST /payments): F02B, F03C, F04B.
+# IDs: T01..T06 mantidos (T01 agora só testa o schema; T05 agora só o formulário); T07..T13 são novos.
 cards:
   # ---------------------------------------------------------------- E13-F01: editar parâmetros padrão
   - id: E13-T01
-    title: Write the tests for PUT /settings/default-terms
+    title: Write the schema tests for updateDefaultTermsRequest
     kind: test-author
     assignee: bia
+    rules: [RN-E03]
     skills: [escrever-teste]
-    refs: [PRD-001 RF-40, ADR-0006, ADR-0008, docs/plano/E13.md]
+    refs: [PRD-001 RF-40, ADR-0004, ADR-0006, docs/plano/E13.md D5, docs/plano/E13-F01/plano.md, docs/adr/0017-estrategia-de-testes.md]
     dependsOn: [E10-T06]
     allowedPaths:
-      - apps/api/src/lending/http/default-terms-update.http.test.ts
-      - packages/schemas/src/api/lending/update-default-terms.test.ts
-  - id: E13-T02
-    title: Implement default terms editing as a new effective row
-    kind: implement
-    assignee: baidu
-    skills: [editar-arquivo, coding-guidelines, modular-design-principles]
-    refs: [PRD-001 RF-40, ADR-0006, ADR-0008, docs/plano/E13.md]
+      - packages/schemas/src/api/lending/update-default-terms.test.ts   # novo
+    protectedTests: []
+    checks:
+      - '! pnpm --filter @pilla/schemas exec vitest run src/api/lending/update-default-terms.test.ts'
+      - node scripts/check-test-quality.mjs packages/schemas/src/api/lending/update-default-terms.test.ts
+      - pnpm --filter @pilla/schemas typecheck
+    done:
+      - 'schema (A8, A9, C14 to C18): accepts the five fields as integers within the limits of the plano; rejects a missing field, a negative value, a non-integer, roundingStepCents 0, a value above the limit, and any unknown key (strict)'
+      - the red run fails because update-default-terms.ts does not exist yet, not because of a typo in the test
+    budget: {attempts: 4, toolCalls: 25, minutes: 15}
+    readFirst:
+      - docs/plano/E13-F01/plano.md
+      - packages/schemas/src/api/lending/create-loan.ts
+      - packages/schemas/src/api/lending/update-loan.test.ts
+      - packages/schemas/src/common.ts
+  - id: E13-T07
+    title: Write the HTTP tests for PUT /settings/default-terms (new effective row, audit, frozen contracts)
+    kind: test-author
+    assignee: claude
+    rules: [RN-E03]
+    skills: [escrever-teste]
+    refs: [PRD-001 RF-40, PRD-001 RF-41, PRD-001 CA-10, ADR-0006, ADR-0008, RFC-004 §3, RFC-004 §6, docs/plano/E13.md D5 D6, docs/plano/E13-F01/plano.md]
     dependsOn: [E13-T01]
     allowedPaths:
-      - packages/schemas/src/api/lending/update-default-terms.ts
-      - packages/schemas/src/index.ts
-      - apps/api/src/lending/application/**
-      - apps/api/src/lending/http/**
+      - apps/api/src/lending/http/default-terms-update.http.test.ts   # novo
+    protectedTests: []
+    checks:
+      - '! pnpm --filter @pilla/api exec vitest run src/lending/http/default-terms-update.http.test.ts'
+      - node scripts/check-test-quality.mjs apps/api/src/lending/http/default-terms-update.http.test.ts
+      - pnpm --filter @pilla/api typecheck
+    done:
+      - 'update (A1 to A4, C1 to C6): PUT with the five fields answers 200 with the new values; a second row exists in default_terms and the first is untouched; GET right after returns the new values; two PUTs in a row leave the last one current'
+      - 'audit (A5, C7 to C9): one audit_log row per change, action default_terms.updated, entityType default_terms, before the old terms and after the new ones, written in the same transaction (a forced failure of the audit insert leaves no new default_terms row)'
+      - 'frozen contract (A6, A7, C10 to C13): a loan created before the PUT keeps its late fee, late interest, grace and rounding step (GET /loans/{id}); a loan created after the PUT carries the new values (CA-10, ADR-0008)'
+      - 'invalid body (A8, C14 to C16): missing field, negative value and unknown key answer 422 VALIDATION_FAILED naming the field; a PUT equal to the current terms answers 200 and creates no row and no audit'
+    budget: {attempts: 4, toolCalls: 30, minutes: 20}
+    readFirst:
+      - docs/plano/E13-F01/plano.md
+      - apps/api/src/lending/http/default-terms.http.test.ts
+      - apps/api/src/lending/http/loans-draft.http.test.ts
       - apps/api/src/lending/infra/default-terms-repository.ts
-  # ---------------------------------------------------------------- E13-F02: alertas
-  - id: E13-T03
-    title: Write the tests for the alerts query
-    kind: test-author
-    assignee: claude
-    skills: [escrever-teste]
-    refs: [PRD-001 RF-50, ADR-0005, RFC-002 §3.5, docs/plano/E13.md]
-    dependsOn: [E10-T10, E11-T04]
-    allowedPaths:
-      - apps/api/src/lending/http/alerts.http.test.ts
-  - id: E13-T04
-    title: Implement the alerts query (due, overdue, pending review)
+      - apps/api/src/db/test-db.ts
+  - id: E13-T02
+    title: Implement default terms editing as a new effective row, with audit
     kind: implement
     assignee: baidu
+    rules: [RN-E03]
     skills: [editar-arquivo, coding-guidelines, modular-design-principles]
-    refs: [PRD-001 RF-50, ADR-0005, docs/plano/E13.md]
-    dependsOn: [E13-T03]
+    refs: [PRD-001 RF-40, ADR-0006, ADR-0008, RFC-004 §3, docs/plano/E13.md D5 D6, docs/plano/E13-F01/plano.md]
+    dependsOn: [E13-T01, E13-T07]
     allowedPaths:
+      - packages/schemas/src/api/lending/update-default-terms.ts   # novo
+      - packages/schemas/src/index.ts
       - apps/api/src/lending/application/**
-      - apps/api/src/lending/http/**
-      - apps/api/src/payments/public/**
-  # ---------------------------------------------------------------- E13-F03: web
-  - id: E13-T05
-    title: Add the default terms form and the alerts screen
-    kind: implement
-    assignee: claude
-    skills: [shadcn, tailwind-css, react-best-practices, accessibility, coding-guidelines]
-    refs: [PRD-001 RF-40, PRD-001 RF-41, PRD-001 RF-50, docs/plano/E13.md]
-    dependsOn: [E13-T02, E13-T04, E10-T15, E9-T15]
+      - apps/api/src/lending/http/default-terms.controller.ts
+      - apps/api/src/lending/infra/default-terms-repository.ts
+    protectedTests:
+      - packages/schemas/src/api/lending/update-default-terms.test.ts
+      - apps/api/src/lending/http/default-terms-update.http.test.ts
+    checks:
+      - pnpm --filter @pilla/api exec vitest run src/lending
+      - pnpm --filter @pilla/schemas exec vitest run src/api/lending
+      - pnpm --filter @pilla/api typecheck
+      - pnpm --filter @pilla/api lint
+      - pnpm check:schemas
+      - pnpm depcruise
+    done:
+      - the protected tests pass (A1 to A9)
+      - PUT only inserts (no UPDATE or DELETE on default_terms) and the insert and the audit row share one transaction (ADR-0006)
+      - findCurrentDefaultTerms orders by effective_from desc then id desc, so two rows in the same instant resolve the same way every time
+      - the loans table and the loan-creation code are not touched (ADR-0008 holds by construction)
+    hints:
+      - copy the audit call and the transaction shape of the draft creation in loans-service.ts (auditEntry, action name default_terms.updated)
+      - updateDefaultTermsRequest reuses bpsSchema and positiveCentsSchema from common.ts and adds a max per field (see the plano); keep it a strictObject
+      - compare the new body with findCurrentDefaultTerms before inserting; equal values return the current terms with no insert and no audit
+    budget: {attempts: 3, toolCalls: 40, minutes: 30}
+    readFirst:
+      - docs/plano/E13-F01/plano.md
+      - apps/api/src/lending/http/default-terms.controller.ts
+      - apps/api/src/lending/application/loans-service.ts
+      - apps/api/src/lending/infra/default-terms-repository.ts
+      - apps/api/src/core/public/audit.ts
+      - packages/schemas/src/api/lending/create-loan.ts
+    sizeNote: um schema curto, um método de serviço e uma rota
+
+  # ---------------------------------------------------------------- E13-F02A: painel, parcelas
+  - id: E13-T08
+    title: Write the schema tests for dashboardTodayResponse (the full contract, pending block included)
+    kind: test-author
+    assignee: bia
+    rules: [RN-E01, RN-E02]
+    skills: [escrever-teste]
+    refs: [PRD-001 RF-50, ADR-0004, ADR-0005, RFC-004 §3, docs/plano/E13.md D2, docs/plano/E13-F02A/plano.md, docs/adr/0017-estrategia-de-testes.md]
+    dependsOn: [E10-T10]
     allowedPaths:
-      - apps/web/lib/api/lending.ts
-      - apps/web/app/(admin)/configuracoes/**
-      - apps/web/app/(admin)/alertas/**
-      - apps/web/components/settings/**
-      - apps/web/components/alerts/**
-  # ---------------------------------------------------------------- E13-F04: E2E
-  - id: E13-T06
-    title: Write the Playwright e2e of default terms and alerts
+      - packages/schemas/src/api/lending/dashboard-today.test.ts   # novo
+    protectedTests: []
+    checks:
+      - '! pnpm --filter @pilla/schemas exec vitest run src/api/lending/dashboard-today.test.ts'
+      - node scripts/check-test-quality.mjs packages/schemas/src/api/lending/dashboard-today.test.ts
+      - pnpm --filter @pilla/schemas typecheck
+    done:
+      - 'shape (A10, C17 to C20): the response has referenceDate, weekEndDate, dueToday, dueThisWeek, overdue and pendingReview; each block is {count, totalCents, items}; every money field is a non-negative integer'
+      - 'items (A11, C21 to C24): an overdue item requires daysOverdue >= 1, lateChargesCents and totalDueCents; a due item has no daysOverdue; a pending item requires paymentId, loanId, loanNumber, personName, loanStatus, amountCents > 0, paidAt, method and createdAt'
+      - 'strict (A12, C25, C26): unknown keys and a float in any cents field are rejected; an empty pendingReview {count 0, totalCents 0, items []} is valid (the F02A shape)'
+      - the red run fails because dashboard-today.ts does not exist yet
+    budget: {attempts: 4, toolCalls: 25, minutes: 15}
+    readFirst:
+      - docs/plano/E13-F02A/plano.md
+      - packages/schemas/src/api/lending/loan-views.ts
+      - packages/schemas/src/api/lending/payoff-quote.test.ts
+      - packages/schemas/src/common.ts
+  - id: E13-T03
+    title: Write the HTTP tests for GET /dashboard/today (due today, due this week, overdue)
     kind: test-author
     assignee: claude
-    skills: [escrever-teste, accessibility]
-    refs: [PRD-001 RF-40, PRD-001 RF-50, docs/plano/E13.md]
-    dependsOn: [E13-T05]
+    rules: [RN-E01, RN-E02, RN-E03]
+    skills: [escrever-teste]
+    refs: [PRD-001 RF-50, ADR-0005, RFC-002 §3.5, RFC-004 §3, docs/plano/E10.md D11, docs/plano/E13.md D2 D3 D4 D7, docs/plano/E13-F02A/plano.md]
+    dependsOn: [E13-T08]
     allowedPaths:
+      - apps/api/src/lending/http/dashboard-today.http.test.ts   # novo
+    protectedTests: []
+    checks:
+      - '! pnpm --filter @pilla/api exec vitest run src/lending/http/dashboard-today.http.test.ts'
+      - node scripts/check-test-quality.mjs apps/api/src/lending/http/dashboard-today.http.test.ts
+      - pnpm --filter @pilla/api typecheck
+    done:
+      - 'buckets (A1 to A4, C1 to C8): an open installment due today is in dueToday; due tomorrow and due in 7 days are in dueThisWeek; due in 8 days is in none; due yesterday is in overdue; a PAID installment is in none; installments of DRAFT, CANCELLED, PAID_OFF and WRITTEN_OFF loans are in none'
+      - 'amounts (A5, A6, C9 to C13): openCents is principal plus interest still open after confirmed allocations; a partial payment lowers it and the status is PARTIAL or OVERDUE_PARTIAL; totals equal the sum of the items'
+      - 'overdue (A7 to A9, C14 to C19): daysOverdue is today minus the due date in days; lateChargesCents equals @pilla/finance at today in Brasília on the open balance; with grace 0 an installment 1 day late already has charges; with grace 3 it is overdue with lateChargesCents 0 until day 4; totalDueCents is openCents plus lateChargesCents'
+      - 'order (A13, C20 to C22): dueToday by loan number, dueThisWeek by due date, overdue by daysOverdue descending, ties by loan number then installment number'
+      - 'pending placeholder (A14, C23): pendingReview is {count 0, totalCents 0, items []} even when PENDING_REVIEW rows exist (the F02B fills it); the test is marked so the F02B replaces it'
+      - 'no storage (A15, C24): the call writes no row in any table (ADR-0005) and an empty database answers 200 with four empty blocks'
+    budget: {attempts: 4, toolCalls: 30, minutes: 20}
+    readFirst:
+      - docs/plano/E13-F02A/plano.md
+      - apps/api/src/lending/http/loans-read.http.test.ts
+      - apps/api/src/lending/application/loan-assessment.ts
+      - packages/finance/src/late-charges.ts
+      - packages/finance/src/balance.ts
+      - apps/api/src/db/test-db.ts
+  - id: E13-T04
+    title: Implement GET /dashboard/today for the installment blocks (derived, nothing stored)
+    kind: implement
+    assignee: baidu
+    rules: [RN-E01, RN-E02, RN-E03]
+    skills: [editar-arquivo, coding-guidelines, modular-design-principles]
+    refs: [PRD-001 RF-50, ADR-0005, RFC-002 §3.5, RFC-004 §3, docs/plano/E10.md D5 D11, docs/plano/E13.md D1 D2 D3 D7, docs/plano/E13-F02A/plano.md]
+    dependsOn: [E13-T03]
+    allowedPaths:
+      - packages/schemas/src/api/lending/dashboard-today.ts   # novo
+      - packages/schemas/src/index.ts
+      - apps/api/src/lending/application/**
+      - apps/api/src/lending/http/dashboard.controller.ts   # novo
+      - apps/api/src/lending/infra/loan-queries.ts
+      - apps/api/src/lending/lending.module.ts
+    protectedTests:
+      - packages/schemas/src/api/lending/dashboard-today.test.ts
+      - apps/api/src/lending/http/dashboard-today.http.test.ts
+      - apps/api/src/lending/http/loans-read.http.test.ts
+      - apps/api/src/lending/http/payoff-quote.http.test.ts
+    checks:
+      - pnpm --filter @pilla/api exec vitest run src/lending
+      - pnpm --filter @pilla/schemas exec vitest run src/api/lending
+      - pnpm --filter @pilla/api typecheck
+      - pnpm --filter @pilla/api lint
+      - pnpm check:schemas
+      - pnpm depcruise
+    done:
+      - the protected tests pass (A1 to A15), including the E10 read tests (the shared helpers were reused, not copied)
+      - the schema file defines the full contract of docs/plano/E13-F02A/plano.md (four blocks, pendingReview included) and the controller returns pendingReview as the fixed empty block
+      - no computed value is stored (ADR-0005); open amounts and charges come from assessLoan and @pilla/finance, today comes from todayInBrasilia
+      - installments are read in batch for the ACTIVE loans (selectInstallmentsByLoan), not one query per installment
+    hints:
+      - export the per-installment open amount helper that assessLoan already uses (openInstallments in loan-assessment.ts) instead of rewriting it
+      - add selectActiveLoans(db) to loan-queries.ts (status ACTIVE, ordered by loan_number); do not reuse the paginated selectLoanPage
+      - week window is today+1 to today+7 inclusive (pendência E13-F02A, default a); keep the 7 in one named constant
+      - personName comes from findPersonNames (people/public), as in the list
+    budget: {attempts: 3, toolCalls: 40, minutes: 30}
+    readFirst:
+      - docs/plano/E13-F02A/plano.md
+      - apps/api/src/lending/application/loan-assessment.ts
+      - apps/api/src/lending/application/loans-service.ts
+      - apps/api/src/lending/infra/loan-queries.ts
+      - apps/api/src/lending/http/loans.controller.ts
+      - packages/finance/src/balance.ts
+    sizeNote: um schema, uma consulta de ativos e um agrupador sobre o que a E10-F05 já calcula
+
+  # ---------------------------------------------------------------- E13-F02B: painel, pendentes
+  - id: E13-T09
+    title: Write the HTTP tests for the pendingReview block of GET /dashboard/today
+    kind: test-author
+    assignee: claude
+    rules: []
+    skills: [escrever-teste]
+    refs: [PRD-001 RF-50, ADR-0005, RFC-004 §3, docs/plano/E11.md, docs/plano/E13.md D2, docs/plano/E13-F02B/plano.md]
+    dependsOn: [E13-T04, E11-T04]
+    allowedPaths:
+      - apps/api/src/lending/http/dashboard-pending.http.test.ts   # novo
+      - apps/api/src/lending/http/dashboard-today.http.test.ts
+      - apps/api/src/payments/public/pending-review.test.ts   # novo
+    protectedTests: []
+    checks:
+      - '! pnpm --filter @pilla/api exec vitest run src/lending/http/dashboard-pending.http.test.ts src/payments/public/pending-review.test.ts'
+      - node scripts/check-test-quality.mjs apps/api/src/lending/http/dashboard-pending.http.test.ts apps/api/src/payments/public/pending-review.test.ts
+      - pnpm --filter @pilla/api typecheck
+    done:
+      - 'port (A1, A2, C1 to C4): pendingReviewPayments returns only payments with status PENDING_REVIEW, oldest createdAt first; CONFIRMED and REVERSED are excluded'
+      - 'block (A3 to A7, C5 to C12): pendingReview.count and totalCents equal the PENDING_REVIEW rows; each item has paymentId, loanId, loanNumber, personName, loanStatus, amountCents, paidAt, method and createdAt; a payment on a DRAFT loan is included with loanStatus DRAFT (E11 decision of 20/11); confirming the payment through the E11 route removes it from the block'
+      - 'regression (A8, C13): the placeholder case of E13-T03 (pendingReview always empty) is replaced by the real behaviour; the three installment blocks answer exactly as before'
+      - the payments are created with POST /payments of the E11 (or by inserting PENDING_REVIEW rows directly if that route is not yet merged, same result)
+    budget: {attempts: 4, toolCalls: 30, minutes: 20}
+    readFirst:
+      - docs/plano/E13-F02B/plano.md
+      - docs/plano/E11.md
+      - apps/api/src/payments/infra/schema.ts
+      - apps/api/src/payments/public
+      - apps/api/src/lending/http/dashboard-today.http.test.ts
+  - id: E13-T10
+    title: Fill pendingReview with the payments waiting for review
+    kind: implement
+    assignee: baidu
+    rules: []
+    skills: [editar-arquivo, coding-guidelines, modular-design-principles]
+    refs: [PRD-001 RF-50, ADR-0002, ADR-0005, RFC-004 §3, RFC-005 §5, docs/plano/E10.md D5, docs/plano/E13.md D2, docs/plano/E13-F02B/plano.md]
+    dependsOn: [E13-T09]
+    allowedPaths:
+      - apps/api/src/payments/public/**
+      - apps/api/src/payments/infra/pending-review-reader.ts   # novo
+      - apps/api/src/lending/application/**
+      - apps/api/src/lending/infra/loan-queries.ts
+    protectedTests:
+      - apps/api/src/lending/http/dashboard-pending.http.test.ts
+      - apps/api/src/payments/public/pending-review.test.ts
+      - apps/api/src/lending/http/dashboard-today.http.test.ts
+      - packages/schemas/src/api/lending/dashboard-today.test.ts
+    checks:
+      - pnpm --filter @pilla/api exec vitest run src/lending src/payments
+      - pnpm --filter @pilla/schemas exec vitest run src/api/lending
+      - pnpm --filter @pilla/api typecheck
+      - pnpm --filter @pilla/api lint
+      - pnpm check:schemas
+      - pnpm depcruise
+    done:
+      - the protected tests pass (A1 to A8)
+      - packages/schemas is not changed (the contract was closed in E13-F02A); only the fixed empty block is replaced
+      - lending reads payments only through payments/public (no import of payments/infra); payments stays free of imports from lending (ADR-0002)
+      - nothing is stored (ADR-0005); the index payments_pending_review_idx serves the query
+    hints:
+      - payments/public exposes pendingReviewPayments() returning plain rows (id, loanId, personId, amountCents, paidAt, method, createdAt); lending adds loanNumber and loanStatus from its own loans table and personName from findPersonNames
+      - the loans of the pending payments may be in any status, so look them up by id, not through selectActiveLoans
+    budget: {attempts: 3, toolCalls: 35, minutes: 25}
+    readFirst:
+      - docs/plano/E13-F02B/plano.md
+      - apps/api/src/payments/public
+      - apps/api/src/payments/infra/schema.ts
+      - apps/api/src/lending/application/loans-service.ts
+      - packages/schemas/src/api/lending/dashboard-today.ts
+
+  # ---------------------------------------------------------------- E13-F03A: web, formulário de parâmetros
+  - id: E13-T05
+    title: Add the default terms form at /configuracoes
+    kind: implement
+    assignee: claude
+    rules: [RN-E03]
+    skills:
+      - shadcn
+      - tailwind-css
+      - react-best-practices
+      - react-best-practices#rerender-derived-state-no-effect
+      - accessibility
+      - coding-guidelines
+    refs: [PRD-001 RF-40, PRD-001 RF-41, ADR-0013, docs/plano/decisoes-2026-11-19.md, docs/plano/E13.md D5 D6 D10, docs/plano/E13-F03A/plano.md]
+    dependsOn: [E13-T02, E10-T15, E9-T13]
+    allowedPaths:
+      - apps/web/lib/api/settings.ts   # novo
+      - apps/web/app/(admin)/configuracoes/**
+      - apps/web/components/settings/**
+      - apps/web/components/shared/admin-nav.tsx
+      - apps/web/lib/labels.ts
+    protectedTests: []
+    checks:
+      - pnpm --filter @pilla/web typecheck
+      - pnpm --filter @pilla/web lint
+    done:
+      - 'apps/web/lib/api/settings.ts has getDefaultTerms and updateDefaultTerms on the E9 wrapper; responses parsed with @pilla/schemas; problem+json as ApiProblem'
+      - '/configuracoes shows the form filled with the current terms from GET /settings/default-terms: multa por atraso (%), juros de mora (% ao mês), dias de carência, taxa de juros sugerida (% ao mês) and passo de arredondamento (R$); percent and reais fields convert to bps and cents with the same helpers as the loan form (no float in the request)'
+      - saving sends PUT through a Server Action, shows "Parâmetros atualizados." and the form keeps the saved values; a note under the form says the change only applies to contracts created from now on (existing contracts keep theirs)
+      - 422 shows the message next to the field; other API errors show through the shared error component
+      - the admin nav gets the item Configurações (href /configuracoes); the page uses PageHeader and FormField from components/shared
+      - 'visual review in the browser: the route opens with the current values, saving works, empty/loading/error states render, no console error'
+    budget: {attempts: 3, toolCalls: 40, minutes: 30}
+    readFirst:
+      - docs/plano/E13-F03A/plano.md
+      - apps/web/lib/api/loans.ts
+      - apps/web/components/loans/new-loan-form.tsx
+      - apps/web/components/shared/form-field.tsx
+      - apps/web/components/shared/page-header.tsx
+      - apps/web/components/shared/admin-nav.tsx
+      - apps/web/app/(admin)/emprestimos/actions.ts
+
+  # ---------------------------------------------------------------- E13-F03B: web, painel de parcelas
+  - id: E13-T11
+    title: Add the /alertas screen with due today, due this week and overdue blocks
+    kind: implement
+    assignee: claude
+    rules: [RN-E01, RN-E02]
+    skills:
+      - shadcn
+      - tailwind-css
+      - react-best-practices
+      - react-best-practices#rendering-conditional-render
+      - accessibility
+      - coding-guidelines
+    refs: [PRD-001 RF-50, ADR-0005, ADR-0013, docs/plano/E10.md D11 D12, docs/plano/E13.md D2 D8 D10, docs/plano/E13-F03B/plano.md]
+    dependsOn: [E13-T04, E10-T15, E9-T13]
+    allowedPaths:
+      - apps/web/lib/api/dashboard.ts   # novo
+      - apps/web/app/(admin)/alertas/**
+      - apps/web/components/alerts/**
+      - apps/web/components/shared/admin-nav.tsx
+      - apps/web/lib/labels.ts
+    protectedTests: []
+    checks:
+      - pnpm --filter @pilla/web typecheck
+      - pnpm --filter @pilla/web lint
+    done:
+      - 'apps/web/lib/api/dashboard.ts has getDashboardToday on the E9 wrapper, parsed with dashboardTodayResponse'
+      - '/alertas shows three blocks, in this order: "Vencendo hoje", "Vencendo na semana" and "Atrasadas", each with the count and the total in R$ in the heading; each row shows the person, the contract number (link to /emprestimos/{loanId}), the installment number, the due date, the open amount; the overdue rows also show "N dias de atraso", the late charges and the total to pay'
+      - the pendingReview block is NOT rendered in this card (it is ligado in E13-T12); the screen ignores the field
+      - empty block shows an EmptyState ("Nenhuma parcela vencendo hoje." and the equivalents); the page header says the reference date in Brasília
+      - the admin nav gets the item Alertas (href /alertas); the table uses DataTable and StatusBadge from components/shared; the loading.tsx and error states exist
+      - 'visual review in the browser: the route opens with seeded data, the three blocks and the empty states render, links go to the contract, no console error'
+    budget: {attempts: 3, toolCalls: 40, minutes: 30}
+    readFirst:
+      - docs/plano/E13-F03B/plano.md
+      - apps/web/components/loans/loans-table.tsx
+      - apps/web/components/shared/data-table.tsx
+      - apps/web/components/shared/empty-state.tsx
+      - apps/web/components/shared/status-badge.tsx
+      - apps/web/app/(admin)/emprestimos/page.tsx
+      - packages/schemas/src/api/lending/dashboard-today.ts
+
+  # ---------------------------------------------------------------- E13-F03C: web, bloco de pendentes
+  - id: E13-T12
+    title: Add the pending review block to /alertas
+    kind: implement
+    assignee: claude
+    rules: []
+    skills:
+      - shadcn
+      - tailwind-css
+      - react-best-practices
+      - react-best-practices#rendering-conditional-render
+      - accessibility
+      - coding-guidelines
+    refs: [PRD-001 RF-50, docs/plano/E11.md, docs/plano/E13.md D2 D8 D10, docs/plano/E13-F03C/plano.md]
+    dependsOn: [E13-T10, E13-T11]
+    allowedPaths:
+      - apps/web/app/(admin)/alertas/**
+      - apps/web/components/alerts/**
+      - apps/web/lib/labels.ts
+    protectedTests: []
+    checks:
+      - pnpm --filter @pilla/web typecheck
+      - pnpm --filter @pilla/web lint
+    done:
+      - '/alertas shows the block "Pagamentos pendentes de conferência" with the count and the total in the heading, listed oldest first: person, contract number (link to /emprestimos/{loanId}), amount, payment date, method label in pt-BR and the date it was registered'
+      - an item of a DRAFT contract shows a badge "Contrato em rascunho"
+      - empty state "Nenhum pagamento aguardando conferência."; the block sits after "Atrasadas"
+      - the confirm action is not here (it lives in the E11-F05 screens); the row only links to the contract
+      - 'visual review in the browser: with a PENDING_REVIEW payment the block shows it; with none, the empty state; no console error'
+    budget: {attempts: 3, toolCalls: 25, minutes: 20}
+    readFirst:
+      - docs/plano/E13-F03C/plano.md
+      - apps/web/components/alerts
+      - apps/web/app/(admin)/alertas
+      - packages/schemas/src/api/lending/dashboard-today.ts
+
+  # ---------------------------------------------------------------- E13-F04A: E2E, parâmetros e parcelas
+  - id: E13-T06
+    title: Write the Playwright e2e of default terms and the installment alerts
+    kind: test-author
+    assignee: claude
+    rules: [RN-E03]
+    skills: [escrever-teste, accessibility]
+    refs: [PRD-001 RF-40, PRD-001 RF-41, PRD-001 RF-50, PRD-001 CA-10, docs/plano/E13.md, docs/plano/E13-F04A/plano.md]
+    dependsOn: [E13-T05, E13-T11, E10-T18]
+    allowedPaths:
+      - apps/web/e2e/settings-alerts.e2e.ts   # novo
+    protectedTests: []
+    checks:
+      - pnpm --filter @pilla/web e2e
+    done:
+      - 'with compose up, migrate and seed: /configuracoes shows the seeded terms; change the late fee, save, reload and see the new value; restore it at the end so other specs keep their data'
+      - 'CA-10: a contract created before the change keeps the old late fee on its detail; a contract created after shows the new one'
+      - 'alerts: a loan activated with an installment due today appears in "Vencendo hoje"; one due within 7 days in "Vencendo na semana"; one with a past due date in "Atrasadas" with the days of delay and the late charges; the rows link to the contract'
+      - the pending block is not asserted here (E13-F04B); no console errors
+    hints:
+      - build the dates relative to today in Brasília inside the spec (never fixed dates); if activation refuses a past first due date, use the DB fixture helper the E10-T18 spec uses
+    budget: {attempts: 3, toolCalls: 40, minutes: 30}
+    readFirst:
+      - docs/plano/E13-F04A/plano.md
+      - apps/web/e2e/loans.e2e.ts
+      - apps/web/app/(admin)/configuracoes
+      - apps/web/app/(admin)/alertas
+
+  # ---------------------------------------------------------------- E13-F04B: E2E, pendentes
+  - id: E13-T13
+    title: Write the Playwright e2e of the pending review block
+    kind: test-author
+    assignee: claude
+    rules: []
+    skills: [escrever-teste, accessibility]
+    refs: [PRD-001 RF-20, PRD-001 RF-50, docs/plano/E11.md, docs/plano/E13.md, docs/plano/E13-F04B/plano.md]
+    dependsOn: [E13-T12, E13-T06, E11-T04]
+    allowedPaths:
+      - apps/web/e2e/alerts-pending.e2e.ts   # novo
+    protectedTests: []
+    checks:
+      - pnpm --filter @pilla/web e2e
+    done:
+      - 'with compose up, migrate and seed: register a payment on an active loan through POST /payments (Playwright request context) and see it in "Pagamentos pendentes de conferência" with the amount and the contract link'
+      - 'after confirming that payment through the E11 API route, the block no longer lists it (and the installment blocks reflect the new open amount)'
+      - no console errors
+    budget: {attempts: 3, toolCalls: 30, minutes: 20}
+    readFirst:
+      - docs/plano/E13-F04B/plano.md
       - apps/web/e2e/settings-alerts.e2e.ts
+      - docs/plano/E11.yaml
 
 features:
   - id: E13-F01
-    title: Edit default terms
-    cards: [E13-T01, E13-T02]
-  - id: E13-F02
-    title: Operational alerts query
-    cards: [E13-T03, E13-T04]
-  - id: E13-F03
-    title: Web default terms and alerts screens
+    title: Edit default terms (PUT, new effective row, audit)
+    cards: [E13-T01, E13-T07, E13-T02]
+  - id: E13-F02A
+    title: Operational alerts query, installment blocks (full contract)
+    cards: [E13-T08, E13-T03, E13-T04]
+  - id: E13-F02B
+    title: Operational alerts query, pending review block
+    cards: [E13-T09, E13-T10]
+  - id: E13-F03A
+    title: Web default terms form
     cards: [E13-T05]
-  - id: E13-F04
-    title: Settings and alerts end-to-end test
+  - id: E13-F03B
+    title: Web alerts screen, installment blocks
+    cards: [E13-T11]
+  - id: E13-F03C
+    title: Web alerts screen, pending review block
+    cards: [E13-T12]
+  - id: E13-F04A
+    title: Default terms and installment alerts end-to-end test
     cards: [E13-T06]
+  - id: E13-F04B
+    title: Pending review end-to-end test
+    cards: [E13-T13]

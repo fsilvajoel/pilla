@@ -1,129 +1,558 @@
 delivery: E11
-title: Payments (register, preview allocation, confirm, reverse) on the NestJS API, screens wired to it
-# Esqueleto: cartões só com id, title, kind, assignee, dependsOn, refs, allowedPaths e skills (quando há web).
-# Detalhar checks, done, protectedTests, budget e readFirst antes de executar (formato de E10.yaml).
+title: Payments (preview, register, confirm, reverse) on the NestJS API, screens wired to it
+# Plano e decisões D1–D13 em docs/plano/E11.md; escopo e critérios de cada feature em docs/plano/E11-F0x/plano.md.
+# Cartões em inglês (ADR-0012). Dono recomendado: ver "Divisão entre trabalhadores" em E11.md.
+# bia: testes de domínio puro e de schema; claude (Sonnet/Opus): testes HTTP com PGlite, telas e E2E; baidu: backend simples.
+# Todo cartão que toca apps/web leva skills; cartão de tela leva também shadcn e tailwind-css (gate card-skills).
+# IDs E11-T01..T10 mantidos. Novos: T11 (cliente web) e T12..T15 (E11-F07, encargos após pagamento parcial).
+# Prioridade: E11-T04 (F02) destrava a RF-50 da E13 (E13-F02 depende dele).
 cards:
   # ---------------------------------------------------------------- E11-F01: prévia da alocação
   - id: E11-T01
     title: Write the tests for POST /payments/allocation-preview
     kind: test-author
-    assignee: bia
+    assignee: claude
+    rules: [RN-R02, RN-R03, RN-R04, RN-R05, RN-R09]
     skills: [escrever-teste]
-    refs: [PRD-001 RF-23, RFC-002 §3.6, RFC-004 §3, docs/plano/E11.md]
+    refs: [PRD-001 RF-23, RFC-002 §3.6, RFC-004 §3, RFC-004 §6, ADR-0005, docs/plano/E11.md D2 D3 D5 D6 D7, docs/plano/E11-F01/plano.md]
     dependsOn: [E10-T10]
     allowedPaths:
       - apps/api/src/payments/http/allocation-preview.http.test.ts
+      - packages/schemas/src/api/payments/allocation-preview.test.ts
+    protectedTests: []
+    checks:
+      - '! pnpm --filter @pilla/api exec vitest run src/payments/http/allocation-preview.http.test.ts'
+      - '! pnpm --filter @pilla/schemas exec vitest run src/api/payments/allocation-preview.test.ts'
+      - node scripts/check-test-quality.mjs apps/api/src/payments/http/allocation-preview.http.test.ts packages/schemas/src/api/payments/allocation-preview.test.ts
+      - pnpm --filter @pilla/api typecheck
+    done:
+      - 'distribution (A1 to A4, C1 to C6): the oldest installment first and charges, then interest, then principal inside each; a payment beyond one installment spills to the next; a partial payment leaves the installment PARTIAL; the amounts sum to amountCents'
+      - 'balance (A5, A6, C7, C8): outstandingBeforeCents and outstandingAfterCents match @pilla/finance at paidAt; paysOff is true only when the payment clears the balance'
+      - 'refusals (A7 to A11, C9 to C14): amount above the balance 422 PAYMENT_EXCEEDS_BALANCE; PAID_OFF, RENEWED, RENEGOTIATED and CANCELLED 422 LOAN_CLOSED_FOR_PAYMENTS (successorLoanId when there is one); paidAt before disbursedAt or after today 422 VALIDATION_FAILED on paidAt; unknown loan 404; nothing is written in any case'
+      - 'DRAFT and WRITTEN_OFF (A12, A13, C15, C16): DRAFT answers 200 with deferred true, empty allocations and null balances; WRITTEN_OFF answers 200 with isRecovery true'
+      - 'schema (A14, C17, C18): allocationPreviewResponse requires integers only and totals that sum to amountCents'
+    budget: {attempts: 4, toolCalls: 25, minutes: 15}
+    readFirst:
+      - docs/plano/E11-F01/plano.md
+      - packages/finance/src/allocation.ts
+      - packages/finance/src/balance.ts
+      - packages/schemas/src/api/payments/allocation-preview.ts
+      - apps/api/src/lending/http/payoff-quote.http.test.ts
+      - apps/api/src/core/http/test-app.ts
+      - apps/api/src/db/test-db.ts
   - id: E11-T02
-    title: Implement the allocation preview
+    title: Implement the allocation preview and the lending public read port for payments
     kind: implement
     assignee: baidu
+    rules: [RN-R02, RN-R03, RN-R04, RN-R05, RN-R09]
     skills: [editar-arquivo, coding-guidelines, modular-design-principles]
-    refs: [PRD-001 RF-23, RFC-002 §3.6, ADR-0005, docs/plano/E11.md]
+    refs: [PRD-001 RF-23, RFC-001 M2, RFC-002 §3.6, RFC-004 §3, ADR-0005, docs/plano/E11.md D1 D3 D5 D6 D7, docs/plano/E11-F01/plano.md]
     dependsOn: [E11-T01]
     allowedPaths:
+      - packages/schemas/src/api/payments/allocation-preview.ts
+      - packages/schemas/src/index.ts
       - apps/api/src/payments/application/**
       - apps/api/src/payments/http/**
       - apps/api/src/payments/payments.module.ts
       - apps/api/src/lending/public/**
+      - apps/api/src/lending/infra/payment-loan-reader.ts
       - apps/api/src/app.module.ts
-  # ---------------------------------------------------------------- E11-F02: registrar
+    protectedTests:
+      - apps/api/src/payments/http/allocation-preview.http.test.ts
+      - packages/schemas/src/api/payments/allocation-preview.test.ts
+    checks:
+      - pnpm --filter @pilla/api exec vitest run src/payments src/lending
+      - pnpm --filter @pilla/schemas exec vitest run src/api/payments
+      - pnpm --filter @pilla/api typecheck
+      - pnpm --filter @pilla/api lint
+      - pnpm check:schemas
+      - pnpm depcruise
+    done:
+      - the protected tests pass (A1 to A14)
+      - the preview writes nothing (no row in payments, no outbox, no audit) and the allocation comes from allocatePayment of @pilla/finance
+      - payments reads the loan only through apps/api/src/lending/public/loan-for-payment.ts (loadLoanForPayment, findLoanNumbers); depcruise has no cycle between lending and payments
+      - PaymentsModule and PaymentsController exist and are registered in app.module.ts
+    hints:
+      - open installments = installment rows minus confirmedAllocationsByLoan (same assembly the loan detail uses in loan-assessment.ts); reuse, do not copy
+      - today in Brasília comes from the same helper the lending service uses
+    budget: {attempts: 3, toolCalls: 40, minutes: 30}
+    readFirst:
+      - docs/plano/E11-F01/plano.md
+      - apps/api/src/lending/application/loan-assessment.ts
+      - apps/api/src/lending/application/loans-service.ts
+      - apps/api/src/lending/domain/loan-status.ts
+      - apps/api/src/payments/public/confirmed-allocations.ts
+      - apps/api/src/lending/lending.module.ts
+      - .dependency-cruiser.cjs
+  # ---------------------------------------------------------------- E11-F02: registrar (PRIORIDADE: destrava a RF-50 da E13)
   - id: E11-T03
-    title: Write the tests for POST /payments (PENDING_REVIEW)
+    title: Write the tests for POST /payments, GET /payments and the pending-review public port
     kind: test-author
     assignee: claude
+    rules: [RN-R01, RN-R03, RN-R04, RN-R09, RN-C20]
     skills: [escrever-teste]
-    refs: [PRD-001 RF-20, RFC-004 §3, ADR-0006, docs/plano/E11.md]
-    dependsOn: [E11-T02]
+    refs: [PRD-001 RF-20, PRD-001 RF-50, RFC-004 §2, RFC-004 §3, RFC-004 §6, RFC-005 §5, ADR-0006, docs/plano/E11.md D2 D6 D7 D8 D9, docs/plano/E11-F02/plano.md]
+    dependsOn: [E10-T10]
     allowedPaths:
       - apps/api/src/payments/http/payments-create.http.test.ts
+      - apps/api/src/payments/http/payments-list.http.test.ts
+      - apps/api/src/payments/public/pending-payments.test.ts
+      - packages/schemas/src/api/payments/create-payment.test.ts
+      - packages/schemas/src/api/payments/payment-views.test.ts
+      - packages/schemas/src/api/payments/pending-payments.test.ts
+    protectedTests: []
+    checks:
+      - '! pnpm --filter @pilla/api exec vitest run src/payments/http/payments-create.http.test.ts src/payments/http/payments-list.http.test.ts src/payments/public/pending-payments.test.ts'
+      - '! pnpm --filter @pilla/schemas exec vitest run src/api/payments/create-payment.test.ts src/api/payments/payment-views.test.ts src/api/payments/pending-payments.test.ts'
+      - node scripts/check-test-quality.mjs apps/api/src/payments/http/payments-create.http.test.ts apps/api/src/payments/http/payments-list.http.test.ts apps/api/src/payments/public/pending-payments.test.ts packages/schemas/src/api/payments/create-payment.test.ts packages/schemas/src/api/payments/payment-views.test.ts packages/schemas/src/api/payments/pending-payments.test.ts
+      - pnpm --filter @pilla/api typecheck
     done:
-      - 'a payment on a DRAFT loan is accepted as PENDING_REVIEW and allocates nothing (decision of 20/11, option b)'
+      - 'register (A1 to A5, C1 to C6): 201 with status PENDING_REVIEW, version 1, personId copied from the loan, channel ADMIN and an audit row; no allocation, no outbox row, no effect on the loan balance (RN-R01)'
+      - 'DRAFT (A6, C7): a payment on a DRAFT loan is accepted as PENDING_REVIEW and allocates nothing (decision of 20/11)'
+      - 'recovery (A7, C8): a payment on a WRITTEN_OFF loan is accepted (RN-C20)'
+      - 'refusals (A8 to A13, C9 to C16): unknown loan 404; inactive or unknown accountId 422 on accountId; amount above the balance 422 PAYMENT_EXCEEDS_BALANCE on ACTIVE; PAID_OFF, RENEWED, RENEGOTIATED, CANCELLED 422 LOAN_CLOSED_FOR_PAYMENTS with successorLoanId; paidAt before disbursedAt or in the future 422 on paidAt; unknown keys, destinationKey and receiptAttachmentId 400 VALIDATION_FAILED; nothing is written on a refusal'
+      - 'idempotency (A14, C17, C18): the same Idempotency-Key returns the same payment and creates one row; no key creates a new payment each time'
+      - 'list (A15, A16, C19 to C22): GET /payments filters by status and loanId, orders pending oldest first inside PENDING_REVIEW, paginates by cursor without repeating items and carries loanNumber and personName'
+      - 'public port (A17 to A19, C23 to C27): listPendingReviewPayments returns only PENDING_REVIEW rows, oldest first, with count and totalCents of all pending rows (not only the page), honours limit (default 50, max 200) and returns plain objects (no Drizzle row)'
+      - 'schemas (A20, C28 to C31): createPaymentRequest is {loanId, accountId, paidAt, amountCents, method} and strict; pendingPaymentSchema and pendingPaymentsSummarySchema match the contract in docs/plano/E11-F02/plano.md'
+    budget: {attempts: 4, toolCalls: 30, minutes: 20}
+    readFirst:
+      - docs/plano/E11-F02/plano.md
+      - docs/plano/E11-F01/plano.md
+      - packages/schemas/src/api/payments/create-payment.ts
+      - apps/api/src/payments/infra/schema.ts
+      - apps/api/src/payments/public/confirmed-allocations.test.ts
+      - apps/api/src/lending/http/loans-activate.http.test.ts
+      - apps/api/src/core/http/test-app.ts
+      - apps/api/src/db/test-db.ts
   - id: E11-T04
-    title: Implement payment registration
+    title: Implement payment registration, GET /payments and the pending-review public port
     kind: implement
-    assignee: baidu
+    assignee: claude
+    rules: [RN-R01, RN-R03, RN-R04, RN-R09, RN-C20]
     skills: [editar-arquivo, coding-guidelines, modular-design-principles]
-    refs: [PRD-001 RF-20, RFC-004 §3, docs/plano/E11.md]
-    dependsOn: [E11-T03]
+    refs: [PRD-001 RF-20, PRD-001 RF-50, RFC-001 M2, RFC-004 §2, RFC-004 §3, RFC-004 §6, RFC-005 §5, ADR-0006, docs/plano/E11.md D1 D2 D6 D7 D8 D9, docs/plano/E11-F02/plano.md]
+    dependsOn: [E11-T02, E11-T03]
     allowedPaths:
+      - packages/schemas/src/api/payments/create-payment.ts
+      - packages/schemas/src/api/payments/payment-views.ts
+      - packages/schemas/src/api/payments/pending-payments.ts
+      - packages/schemas/src/index.ts
       - apps/api/src/payments/application/**
       - apps/api/src/payments/http/**
-      - apps/api/src/payments/infra/**
+      - apps/api/src/payments/infra/payment-repository.ts
+      - apps/api/src/payments/infra/pending-reader.ts
+      - apps/api/src/payments/public/pending-payments.ts
+      - apps/api/src/payments/payments.module.ts
+      - docs/rfc/RFC-004-api-e-eventos.md
+    protectedTests:
+      - apps/api/src/payments/http/payments-create.http.test.ts
+      - apps/api/src/payments/http/payments-list.http.test.ts
+      - apps/api/src/payments/public/pending-payments.test.ts
+      - packages/schemas/src/api/payments/create-payment.test.ts
+      - packages/schemas/src/api/payments/payment-views.test.ts
+      - packages/schemas/src/api/payments/pending-payments.test.ts
+      - apps/api/src/payments/http/allocation-preview.http.test.ts
+    checks:
+      - pnpm --filter @pilla/api exec vitest run src/payments
+      - pnpm --filter @pilla/schemas exec vitest run src/api/payments
+      - pnpm --filter @pilla/api typecheck
+      - pnpm --filter @pilla/api lint
+      - pnpm check:schemas
+      - pnpm depcruise
+    done:
+      - the protected tests pass (A1 to A20) and the F01 preview tests still pass
+      - POST /payments writes the payment and one audit row in one transaction, and writes no outbox row and no allocation
+      - apps/api/src/payments/public/pending-payments.ts exports listPendingReviewPayments, PendingPayment and PendingPaymentsPage exactly as in docs/plano/E11-F02/plano.md (contract for E13), and imports nothing from lending, people or treasury
+      - the schemas pendingPaymentSchema and pendingPaymentsSummarySchema are exported from @pilla/schemas
+      - RFC-004 §6 gets the three new codes only after the entry in docs/plano/pendencias-pm.md is resolved; if it is still open, leave the RFC untouched and report it
+      - destinationKey, receiptAttachmentId and RECEIPT_REQUIRED are gone from create-payment.ts (v1.1); payments.receipt_attachment_id stays null
+    hints:
+      - reuse loadLoanForPayment and the preview use case of F01 for the balance check (same code, no copy)
+      - the pending reader uses payments_pending_review_idx; count and sum run in one query over status = PENDING_REVIEW
+      - Idempotency-Key lookup and insert belong in one transaction; a unique violation on payments_idempotency_key_key re-reads the row
+    budget: {attempts: 3, toolCalls: 50, minutes: 35}
+    readFirst:
+      - docs/plano/E11-F02/plano.md
+      - docs/plano/E11.md
+      - apps/api/src/payments/infra/schema.ts
+      - apps/api/src/payments/application
+      - apps/api/src/lending/public
+      - apps/api/src/core/public/audit.ts
+      - apps/api/src/treasury/public/account-lookup.ts
   # ---------------------------------------------------------------- E11-F03: confirmar
   - id: E11-T05
     title: Write the tests for POST /payments/{id}/confirm (allocations, events, PAID_OFF)
     kind: test-author
     assignee: claude
+    rules: [RN-R01, RN-R02, RN-R03, RN-R04, RN-R09, RN-C09, RN-C20, RN-T03]
     skills: [escrever-teste]
-    refs: [PRD-001 RF-21, RFC-002 §3.6, RFC-004 §7, docs/plano/E10.md D3, docs/plano/E11.md]
-    dependsOn: [E11-T04]
+    refs: [PRD-001 RF-21, RFC-002 §3.6, RFC-004 §3, RFC-004 §6, RFC-004 §7, ADR-0006, docs/plano/E10.md D3, docs/plano/E11.md D4 D5 D6 D7 D8 D9 D10, docs/plano/E11-F03/plano.md]
+    dependsOn: [E11-T04, E11-T15]
     allowedPaths:
       - apps/api/src/payments/http/payments-confirm.http.test.ts
+      - apps/api/src/payments/application/confirm-concurrency.test.ts
+    protectedTests: []
+    checks:
+      - '! pnpm --filter @pilla/api exec vitest run src/payments/http/payments-confirm.http.test.ts src/payments/application/confirm-concurrency.test.ts'
+      - node scripts/check-test-quality.mjs apps/api/src/payments/http/payments-confirm.http.test.ts apps/api/src/payments/application/confirm-concurrency.test.ts
+      - pnpm --filter @pilla/api typecheck
     done:
-      - 'confirming a PENDING_REVIEW payment of a DRAFT loan: allocation happens at confirmation, when the loan is ACTIVE; while the loan is not ACTIVE the confirmation is refused'
+      - 'allocation (A1 to A5, C1 to C7): confirming writes one payment_allocations row per touched installment with the F01 distribution; the payment becomes CONFIRMED with confirmedAt, confirmedBy and version + 1; GET /loans/{id} then shows the installment paidCents and the lower outstandingCents (RN-R01)'
+      - 'events (A6 to A8, C8 to C11): one PaymentConfirmed in core.outbox that validates against paymentConfirmedV1 and whose allocations sum to amountCents; one InstallmentPaid per installment that became PAID, with daysLate; an audit row; all in the same transaction'
+      - 'PAID_OFF (A9 to A11, C12 to C14): when the balance reaches zero an ACTIVE loan becomes PAID_OFF with status_changed_at, an audit row and a LoanPaidOff in the outbox (paidOffAt = paidAt); a partial payment keeps ACTIVE; a payment equal to the payoff quote pays the loan off'
+      - 'DRAFT (A12, A13, C15, C16): confirming a payment of a DRAFT loan is refused with 409 LOAN_NOT_ACTIVE and the payment stays PENDING_REVIEW; after the loan is activated the same payment confirms and allocates then'
+      - 'recovery (A14, C17): confirming on a WRITTEN_OFF loan sets isRecovery true, allocates, and the loan stays WRITTEN_OFF with no LoanPaidOff'
+      - 'refusals (A15 to A20, C18 to C24): not PENDING_REVIEW 409 PAYMENT_NOT_PENDING; wrong If-Match 409 VERSION_CONFLICT; amount above the balance now (other payment confirmed first) 422 PAYMENT_EXCEEDS_BALANCE; loan closed meanwhile 422 LOAN_CLOSED_FOR_PAYMENTS; paidAt before disbursedAt 422; nothing is written and the payment stays PENDING_REVIEW'
+      - 'concurrency (A21, C25): two simultaneous confirmations of two pending payments that together exceed the balance: one succeeds, the other gets 422 and the installments are never over-allocated'
+    budget: {attempts: 4, toolCalls: 35, minutes: 25}
+    readFirst:
+      - docs/plano/E11-F03/plano.md
+      - docs/plano/E11-F02/plano.md
+      - packages/schemas/src/events/payment-confirmed.ts
+      - packages/schemas/src/events/installment-paid.ts
+      - packages/schemas/src/events/loan-paid-off.ts
+      - apps/api/src/payments/http/payments-create.http.test.ts
+      - apps/api/src/lending/http/loans-activate.http.test.ts
+      - apps/api/src/core/infra/outbox-writer.ts
   - id: E11-T06
-    title: Implement payment confirmation
+    title: Implement payment confirmation (allocations, events, PAID_OFF)
     kind: implement
     assignee: claude
+    rules: [RN-R01, RN-R02, RN-R03, RN-R04, RN-R09, RN-C09, RN-C20, RN-T03]
     skills: [editar-arquivo, coding-guidelines, modular-design-principles]
-    refs: [PRD-001 RF-21, RFC-004 §7, ADR-0006, docs/plano/E11.md]
+    refs: [PRD-001 RF-21, RFC-004 §3, RFC-004 §7, ADR-0006, docs/plano/E10.md D3 D7, docs/plano/E11.md D3 D4 D5 D10, docs/plano/E11-F03/plano.md]
     dependsOn: [E11-T05]
     allowedPaths:
-      - apps/api/src/payments/**
+      - apps/api/src/payments/application/**
+      - apps/api/src/payments/http/**
+      - apps/api/src/payments/infra/**
       - apps/api/src/lending/public/**
-      - apps/api/src/lending/application/**
+      - apps/api/src/lending/infra/payment-loan-reader.ts
+      - apps/api/src/lending/infra/loan-repository.ts
+    protectedTests:
+      - apps/api/src/payments/http/payments-confirm.http.test.ts
+      - apps/api/src/payments/application/confirm-concurrency.test.ts
+      - apps/api/src/payments/http/payments-create.http.test.ts
+      - apps/api/src/payments/http/allocation-preview.http.test.ts
+      - apps/api/src/payments/public/pending-payments.test.ts
+      - apps/api/src/lending/http/loans-read.http.test.ts
+    checks:
+      - pnpm --filter @pilla/api exec vitest run src/payments src/lending
+      - pnpm --filter @pilla/api typecheck
+      - pnpm --filter @pilla/api lint
+      - pnpm depcruise
+    done:
+      - the protected tests pass (A1 to A21) and the F01 and F02 tests still pass
+      - confirmation runs in one transaction that locks the payment and the loan row (FOR UPDATE) and writes payment, allocations, loan status, audit and outbox together
+      - the PAID_OFF transition is lending/public markLoanPaidOff(tx, ...), which writes status, status_changed_at, audit and LoanPaidOff; payments never updates a lending table
+      - the public ports listPendingReviewPayments and confirmedAllocationsByLoan keep their signatures
+      - no computed value is stored (ADR-0005): outstanding and standing stay derived
+    hints:
+      - the distribution is the F01 use case with ref = paidAt; do not duplicate it
+      - map installmentNumber to installmentId through the loan read of lending/public
+      - only newly PAID installments get an InstallmentPaid
+    budget: {attempts: 3, toolCalls: 50, minutes: 40}
+    readFirst:
+      - docs/plano/E11-F03/plano.md
+      - apps/api/src/payments/application
+      - apps/api/src/lending/public
+      - apps/api/src/lending/domain/loan-transitions.ts
+      - apps/api/src/core/public/audit.ts
+      - apps/api/src/core/infra/outbox-writer.ts
+      - apps/api/src/lending/application/loans-service.ts
   # ---------------------------------------------------------------- E11-F04: estornar
   - id: E11-T07
     title: Write the tests for POST /payments/{id}/reverse
     kind: test-author
-    assignee: bia
+    assignee: claude
+    rules: [RN-R07, RN-R10, RN-R11]
     skills: [escrever-teste]
-    refs: [PRD-001 RF-22, RFC-004 §7, ADR-0006, docs/plano/E11.md]
+    refs: [PRD-001 RF-22, PRD-001 RN-R10, PRD-001 RN-R11, RFC-004 §3, RFC-004 §6, RFC-004 §7, ADR-0006, docs/plano/E11.md D4 D8 D9 D10 D12, docs/plano/E11-F04/plano.md]
     dependsOn: [E11-T06]
     allowedPaths:
       - apps/api/src/payments/http/payments-reverse.http.test.ts
+      - packages/schemas/src/api/payments/reverse-payment.test.ts
+    protectedTests: []
+    checks:
+      - '! pnpm --filter @pilla/api exec vitest run src/payments/http/payments-reverse.http.test.ts'
+      - '! pnpm --filter @pilla/schemas exec vitest run src/api/payments/reverse-payment.test.ts'
+      - node scripts/check-test-quality.mjs apps/api/src/payments/http/payments-reverse.http.test.ts packages/schemas/src/api/payments/reverse-payment.test.ts
+      - pnpm --filter @pilla/api typecheck
+    done:
+      - 'reverse (A1 to A6, C1 to C7): a CONFIRMED payment becomes REVERSED with reversedAt, reversedBy, reversalReason and version + 1; every allocation of it gets reversed_at; the installments and outstandingCents on GET /loans/{id} go back as if it never happened; the rows are kept (RN-R07); an audit row is written'
+      - 'events (A7, C8, C9): one PaymentReversed in the outbox that validates against paymentReversedV1 with the same allocations and the reason; nothing is published when the reversal is refused'
+      - 'reopen (A8 to A10, C10 to C12): reversing a payment of a PAID_OFF loan that leaves a balance sets the loan back to ACTIVE with status_changed_at, an audit row and a LoanReopened (reason = the reversal reason); on an ACTIVE or WRITTEN_OFF loan the status does not change'
+      - 'blocked (A11, A12, C13, C14): RENEWED and RENEGOTIATED loans 422 REVERSAL_BLOCKED_BY_SUCCESSOR (RN-R11); nothing is written'
+      - 'refusals (A13 to A17, C15 to C20): PENDING_REVIEW or REVERSED payment 409 PAYMENT_NOT_CONFIRMED; wrong If-Match 409 VERSION_CONFLICT; missing or blank reason 400 VALIDATION_FAILED; unknown payment 404'
+      - 'schema (A18, C21, C22): reversePaymentRequest requires a reason and rejects unknown keys'
+    budget: {attempts: 4, toolCalls: 30, minutes: 20}
+    readFirst:
+      - docs/plano/E11-F04/plano.md
+      - apps/api/src/lending/domain/reversal.ts
+      - packages/schemas/src/events/payment-reversed.ts
+      - packages/schemas/src/events/loan-reopened.ts
+      - apps/api/src/payments/http/payments-confirm.http.test.ts
   - id: E11-T08
-    title: Implement payment reversal
+    title: Implement payment reversal (PaymentReversed, reopen a PAID_OFF loan)
     kind: implement
     assignee: baidu
+    rules: [RN-R07, RN-R10, RN-R11]
     skills: [editar-arquivo, coding-guidelines, modular-design-principles]
-    refs: [PRD-001 RF-22, RFC-004 §7, docs/plano/E11.md]
+    refs: [PRD-001 RF-22, RFC-004 §3, RFC-004 §7, ADR-0006, docs/plano/E11.md D3 D4 D10 D12, docs/plano/E11-F04/plano.md]
     dependsOn: [E11-T07]
     allowedPaths:
-      - apps/api/src/payments/**
-      - apps/api/src/lending/application/**
+      - apps/api/src/payments/application/**
+      - apps/api/src/payments/http/**
+      - apps/api/src/payments/infra/**
+      - apps/api/src/lending/public/**
+      - apps/api/src/lending/infra/loan-repository.ts
+    protectedTests:
+      - apps/api/src/payments/http/payments-reverse.http.test.ts
+      - packages/schemas/src/api/payments/reverse-payment.test.ts
+      - apps/api/src/payments/http/payments-confirm.http.test.ts
+      - apps/api/src/payments/http/payments-create.http.test.ts
+    checks:
+      - pnpm --filter @pilla/api exec vitest run src/payments src/lending
+      - pnpm --filter @pilla/schemas exec vitest run src/api/payments
+      - pnpm --filter @pilla/api typecheck
+      - pnpm --filter @pilla/api lint
+      - pnpm depcruise
+    done:
+      - the protected tests pass (A1 to A18) and the F01 to F03 tests still pass
+      - reversal runs in one transaction that locks the payment and the loan; allocations are marked reversed, never deleted
+      - the block and the reopening use isReversalBlocked and reopensOnReversal of lending/domain/reversal.ts through lending/public (reopenLoan(tx, ...)); payments never updates a lending table
+      - the loan balance used for the reopening is the open principal plus interest after the reversal, not a stored value (ADR-0005)
+    hints:
+      - the order is lock, check status and If-Match, check the block, mark allocations, mark payment, reopen if needed, audit, outbox
+    budget: {attempts: 3, toolCalls: 40, minutes: 30}
+    readFirst:
+      - docs/plano/E11-F04/plano.md
+      - apps/api/src/payments/application
+      - apps/api/src/lending/domain/reversal.ts
+      - apps/api/src/lending/public
   # ---------------------------------------------------------------- E11-F05: web
+  - id: E11-T11
+    title: Implement the server-side API client for payments
+    kind: implement
+    assignee: claude
+    rules: []
+    skills: [react-best-practices, coding-guidelines, security-best-practices]
+    refs: [ADR-0013, RFC-004 §3, docs/plano/E11.md D2 D8 D13, docs/plano/E11-F05/plano.md]
+    dependsOn: [E11-T08, E10-T15]
+    allowedPaths:
+      - apps/web/lib/api/payments.ts
+    protectedTests: []
+    checks:
+      - pnpm --filter @pilla/web typecheck
+      - pnpm --filter @pilla/web lint
+    done:
+      - typed functions for allocation-preview, create (with Idempotency-Key), list, confirm and reverse (with If-Match), on top of the E9 wrapper; responses parsed with @pilla/schemas; problem+json as ApiProblem
+    budget: {attempts: 3, toolCalls: 30, minutes: 20}
+    readFirst:
+      - docs/plano/E11-F05/plano.md
+      - apps/web/lib/api/client.ts
+      - apps/web/lib/api/loans.ts
+      - apps/web/lib/api/problem.ts
   - id: E11-T09
     title: Wire the payment form with allocation preview, the review queue, confirm and reverse
     kind: implement
     assignee: claude
+    rules: [RN-R03, RN-R09, RN-R10, RN-R11]
     skills: [shadcn, tailwind-css, react-best-practices, accessibility, coding-guidelines]
-    refs: [PRD-001 RF-20, PRD-001 RF-21, PRD-001 RF-22, PRD-001 RF-23, docs/plano/E11.md]
-    dependsOn: [E11-T08, E10-T16]
+    refs: [PRD-001 RF-20, PRD-001 RF-21, PRD-001 RF-22, PRD-001 RF-23, docs/plano/decisoes-2026-11-19.md, docs/plano/E11.md D2 D6 D8 D13, docs/plano/E11-F05/plano.md]
+    dependsOn: [E11-T11, E10-T16]
     allowedPaths:
-      - apps/web/lib/api/payments.ts
       - apps/web/app/(admin)/emprestimos/[id]/pagamento/**
       - apps/web/app/(admin)/pagamentos/**
       - apps/web/components/payments/**
       - apps/web/components/payment-form.tsx
+      - apps/web/components/payment-form.test.tsx
+      - apps/web/components/shared/admin-nav.tsx
+      - apps/web/components/loans/loan-detail-view.tsx
       - apps/web/lib/payment-draft.ts
+      - apps/web/lib/payment-draft.test.ts
+      - apps/web/lib/labels.ts
+    protectedTests: []
+    checks:
+      - pnpm --filter @pilla/web typecheck
+      - pnpm --filter @pilla/web lint
+      - pnpm --filter @pilla/web test
+    done:
+      - /emprestimos/[id]/pagamento loads the loan from the API (no import of lib/mock-data.ts); the form has account (GET /accounts, base account preselected), date (default today in Brasília), amount and method, no receipt and no Pix key field; a closed loan shows the notice with the successor link when there is one
+      - the form shows the allocation preview (per installment, charges, interest, principal, balance after) as the amount and date change; on a DRAFT loan it says the distribution is calculated at confirmation; submitting posts with an Idempotency-Key and shows "Pagamento registrado para conferência."
+      - /pagamentos lists PENDING_REVIEW by default, with a filter for CONFIRMED and REVERSED and for a loan; each pending row has "Confirmar"; each confirmed row has "Estornar" with a dialog that requires a reason; empty state "Nenhum pagamento."
+      - API errors (PAYMENT_EXCEEDS_BALANCE, LOAN_CLOSED_FOR_PAYMENTS, LOAN_NOT_ACTIVE, PAYMENT_NOT_PENDING, PAYMENT_NOT_CONFIRMED, REVERSAL_BLOCKED_BY_SUCCESSOR, VERSION_CONFLICT) show in pt-BR next to the action; the nav has "Pagamentos"; the loan detail links to "Registrar pagamento" (DRAFT, ACTIVE, WRITTEN_OFF) and to the loan's payments
+      - the old payment-form and payment-draft tests only change to stay green; no new frontend test (ADR-0017 amendment)
+      - 'visual review in the browser: both routes open; loading, empty and error states render; no console error'
+    budget: {attempts: 3, toolCalls: 50, minutes: 40}
+    readFirst:
+      - docs/plano/E11-F05/plano.md
+      - apps/web/components/payment-form.tsx
+      - apps/web/lib/payment-draft.ts
+      - apps/web/app/(admin)/emprestimos/[id]/pagamento/page.tsx
+      - apps/web/app/(admin)/emprestimos/[id]/quitacao
+      - apps/web/components/loans/payoff-quote-view.tsx
+      - apps/web/components/shared/confirm-dialog.tsx
+      - apps/web/components/shared/data-table.tsx
   # ---------------------------------------------------------------- E11-F06: E2E
   - id: E11-T10
     title: Write the Playwright e2e of pay, confirm, reverse and payoff
     kind: test-author
     assignee: claude
+    rules: []
     skills: [escrever-teste, accessibility]
-    refs: [PRD-001 RF-20, PRD-001 RF-21, PRD-001 RF-22, docs/plano/E11.md]
+    refs: [PRD-001 RF-20, PRD-001 RF-21, PRD-001 RF-22, PRD-001 RF-23, PRD-001 RN-C09, PRD-001 RN-R10, docs/plano/E11.md, docs/plano/E11-F06/plano.md]
     dependsOn: [E11-T09]
     allowedPaths:
       - apps/web/e2e/payments.e2e.ts
+    protectedTests: []
+    checks:
+      - pnpm --filter @pilla/web e2e
+    done:
+      - with compose up, migrate and seed - create and activate a loan, open /emprestimos/{id}/pagamento, see the allocation preview, register a payment, see it in /pagamentos as pending, confirm it, and see the first installment PAID and the lower balance on the loan detail
+      - reverse the confirmed payment with a reason and see the installment and the balance back
+      - pay the whole payoff quote, confirm, and see the loan Quitado; reverse that payment and see the loan Ativo again (RN-R10)
+      - an amount above the balance shows the pt-BR message and registers nothing
+      - a payment on a DRAFT loan is registered, the confirmation is refused with the pt-BR message, and after activating the loan it confirms
+      - no console errors
+    budget: {attempts: 3, toolCalls: 50, minutes: 40}
+    readFirst:
+      - docs/plano/E11-F06/plano.md
+      - apps/web/e2e/loans.e2e.ts
+      - apps/web/playwright.config.ts
+  # ---------------------------------------------------------------- E11-F07: encargos depois de pagamento parcial
+  - id: E11-T12
+    title: Write the tests for late charges after a partial payment in @pilla/finance
+    kind: test-author
+    assignee: bia
+    rules: [RN-E01, RN-E02, RN-R04]
+    skills: [escrever-teste]
+    refs: [RFC-002 §3.5, RFC-002 §3.6, RFC-002 §3.7, ADR-0004, docs/plano/E11.md D11, docs/plano/E11-F07/plano.md]
+    dependsOn: [E10-T10]
+    allowedPaths:
+      - packages/finance/src/partial-charges.test.ts
+    protectedTests: []
+    checks:
+      - '! pnpm --filter @pilla/finance exec vitest run src/partial-charges.test.ts'
+      - node scripts/check-test-quality.mjs packages/finance/src/partial-charges.test.ts
+      - pnpm --filter @pilla/finance typecheck
+    done:
+      - 'no history (A1, C1): an installment without payment history gives exactly the charges of lateChargesAt today (every existing case keeps its value)'
+      - 'fine once (A2, A3, C2 to C4): after a partial payment that covered the fine, the fine is not charged again; the late interest runs on the new open amount from the payment date'
+      - 'carry (A4, C5, C6): a payment smaller than the charges leaves the unpaid charges owed and they are not charged twice'
+      - 'order (A5, C7): several payments are folded by paidAt order, not by insertion order'
+      - 'allocation (A6, A7, C8 to C10): allocatePayment on an installment with history pays charges, then interest, then principal; the sum still equals the amount; PAYMENT_EXCEEDS_BALANCE uses the history-aware balance'
+      - 'property (A8, C11, prop): paying the whole outstandingBalance at ref leaves outstandingBalance 0 at ref, with or without history'
+    budget: {attempts: 4, toolCalls: 25, minutes: 15}
+    readFirst:
+      - docs/plano/E11-F07/plano.md
+      - packages/finance/src/allocation.ts
+      - packages/finance/src/balance.ts
+      - packages/finance/src/late-charges.ts
+      - packages/finance/src/properties.test.ts
+      - docs/rfc/RFC-002-motor-de-calculo-financeiro.md
+  - id: E11-T13
+    title: Implement the history-aware late charges and allocation in @pilla/finance
+    kind: implement
+    assignee: baidu
+    rules: [RN-E01, RN-E02, RN-R04]
+    skills: [editar-arquivo, coding-guidelines, modular-design-principles]
+    refs: [RFC-002 §3.5, RFC-002 §3.6, ADR-0004, docs/plano/E11.md D11, docs/plano/E11-F07/plano.md]
+    dependsOn: [E11-T12]
+    allowedPaths:
+      - packages/finance/src/partial-charges.ts
+      - packages/finance/src/balance.ts
+      - packages/finance/src/allocation.ts
+      - packages/finance/src/index.ts
+    protectedTests:
+      - packages/finance/src/partial-charges.test.ts
+      - packages/finance/src/balance.test.ts
+      - packages/finance/src/allocation.test.ts
+      - packages/finance/src/late-charges.test.ts
+      - packages/finance/src/properties.test.ts
+    checks:
+      - pnpm --filter @pilla/finance exec vitest run
+      - pnpm --filter @pilla/finance typecheck
+      - pnpm --filter @pilla/finance lint
+    done:
+      - the protected tests pass (A1 to A8) and every older finance test passes unchanged
+      - the history is optional on OpenInstallment, so the E10 callers that pass none keep their values
+      - money stays bigint cents (ADR-0004); the file has no import outside packages/finance
+    hints:
+      - fold the payments of an installment in paidAt order into the state "fine already charged, charges still owed, accrual starts at date"
+    budget: {attempts: 3, toolCalls: 40, minutes: 30}
+    readFirst:
+      - docs/plano/E11-F07/plano.md
+      - packages/finance/src/balance.ts
+      - packages/finance/src/allocation.ts
+      - packages/finance/src/late-charges.ts
+      - packages/finance/src/partial-charges.test.ts
+  - id: E11-T14
+    title: Write the tests for the loan reads that use the payment history
+    kind: test-author
+    assignee: claude
+    rules: [RN-E01, RN-E02, RN-R04]
+    skills: [escrever-teste]
+    refs: [RFC-002 §3.5, ADR-0005, docs/plano/E10.md D5, docs/plano/E11.md D5 D11, docs/plano/E11-F07/plano.md]
+    dependsOn: [E11-T13]
+    allowedPaths:
+      - apps/api/src/payments/public/confirmed-allocations.test.ts
+      - apps/api/src/lending/application/loan-assessment.test.ts
+    protectedTests: []
+    checks:
+      - '! pnpm --filter @pilla/api exec vitest run src/payments/public/confirmed-allocations.test.ts src/lending/application/loan-assessment.test.ts'
+      - node scripts/check-test-quality.mjs apps/api/src/payments/public/confirmed-allocations.test.ts apps/api/src/lending/application/loan-assessment.test.ts
+      - pnpm --filter @pilla/api typecheck
+    done:
+      - 'port (A9, C12, C13): confirmedAllocationsByLoan also returns, per installment, the confirmed payments (paidAt and the three components), without reversed ones; the old fields keep their values'
+      - 'assessment (A10 to A12, C14 to C16): the loan detail, the payoff quote and loanStanding use the history, so after a partial payment the fine is not charged again and the balance equals the sum the preview shows'
+    budget: {attempts: 4, toolCalls: 25, minutes: 15}
+    readFirst:
+      - docs/plano/E11-F07/plano.md
+      - apps/api/src/payments/public/confirmed-allocations.test.ts
+      - apps/api/src/lending/application/loan-assessment.ts
+      - packages/finance/src/partial-charges.ts
+  - id: E11-T15
+    title: Feed the payment history into the payments public port and the loan assessment
+    kind: implement
+    assignee: baidu
+    rules: [RN-E01, RN-E02, RN-R04]
+    skills: [editar-arquivo, coding-guidelines, modular-design-principles]
+    refs: [RFC-002 §3.5, ADR-0005, docs/plano/E10.md D5, docs/plano/E11.md D5 D11, docs/plano/E11-F07/plano.md]
+    dependsOn: [E11-T14]
+    allowedPaths:
+      - apps/api/src/payments/public/confirmed-allocations.ts
+      - apps/api/src/payments/infra/allocation-reader.ts
+      - apps/api/src/lending/application/loan-assessment.ts
+      - apps/api/src/lending/public/**
+    protectedTests:
+      - apps/api/src/payments/public/confirmed-allocations.test.ts
+      - apps/api/src/lending/application/loan-assessment.test.ts
+      - apps/api/src/lending/http/loans-read.http.test.ts
+      - apps/api/src/lending/http/payoff-quote.http.test.ts
+    checks:
+      - pnpm --filter @pilla/api exec vitest run src/payments src/lending
+      - pnpm --filter @pilla/api typecheck
+      - pnpm --filter @pilla/api lint
+      - pnpm depcruise
+    done:
+      - the protected tests pass (A9 to A12) and the E10 read tests still pass
+      - the F01 preview and the F03 confirmation get the history through the same assembly the loan detail uses (one place, no copy)
+      - nothing computed is stored (ADR-0005)
+    budget: {attempts: 3, toolCalls: 35, minutes: 25}
+    readFirst:
+      - docs/plano/E11-F07/plano.md
+      - apps/api/src/payments/infra/allocation-reader.ts
+      - apps/api/src/lending/application/loan-assessment.ts
+      - packages/finance/src/partial-charges.ts
 
 features:
   - id: E11-F01
     title: Allocation preview
     cards: [E11-T01, E11-T02]
   - id: E11-F02
-    title: Register payment
+    title: Register payment, list payments and the pending-review public port (unlocks E13 RF-50)
     cards: [E11-T03, E11-T04]
   - id: E11-F03
     title: Confirm payment
@@ -132,8 +561,11 @@ features:
     title: Reverse payment
     cards: [E11-T07, E11-T08]
   - id: E11-F05
-    title: Web payment screens
-    cards: [E11-T09]
+    title: Web payment client and screens
+    cards: [E11-T11, E11-T09]
   - id: E11-F06
     title: Payments end-to-end test
     cards: [E11-T10]
+  - id: E11-F07
+    title: Late charges after a partial payment
+    cards: [E11-T12, E11-T13, E11-T14, E11-T15]
