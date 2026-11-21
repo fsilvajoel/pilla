@@ -109,10 +109,12 @@ type Body = {
 };
 type Result = { status: number; body: Body };
 
+const MISSING = Symbol("missing reason");
+
 async function reject(id: string, reason: unknown = REASON, version: string | number | null = 1): Promise<Result> {
   const call = request(baseUrl).post(`/api/v1/payments/${id}/reject`);
   const res = await (version === null ? call : call.set("If-Match", String(version))).send(
-    reason === undefined ? {} : { reason },
+    reason === MISSING ? {} : { reason },
   );
   return { status: res.status, body: res.body as Body };
 }
@@ -301,7 +303,7 @@ describe("POST /api/v1/payments/{id}/reject: refusals (E11-F04, A5, A6)", () => 
   });
 
   it.each([
-    ["missing", undefined],
+    ["missing", MISSING],
     ["empty", ""],
     ["blank", "   "],
     ["not a text", 5],
