@@ -1,12 +1,12 @@
 import { Inject, Injectable } from "@nestjs/common";
 import { addDays, isoDate } from "@pilla/finance";
 import { dashboardTodayResponse, type DashboardTodayResponse } from "@pilla/schemas";
-import { ProblemException } from "../../core/http/problem-exception";
 import { DATABASE, type Database } from "../../db/database";
 import { confirmedAllocationsByLoan } from "../../payments/public/confirmed-allocations";
 import { findPersonNames } from "../../people/public/person-lookup";
 import { selectActiveLoans, selectInstallmentsByLoan } from "../infra/loan-queries";
 import { groupDashboardInstallments, WEEK_DAYS, type DashboardLoan } from "./dashboard-today";
+import { personNameOf } from "./loans-service";
 import { todayInBrasilia } from "./today";
 
 /** Pendentes de conferência: fixo e vazio na F02A; a F02B passa a preenchê-lo. */
@@ -31,11 +31,9 @@ export class DashboardService {
     const names = await findPersonNames(this.db, [...new Set(loans.map((loan) => loan.personId))]);
     const entries: DashboardLoan[] = [];
     for (const loan of loans) {
-      const personName = names.get(loan.personId);
-      if (personName === undefined) throw new ProblemException("INTERNAL_ERROR", "Pessoa do contrato não encontrada.");
       entries.push({
         loan,
-        personName,
+        personName: personNameOf(names, loan.personId),
         installments: installmentsByLoan.get(loan.id) ?? [],
         allocations: await confirmedAllocationsByLoan(this.db, loan.id),
       });

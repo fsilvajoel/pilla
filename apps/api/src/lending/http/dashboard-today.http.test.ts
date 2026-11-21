@@ -262,6 +262,21 @@ describe("GET /api/v1/dashboard/today amounts (E13-F02A, A5, A6)", () => {
     expect(body.dueToday.items[0]).toMatchObject({ openCents: 60000, status: "PARTIAL" });
   });
 
+  it("C9 (A5): a partially paid installment due this week is PARTIAL with the open balance", async () => {
+    await seedLoan({ id: A, number: "2026-0001" });
+    const soon = await seedInstallment(A, 1, "2026-11-23");
+    await seedPayment(A, soon, { principal: 40000, interest: 20000 });
+    const { body } = await today();
+    expect(body.dueThisWeek.items[0]).toMatchObject({ openCents: 60000, status: "PARTIAL" });
+  });
+
+  it("C9 (A4): an ACTIVE loan without installments adds nothing to the blocks", async () => {
+    await seedLoan({ id: A, number: "2026-0001" });
+    const { status, body } = await today();
+    expect(status).toBe(200);
+    expect(body.dueToday.count + body.dueThisWeek.count + body.overdue.count).toBe(0);
+  });
+
   it("C10 (A5): a partially paid overdue installment is OVERDUE_PARTIAL with the open balance", async () => {
     await seedLoan({ id: A, number: "2026-0001" });
     const late = await seedInstallment(A, 1, "2026-11-10");

@@ -90,7 +90,7 @@ function decodeCursor(cursor: string): string {
   return loanNumber;
 }
 
-function personNameOf(names: Map<string, string>, personId: string): string {
+export function personNameOf(names: Map<string, string>, personId: string): string {
   const name = names.get(personId);
   if (name === undefined) throw new ProblemException("INTERNAL_ERROR", "Pessoa do contrato não encontrada.");
   return name;

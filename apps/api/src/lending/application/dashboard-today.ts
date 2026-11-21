@@ -1,8 +1,8 @@
-import { addDays, daysBetween, openAmount, type IsoDate } from "@pilla/finance";
+import { addDays, daysBetween, lateChargesAt, openAmount, type IsoDate } from "@pilla/finance";
 import type { DashboardTodayResponse, DueInstallmentItem, OverdueInstallmentItem } from "@pilla/schemas";
 import type { ConfirmedAllocation } from "../../payments/public/confirmed-allocations";
 import type { InstallmentRow, LoanRow } from "../infra/schema";
-import { assessLoan, openInstallments } from "./loan-assessment";
+import { lateTermsOf, openInstallments } from "./loan-assessment";
 
 /** Janela da semana do painel: de hoje + 1 a hoje + 7 dias, inclusive (pendência E13-F02A, padrão a). */
 export const WEEK_DAYS = 7;
@@ -27,7 +27,7 @@ const byLoanThenInstallment = (
 ): number => a.loanNumber.localeCompare(b.loanNumber) || a.installmentNumber - b.installmentNumber;
 
 /**
- * Painel de parcelas em `today` (RF-50): vencendo hoje, na semana e atrasadas. Função pura sobre `assessLoan`;
+ * Painel de parcelas em `today` (RF-50): vencendo hoje, na semana e atrasadas. Função pura sobre as parcelas em aberto de `assessLoan` e `@pilla/finance`;
  * só entram parcelas com valor em aberto (principal + juros) maior que zero. Nada é gravado (ADR-0005).
  */
 export function groupDashboardInstallments(
@@ -39,35 +39,35 @@ export function groupDashboardInstallments(
   const dueThisWeek: DueInstallmentItem[] = [];
   const overdue: OverdueInstallmentItem[] = [];
   for (const { loan, personName, installments, allocations } of entries) {
-    const views = assessLoan(loan, installments, allocations, today).installments;
-    const opens = openInstallments(installments, allocations);
-    opens.forEach(({ open }, index) => {
-      const view = views[index];
-      if (view === undefined || openAmount(open) === 0n) return;
+    const terms = lateTermsOf(loan);
+    for (const { row, paid, open } of openInstallments(installments, allocations)) {
+      const openCents = Number(openAmount(open));
+      if (openCents === 0) continue;
       const base = {
         loanId: loan.id,
         loanNumber: loan.loanNumber,
         personId: loan.personId,
         personName,
-        installmentNumber: view.number,
-        dueDate: view.dueDate,
-        openCents: Number(openAmount(open)),
+        installmentNumber: row.number,
+        dueDate: row.dueDate,
+        openCents,
       };
       const daysLate = daysBetween(open.dueDate, today);
       if (daysLate > 0) {
+        const lateChargesCents = Number(lateChargesAt(open, terms, today));
         overdue.push({
           ...base,
           daysOverdue: daysLate,
-          lateChargesCents: view.lateChargesCents,
-          totalDueCents: base.openCents + view.lateChargesCents,
-          status: view.status === "OVERDUE_PARTIAL" ? "OVERDUE_PARTIAL" : "OVERDUE",
+          lateChargesCents,
+          totalDueCents: openCents + lateChargesCents,
+          status: paid > 0 ? "OVERDUE_PARTIAL" : "OVERDUE",
         });
-        return;
+      } else if (daysLate === 0) {
+        dueToday.push({ ...base, status: paid > 0 ? "PARTIAL" : "OPEN" });
+      } else if (daysBetween(open.dueDate, weekEnd) >= 0) {
+        dueThisWeek.push({ ...base, status: paid > 0 ? "PARTIAL" : "OPEN" });
       }
-      const status = view.status === "PARTIAL" ? "PARTIAL" : "OPEN";
-      if (daysLate === 0) dueToday.push({ ...base, status });
-      else if (daysBetween(open.dueDate, weekEnd) >= 0) dueThisWeek.push({ ...base, status });
-    });
+    }
   }
   dueToday.sort(byLoanThenInstallment);
   dueThisWeek.sort((a, b) => a.dueDate.localeCompare(b.dueDate) || byLoanThenInstallment(a, b));
