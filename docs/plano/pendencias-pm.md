@@ -259,3 +259,6 @@ Formato de cada entrada:
 - opções: a) seguir a RFC-002 §3.5 (multa uma vez; mora corre sobre o novo em aberto desde o pagamento; encargos não pagos continuam devidos), com a feature E11-F07; b) manter o cálculo atual (encargos sempre sobre o em aberto da parcela na data), sem a F07
 - sugestão padrão: a) é o que a RFC já diz e é o único que deixa "saldo antes menos pagamento" igual ao "saldo depois"
 - resposta:
+
+## E13-F01: created_by do default_terms (21/11)
+- decisão do Joel (21/11): enquanto não há login, `created_by` da nova vigência herda o da linha vigente; vira o ator real quando a épica de Acesso/login existir.
