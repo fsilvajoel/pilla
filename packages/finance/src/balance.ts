@@ -3,6 +3,7 @@ import type { IsoDate } from "./date";
 import { calculateLateCharges } from "./late-charges";
 import type { Bps, Cents } from "./money";
 import { cents } from "./money";
+import type { InstallmentPayment } from "./partial-charges";
 
 /** Parcela com o que falta pagar (principal e juros), já descontadas as alocações confirmadas. */
 export interface OpenInstallment {
@@ -10,6 +11,8 @@ export interface OpenInstallment {
   readonly dueDate: IsoDate;
   readonly openPrincipal: Cents;
   readonly openInterest: Cents;
+  /** pagamentos confirmados da parcela (opcional; sem ele, encargos como na E3/E4). */
+  readonly payments?: readonly InstallmentPayment[];
 }
 
 /** Condições de atraso congeladas no contrato (RN-C12, ADR-0008). */
