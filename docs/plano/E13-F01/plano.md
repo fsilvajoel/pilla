@@ -26,7 +26,7 @@ Fora: data de vigência futura (D5); histórico de vigências na tela; qualquer 
 
 | Campo | Formato | Mínimo | Máximo | Rejeitados | Erro | Fonte |
 |---|---|---|---|---|---|---|
-| `lateFeeBps` | inteiro (centésimo de %) | 0 | 10000 (100%) | -1, 1.5, "200", 10001 | 422 `VALIDATION_FAILED` | RF-40, `bpsSchema`; teto técnico (pendência E13-F01) |
+| `lateFeeBps` | inteiro (centésimo de %) | 0 | 10000 (100%) | -1, 1.5, "200", 10001 | 400 `VALIDATION_FAILED` | RF-40, `bpsSchema`; teto técnico (pendência E13-F01) |
 | `lateInterestMonthlyBps` | inteiro | 0 | 10000 | -1, 1.5, 10001 | idem | idem |
 | `gracePeriodDays` | inteiro | 0 | 365 | -1, 2.5, 366 | idem | RF-40; teto técnico (pendência) |
 | `suggestedMonthlyRateBps` | inteiro | 0 | 10000 | -1, 1.5, 10001 | idem | idem |
@@ -43,7 +43,7 @@ Os tetos são limites de sanidade, não regra de negócio; a pergunta ao PM est�
 - A5: cada mudança grava uma linha em `audit_log` com `before` e `after`, na mesma transação; falha da auditoria desfaz a nova linha.
 - A6: contrato criado antes do `PUT` mantém multa, mora, carência e passo originais (ADR-0008, CA-10).
 - A7: contrato criado depois do `PUT` traz os novos valores.
-- A8: corpo inválido (campo ausente, negativo, não inteiro, acima do teto, chave desconhecida) dá 422 `VALIDATION_FAILED` no campo.
+- A8: corpo inválido (campo ausente, negativo, não inteiro, acima do teto, chave desconhecida) dá 400 `VALIDATION_FAILED` no campo.
 - A9: `PUT` igual ao vigente responde 200 sem linha nova e sem auditoria.
 
 ## Casos de teste

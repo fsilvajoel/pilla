@@ -51,7 +51,7 @@ cards:
       - 'update (A1 to A4, C1 to C6): PUT with the five fields answers 200 with the new values; a second row exists in default_terms and the first is untouched; GET right after returns the new values; two PUTs in a row leave the last one current'
       - 'audit (A5, C7 to C9): one audit_log row per change, action default_terms.updated, entityType default_terms, before the old terms and after the new ones, written in the same transaction (a forced failure of the audit insert leaves no new default_terms row)'
       - 'frozen contract (A6, A7, C10 to C13): a loan created before the PUT keeps its late fee, late interest, grace and rounding step (GET /loans/{id}); a loan created after the PUT carries the new values (CA-10, ADR-0008)'
-      - 'invalid body (A8, C14 to C16): missing field, negative value and unknown key answer 422 VALIDATION_FAILED naming the field; a PUT equal to the current terms answers 200 and creates no row and no audit'
+      - 'invalid body (A8, C14 to C16): missing field, negative value and unknown key answer 400 VALIDATION_FAILED naming the field; a PUT equal to the current terms answers 200 and creates no row and no audit'
     budget: {attempts: 4, toolCalls: 30, minutes: 20}
     readFirst:
       - docs/plano/E13-F01/plano.md

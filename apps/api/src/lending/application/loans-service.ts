@@ -1,3 +1,4 @@
+import { isDeepStrictEqual } from "node:util";
 import { Inject, Injectable } from "@nestjs/common";
 import { bps, cents, daysBetween, generateSchedule, isoDate, type ScheduleInput } from "@pilla/finance";
 import {
@@ -19,20 +20,21 @@ import {
   type LoanListResponse,
   type LoanStanding,
   type PayoffQuoteResponse,
+  type UpdateDefaultTermsRequest,
   type UpdateLoanRequest,
   type WriteOffLoanRequest,
 } from "@pilla/schemas";
 import { ProblemException } from "../../core/http/problem-exception";
-import type { AuditEntry } from "../../core/public/audit";
+import { recordAudit, type AuditEntry } from "../../core/public/audit";
 import { newId } from "../../core/public/ids";
 import { DATABASE, type Database } from "../../db/database";
 import { confirmedAllocationsByLoan } from "../../payments/public/confirmed-allocations";
 import { findPersonNames, personExists } from "../../people/public/person-lookup";
 import { isActiveAccount } from "../../treasury/public/account-lookup";
-import { findCurrentDefaultTerms } from "../infra/default-terms-repository";
+import { findCurrentDefaultTerms, insertDefaultTerms } from "../infra/default-terms-repository";
 import { selectInstallmentsByLoan, selectLoan, selectLoanPage } from "../infra/loan-queries";
 import { loanRepository, type LoanDraftChanges, type LoanStore } from "../infra/loan-repository";
-import type { InstallmentRow, LoanRow } from "../infra/schema";
+import type { DefaultTermsRow, InstallmentRow, LoanRow } from "../infra/schema";
 import { assessLoan, quotePayoff, rolloverFigures, type LoanAssessment } from "./loan-assessment";
 
 const NOT_FOUND_DETAIL = "Recurso não encontrado.";
@@ -126,6 +128,16 @@ function toResponse(row: LoanRow): LoanDraftResponse {
 /** Data de hoje em Brasília (D11), no formato AAAA-MM-DD. */
 function todayInBrasilia(now: Date): string {
   return new Intl.DateTimeFormat("sv-SE", { timeZone: TIME_ZONE }).format(now);
+}
+
+function termsOf(row: DefaultTermsRow): DefaultTermsResponse {
+  return {
+    lateFeeBps: row.lateFeeBps,
+    lateInterestMonthlyBps: row.lateInterestMonthlyBps,
+    gracePeriodDays: row.gracePeriodDays,
+    suggestedMonthlyRateBps: row.suggestedMonthlyRateBps,
+    roundingStepCents: row.roundingStepCents,
+  };
 }
 
 function auditEntry(action: string, loanId: string, before: LoanRow | null, after: LoanRow, at: Date): AuditEntry {
@@ -329,13 +341,39 @@ export class LoansService {
   async getDefaultTerms(): Promise<DefaultTermsResponse> {
     const row = await findCurrentDefaultTerms(this.db);
     if (row === null) throw new ProblemException("NOT_FOUND", NOT_FOUND_DETAIL);
-    return {
-      lateFeeBps: row.lateFeeBps,
-      lateInterestMonthlyBps: row.lateInterestMonthlyBps,
-      gracePeriodDays: row.gracePeriodDays,
-      suggestedMonthlyRateBps: row.suggestedMonthlyRateBps,
-      roundingStepCents: row.roundingStepCents,
-    };
+    return termsOf(row);
+  }
+
+  // Nova vigência (RF-40, ADR-0006): insere linha, nunca altera; igual ao vigente não grava nada.
+  async updateDefaultTerms(request: UpdateDefaultTermsRequest): Promise<DefaultTermsResponse> {
+    return this.db.transaction(async (tx) => {
+      const current = await findCurrentDefaultTerms(tx);
+      if (current === null) throw new ProblemException("NOT_FOUND", NOT_FOUND_DETAIL);
+      const before = termsOf(current);
+      if (isDeepStrictEqual(before, request)) return before;
+      const now = new Date();
+      // Provisório até existir login (Acesso): created_by herda o da linha vigente; vira o ator real depois.
+      const insertedId = newId();
+      await insertDefaultTerms(tx, {
+        id: insertedId,
+        ...request,
+        effectiveFrom: now,
+        createdBy: current.createdBy,
+      });
+      await recordAudit(tx, {
+        id: newId(),
+        actorType: "ADMIN",
+        actorId: null,
+        action: "default_terms.updated",
+        entityType: "default_terms",
+        entityId: insertedId,
+        before,
+        after: request,
+        at: now,
+        ip: null,
+      });
+      return request;
+    });
   }
 
   // Lista (E10-F05): filtros de pessoa e status no banco; a situação (standing) é calculada, então a página
