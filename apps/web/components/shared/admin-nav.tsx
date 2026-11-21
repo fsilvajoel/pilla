@@ -15,6 +15,7 @@ import {
 export const ADMIN_NAV_ITEMS: readonly { label: string; href: string }[] = [
   { label: "Pessoas", href: "/pessoas" },
   { label: "Empréstimos", href: "/emprestimos" },
+  { label: "Configurações", href: "/configuracoes" },
 ];
 
 export function AdminNav(): ReactElement {
