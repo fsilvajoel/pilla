@@ -16,6 +16,7 @@ export const ADMIN_NAV_ITEMS: readonly { label: string; href: string }[] = [
   { label: "Alertas", href: "/alertas" },
   { label: "Pessoas", href: "/pessoas" },
   { label: "Empréstimos", href: "/emprestimos" },
+  { label: "Pagamentos", href: "/pagamentos" },
   { label: "Configurações", href: "/configuracoes" },
 ];
 

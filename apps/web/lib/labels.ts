@@ -1,4 +1,4 @@
-import type { InstallmentStatus, LoanStanding, LoanStatus, PaymentMethod } from "@pilla/schemas";
+import type { InstallmentStatus, LoanStanding, LoanStatus, PaymentMethod, PaymentStatus } from "@pilla/schemas";
 
 // Rótulos das telas, os mesmos do glossário (docs/glossario.md).
 
@@ -34,4 +34,12 @@ export const paymentMethodLabel: Readonly<Record<PaymentMethod, string>> = {
   BOLETO: "Boleto",
   CASH: "Espécie",
   BANK_TRANSFER: "Transferência",
+};
+
+/** Situação do pagamento na fila de conferência. */
+export const paymentStatusLabel: Readonly<Record<PaymentStatus, string>> = {
+  PENDING_REVIEW: "Aguardando conferência",
+  CONFIRMED: "Confirmado",
+  REVERSED: "Estornado",
+  REJECTED: "Rejeitado",
 };
