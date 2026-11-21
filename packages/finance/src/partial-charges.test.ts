@@ -122,6 +122,15 @@ describe("payment smaller than the charges (A4, C5, C6)", () => {
   });
 });
 
+describe("payment without charges paid (legacy data)", () => {
+  it("leaves the charges as if computed on the open amount since the due date", () => {
+    // pagou 500,00 só de juros e principal em 11/02, sem pagar encargos: nada é marcado como cobrado
+    const legacy = installment(1, DUE, 70000n, 0n, [payment(FIRST_PAYMENT, 0n, 20000n, 10000n)]);
+    // 21/02, 20 dias: multa 70,00 + mora 1% x 20 x 700,00 = 140,00
+    expect(lateChargesAt(legacy, terms, isoDate("2027-02-21"))).toBe(21000n);
+  });
+});
+
 describe("order of the history (A5, C7)", () => {
   const first = payment(FIRST_PAYMENT, 20000n, 20000n, 10000n);
   const second = payment("2027-02-21", 7000n, 0n, 10000n);
