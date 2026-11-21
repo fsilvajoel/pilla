@@ -3,12 +3,14 @@ import {
   createLoanRequest,
   renegotiateLoanRequest,
   renewLoanRequest,
+  updateLoanRequest,
   writeOffLoanRequest,
   type ActivateLoanRequest,
   type CreateLoanRequest,
   type LoanStatus,
   type RenegotiateLoanRequest,
   type RenewLoanRequest,
+  type UpdateLoanRequest,
   type WriteOffLoanRequest,
 } from "@pilla/schemas";
 import { toActionError } from "@/lib/people-action-result";
@@ -32,6 +34,11 @@ export function canCancel(status: LoanStatus): boolean {
   return status === "DRAFT";
 }
 
+/** Editar só existe em rascunho (E10-T21). */
+export function canEdit(status: LoanStatus): boolean {
+  return status === "DRAFT";
+}
+
 /** Só renderiza o link de pagamento em contrato ACTIVE. */
 export function canRegisterPayment(status: LoanStatus): boolean {
   return status === "ACTIVE";
@@ -44,7 +51,7 @@ export function canRollover(status: LoanStatus): boolean {
 
 const MESSAGES: Readonly<Record<string, string>> = {
   VERSION_CONFLICT: "Este contrato foi alterado por outra pessoa. Recarregue a página e tente de novo.",
-  LOAN_NOT_EDITABLE: "Só contratos em rascunho podem ser ativados ou cancelados.",
+  LOAN_NOT_EDITABLE: "Só contratos em rascunho podem ser editados, ativados ou cancelados.",
   RENEWAL_REQUIRES_INTEREST_PAID:
     "Há juros ou encargos vencidos em aberto. Pague-os antes de renovar ou use a renegociação.",
   INSUFFICIENT_ACCOUNT_BALANCE: "A conta escolhida não tem saldo para este desembolso.",
@@ -74,6 +81,13 @@ export type Checked<T> =
 
 export function checkCreateLoan(input: unknown): Checked<CreateLoanRequest> {
   const parsed = createLoanRequest.safeParse(input);
+  return parsed.success
+    ? { ok: true, data: parsed.data }
+    : { ok: false, fieldErrors: fieldErrorsOf(parsed.error.issues) };
+}
+
+export function checkUpdateLoan(input: unknown): Checked<UpdateLoanRequest> {
+  const parsed = updateLoanRequest.safeParse(input);
   return parsed.success
     ? { ok: true, data: parsed.data }
     : { ok: false, fieldErrors: fieldErrorsOf(parsed.error.issues) };

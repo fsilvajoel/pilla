@@ -7,7 +7,7 @@ import { PageHeader } from "@/components/shared/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { installmentStatusLabel, loanStandingLabel, loanStatusLabel } from "@/lib/labels";
-import { canRegisterPayment, canRollover, formatDateBr } from "./loan-actions";
+import { canEdit, canRegisterPayment, canRollover, formatDateBr } from "./loan-actions";
 
 type Installment = LoanDetailResponse["installments"][number];
 
@@ -55,8 +55,13 @@ export function LoanDetailView({ loan, children }: LoanDetailViewProps): ReactEl
         title={`Contrato ${loan.loanNumber}`}
         description={`${loan.personName} · ${loanStatusLabel[loan.status]}${loan.standing ? ` · ${loanStandingLabel[loan.standing]}` : ""}`}
         actions={
-          canRegisterPayment(loan.status) || canRollover(loan.status) ? (
+          canEdit(loan.status) || canRegisterPayment(loan.status) || canRollover(loan.status) ? (
             <div className="flex flex-wrap gap-2">
+              {canEdit(loan.status) && (
+                <Button asChild variant="outline">
+                  <Link href={`/emprestimos/${loan.id}/editar`}>Editar</Link>
+                </Button>
+              )}
               {canRegisterPayment(loan.status) && (
                 <Button asChild>
                   <Link href={`/emprestimos/${loan.id}/pagamento`}>Registrar pagamento</Link>

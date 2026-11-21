@@ -624,6 +624,31 @@ cards:
       - on a fresh database after db:seed, GET /api/v1/settings/default-terms answers 200
     budget: {attempts: 3, toolCalls: 30, minutes: 20}
 
+  - id: E10-T21
+    title: Edit DRAFT loan screen (PATCH /loans/{id} with If-Match)
+    kind: implement
+    assignee: claude
+    rules: []
+    skills: [coding-guidelines]
+    refs: [docs/plano/E10.md]
+    dependsOn: [E10-T19]
+    allowedPaths:
+      - apps/web/app/(admin)/emprestimos/[id]/editar/**
+      - apps/web/app/(admin)/emprestimos/actions.ts
+      - apps/web/lib/api/loans.ts
+      - apps/web/components/loans/**
+      - apps/web/lib/labels.ts
+    protectedTests: []
+    checks:
+      - pnpm --filter @pilla/web typecheck
+      - pnpm --filter @pilla/web lint
+      - pnpm --filter @pilla/web test
+    done:
+      - /emprestimos/{id}/editar edits a DRAFT sending loan.version in If-Match and goes back to the detail
+      - the Editar link shows only on DRAFT, and the route redirects to the detail otherwise
+      - API errors show through toLoanActionError
+    budget: {attempts: 3, toolCalls: 30, minutes: 20}
+
 features:
   - id: E10-F01
     title: Nullable account in DRAFT and the loan status transitions
@@ -658,3 +683,6 @@ features:
   - id: E10-F11
     title: Loan version on the detail for If-Match
     cards: [E10-T19]
+  - id: E10-F12
+    title: Web edit DRAFT loan screen
+    cards: [E10-T21]

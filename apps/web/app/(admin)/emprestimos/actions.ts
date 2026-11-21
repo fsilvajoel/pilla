@@ -1,12 +1,21 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { activateLoan, cancelLoan, createLoanDraft, renegotiateLoan, renewLoan, writeOffLoan } from "@/lib/api/loans";
+import {
+  activateLoan,
+  cancelLoan,
+  createLoanDraft,
+  renegotiateLoan,
+  renewLoan,
+  updateLoan,
+  writeOffLoan,
+} from "@/lib/api/loans";
 import {
   checkActivateLoan,
   checkCreateLoan,
   checkRenegotiateLoan,
   checkRenewLoan,
+  checkUpdateLoan,
   checkWriteOffLoan,
   toLoanActionError,
   type LoanActionResult,
@@ -24,6 +33,20 @@ export async function createLoanAction(input: unknown): Promise<LoanActionResult
     const loan = await createLoanDraft(check.data);
     revalidatePath("/emprestimos");
     return { ok: true, id: loan.id, activeLoansCount: loan.warning.activeLoansCount };
+  } catch (error) {
+    return toLoanActionError(error);
+  }
+}
+
+/** Edita o rascunho (PATCH parcial); `version` vai em If-Match. */
+export async function updateLoanAction(id: string, version: number, input: unknown): Promise<LoanActionResult> {
+  const check = checkUpdateLoan(input);
+  if (!check.ok) return invalid(check.fieldErrors);
+  try {
+    const loan = await updateLoan(id, version, check.data);
+    revalidatePath("/emprestimos");
+    revalidatePath(`/emprestimos/${id}`);
+    return { ok: true, id: loan.id };
   } catch (error) {
     return toLoanActionError(error);
   }
