@@ -6,14 +6,16 @@ import { PaymentForm } from "./payment-form";
 
 const payment = {
   loanId: "01936f8e-7b2c-7cde-8f00-000000000002",
-  destinationKey: "chave-pix@exemplo.com",
+  accountId: "01936f8e-7b2c-7cde-8f00-000000000003",
   paidAt: "2026-12-13",
   amountCents: 115000,
   method: "PIX",
 };
 
 function fillExample(): void {
-  fireEvent.change(screen.getByLabelText("Chave Pix de destino"), { target: { value: "chave-pix@exemplo.com" } });
+  fireEvent.change(screen.getByLabelText("Chave Pix de destino"), {
+    target: { value: "01936f8e-7b2c-7cde-8f00-000000000003" },
+  });
   fireEvent.change(screen.getByLabelText("Data do pagamento"), { target: { value: "2026-12-13" } });
   fireEvent.change(screen.getByLabelText("Valor"), { target: { value: "1.150,00" } });
 }

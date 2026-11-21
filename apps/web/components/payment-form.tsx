@@ -45,7 +45,7 @@ const methods: readonly PaymentFormValues["method"][] = ["PIX", "BOLETO", "CASH"
  */
 export function PaymentForm({ loan, onSubmit }: PaymentFormProps): JSX.Element {
   const { register, handleSubmit } = useForm<PaymentFormValues>({
-    defaultValues: { destinationKey: "", paidAt: "", amount: "", method: "PIX" },
+    defaultValues: { accountId: "", paidAt: "", amount: "", method: "PIX" },
   });
   const [outcome, setOutcome] = useState<Outcome>("idle");
 
@@ -85,7 +85,7 @@ export function PaymentForm({ loan, onSubmit }: PaymentFormProps): JSX.Element {
       <form onSubmit={(event) => void handleSubmit(submit)(event)} noValidate>
         <label>
           Chave Pix de destino
-          <input type="text" {...register("destinationKey")} />
+          <input type="text" {...register("accountId")} />
         </label>
         <label>
           Data do pagamento
