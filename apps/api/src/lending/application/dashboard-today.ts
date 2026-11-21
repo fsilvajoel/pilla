@@ -1,5 +1,12 @@
 import { addDays, daysBetween, lateChargesAt, openAmount, type IsoDate } from "@pilla/finance";
-import type { DashboardTodayResponse, DueInstallmentItem, OverdueInstallmentItem } from "@pilla/schemas";
+import { loanStatusSchema } from "@pilla/schemas";
+import type {
+  DashboardTodayResponse,
+  DueInstallmentItem,
+  OverdueInstallmentItem,
+  PendingPaymentsSummary,
+} from "@pilla/schemas";
+import { ProblemException } from "../../core/http/problem-exception";
 import type { ConfirmedAllocation } from "../../payments/public/confirmed-allocations";
 import type { InstallmentRow, LoanRow } from "../infra/schema";
 import { lateTermsOf, openInstallments } from "./loan-assessment";
@@ -76,5 +83,38 @@ export function groupDashboardInstallments(
     dueToday: blockOf(dueToday, (item) => item.openCents),
     dueThisWeek: blockOf(dueThisWeek, (item) => item.openCents),
     overdue: blockOf(overdue, (item) => item.totalDueCents),
+  };
+}
+
+/**
+ * Bloco `pendingReview` (RF-50): junta a fila da porta `payments/public` com o contrato (qualquer status, DRAFT inclusive)
+ * e o nome da pessoa. `count` e `totalCents` vêm da porta e cobrem todos os pendentes.
+ */
+export function pendingReviewBlock(
+  summary: PendingPaymentsSummary,
+  loansById: ReadonlyMap<string, LoanRow>,
+  names: ReadonlyMap<string, string>,
+): DashboardTodayResponse["pendingReview"] {
+  return {
+    count: summary.count,
+    totalCents: summary.totalCents,
+    items: summary.items.map((payment) => {
+      const loan = loansById.get(payment.loanId);
+      const personName = names.get(payment.personId);
+      if (loan === undefined || personName === undefined) {
+        throw new ProblemException("INTERNAL_ERROR", "Contrato ou pessoa do pagamento pendente não encontrado.");
+      }
+      return {
+        paymentId: payment.id,
+        loanId: loan.id,
+        loanNumber: loan.loanNumber,
+        personName,
+        loanStatus: loanStatusSchema.parse(loan.status),
+        amountCents: payment.amountCents,
+        paidAt: payment.paidAt,
+        method: payment.method,
+        createdAt: payment.registeredAt,
+      };
+    }),
   };
 }
