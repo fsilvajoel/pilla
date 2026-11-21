@@ -4,6 +4,7 @@ import {
   idSchema,
   installmentPaidV1,
   paymentConfirmedV1,
+  paymentReversedV1,
   type PaymentAllocation,
   type AllocationPreviewRequest,
   type AllocationPreviewResponse,
@@ -12,7 +13,9 @@ import {
   type PaymentListResponse,
   type PaymentResponse,
   type RejectPaymentRequest,
+  type ReversePaymentRequest,
 } from "@pilla/schemas";
+import { isReversalBlocked, reopensOnReversal } from "../../lending/domain/reversal";
 import { ProblemException } from "../../core/http/problem-exception";
 import type { PgDatabase, PgQueryResultHKT } from "drizzle-orm/pg-core";
 import { recordAudit, type AuditEntry } from "../../core/public/audit";
@@ -22,6 +25,7 @@ import { DATABASE, type Database } from "../../db/database";
 import { findLoanNumbers, loadLoanForPayment, type PaymentLoan } from "../../lending/public/loan-for-payment";
 import { todayInBrasilia } from "../../lending/public/brasilia-today";
 import { markLoanPaidOff } from "../../lending/public/mark-loan-paid-off";
+import { reopenLoan } from "../../lending/public/reopen-loan";
 import { findPersonNames } from "../../people/public/person-lookup";
 import { isActiveAccount } from "../../treasury/public/account-lookup";
 import {
@@ -29,12 +33,15 @@ import {
   findPaymentForUpdate,
   insertAllocations,
   insertPaymentWithAudit,
+  markAllocationsReversed,
   markPaymentConfirmed,
   markPaymentRejected,
+  markPaymentReversed,
   selectPaymentPage,
 } from "../infra/payment-repository";
 import type { PaymentRow } from "../infra/schema";
 import { toListItem, toPaymentResponse } from "./payment-views";
+import { confirmedAllocationsByLoan } from "../public/confirmed-allocations";
 import { previewAllocation, previewForLoan } from "./preview-allocation";
 
 // Provisório até existir login (Acesso): `created_by` é obrigatório e ainda não há ator real.
@@ -53,21 +60,50 @@ function decodeCursor(cursor: string): string {
   return id.data;
 }
 
-/** Trava o pagamento e confere PENDING_REVIEW e a versão do If-Match (confirmação e rejeição, E11 D4). */
-async function lockPendingPayment(
+/** Trava o pagamento e confere o status esperado e a versão do If-Match (E11 D4). */
+async function lockPayment(
   tx: PgDatabase<PgQueryResultHKT>,
   id: string,
   expectedVersion: number | null,
+  expected: {
+    readonly status: string;
+    readonly code: "PAYMENT_NOT_PENDING" | "PAYMENT_NOT_CONFIRMED";
+    readonly message: string;
+  },
 ): Promise<PaymentRow> {
   const current = await findPaymentForUpdate(tx, id);
   if (current === null) throw new ProblemException("NOT_FOUND", "Recurso não encontrado.");
-  if (current.status !== "PENDING_REVIEW") {
-    throw new ProblemException("PAYMENT_NOT_PENDING", "O pagamento não está em conferência.");
-  }
+  if (current.status !== expected.status) throw new ProblemException(expected.code, expected.message);
   if (expectedVersion === null || expectedVersion !== current.version) {
     throw new ProblemException("VERSION_CONFLICT", "Versão desatualizada.");
   }
   return current;
+}
+
+/** Confirmação e rejeição: PENDING_REVIEW. */
+function lockPendingPayment(
+  tx: PgDatabase<PgQueryResultHKT>,
+  id: string,
+  expectedVersion: number | null,
+): Promise<PaymentRow> {
+  return lockPayment(tx, id, expectedVersion, {
+    status: "PENDING_REVIEW",
+    code: "PAYMENT_NOT_PENDING",
+    message: "O pagamento não está em conferência.",
+  });
+}
+
+/** Estorno: CONFIRMED. */
+function lockConfirmedPayment(
+  tx: PgDatabase<PgQueryResultHKT>,
+  id: string,
+  expectedVersion: number | null,
+): Promise<PaymentRow> {
+  return lockPayment(tx, id, expectedVersion, {
+    status: "CONFIRMED",
+    code: "PAYMENT_NOT_CONFIRMED",
+    message: "O pagamento não está confirmado.",
+  });
 }
 
 function auditSnapshot(row: PaymentRow): Record<string, unknown> {
@@ -115,6 +151,14 @@ async function loadLoanOrFail(
   const loan = await loadLoanForPayment(db, loanId, { forUpdate });
   if (loan === null) throw new ProblemException("NOT_FOUND", "Recurso não encontrado.");
   return loan;
+}
+
+/** Principal e juros em aberto do contrato depois do estorno, sem encargos, em centavos (independe da data). */
+async function openPrincipalAndInterest(tx: PgDatabase<PgQueryResultHKT>, loan: PaymentLoan): Promise<bigint> {
+  const confirmed = await confirmedAllocationsByLoan(tx, loan.id);
+  const scheduled = loan.installments.reduce((sum, item) => sum + item.principalCents + item.interestCents, 0);
+  const paid = confirmed.reduce((sum, item) => sum + item.principalCents + item.interestCents, 0);
+  return BigInt(scheduled - paid);
 }
 
 @Injectable()
@@ -301,6 +345,64 @@ export class PaymentsService {
       });
       await recordAudit(tx, auditOf(rejected, now, "payment.rejected", current, { reason: request.reason }));
       return rejected;
+    });
+    return this.respond(stored, []);
+  }
+
+  /**
+   * Estorna o pagamento confirmado (RF-22, E11 D3 e D10), em uma transação que trava o pagamento e depois o contrato:
+   * bloqueia contrato RENEWED/RENEGOTIATED (RN-R11), marca as alocações e o pagamento (nada é apagado, RN-R07),
+   * reabre o contrato PAID_OFF que voltou a ter principal ou juros em aberto (RN-R10) e grava auditoria e eventos.
+   */
+  async reverse(id: string, expectedVersion: number | null, request: ReversePaymentRequest): Promise<PaymentResponse> {
+    const now = new Date();
+    const stored = await this.db.transaction(async (tx) => {
+      const current = await lockConfirmedPayment(tx, id, expectedVersion);
+      const loan = await loadLoanOrFail(tx, current.loanId, true);
+      if (isReversalBlocked(loan.status)) {
+        throw new ProblemException(
+          "REVERSAL_BLOCKED_BY_SUCCESSOR",
+          "O contrato foi renovado ou renegociado; o pagamento não pode ser estornado.",
+          undefined,
+          loan.successorLoanId ?? undefined,
+        );
+      }
+      const marked = await markAllocationsReversed(tx, id, now);
+      const reversed = await markPaymentReversed(tx, id, {
+        reversedAt: now,
+        reversedBy: PROVISIONAL_ACTOR_ID,
+        reason: request.reason,
+      });
+      await recordAudit(tx, auditOf(reversed, now, "payment.reversed", current, { reason: request.reason }));
+      await writeOutboxEvent(
+        tx,
+        paymentReversedV1.parse({
+          id: newId(),
+          type: "PaymentReversed",
+          version: 1,
+          occurredAt: now.toISOString(),
+          aggregateId: id,
+          payload: {
+            paymentId: id,
+            loanId: loan.id,
+            accountId: reversed.accountId,
+            amountCents: reversed.amountCents,
+            allocations: marked.map((item) => ({
+              installmentId: item.installmentId,
+              lateChargesCents: item.lateChargesCents,
+              interestCents: item.interestCents,
+              principalCents: item.principalCents,
+            })),
+            reason: request.reason,
+          },
+        }),
+      );
+      // ADR-0005: o saldo vem do cronograma menos as alocações que seguem confirmadas, não de um valor guardado.
+      const outstanding = await openPrincipalAndInterest(tx, loan);
+      if (reopensOnReversal(loan.status, outstanding)) {
+        await reopenLoan(tx, { loanId: loan.id, reason: request.reason, at: now });
+      }
+      return reversed;
     });
     return this.respond(stored, []);
   }

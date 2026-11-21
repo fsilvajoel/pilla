@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, sql, type SQL } from "drizzle-orm";
+import { and, asc, desc, eq, isNull, sql, type SQL } from "drizzle-orm";
 import type { PgDatabase, PgQueryResultHKT } from "drizzle-orm/pg-core";
 import { recordAudit, type AuditEntry } from "../../core/public/audit";
 import type { Database } from "../../db/database";
@@ -141,4 +141,40 @@ export async function markPaymentRejected(
 /** Grava a alocação do pagamento por parcela tocada. */
 export async function insertAllocations(tx: PgDatabase<PgQueryResultHKT>, rows: NewAllocationRow[]): Promise<void> {
   await tx.insert(paymentAllocations).values(rows);
+}
+
+/** Marca o pagamento REVERSED com o motivo, soma 1 em version; a linha fica (RN-R07, ADR-0006). */
+export async function markPaymentReversed(
+  tx: PgDatabase<PgQueryResultHKT>,
+  id: string,
+  change: { readonly reversedAt: Date; readonly reversedBy: string; readonly reason: string },
+): Promise<PaymentRow> {
+  const rows = await tx
+    .update(payments)
+    .set({
+      status: "REVERSED",
+      reversedAt: change.reversedAt,
+      reversedBy: change.reversedBy,
+      reversalReason: change.reason,
+      version: sql`${payments.version} + 1`,
+      updatedAt: sql`now()`,
+    })
+    .where(eq(payments.id, id))
+    .returning();
+  const stored = rows[0];
+  if (stored === undefined) throw new Error("payment reverse returned no row");
+  return stored;
+}
+
+/** Marca `reversed_at` nas alocações ainda abertas do pagamento e devolve as marcadas; nada é apagado (RN-R07). */
+export async function markAllocationsReversed(
+  tx: PgDatabase<PgQueryResultHKT>,
+  paymentId: string,
+  reversedAt: Date,
+): Promise<(typeof paymentAllocations.$inferSelect)[]> {
+  return tx
+    .update(paymentAllocations)
+    .set({ reversedAt })
+    .where(and(eq(paymentAllocations.paymentId, paymentId), isNull(paymentAllocations.reversedAt)))
+    .returning();
 }
