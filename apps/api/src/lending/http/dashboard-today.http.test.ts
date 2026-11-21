@@ -429,17 +429,7 @@ describe("GET /api/v1/dashboard/today order (E13-F02A, A13)", () => {
   });
 });
 
-describe("GET /api/v1/dashboard/today pending block and storage (E13-F02A, A14, A15)", () => {
-  // F02A placeholder: the F02B replaces this case with the real pendingReview behaviour.
-  it("C23 (A14): pendingReview stays {count 0, totalCents 0, items []} even with PENDING_REVIEW payments", async () => {
-    await seedLoan({ id: A, number: "2026-0001" });
-    const due = await seedInstallment(A, 1, TODAY);
-    await seedPayment(A, due, { principal: 100000, interest: 20000 }, "PENDING_REVIEW");
-    await seedPayment(A, due, { principal: 1000, interest: 0 }, "PENDING_REVIEW");
-    const { body } = await today();
-    expect(body.pendingReview).toEqual({ count: 0, totalCents: 0, items: [] });
-  });
-
+describe("GET /api/v1/dashboard/today storage (E13-F02A, A15)", () => {
   it("C24 (A15): the call writes no row in any table", async () => {
     await seedLoan({ id: A, number: "2026-0001" });
     await seedInstallment(A, 1, "2026-11-10");

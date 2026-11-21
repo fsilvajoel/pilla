@@ -50,3 +50,8 @@ export async function selectInstallmentsByLoan(
 export async function selectActiveLoans(db: Database): Promise<LoanRow[]> {
   return db.select().from(loans).where(eq(loans.status, "ACTIVE")).orderBy(asc(loans.loanNumber));
 }
+
+/** Contratos por id, em qualquer status (o painel mostra pagamentos pendentes de contratos DRAFT). */
+export function selectLoansByIds(_db: Database, _ids: readonly string[]): Promise<Map<string, LoanRow>> {
+  throw new Error("esboço: não implementado");
+}
