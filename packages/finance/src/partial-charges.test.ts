@@ -94,6 +94,15 @@ describe("fine once, late interest from the payment date (A2, A3, C2 to C4)", ()
   });
 });
 
+describe("payment with charges paid before the fine is due", () => {
+  it("keeps the fine pending and the accrual on the due date when the payment predates any charge", () => {
+    // pagou 301,00 em 20/02 (antes do vencimento 01/03), com 1,00 declarado como encargos: nada era devido, nada sobra
+    const early = installment(1, "2027-03-01", 70000n, 0n, [payment("2027-02-20", 100n, 20000n, 10000n)]);
+    // 10 dias de atraso: multa 70,00 + mora 70,00, como se não houvesse encargos pagos
+    expect(lateChargesAt(early, terms, isoDate("2027-03-11"))).toBe(14000n);
+  });
+});
+
 describe("payment smaller than the charges (A4, C5, C6)", () => {
   it("C5: the unpaid charges stay owed and are not charged twice", () => {
     // 11/02: encargos 200,00, pagou só 50,00 de encargos; em aberto continua 1.000,00

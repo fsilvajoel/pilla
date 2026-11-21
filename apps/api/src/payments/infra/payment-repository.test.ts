@@ -1,7 +1,12 @@
 import type { PgDatabase, PgQueryResultHKT } from "drizzle-orm/pg-core";
 import { describe, expect, it } from "vitest";
 import type { Database } from "../../db/database";
-import { insertPaymentWithAudit } from "./payment-repository";
+import {
+  insertPaymentWithAudit,
+  markPaymentConfirmed,
+  markPaymentRejected,
+  markPaymentReversed,
+} from "./payment-repository";
 
 // Banco falso em que o insert devolve zero linhas: exercita a defesa contra retorno vazio, que o banco real
 // nunca produz (a chave única devolve a linha guardada).
@@ -33,5 +38,29 @@ describe("insertPaymentWithAudit: banco que devolve zero linhas", () => {
       }),
     ).rejects.toThrow("payment insert returned no row");
     expect(audited).toBe(false);
+  });
+});
+
+describe("marcações de status: banco que devolve zero linhas", () => {
+  const updateTx = { update: () => ({ set: () => ({ where: () => ({ returning: () => empty }) }) }) };
+  const tx = updateTx as unknown as PgDatabase<PgQueryResultHKT>;
+  const at = new Date("2026-11-20T10:00:00Z");
+
+  it("confirm fails when the update returns no row", async () => {
+    await expect(
+      markPaymentConfirmed(tx, "x", { confirmedAt: at, confirmedBy: "u", isRecovery: false }),
+    ).rejects.toThrow("payment confirm returned no row");
+  });
+
+  it("reject fails when the update returns no row", async () => {
+    await expect(markPaymentRejected(tx, "x", { rejectedAt: at, rejectedBy: "u", reason: "r" })).rejects.toThrow(
+      "payment reject returned no row",
+    );
+  });
+
+  it("reverse fails when the update returns no row", async () => {
+    await expect(markPaymentReversed(tx, "x", { reversedAt: at, reversedBy: "u", reason: "r" })).rejects.toThrow(
+      "payment reverse returned no row",
+    );
   });
 });
