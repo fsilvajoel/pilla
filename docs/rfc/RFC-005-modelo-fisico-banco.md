@@ -128,10 +128,11 @@
 | receipt_attachment_id | uuid null | obrigatório exceto `CASH` (RN-R06; validado na aplicação) |
 | pix_end_to_end_id | text null | `UNIQUE` parcial `WHERE pix_end_to_end_id IS NOT NULL` |
 | channel | text | `ADMIN` (futuro `WHATSAPP`) |
-| status | text | `PENDING_REVIEW`, `CONFIRMED`, `REVERSED` |
+| status | text | `PENDING_REVIEW`, `CONFIRMED`, `REVERSED`, `REJECTED` (pendente descartado; estado final, sem alocação) |
 | is_recovery | boolean default false | RN-C20 |
 | idempotency_key | text null unique | |
 | confirmed_at/by, reversed_at/by, reversal_reason | | |
+| rejected_at/by, rejection_reason | | preenchidos só em `REJECTED` (motivo obrigatório) |
 | created_at, created_by | | |
 
 Índices: `(loan_id, status)`, `(status) WHERE status = 'PENDING_REVIEW'`, `(person_id)`.

@@ -221,44 +221,44 @@ Formato de cada entrada:
 - sugestão padrão: b) 3 dias
 - resposta: a) 0 dias de carência (Joel em 20/11)
 ## E13-F02A (E13-T03)
-- status: aberta
+- status: resolvida
 - data: 2026-11-21
 - pergunta: no painel de alertas (RF-50), o que é "vencendo na semana"? O PRD não define a janela.
 - opções: a) os próximos 7 dias depois de hoje (hoje + 1 até hoje + 7), sem repetir o que vence hoje; b) o resto da semana civil (até domingo); c) 7 dias incluindo hoje
 - sugestão padrão: a) hoje + 1 até hoje + 7: janela fixa, não muda conforme o dia da semana, e "vencendo hoje" fica separado
-- resposta:
+- resposta: a) hoje + 1 até hoje + 7, sem repetir o que vence hoje; já implementada assim (aprovado pelo Joel em 21/11)
 
 ## E13-F01 (E13-T01)
-- status: aberta
+- status: resolvida
 - data: 2026-11-21
 - pergunta: o RF-40 não fixa limites para os parâmetros padrão. Quais tetos o `PUT /settings/default-terms` deve aceitar (protege de erro de digitação, ex.: multa de 1000%)?
 - opções: a) multa, mora e taxa sugerida até 100% (10000 bps), carência até 365 dias, passo de arredondamento até R$ 1.000; b) outros tetos (informar); c) sem tetos
 - sugestão padrão: a) tetos de sanidade, fáceis de afrouxar depois (só o schema e os casos C14 a C18 mudam)
-- resposta:
+- resposta: a) multa, mora e taxa sugerida até 100% (10000 bps), carência até 365 dias, passo de arredondamento até R$ 1.000; já implementada assim (aprovado pelo Joel em 21/11)
 
 ## E11-T04 (E11-F02)
-- status: aberta
+- status: resolvida
 - data: 2026-11-21
 - pergunta: como o ADMIN descarta ou corrige um pagamento PENDING_REVIEW lançado por engano (valor, data ou contrato errados)? O PRD e a RFC-004 só têm registrar, confirmar e estornar; estornar exige CONFIRMED. Um pendente que nunca pode ser confirmado (por exemplo, valor acima do saldo) ficaria para sempre na fila de conferência (RF-50).
 - opções: a) sem descarte no MVP: confirmar e depois estornar (gera lançamentos de entrada e de estorno na tesouraria, E12) e, se não puder confirmar, o pendente fica na fila; b) `POST /payments/{id}/reject {reason}` leva o pendente a um status novo REJECTED (mudança na RFC-004 §3 e no check de `payments.status` da RFC-005 §5), sem efeito algum e com auditoria; c) permitir editar o pendente
 - sugestão padrão: b) rejeitar com motivo, é o menor desvio e mantém a regra de imutabilidade (ADR-0006); entraria como cartão novo da F04
-- resposta:
+- resposta: b) `POST /payments/{id}/reject {reason}` leva o pendente a REJECTED, sem efeito financeiro, com auditoria; cartões E11-T16 e E11-T17 na F04, RFC-004 §3 e RFC-005 §5 atualizadas (aprovado pelo Joel em 21/11)
 
 ## E11-T04 (E11-F02)
-- status: aberta
+- status: resolvida
 - data: 2026-11-21
 - pergunta: o catálogo de erros da RFC-004 §6 não tem código para: confirmar pagamento de contrato DRAFT (decisão de 20/11), confirmar ou recusar pagamento que não está PENDING_REVIEW, e estornar pagamento que não está CONFIRMED. Quais códigos e HTTP usar?
 - opções: a) 409 `LOAN_NOT_ACTIVE`, 409 `PAYMENT_NOT_PENDING` e 409 `PAYMENT_NOT_CONFIRMED`, acrescentados à RFC-004 §6 pelo cartão E11-T04; b) reaproveitar 422 `LOAN_CLOSED_FOR_PAYMENTS` e 409 `VERSION_CONFLICT`, sem códigos novos
 - sugestão padrão: a) três códigos novos, estáveis e específicos (mesmo caminho da pendência de `DUPLICATE_CPF`)
-- resposta:
+- resposta: a) 409 `LOAN_NOT_ACTIVE`, 409 `PAYMENT_NOT_PENDING` e 409 `PAYMENT_NOT_CONFIRMED`; acrescentados à RFC-004 §6 (aprovado pelo Joel em 21/11)
 
 ## E11-T12 (E11-F07)
-- status: aberta
+- status: resolvida
 - data: 2026-11-21
 - pergunta: como cobrar encargos de uma parcela depois de um pagamento parcial? A RFC-002 §3.5 diz "a multa já paga não é cobrada de novo; a mora corre sobre o novo em aberto a partir da data do pagamento (detalhe a validar nos testes)", mas `@pilla/finance` hoje recalcula multa e mora sobre o em aberto desde o vencimento, o que cobra a multa outra vez após cada parcial.
 - opções: a) seguir a RFC-002 §3.5 (multa uma vez; mora corre sobre o novo em aberto desde o pagamento; encargos não pagos continuam devidos), com a feature E11-F07; b) manter o cálculo atual (encargos sempre sobre o em aberto da parcela na data), sem a F07
 - sugestão padrão: a) é o que a RFC já diz e é o único que deixa "saldo antes menos pagamento" igual ao "saldo depois"
-- resposta:
+- resposta: a) seguir a RFC-002 §3.5 (multa uma vez; mora sobre o novo em aberto desde o pagamento), feature E11-F07 mantida (aprovado pelo Joel em 21/11)
 
 ## E13-F01: created_by do default_terms (21/11)
 - decisão do Joel (21/11): enquanto não há login, `created_by` da nova vigência herda o da linha vigente; vira o ator real quando a épica de Acesso/login existir.

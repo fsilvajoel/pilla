@@ -16,7 +16,7 @@ Entra:
 - Resposta 200 `paymentResponse` (com `allocations` e o `loanStatus` depois da operação).
 - A porta `lending/public` ganha `markLoanPaidOff`, que usa a transição já existente em `lending/domain`.
 
-Fora: lançamento no ledger (consumidor da tesouraria, E12); estorno (F04); descartar pendente (pergunta aberta); cálculo dos encargos após parcial (F07, pré-requisito desta feature).
+Fora: lançamento no ledger (consumidor da tesouraria, E12); estorno (F04); descartar pendente (rejeitar, F04); cálculo dos encargos após parcial (F07, pré-requisito desta feature).
 
 ## Domínio das entradas
 

@@ -78,7 +78,8 @@ Campos calculados ([ADR-0005](../adr/0005-valores-derivados.md)) aparecem nas re
 | `POST /payments/allocation-preview` `{loanId, amountCents, paidAt}` | mostra a distribuição antes de gravar | RF-23 |
 | `POST /payments` | registra em PENDING_REVIEW | RF-20 |
 | `POST /payments/{id}/confirm` | confirma, aloca, publica `PaymentConfirmed` | RF-21 |
-| `POST /payments/{id}/reverse` `{reason}` | estorna | RF-22, RN-R07/R10/R11 |
+| `POST /payments/{id}/reverse` `{reason}` | estorna (só CONFIRMED) | RF-22, RN-R07/R10/R11 |
+| `POST /payments/{id}/reject` `{reason}` | rejeita um pagamento PENDING_REVIEW lançado por engano: vai a REJECTED, sem efeito financeiro, sem evento, com auditoria; estado final | RF-20, RF-21, ADR-0006 |
 | `GET /payments?status=&loanId=` | lista | |
 
 ### Anexos (`core`)
@@ -163,6 +164,9 @@ Resposta `200`:
 | 403 | `FORBIDDEN` | papel sem permissão / recurso de outra pessoa |
 | 404 | `NOT_FOUND` | inexistente (portal usa 404 também para "não é seu") |
 | 409 | `VERSION_CONFLICT` | `If-Match` desatualizado |
+| 409 | `LOAN_NOT_ACTIVE` | confirmar pagamento de contrato que não está ACTIVE (ex.: DRAFT) |
+| 409 | `PAYMENT_NOT_PENDING` | confirmar ou rejeitar pagamento que não está PENDING_REVIEW |
+| 409 | `PAYMENT_NOT_CONFIRMED` | estornar pagamento que não está CONFIRMED |
 | 422 | `LOAN_NOT_EDITABLE` | editar contrato fora de DRAFT |
 | 422 | `INSUFFICIENT_ACCOUNT_BALANCE` | RN-C10 |
 | 422 | `FIRST_DUE_DATE_BEFORE_DISBURSEMENT` | RN-C04 |
