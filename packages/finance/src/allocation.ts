@@ -35,7 +35,7 @@ function byDueDate(a: OpenInstallment, b: OpenInstallment): number {
  * RFC-002 §3.6 / RN-R02, RN-R03, RN-R04. Parcelas em aberto da mais antiga para a mais nova;
  * em cada uma: encargos (na data `ref`) → juros → principal; a sobra vai para a próxima.
  * Erro INVALID_PAYMENT se amount <= 0; PAYMENT_EXCEEDS_BALANCE se amount > outstandingBalance(ref) (T-06).
- * Parcelas sem valor em aberto são ignoradas.
+ * Parcelas sem valor em aberto nem encargos devidos são ignoradas.
  */
 export function allocatePayment(
   amount: Cents,
@@ -50,8 +50,8 @@ export function allocatePayment(
   let remaining: bigint = amount;
   for (const installment of [...installments].sort(byDueDate)) {
     if (remaining === 0n) break;
-    if (openAmount(installment) === 0n) continue;
     const charges = lateChargesAt(installment, terms, ref);
+    if (openAmount(installment) === 0n && charges === 0n) continue;
     const toCharges = min(remaining, charges);
     const toInterest = min(remaining - toCharges, installment.openInterest);
     const toPrincipal = min(remaining - toCharges - toInterest, installment.openPrincipal);

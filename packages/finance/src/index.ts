@@ -17,3 +17,5 @@ export { lateChargesAt, loanStanding, openAmount, outstandingBalance, payoffAmou
 export type { LateTerms, LoanStanding, OpenInstallment } from "./balance";
 export { allocatePayment, AllocationError } from "./allocation";
 export type { PaymentAllocation } from "./allocation";
+export { lateChargesWithHistory } from "./partial-charges";
+export type { InstallmentPayment } from "./partial-charges";

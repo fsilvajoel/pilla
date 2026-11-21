@@ -1,5 +1,5 @@
 import type { PgDatabase, PgQueryResultHKT } from "drizzle-orm/pg-core";
-import { allocatePayment, cents, daysBetween, isoDate, outstandingBalance, type OpenInstallment } from "@pilla/finance";
+import { allocatePayment, cents, daysBetween, isoDate, outstandingBalance } from "@pilla/finance";
 import {
   allocationPreviewResponse,
   type AllocationPreviewRequest,
@@ -7,24 +7,9 @@ import {
 } from "@pilla/schemas";
 import { ProblemException } from "../../core/http/problem-exception";
 import { isClosedForPayments } from "../../lending/domain/loan-status";
+import { openInstallmentsWithHistory } from "../../lending/public/open-installments";
 import { loadLoanForPayment, type PaymentLoan } from "../../lending/public/loan-for-payment";
 import { confirmedAllocationsByLoan } from "../public/confirmed-allocations";
-
-const NO_ALLOCATION = { principalCents: 0, interestCents: 0 };
-
-/** Parcelas em aberto: o valor de cada parcela do contrato menos as alocações confirmadas (E11 D5). */
-async function openInstallmentsOf(db: PgDatabase<PgQueryResultHKT>, loan: PaymentLoan): Promise<OpenInstallment[]> {
-  const confirmed = new Map((await confirmedAllocationsByLoan(db, loan.id)).map((item) => [item.installmentId, item]));
-  return loan.installments.map((installment) => {
-    const paid = confirmed.get(installment.id) ?? NO_ALLOCATION;
-    return {
-      number: installment.number,
-      dueDate: isoDate(installment.dueDate),
-      openPrincipal: cents(BigInt(installment.principalCents - paid.principalCents)),
-      openInterest: cents(BigInt(installment.interestCents - paid.interestCents)),
-    };
-  });
-}
 
 function paidAtError(message: string): ProblemException {
   return new ProblemException("VALIDATION_FAILED", "Dados inválidos.", [{ field: "paidAt", message }]);
@@ -84,7 +69,7 @@ export async function previewForLoan(
     throw paidAtError("A data não pode ser anterior ao desembolso.");
   }
   if (daysBetween(isoDate(today), paidAt) > 0) throw paidAtError("A data não pode ser futura.");
-  const opens = await openInstallmentsOf(db, loan);
+  const opens = openInstallmentsWithHistory(loan.installments, await confirmedAllocationsByLoan(db, loan.id));
   const before = outstandingBalance(opens, loan.lateTerms, paidAt);
   const amount = cents(BigInt(request.amountCents));
   if (amount > before) {

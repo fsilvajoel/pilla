@@ -1,7 +1,7 @@
 import type { PgDatabase, PgQueryResultHKT } from "drizzle-orm/pg-core";
-import { readConfirmedAllocations, type ConfirmedAllocation } from "../infra/allocation-reader";
+import { readConfirmedAllocations, type ConfirmedAllocation, type ConfirmedPayment } from "../infra/allocation-reader";
 
-export type { ConfirmedAllocation };
+export type { ConfirmedAllocation, ConfirmedPayment };
 
 /** Alocações confirmadas e não estornadas do contrato, somadas por parcela e por componente. */
 export function confirmedAllocationsByLoan(

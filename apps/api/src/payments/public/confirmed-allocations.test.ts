@@ -28,12 +28,19 @@ beforeEach(async () => {
 
 type Alloc = { principal: number; interest: number; lateCharges: number; reversedAt?: string | null };
 
-async function addPayment(loanId: string, status: string, allocations: Record<string, Alloc>): Promise<void> {
+const PAID_AT = "2026-11-16";
+
+async function addPayment(
+  loanId: string,
+  status: string,
+  allocations: Record<string, Alloc>,
+  paidAt: string = PAID_AT,
+): Promise<void> {
   const paymentId = nextId();
   await client.query(
     `insert into payments.payments (id, loan_id, person_id, account_id, paid_at, amount_cents, method, channel, status, created_by)
-     values ($1, $2, $3, $4, '2026-11-16', 1000, 'CASH', 'ADMIN', $5, $6)`,
-    [paymentId, loanId, PERSON_ID, ACCOUNT_ID, status, USER_ID],
+     values ($1, $2, $3, $4, $7, 1000, 'CASH', 'ADMIN', $5, $6)`,
+    [paymentId, loanId, PERSON_ID, ACCOUNT_ID, status, USER_ID, paidAt],
   );
   for (const [installmentId, a] of Object.entries(allocations)) {
     await client.query(
@@ -49,7 +56,13 @@ describe("payments public: confirmedAllocationsByLoan", () => {
   it("C8: sums the allocations of a CONFIRMED payment by component", async () => {
     await addPayment(LOAN_ID, "CONFIRMED", { [INSTALLMENT_1]: { principal: 300, interest: 100, lateCharges: 20 } });
     expect(await confirmedAllocationsByLoan(handle.db, LOAN_ID)).toEqual([
-      { installmentId: INSTALLMENT_1, principalCents: 300, interestCents: 100, lateChargesCents: 20 },
+      {
+        installmentId: INSTALLMENT_1,
+        principalCents: 300,
+        interestCents: 100,
+        lateChargesCents: 20,
+        payments: [{ paidAt: PAID_AT, principalCents: 300, interestCents: 100, lateChargesCents: 20 }],
+      },
     ]);
   });
 
@@ -77,8 +90,82 @@ describe("payments public: confirmedAllocationsByLoan", () => {
     });
     const result = await confirmedAllocationsByLoan(handle.db, LOAN_ID);
     expect([...result].sort((a, b) => a.installmentId.localeCompare(b.installmentId))).toEqual([
-      { installmentId: INSTALLMENT_1, principalCents: 400, interestCents: 120, lateChargesCents: 5 },
-      { installmentId: INSTALLMENT_2, principalCents: 200, interestCents: 40, lateChargesCents: 10 },
+      {
+        installmentId: INSTALLMENT_1,
+        principalCents: 400,
+        interestCents: 120,
+        lateChargesCents: 5,
+        payments: [
+          { paidAt: PAID_AT, principalCents: 300, interestCents: 100, lateChargesCents: 0 },
+          { paidAt: PAID_AT, principalCents: 100, interestCents: 20, lateChargesCents: 5 },
+        ],
+      },
+      {
+        installmentId: INSTALLMENT_2,
+        principalCents: 200,
+        interestCents: 40,
+        lateChargesCents: 10,
+        payments: [{ paidAt: PAID_AT, principalCents: 200, interestCents: 40, lateChargesCents: 10 }],
+      },
+    ]);
+  });
+
+  it("C12: lists the confirmed payments of each installment by paidAt, whatever the order they were saved in", async () => {
+    await addPayment(
+      LOAN_ID,
+      "CONFIRMED",
+      { [INSTALLMENT_1]: { principal: 100, interest: 20, lateCharges: 5 } },
+      "2026-11-20",
+    );
+    await addPayment(
+      LOAN_ID,
+      "CONFIRMED",
+      { [INSTALLMENT_1]: { principal: 300, interest: 100, lateCharges: 0 } },
+      "2026-11-10",
+    );
+    const result = await confirmedAllocationsByLoan(handle.db, LOAN_ID);
+    expect(result).toEqual([
+      {
+        installmentId: INSTALLMENT_1,
+        principalCents: 400,
+        interestCents: 120,
+        lateChargesCents: 5,
+        payments: [
+          { paidAt: "2026-11-10", principalCents: 300, interestCents: 100, lateChargesCents: 0 },
+          { paidAt: "2026-11-20", principalCents: 100, interestCents: 20, lateChargesCents: 5 },
+        ],
+      },
+    ]);
+  });
+
+  it("C13: a reversed payment and a reversed allocation leave the history of the installment", async () => {
+    await addPayment(
+      LOAN_ID,
+      "REVERSED",
+      { [INSTALLMENT_1]: { principal: 999, interest: 99, lateCharges: 9 } },
+      "2026-11-05",
+    );
+    await addPayment(
+      LOAN_ID,
+      "CONFIRMED",
+      { [INSTALLMENT_1]: { principal: 888, interest: 88, lateCharges: 8, reversedAt: "2026-11-18T10:00:00Z" } },
+      "2026-11-06",
+    );
+    await addPayment(
+      LOAN_ID,
+      "CONFIRMED",
+      { [INSTALLMENT_1]: { principal: 300, interest: 100, lateCharges: 20 } },
+      "2026-11-12",
+    );
+    const result = await confirmedAllocationsByLoan(handle.db, LOAN_ID);
+    expect(result).toEqual([
+      {
+        installmentId: INSTALLMENT_1,
+        principalCents: 300,
+        interestCents: 100,
+        lateChargesCents: 20,
+        payments: [{ paidAt: "2026-11-12", principalCents: 300, interestCents: 100, lateChargesCents: 20 }],
+      },
     ]);
   });
 });
