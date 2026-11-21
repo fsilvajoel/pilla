@@ -35,6 +35,7 @@ export * from "./api/people/address";
 export * from "./api/people/pix-key";
 export * from "./api/lending/create-loan";
 export * from "./api/lending/update-loan";
+export * from "./api/lending/update-default-terms";
 export * from "./api/lending/loan-views";
 export * from "./api/payments/create-payment";
 export * from "./api/treasury/account-summary";

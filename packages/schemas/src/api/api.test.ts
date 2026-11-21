@@ -12,6 +12,7 @@ import { renegotiateLoanRequest } from "./lending/renegotiate-loan";
 import { renewLoanRequest } from "./lending/renew-loan";
 import { payoffQuoteQuery, payoffQuoteResponse } from "./lending/payoff-quote";
 import { simulateLoanRequest, simulateLoanResponse } from "./lending/simulate-loan";
+import { updateDefaultTermsRequest } from "./lending/update-default-terms";
 import { updateLoanRequest } from "./lending/update-loan";
 import { writeOffLoanRequest } from "./lending/write-off-loan";
 import { allocationPreviewRequest } from "./payments/allocation-preview";
@@ -349,6 +350,12 @@ const cases: BodyCase[] = [
     schema: defaultTermsResponse,
     body: { ...charges, suggestedMonthlyRateBps: 633, roundingStepCents: 500 },
     invalid: { lateFeeBps: 2.5, gracePeriodDays: -1, suggestedMonthlyRateBps: -633, roundingStepCents: 0 },
+  },
+  {
+    name: "updateDefaultTermsRequest",
+    schema: updateDefaultTermsRequest,
+    body: { ...charges, suggestedMonthlyRateBps: 633, roundingStepCents: 500 },
+    invalid: { lateFeeBps: 10001, gracePeriodDays: 366, suggestedMonthlyRateBps: -1, roundingStepCents: 0 },
   },
   {
     name: "createLoanRequest",

@@ -336,4 +336,12 @@ describe("PUT /api/v1/settings/default-terms: invalid body and equal values (A8,
     expect(await termsRows()).toHaveLength(1);
     expect(await termsAudit()).toHaveLength(0);
   });
+
+  it("C20: with no default terms row at all answers 404 NOT_FOUND and writes nothing", async () => {
+    await client.query("delete from lending.default_terms");
+    const res = await put(NEW_TERMS);
+    expect(res.status).toBe(404);
+    expect((res.body as ProblemBody).code).toBe("NOT_FOUND");
+    expect(await termsRows()).toHaveLength(0);
+  });
 });
