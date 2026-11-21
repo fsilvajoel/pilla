@@ -1,17 +1,26 @@
 import { z } from "zod";
-import type { PaymentMethod } from "./create-payment";
+import { centsSchema, idSchema, instantSchema, isoDateSchema, positiveCentsSchema } from "../../common";
+import { paymentMethodSchema } from "./create-payment";
 
-/** Esboço (E11-T03): o contrato da E13 (docs/plano/E11-F02/plano.md) entra na E11-T04. */
-export type PendingPayment = {
-  id: string;
-  loanId: string;
-  personId: string;
-  accountId: string;
-  paidAt: string;
-  amountCents: number;
-  method: PaymentMethod;
-  registeredAt: string;
-};
-export const pendingPaymentSchema: z.ZodType<PendingPayment> = z.never();
-export type PendingPaymentsSummary = { count: number; totalCents: number; items: PendingPayment[] };
-export const pendingPaymentsSummarySchema: z.ZodType<PendingPaymentsSummary> = z.never();
+/** Pagamento aguardando conferência, só ids e valores (contrato da E13, RF-50; docs/plano/E11-F02/plano.md). */
+export const pendingPaymentSchema = z.strictObject({
+  id: idSchema,
+  loanId: idSchema,
+  personId: idSchema,
+  accountId: idSchema,
+  /** data do pagamento informada */
+  paidAt: isoDateSchema,
+  amountCents: positiveCentsSchema,
+  method: paymentMethodSchema,
+  /** `created_at`, instante com fuso */
+  registeredAt: instantSchema,
+});
+export type PendingPayment = z.infer<typeof pendingPaymentSchema>;
+
+/** Fila de pendentes: `count` e `totalCents` cobrem todos os PENDING_REVIEW, `items` só a página pedida. */
+export const pendingPaymentsSummarySchema = z.strictObject({
+  count: z.int().nonnegative(),
+  totalCents: centsSchema,
+  items: z.array(pendingPaymentSchema),
+});
+export type PendingPaymentsSummary = z.infer<typeof pendingPaymentsSummarySchema>;

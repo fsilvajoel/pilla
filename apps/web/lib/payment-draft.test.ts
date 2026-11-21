@@ -7,7 +7,7 @@ import { toPaymentDraft } from "./payment-draft";
 describe("toPaymentDraft", () => {
   const loanId = "01936f8e-7b2c-7cde-8f00-000000000002";
   const example: PaymentFormValues = {
-    destinationKey: "chave-pix@exemplo.com",
+    accountId: "01936f8e-7b2c-7cde-8f00-000000000003",
     paidAt: "2026-12-13",
     amount: "1.150,00",
     method: "PIX",
@@ -16,7 +16,7 @@ describe("toPaymentDraft", () => {
   it("builds the RFC-004 payment", () => {
     expect(toPaymentDraft(loanId, example)).toStrictEqual({
       loanId: "01936f8e-7b2c-7cde-8f00-000000000002",
-      destinationKey: "chave-pix@exemplo.com",
+      accountId: "01936f8e-7b2c-7cde-8f00-000000000003",
       paidAt: "2026-12-13",
       amountCents: 115000,
       method: "PIX",
@@ -26,7 +26,7 @@ describe("toPaymentDraft", () => {
   it("accepts the four methods", () => {
     const base = {
       loanId: "01936f8e-7b2c-7cde-8f00-000000000002",
-      destinationKey: "chave-pix@exemplo.com",
+      accountId: "01936f8e-7b2c-7cde-8f00-000000000003",
       paidAt: "2026-12-13",
       amountCents: 115000,
     };
@@ -49,7 +49,7 @@ describe("toPaymentDraft", () => {
 
   it("rejects a bad date, account and loan", () => {
     expect(() => toPaymentDraft(loanId, { ...example, paidAt: "2026-02-30" })).toThrow(ZodError);
-    expect(() => toPaymentDraft(loanId, { ...example, destinationKey: "" })).toThrow(ZodError);
+    expect(() => toPaymentDraft(loanId, { ...example, accountId: "" })).toThrow(ZodError);
     expect(() => toPaymentDraft("abc", example)).toThrow(ZodError);
   });
 
