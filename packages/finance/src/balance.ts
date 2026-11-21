@@ -1,8 +1,8 @@
 import { daysBetween } from "./date";
 import type { IsoDate } from "./date";
-import { calculateLateCharges } from "./late-charges";
 import type { Bps, Cents } from "./money";
 import { cents } from "./money";
+import { lateChargesWithHistory } from "./partial-charges";
 import type { InstallmentPayment } from "./partial-charges";
 
 /** Parcela com o que falta pagar (principal e juros), já descontadas as alocações confirmadas. */
@@ -30,17 +30,9 @@ export function openAmount(installment: OpenInstallment): Cents {
   return cents(installment.openPrincipal + installment.openInterest);
 }
 
-/** RN-E01/RN-E02: encargos da parcela na data `ref` (total já arredondado ao passo, RN-C03). */
+/** RN-E01/RN-E02: encargos da parcela na data `ref` (total já arredondado ao passo, RN-C03); usa o histórico, se houver. */
 export function lateChargesAt(installment: OpenInstallment, terms: LateTerms, ref: IsoDate): Cents {
-  return calculateLateCharges({
-    openAmount: openAmount(installment),
-    dueDate: installment.dueDate,
-    referenceDate: ref,
-    finePercent: terms.finePercent,
-    lateInterestMonthlyRate: terms.lateInterestMonthlyRate,
-    graceDays: terms.graceDays,
-    roundingStep: terms.roundingStep,
-  }).total;
+  return lateChargesWithHistory(installment, terms, ref);
 }
 
 /** RFC-002 §3.7: Σ (principal + juros em aberto) + encargos na data `ref`, inclusive parcelas futuras. */

@@ -61,7 +61,8 @@ describe("no history (A1, C1)", () => {
     const none = installment(1, DUE, 80000n, 20000n);
     const empty = installment(1, DUE, 80000n, 20000n, []);
     expect(lateChargesWithHistory(empty, terms, ref)).toBe(lateChargesAt(none, terms, ref));
-    expect(lateChargesWithHistory(empty, terms, ref)).toBe(18000n + 10000n);
+    // 47 dias: multa 100,00 + mora 1% x 47 x 1.000,00 = 470,00
+    expect(lateChargesWithHistory(empty, terms, ref)).toBe(10000n + 47000n);
   });
 });
 
