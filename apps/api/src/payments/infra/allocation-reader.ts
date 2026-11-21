@@ -19,7 +19,7 @@ export type ConfirmedAllocation = {
   readonly payments: readonly ConfirmedPayment[];
 };
 
-/** Soma por parcela as alocações não estornadas de pagamentos CONFIRMED do contrato. */
+/** Por parcela, as alocações não estornadas de pagamentos CONFIRMED do contrato: soma e histórico por `paidAt`. */
 export async function readConfirmedAllocations(
   db: PgDatabase<PgQueryResultHKT>,
   loanId: string,
@@ -27,6 +27,7 @@ export async function readConfirmedAllocations(
   const rows = await db
     .select({
       installmentId: paymentAllocations.installmentId,
+      paidAt: payments.paidAt,
       principalCents: sql<string>`sum(${paymentAllocations.principalCents})`,
       interestCents: sql<string>`sum(${paymentAllocations.interestCents})`,
       lateChargesCents: sql<string>`sum(${paymentAllocations.lateChargesCents})`,
@@ -41,12 +42,26 @@ export async function readConfirmedAllocations(
         isNull(payments.reversedAt),
       ),
     )
-    .groupBy(paymentAllocations.installmentId);
-  return rows.map((row) => ({
-    installmentId: row.installmentId,
-    principalCents: Number(row.principalCents),
-    interestCents: Number(row.interestCents),
-    lateChargesCents: Number(row.lateChargesCents),
-    payments: [], // esboço do E11-T14
+    .groupBy(paymentAllocations.installmentId, payments.id, payments.paidAt)
+    .orderBy(payments.paidAt, payments.id);
+  const byInstallment = new Map<string, ConfirmedPayment[]>();
+  for (const row of rows) {
+    const history = byInstallment.get(row.installmentId) ?? [];
+    history.push({
+      paidAt: row.paidAt,
+      principalCents: Number(row.principalCents),
+      interestCents: Number(row.interestCents),
+      lateChargesCents: Number(row.lateChargesCents),
+    });
+    byInstallment.set(row.installmentId, history);
+  }
+  const total = (history: readonly ConfirmedPayment[], pick: (item: ConfirmedPayment) => number): number =>
+    history.reduce((sum, item) => sum + pick(item), 0);
+  return [...byInstallment].map(([installmentId, history]) => ({
+    installmentId,
+    principalCents: total(history, (item) => item.principalCents),
+    interestCents: total(history, (item) => item.interestCents),
+    lateChargesCents: total(history, (item) => item.lateChargesCents),
+    payments: history,
   }));
 }

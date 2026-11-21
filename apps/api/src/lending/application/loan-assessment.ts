@@ -51,9 +51,17 @@ export function lateTermsOf(loan: LoanRow): LateTerms {
   };
 }
 
-/** Parcela com o que falta pagar: o valor da parcela menos as alocações confirmadas (principal e juros). */
+/** Parcela mínima para montar o em aberto (a linha do banco e a do módulo de pagamentos servem). */
+export type InstallmentValues = {
+  readonly number: number;
+  readonly dueDate: string;
+  readonly principalCents: number;
+  readonly interestCents: number;
+};
+
+/** Parcela com o que falta pagar: o valor da parcela menos as alocações confirmadas, com o histórico de pagamentos. */
 function openInstallmentOf(
-  row: InstallmentRow,
+  row: InstallmentValues,
   allocation: Omit<ConfirmedAllocation, "installmentId">,
 ): OpenInstallment {
   return {
@@ -61,7 +69,22 @@ function openInstallmentOf(
     dueDate: isoDate(row.dueDate),
     openPrincipal: cents(BigInt(row.principalCents - allocation.principalCents)),
     openInterest: cents(BigInt(row.interestCents - allocation.interestCents)),
+    payments: allocation.payments.map((payment) => ({
+      paidAt: isoDate(payment.paidAt),
+      lateCharges: cents(BigInt(payment.lateChargesCents)),
+      interest: cents(BigInt(payment.interestCents)),
+      principal: cents(BigInt(payment.principalCents)),
+    })),
   };
+}
+
+/** Único ponto que monta as parcelas em aberto (com histórico): detalhe, cotação, prévia e confirmação o usam. */
+export function openInstallmentsWithHistory(
+  installments: readonly (InstallmentValues & { readonly id: string })[],
+  allocations: readonly ConfirmedAllocation[],
+): OpenInstallment[] {
+  const byInstallment = new Map(allocations.map((allocation) => [allocation.installmentId, allocation]));
+  return installments.map((row) => openInstallmentOf(row, byInstallment.get(row.id) ?? NO_ALLOCATION));
 }
 
 /** Cada parcela com o pago e o que falta pagar (principal e juros), na ordem recebida. */
