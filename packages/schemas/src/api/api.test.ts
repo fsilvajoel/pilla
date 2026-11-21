@@ -19,6 +19,7 @@ import { writeOffLoanRequest } from "./lending/write-off-loan";
 import { allocationPreviewRequest, allocationPreviewResponse } from "./payments/allocation-preview";
 import { createPaymentRequest } from "./payments/create-payment";
 import { paymentListQuery, paymentListResponse, paymentResponse } from "./payments/payment-views";
+import { rejectPaymentRequest } from "./payments/reject-payment";
 import { reversePaymentRequest } from "./payments/reverse-payment";
 import { createPersonRequest, personListResponse } from "./people/create-person";
 import { addressSchema, createAddressRequest, updateAddressRequest } from "./people/address";
@@ -257,6 +258,12 @@ const cases: BodyCase[] = [
       paysOff: false,
     },
     invalid: { loanId: "x", amountCents: 0, deferred: "no" },
+  },
+  {
+    name: "rejectPaymentRequest",
+    schema: rejectPaymentRequest,
+    body: { reason: "valor digitado errado" },
+    invalid: { reason: "" },
   },
   {
     name: "reversePaymentRequest",

@@ -11,6 +11,7 @@ import {
   type PaymentListQuery,
   type PaymentListResponse,
   type PaymentResponse,
+  type RejectPaymentRequest,
 } from "@pilla/schemas";
 import { ProblemException } from "../../core/http/problem-exception";
 import type { PgDatabase, PgQueryResultHKT } from "drizzle-orm/pg-core";
@@ -29,6 +30,7 @@ import {
   insertAllocations,
   insertPaymentWithAudit,
   markPaymentConfirmed,
+  markPaymentRejected,
   selectPaymentPage,
 } from "../infra/payment-repository";
 import type { PaymentRow } from "../infra/schema";
@@ -51,6 +53,23 @@ function decodeCursor(cursor: string): string {
   return id.data;
 }
 
+/** Trava o pagamento e confere PENDING_REVIEW e a versão do If-Match (confirmação e rejeição, E11 D4). */
+async function lockPendingPayment(
+  tx: PgDatabase<PgQueryResultHKT>,
+  id: string,
+  expectedVersion: number | null,
+): Promise<PaymentRow> {
+  const current = await findPaymentForUpdate(tx, id);
+  if (current === null) throw new ProblemException("NOT_FOUND", "Recurso não encontrado.");
+  if (current.status !== "PENDING_REVIEW") {
+    throw new ProblemException("PAYMENT_NOT_PENDING", "O pagamento não está em conferência.");
+  }
+  if (expectedVersion === null || expectedVersion !== current.version) {
+    throw new ProblemException("VERSION_CONFLICT", "Versão desatualizada.");
+  }
+  return current;
+}
+
 function auditSnapshot(row: PaymentRow): Record<string, unknown> {
   return {
     id: row.id,
@@ -67,7 +86,13 @@ function auditSnapshot(row: PaymentRow): Record<string, unknown> {
   };
 }
 
-function auditOf(row: PaymentRow, at: Date, action: string, before: PaymentRow | null): AuditEntry {
+function auditOf(
+  row: PaymentRow,
+  at: Date,
+  action: string,
+  before: PaymentRow | null,
+  extra: Record<string, unknown> = {},
+): AuditEntry {
   return {
     id: newId(),
     actorType: "ADMIN",
@@ -76,7 +101,7 @@ function auditOf(row: PaymentRow, at: Date, action: string, before: PaymentRow |
     entityType: "payment",
     entityId: row.id,
     before: before === null ? null : auditSnapshot(before),
-    after: auditSnapshot(row),
+    after: { ...auditSnapshot(row), ...extra },
     at,
     ip: null,
   };
@@ -169,14 +194,7 @@ export class PaymentsService {
   async confirm(id: string, expectedVersion: number | null): Promise<PaymentResponse> {
     const now = new Date();
     const confirmed = await this.db.transaction(async (tx) => {
-      const current = await findPaymentForUpdate(tx, id);
-      if (current === null) throw new ProblemException("NOT_FOUND", "Recurso não encontrado.");
-      if (current.status !== "PENDING_REVIEW") {
-        throw new ProblemException("PAYMENT_NOT_PENDING", "O pagamento não está em conferência.");
-      }
-      if (expectedVersion === null || expectedVersion !== current.version) {
-        throw new ProblemException("VERSION_CONFLICT", "Versão desatualizada.");
-      }
+      const current = await lockPendingPayment(tx, id, expectedVersion);
       const loan = await loadLoanOrFail(tx, current.loanId, true);
       if (loan.status === "DRAFT") {
         throw new ProblemException("LOAN_NOT_ACTIVE", "O contrato ainda não foi ativado.");
@@ -266,6 +284,25 @@ export class PaymentsService {
       return { stored, allocations };
     });
     return this.respond(confirmed.stored, confirmed.allocations);
+  }
+
+  /**
+   * Rejeita o pagamento pendente (RF-20, E11 D12): trava o pagamento, confere PENDING_REVIEW e a versão, grava
+   * REJECTED com o motivo e a auditoria `payment.rejected`. Sem alocação, evento nem efeito no contrato (RN-R01).
+   */
+  async reject(id: string, expectedVersion: number | null, request: RejectPaymentRequest): Promise<PaymentResponse> {
+    const now = new Date();
+    const stored = await this.db.transaction(async (tx) => {
+      const current = await lockPendingPayment(tx, id, expectedVersion);
+      const rejected = await markPaymentRejected(tx, id, {
+        rejectedAt: now,
+        rejectedBy: PROVISIONAL_ACTOR_ID,
+        reason: request.reason,
+      });
+      await recordAudit(tx, auditOf(rejected, now, "payment.rejected", current, { reason: request.reason }));
+      return rejected;
+    });
+    return this.respond(stored, []);
   }
 
   private loanOf(loanId: string): Promise<PaymentLoan> {

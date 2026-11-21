@@ -8,6 +8,13 @@
       "when": 1794862448399,
       "tag": "0000_payments_tables",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1795292321430,
+      "tag": "0001_payments_rejection",
+      "breakpoints": true
     }
   ]
 }
