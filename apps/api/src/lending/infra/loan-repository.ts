@@ -42,6 +42,8 @@ export type LoanStore = {
   writeOff(id: string, reason: string): Promise<LoanRow>;
   /** Passa o ACTIVE para PAID_OFF, soma 1 em version e grava status_changed_at (RN-C09). */
   markPaidOff(id: string): Promise<LoanRow>;
+  /** Passa o PAID_OFF para ACTIVE, soma 1 em version e grava status_changed_at (RN-R10). */
+  reopen(id: string): Promise<LoanRow>;
   insertInstallments(rows: NewInstallmentRow[]): Promise<void>;
   /** Grava o evento no core.outbox na mesma transação (D7). */
   outbox(event: OutboxEvent): Promise<void>;
@@ -156,6 +158,19 @@ function storeOf(tx: PgDatabase<PgQueryResultHKT>): LoanStore {
         .where(and(eq(loans.id, id), eq(loans.status, "ACTIVE")))
         .returning();
       return firstRow(rows, "loan pay-off");
+    },
+    async reopen(id) {
+      const rows = await tx
+        .update(loans)
+        .set({
+          status: "ACTIVE",
+          statusChangedAt: sql`now()`,
+          version: sql`${loans.version} + 1`,
+          updatedAt: sql`now()`,
+        })
+        .where(and(eq(loans.id, id), eq(loans.status, "PAID_OFF")))
+        .returning();
+      return firstRow(rows, "loan reopen");
     },
     async insertInstallments(rows) {
       await tx.insert(installments).values(rows);

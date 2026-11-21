@@ -4,6 +4,7 @@ import {
   idSchema,
   createPaymentRequest,
   rejectPaymentRequest,
+  reversePaymentRequest,
   paymentListQuery,
   type AllocationPreviewRequest,
   type AllocationPreviewResponse,
@@ -12,6 +13,7 @@ import {
   type PaymentListResponse,
   type PaymentResponse,
   type RejectPaymentRequest,
+  type ReversePaymentRequest,
 } from "@pilla/schemas";
 import { z } from "zod";
 import { ProblemException } from "../../core/http/problem-exception";
@@ -85,6 +87,17 @@ export class PaymentsController {
     @Body(new ZodValidationPipe<RejectPaymentRequest>(rejectPaymentRequest)) body: RejectPaymentRequest,
   ): Promise<PaymentResponse> {
     return this.service.reject(id, ifMatchVersion(ifMatch), body);
+  }
+
+  /** Estorna o pagamento confirmado (RF-22): `If-Match` com a versão e `{reason}`. */
+  @Post(":id/reverse")
+  @HttpCode(200)
+  reverse(
+    @Param("id", new ZodValidationPipe<string>(idSchema)) id: string,
+    @Headers("if-match") ifMatch: string | undefined,
+    @Body(new ZodValidationPipe<ReversePaymentRequest>(reversePaymentRequest)) body: ReversePaymentRequest,
+  ): Promise<PaymentResponse> {
+    return this.service.reverse(id, ifMatchVersion(ifMatch), body);
   }
 
   @Get()
