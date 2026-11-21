@@ -20,6 +20,7 @@ const NO_ALLOCATION: Omit<ConfirmedAllocation, "installmentId"> = {
   principalCents: 0,
   interestCents: 0,
   lateChargesCents: 0,
+  payments: [],
 };
 
 /** Tudo que se calcula de um contrato na data de hoje; nada disto é gravado (ADR-0005). */
