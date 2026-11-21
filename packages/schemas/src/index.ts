@@ -39,5 +39,7 @@ export * from "./api/lending/update-default-terms";
 export * from "./api/lending/loan-views";
 export * from "./api/lending/dashboard-today";
 export * from "./api/payments/create-payment";
+export * from "./api/payments/payment-views";
+export * from "./api/payments/pending-payments";
 export * from "./api/treasury/account-summary";
 export * from "./api/core/health";

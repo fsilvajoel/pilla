@@ -18,6 +18,7 @@ import { updateLoanRequest } from "./lending/update-loan";
 import { writeOffLoanRequest } from "./lending/write-off-loan";
 import { allocationPreviewRequest, allocationPreviewResponse } from "./payments/allocation-preview";
 import { createPaymentRequest } from "./payments/create-payment";
+import { paymentListQuery, paymentListResponse, paymentResponse } from "./payments/payment-views";
 import { reversePaymentRequest } from "./payments/reverse-payment";
 import { createPersonRequest, personListResponse } from "./people/create-person";
 import { addressSchema, createAddressRequest, updateAddressRequest } from "./people/address";
@@ -87,7 +88,7 @@ const installment = {
 };
 const payment = {
   loanId: id(2),
-  destinationKey: "chave-pix@exemplo.com",
+  accountId: id(3),
   paidAt: "2026-12-13",
   amountCents: 115000,
   method: "PIX",
@@ -459,8 +460,46 @@ const cases: BodyCase[] = [
   {
     name: "createPaymentRequest",
     schema: createPaymentRequest,
-    body: { ...payment, receiptAttachmentId: id(5) },
-    invalid: { method: "CHECK", amountCents: 0, paidAt: "2026-12-32", receiptAttachmentId: "x" },
+    body: payment,
+    invalid: { loanId: "x", accountId: "x", method: "CHECK", amountCents: 0, paidAt: "2026-12-32" },
+  },
+  {
+    name: "paymentResponse",
+    schema: paymentResponse,
+    body: {
+      id: id(6),
+      loanId: id(2),
+      loanNumber: "2026-0001",
+      personId: id(1),
+      personName: "Ana Souza",
+      accountId: id(3),
+      paidAt: "2026-12-13",
+      amountCents: 115000,
+      method: "PIX",
+      status: "PENDING_REVIEW",
+      isRecovery: false,
+      createdAt: "2026-12-13T12:00:00-03:00",
+      confirmedAt: null,
+      reversedAt: null,
+      version: 1,
+      reversalReason: null,
+      loanStatus: "ACTIVE",
+      allocations: [],
+    },
+    invalid: { status: "PAID", version: 0, loanStatus: "OPEN", loanNumber: "1", createdAt: "2026-12-13" },
+  },
+  {
+    name: "paymentListQuery",
+    schema: paymentListQuery,
+    body: {},
+    optional: { status: "CONFIRMED", loanId: id(2), limit: "20", cursor: "abc" },
+    invalid: { status: "PAID", loanId: "x", limit: "0", cursor: "" },
+  },
+  {
+    name: "paymentListResponse",
+    schema: paymentListResponse,
+    body: { items: [], nextCursor: null },
+    invalid: { items: "x", nextCursor: 1 },
   },
   {
     name: "accountListResponse",
@@ -572,13 +611,6 @@ describe("createLoanRequest rules (RF-11)", () => {
     const single = { ...loan, type: "SINGLE_PAYMENT" };
     expect(createLoanRequest.safeParse({ ...single, installmentCount: 1 }).success).toBe(true);
     expect(createLoanRequest.safeParse({ ...single, installmentCount: 2 }).success).toBe(false);
-  });
-});
-
-describe("createPaymentRequest rules (RN-R06)", () => {
-  it("cash needs no receipt; the other methods do", () => {
-    expect(createPaymentRequest.safeParse({ ...payment, method: "CASH" }).success).toBe(true);
-    expect(createPaymentRequest.safeParse(payment).success).toBe(false);
   });
 });
 
