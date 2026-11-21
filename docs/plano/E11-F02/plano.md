@@ -18,9 +18,9 @@ Entra:
   - `payment-views.ts`: `paymentStatusSchema` (`PENDING_REVIEW`, `CONFIRMED`, `REVERSED`), `paymentListItemSchema` (`id`, `loanId`, `loanNumber`, `personId`, `personName`, `accountId`, `paidAt`, `amountCents`, `method`, `status`, `isRecovery`, `createdAt`, `confirmedAt` nulo, `reversedAt` nulo), `paymentResponse` (item + `version`, `reversalReason` nulo, `loanStatus`, `allocations[]` com `installmentNumber`, `lateChargesCents`, `interestCents`, `principalCents`; vazio fora de CONFIRMED), `paymentListQuery`, `paymentListResponse`.
   - `pending-payments.ts`: o contrato da E13 (abaixo).
 - Porta pública `payments/public/pending-payments.ts` (abaixo).
-- RFC-004 §6: os três códigos novos (D9), quando a pendência de `pendencias-pm.md` for resolvida.
+- `errorCodeSchema` e `errorStatus` (`packages/schemas/src/api/problem.ts`) ganham os três códigos novos (D9), que a RFC-004 §6 já lista (aprovado pelo Joel em 21/11).
 
-Fora: confirmar e estornar (F03, F04); descartar pagamento lançado por engano (pergunta aberta em `pendencias-pm.md`); comprovante (v1.1); consulta e tela de alertas (E13).
+Fora: confirmar e estornar (F03, F04); descartar pagamento lançado por engano (rejeitar, F04: E11-T16 e E11-T17); comprovante (v1.1); consulta e tela de alertas (E13).
 
 ## Contrato para a E13 (RF-50)
 
@@ -114,7 +114,3 @@ Garantias:
 - Mudar o contrato da E13 depois: os campos estão fixos acima; qualquer mudança passa pela E13.
 - Duas requisições com a mesma chave ao mesmo tempo: a violação de `payments_idempotency_key_key` relê a linha e responde igual.
 - Soma dos pendentes maior que o saldo: tratada na confirmação (D7).
-
-## Pendências
-- Como descartar um pagamento PENDING_REVIEW lançado por engano (`pendencias-pm.md`, E11-T04).
-- Códigos novos `PAYMENT_NOT_PENDING`, `PAYMENT_NOT_CONFIRMED` e `LOAN_NOT_ACTIVE` (`pendencias-pm.md`, E11-T04).

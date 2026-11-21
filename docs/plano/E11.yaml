@@ -4,7 +4,7 @@ title: Payments (preview, register, confirm, reverse) on the NestJS API, screens
 # Cartões em inglês (ADR-0012). Dono recomendado: ver "Divisão entre trabalhadores" em E11.md.
 # bia: testes de domínio puro e de schema; claude (Sonnet/Opus): testes HTTP com PGlite, telas e E2E; baidu: backend simples.
 # Todo cartão que toca apps/web leva skills; cartão de tela leva também shadcn e tailwind-css (gate card-skills).
-# IDs E11-T01..T10 mantidos. Novos: T11 (cliente web) e T12..T15 (E11-F07, encargos após pagamento parcial).
+# IDs E11-T01..T10 mantidos. Novos: T11 (cliente web), T12..T15 (E11-F07, encargos após pagamento parcial) e T16..T17 (F04, rejeitar pendente).
 # Prioridade: E11-T04 (F02) destrava a RF-50 da E13 (E13-F02 depende dele).
 cards:
   # ---------------------------------------------------------------- E11-F01: prévia da alocação
@@ -137,6 +137,7 @@ cards:
       - packages/schemas/src/api/payments/create-payment.ts
       - packages/schemas/src/api/payments/payment-views.ts
       - packages/schemas/src/api/payments/pending-payments.ts
+      - packages/schemas/src/api/problem.ts
       - packages/schemas/src/index.ts
       - apps/api/src/payments/application/**
       - apps/api/src/payments/http/**
@@ -144,7 +145,6 @@ cards:
       - apps/api/src/payments/infra/pending-reader.ts
       - apps/api/src/payments/public/pending-payments.ts
       - apps/api/src/payments/payments.module.ts
-      - docs/rfc/RFC-004-api-e-eventos.md
     protectedTests:
       - apps/api/src/payments/http/payments-create.http.test.ts
       - apps/api/src/payments/http/payments-list.http.test.ts
@@ -165,7 +165,7 @@ cards:
       - POST /payments writes the payment and one audit row in one transaction, and writes no outbox row and no allocation
       - apps/api/src/payments/public/pending-payments.ts exports listPendingReviewPayments, PendingPayment and PendingPaymentsPage exactly as in docs/plano/E11-F02/plano.md (contract for E13), and imports nothing from lending, people or treasury
       - the schemas pendingPaymentSchema and pendingPaymentsSummarySchema are exported from @pilla/schemas
-      - RFC-004 §6 gets the three new codes only after the entry in docs/plano/pendencias-pm.md is resolved; if it is still open, leave the RFC untouched and report it
+      - the three codes LOAN_NOT_ACTIVE, PAYMENT_NOT_PENDING and PAYMENT_NOT_CONFIRMED (all 409, approved by Joel on 21/11) are already in RFC-004 §6; this card only adds them to errorCodeSchema and errorStatus in packages/schemas/src/api/problem.ts and does not edit the RFC
       - destinationKey, receiptAttachmentId and RECEIPT_REQUIRED are gone from create-payment.ts (v1.1); payments.receipt_attachment_id stays null
     hints:
       - reuse loadLoanForPayment and the preview use case of F01 for the balance check (same code, no copy)
@@ -284,7 +284,7 @@ cards:
       - 'events (A7, C8, C9): one PaymentReversed in the outbox that validates against paymentReversedV1 with the same allocations and the reason; nothing is published when the reversal is refused'
       - 'reopen (A8 to A10, C10 to C12): reversing a payment of a PAID_OFF loan that leaves a balance sets the loan back to ACTIVE with status_changed_at, an audit row and a LoanReopened (reason = the reversal reason); on an ACTIVE or WRITTEN_OFF loan the status does not change'
       - 'blocked (A11, A12, C13, C14): RENEWED and RENEGOTIATED loans 422 REVERSAL_BLOCKED_BY_SUCCESSOR (RN-R11); nothing is written'
-      - 'refusals (A13 to A17, C15 to C20): PENDING_REVIEW or REVERSED payment 409 PAYMENT_NOT_CONFIRMED; wrong If-Match 409 VERSION_CONFLICT; missing or blank reason 400 VALIDATION_FAILED; unknown payment 404'
+      - 'refusals (A13 to A17, C15 to C20): PENDING_REVIEW, REVERSED or REJECTED payment 409 PAYMENT_NOT_CONFIRMED; wrong If-Match 409 VERSION_CONFLICT; missing or blank reason 400 VALIDATION_FAILED; unknown payment 404'
       - 'schema (A18, C21, C22): reversePaymentRequest requires a reason and rejects unknown keys'
     budget: {attempts: 4, toolCalls: 30, minutes: 20}
     readFirst:
@@ -331,6 +331,83 @@ cards:
       - apps/api/src/payments/application
       - apps/api/src/lending/domain/reversal.ts
       - apps/api/src/lending/public
+  - id: E11-T16
+    title: Write the tests for POST /payments/{id}/reject (discard a pending payment)
+    kind: test-author
+    assignee: claude
+    rules: [RN-R01, RN-R07]
+    skills: [escrever-teste]
+    refs: [PRD-001 RF-20, PRD-001 RF-21, RFC-004 §3, RFC-004 §6, RFC-005 §5, ADR-0006, docs/plano/pendencias-pm.md, docs/plano/E11.md D4 D8 D9 D12, docs/plano/E11-F04/plano.md]
+    dependsOn: [E11-T04]
+    allowedPaths:
+      - apps/api/src/payments/http/payments-reject.http.test.ts
+      - apps/api/src/payments/infra/payments-status.test.ts
+      - packages/schemas/src/api/payments/reject-payment.test.ts
+    protectedTests: []
+    checks:
+      - '! pnpm --filter @pilla/api exec vitest run src/payments/http/payments-reject.http.test.ts src/payments/infra/payments-status.test.ts'
+      - '! pnpm --filter @pilla/schemas exec vitest run src/api/payments/reject-payment.test.ts'
+      - node scripts/check-test-quality.mjs apps/api/src/payments/http/payments-reject.http.test.ts apps/api/src/payments/infra/payments-status.test.ts packages/schemas/src/api/payments/reject-payment.test.ts
+      - pnpm --filter @pilla/api typecheck
+    done:
+      - 'reject (A1 to A5, C1 to C6): a PENDING_REVIEW payment becomes REJECTED with rejectedAt, rejectedBy, rejectionReason and version + 1; the response is 200 paymentResponse with empty allocations; an audit row with the reason is written; the row is kept (ADR-0006) and appears in GET /payments?status=REJECTED'
+      - 'no financial effect (A6, A7, C7, C8): no payment_allocations row, no core.outbox row, and GET /loans/{id} (paidCents, outstandingCents, status) is identical before and after; a DRAFT loan keeps its status'
+      - 'queue (A8, C9): after the rejection the payment is gone from listPendingReviewPayments (count and totalCents drop) and cannot be confirmed (409 PAYMENT_NOT_PENDING)'
+      - 'refusals (A9 to A14, C10 to C16): CONFIRMED, REVERSED or already REJECTED payment 409 PAYMENT_NOT_PENDING; wrong If-Match 409 VERSION_CONFLICT; missing or blank reason 400 VALIDATION_FAILED; unknown payment 404; reversing a REJECTED payment 409 PAYMENT_NOT_CONFIRMED; nothing is written on a refusal'
+      - 'status check (A15, C17, C18): the database accepts status REJECTED and still refuses any other value (payments_status_check of RFC-005 §5)'
+      - 'schema (A16, C19, C20): rejectPaymentRequest requires a reason (same reasonSchema as reverse) and rejects unknown keys; paymentStatusSchema includes REJECTED'
+    budget: {attempts: 4, toolCalls: 30, minutes: 20}
+    readFirst:
+      - docs/plano/E11-F04/plano.md
+      - docs/plano/pendencias-pm.md
+      - apps/api/src/payments/http/payments-create.http.test.ts
+      - apps/api/src/payments/infra/schema.ts
+      - packages/schemas/src/api/payments/payment-views.ts
+  - id: E11-T17
+    title: Implement payment rejection (REJECTED status, migration, POST /payments/{id}/reject)
+    kind: implement
+    assignee: claude
+    rules: [RN-R01, RN-R07]
+    skills: [editar-arquivo, coding-guidelines, modular-design-principles]
+    refs: [PRD-001 RF-20, PRD-001 RF-21, RFC-004 §3, RFC-004 §6, RFC-005 §5, ADR-0006, docs/plano/pendencias-pm.md, docs/plano/E11.md D4 D8 D9 D12, docs/plano/E11-F04/plano.md]
+    dependsOn: [E11-T16, E11-T06]
+    allowedPaths:
+      - packages/schemas/src/api/payments/reject-payment.ts
+      - packages/schemas/src/api/payments/payment-views.ts
+      - packages/schemas/src/index.ts
+      - apps/api/src/payments/application/**
+      - apps/api/src/payments/http/**
+      - apps/api/src/payments/infra/**
+      - apps/api/migrations/payments/**
+    protectedTests:
+      - apps/api/src/payments/http/payments-reject.http.test.ts
+      - apps/api/src/payments/infra/payments-status.test.ts
+      - packages/schemas/src/api/payments/reject-payment.test.ts
+      - apps/api/src/payments/http/payments-create.http.test.ts
+      - apps/api/src/payments/http/payments-confirm.http.test.ts
+      - apps/api/src/payments/public/pending-payments.test.ts
+    checks:
+      - pnpm --filter @pilla/api exec vitest run src/payments
+      - pnpm --filter @pilla/schemas exec vitest run src/api/payments
+      - pnpm --filter @pilla/api typecheck
+      - pnpm --filter @pilla/api lint
+      - pnpm check:schemas
+      - pnpm depcruise
+    done:
+      - the protected tests pass (A1 to A16) and the F01 to F03 tests still pass
+      - a new migration in apps/api/migrations/payments adds rejected_at, rejected_by and rejection_reason and replaces payments_status_check with the four statuses PENDING_REVIEW, CONFIRMED, REVERSED and REJECTED; the Drizzle schema (infra/schema.ts) matches and the db-regen test passes
+      - rejection runs in one transaction that locks the payment (FOR UPDATE), checks PENDING_REVIEW (409 PAYMENT_NOT_PENDING) and If-Match, sets REJECTED with reason, actor, instant and version + 1, and writes the audit row; it writes no allocation, no outbox row and does not touch lending, people or treasury
+      - the status lists in the paymentStatusSchema and in the list filter include REJECTED; listPendingReviewPayments still returns only PENDING_REVIEW rows
+      - the RFC-004 §3 route and the RFC-005 §5 status and columns already describe this change (edited by the PM decision of 21/11); do not edit the RFCs, report any mismatch
+    hints:
+      - the order is lock, check status and If-Match, set REJECTED, audit; share the lock and If-Match helpers with confirm and reverse
+    budget: {attempts: 3, toolCalls: 40, minutes: 30}
+    readFirst:
+      - docs/plano/E11-F04/plano.md
+      - apps/api/src/payments/application
+      - apps/api/src/payments/infra/schema.ts
+      - apps/api/migrations/payments/0000_payments_tables.sql
+      - apps/api/src/core/public/audit.ts
   # ---------------------------------------------------------------- E11-F05: web
   - id: E11-T11
     title: Implement the server-side API client for payments
@@ -339,7 +416,7 @@ cards:
     rules: []
     skills: [react-best-practices, coding-guidelines, security-best-practices]
     refs: [ADR-0013, RFC-004 §3, docs/plano/E11.md D2 D8 D13, docs/plano/E11-F05/plano.md]
-    dependsOn: [E11-T08, E10-T15]
+    dependsOn: [E11-T08, E11-T17, E10-T15]
     allowedPaths:
       - apps/web/lib/api/payments.ts
     protectedTests: []
@@ -347,7 +424,7 @@ cards:
       - pnpm --filter @pilla/web typecheck
       - pnpm --filter @pilla/web lint
     done:
-      - typed functions for allocation-preview, create (with Idempotency-Key), list, confirm and reverse (with If-Match), on top of the E9 wrapper; responses parsed with @pilla/schemas; problem+json as ApiProblem
+      - typed functions for allocation-preview, create (with Idempotency-Key), list, confirm, reject and reverse (with If-Match), on top of the E9 wrapper; responses parsed with @pilla/schemas; problem+json as ApiProblem
     budget: {attempts: 3, toolCalls: 30, minutes: 20}
     readFirst:
       - docs/plano/E11-F05/plano.md
@@ -381,7 +458,7 @@ cards:
     done:
       - /emprestimos/[id]/pagamento loads the loan from the API (no import of lib/mock-data.ts); the form has account (GET /accounts, base account preselected), date (default today in Brasília), amount and method, no receipt and no Pix key field; a closed loan shows the notice with the successor link when there is one
       - the form shows the allocation preview (per installment, charges, interest, principal, balance after) as the amount and date change; on a DRAFT loan it says the distribution is calculated at confirmation; submitting posts with an Idempotency-Key and shows "Pagamento registrado para conferência."
-      - /pagamentos lists PENDING_REVIEW by default, with a filter for CONFIRMED and REVERSED and for a loan; each pending row has "Confirmar"; each confirmed row has "Estornar" with a dialog that requires a reason; empty state "Nenhum pagamento."
+      - /pagamentos lists PENDING_REVIEW by default, with a filter for CONFIRMED, REVERSED and REJECTED and for a loan; each pending row has "Confirmar" and "Rejeitar" (dialog that requires a reason); each confirmed row has "Estornar" with a dialog that requires a reason; empty state "Nenhum pagamento."
       - API errors (PAYMENT_EXCEEDS_BALANCE, LOAN_CLOSED_FOR_PAYMENTS, LOAN_NOT_ACTIVE, PAYMENT_NOT_PENDING, PAYMENT_NOT_CONFIRMED, REVERSAL_BLOCKED_BY_SUCCESSOR, VERSION_CONFLICT) show in pt-BR next to the action; the nav has "Pagamentos"; the loan detail links to "Registrar pagamento" (DRAFT, ACTIVE, WRITTEN_OFF) and to the loan's payments
       - the old payment-form and payment-draft tests only change to stay green; no new frontend test (ADR-0017 amendment)
       - 'visual review in the browser: both routes open; loading, empty and error states render; no console error'
@@ -558,8 +635,8 @@ features:
     title: Confirm payment
     cards: [E11-T05, E11-T06]
   - id: E11-F04
-    title: Reverse payment
-    cards: [E11-T07, E11-T08]
+    title: Reverse payment and reject a pending payment
+    cards: [E11-T07, E11-T08, E11-T16, E11-T17]
   - id: E11-F05
     title: Web payment client and screens
     cards: [E11-T11, E11-T09]

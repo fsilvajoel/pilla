@@ -6,7 +6,7 @@ Plano da feature. Cartões: E11-T12 (testes, bia), E11-T13 (implementação em `
 
 A RFC-002 §3.5 diz: "Pagamento parcial: a multa já paga não é cobrada de novo; a mora corre sobre o novo em aberto a partir da data do pagamento. (Detalhe a validar nos testes.)". Hoje `lateChargesAt` e `allocatePayment` só recebem `openPrincipal` e `openInterest` e recalculam multa e mora sobre o em aberto desde o vencimento: depois de um pagamento parcial a multa voltaria inteira. Sem esta correção, o saldo depois de confirmar não bate com "saldo antes menos o valor pago" e a quitação nunca fecha em centavos exatos. Como só existe alocação confirmada a partir da F03, a F07 precisa estar pronta antes dela.
 
-Regra a confirmar com o PM (`pendencias-pm.md`, E11-T12). Sem resposta, vale o texto da RFC. Se o PM responder que o cálculo atual (encargos sempre sobre o em aberto) é o desejado, a F07 é cancelada (T12 a T15) e as demais features seguem.
+Regra aprovada pelo Joel em 21/11 (`pendencias-pm.md`, E11-T12): vale o texto da RFC e a F07 segue.
 
 ## Escopo
 
@@ -48,6 +48,3 @@ Fora: mudar a regra de carência (só isenta encargos de mora, E10 F05); gravar 
 
 ## Dependências
 - E10-T10 (leituras). Bloqueia a F03.
-
-## Pendências
-- Confirmar a regra com o PM (`pendencias-pm.md`, E11-T12).
