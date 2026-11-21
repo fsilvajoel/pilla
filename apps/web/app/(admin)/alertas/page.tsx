@@ -15,7 +15,6 @@ export default async function AlertasPage(): Promise<ReactElement> {
       <PageHeader title="Alertas" description={`Parcelas em ${formatDateBr(referenceDate)} (hoje em Brasília)`} />
       <InstallmentBlocks dueToday={dueToday} dueThisWeek={dueThisWeek} overdue={overdue} />
       <PendingReviewBlock {...pendingReview} />
-      <PendingReviewBlock {...pendingReview} />
     </div>
   );
 }
