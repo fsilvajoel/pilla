@@ -33,10 +33,10 @@ import { findCurrentDefaultTerms } from "../infra/default-terms-repository";
 import { selectInstallmentsByLoan, selectLoan, selectLoanPage } from "../infra/loan-queries";
 import { loanRepository, type LoanDraftChanges, type LoanStore } from "../infra/loan-repository";
 import type { InstallmentRow, LoanRow } from "../infra/schema";
+import { todayInBrasilia } from "./today";
 import { assessLoan, quotePayoff, rolloverFigures, type LoanAssessment } from "./loan-assessment";
 
 const NOT_FOUND_DETAIL = "Recurso não encontrado.";
-const TIME_ZONE = "America/Sao_Paulo";
 
 /** Contrato como a API devolve nas rotas de rascunho. */
 export type LoanDraftResponse = {
@@ -121,11 +121,6 @@ function toResponse(row: LoanRow): LoanDraftResponse {
     disbursedAt: row.disbursedAt,
     version: row.version,
   };
-}
-
-/** Data de hoje em Brasília (D11), no formato AAAA-MM-DD. */
-function todayInBrasilia(now: Date): string {
-  return new Intl.DateTimeFormat("sv-SE", { timeZone: TIME_ZONE }).format(now);
 }
 
 function auditEntry(action: string, loanId: string, before: LoanRow | null, after: LoanRow, at: Date): AuditEntry {

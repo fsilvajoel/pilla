@@ -45,3 +45,8 @@ export async function selectInstallmentsByLoan(
   for (const row of rows) byLoan.set(row.loanId, [...(byLoan.get(row.loanId) ?? []), row]);
   return byLoan;
 }
+
+/** Contratos ACTIVE por número do contrato (sem paginação: o painel traz todos, E13 D7). */
+export async function selectActiveLoans(db: Database): Promise<LoanRow[]> {
+  return db.select().from(loans).where(eq(loans.status, "ACTIVE")).orderBy(asc(loans.loanNumber));
+}
