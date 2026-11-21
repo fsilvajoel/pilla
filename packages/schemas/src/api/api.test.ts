@@ -16,7 +16,7 @@ import { simulateLoanRequest, simulateLoanResponse } from "./lending/simulate-lo
 import { updateDefaultTermsRequest } from "./lending/update-default-terms";
 import { updateLoanRequest } from "./lending/update-loan";
 import { writeOffLoanRequest } from "./lending/write-off-loan";
-import { allocationPreviewRequest } from "./payments/allocation-preview";
+import { allocationPreviewRequest, allocationPreviewResponse } from "./payments/allocation-preview";
 import { createPaymentRequest } from "./payments/create-payment";
 import { reversePaymentRequest } from "./payments/reverse-payment";
 import { createPersonRequest, personListResponse } from "./people/create-person";
@@ -229,6 +229,33 @@ const cases: BodyCase[] = [
     schema: allocationPreviewRequest,
     body: { loanId: id(2), amountCents: 115000, paidAt: "2027-02-16" },
     invalid: { loanId: "x", amountCents: 0, paidAt: "2027-13-01" },
+  },
+  {
+    name: "allocationPreviewResponse",
+    schema: allocationPreviewResponse,
+    body: {
+      loanId: id(2),
+      loanStatus: "ACTIVE",
+      paidAt: "2027-02-16",
+      amountCents: 115000,
+      deferred: false,
+      isRecovery: false,
+      allocations: [
+        {
+          installmentNumber: 1,
+          dueDate: "2026-12-14",
+          lateChargesCents: 0,
+          interestCents: 31667,
+          principalCents: 83333,
+          installmentStatusAfter: "PAID",
+        },
+      ],
+      totals: { lateChargesCents: 0, interestCents: 31667, principalCents: 83333 },
+      outstandingBeforeCents: 690000,
+      outstandingAfterCents: 575000,
+      paysOff: false,
+    },
+    invalid: { loanId: "x", amountCents: 0, deferred: "no" },
   },
   {
     name: "reversePaymentRequest",
