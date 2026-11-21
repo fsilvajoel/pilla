@@ -44,6 +44,9 @@ describe("payments.payments (RFC-005 §5)", () => {
       "person_id uuid not null",
       "pix_end_to_end_id text null",
       "receipt_attachment_id uuid null",
+      "rejected_at timestamp with time zone null",
+      "rejected_by uuid null",
+      "rejection_reason text null",
       "reversal_reason text null",
       "reversed_at timestamp with time zone null",
       "reversed_by uuid null",
@@ -64,7 +67,7 @@ describe("payments.payments (RFC-005 §5)", () => {
     expect((await add({ method })).affectedRows).toBe(1);
   });
 
-  it.each(["PENDING_REVIEW", "CONFIRMED", "REVERSED"])("accepts the status %s", async (status) => {
+  it.each(["PENDING_REVIEW", "CONFIRMED", "REVERSED", "REJECTED"])("accepts the status %s", async (status) => {
     expect((await add({ status })).affectedRows).toBe(1);
   });
 

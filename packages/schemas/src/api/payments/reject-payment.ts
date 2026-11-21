@@ -1,6 +1,8 @@
 import { z } from "zod";
+import { reasonSchema } from "../../common";
 
-// Esboço (LI-068): o contrato real entra no cartão E11-T17.
-/** POST /payments/{id}/reject (RFC-004 §3). */
-export const rejectPaymentRequest = z.strictObject({});
+/** POST /payments/{id}/reject (RFC-004 §3): descarta o pagamento pendente com motivo, mesmo `reasonSchema` do estorno. */
+export const rejectPaymentRequest = z.strictObject({
+  reason: reasonSchema,
+});
 export type RejectPaymentRequest = z.infer<typeof rejectPaymentRequest>;

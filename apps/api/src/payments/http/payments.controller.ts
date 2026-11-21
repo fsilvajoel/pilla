@@ -3,6 +3,7 @@ import {
   allocationPreviewRequest,
   idSchema,
   createPaymentRequest,
+  rejectPaymentRequest,
   paymentListQuery,
   type AllocationPreviewRequest,
   type AllocationPreviewResponse,
@@ -10,6 +11,7 @@ import {
   type PaymentListQuery,
   type PaymentListResponse,
   type PaymentResponse,
+  type RejectPaymentRequest,
 } from "@pilla/schemas";
 import { z } from "zod";
 import { ProblemException } from "../../core/http/problem-exception";
@@ -72,6 +74,17 @@ export class PaymentsController {
     @Body(new ZodValidationPipe<Record<string, never>>(confirmBody)) _body: Record<string, never>,
   ): Promise<PaymentResponse> {
     return this.service.confirm(id, ifMatchVersion(ifMatch));
+  }
+
+  /** Rejeita o pagamento pendente (RF-20): `If-Match` com a versão e `{reason}`. */
+  @Post(":id/reject")
+  @HttpCode(200)
+  reject(
+    @Param("id", new ZodValidationPipe<string>(idSchema)) id: string,
+    @Headers("if-match") ifMatch: string | undefined,
+    @Body(new ZodValidationPipe<RejectPaymentRequest>(rejectPaymentRequest)) body: RejectPaymentRequest,
+  ): Promise<PaymentResponse> {
+    return this.service.reject(id, ifMatchVersion(ifMatch), body);
   }
 
   @Get()

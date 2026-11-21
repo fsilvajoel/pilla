@@ -11,7 +11,7 @@ import { loanStatusSchema } from "../lending/loan-views";
 import { paymentMethodSchema } from "./create-payment";
 
 /** Situação do pagamento (RFC-005 §5). */
-export const paymentStatusSchema = z.enum(["PENDING_REVIEW", "CONFIRMED", "REVERSED"]);
+export const paymentStatusSchema = z.enum(["PENDING_REVIEW", "CONFIRMED", "REVERSED", "REJECTED"]);
 export type PaymentStatus = z.infer<typeof paymentStatusSchema>;
 
 /** Um pagamento nas listas (RFC-004 §3); número do contrato e nome da pessoa vêm dos módulos donos. */

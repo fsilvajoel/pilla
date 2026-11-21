@@ -115,6 +115,29 @@ export async function markPaymentConfirmed(
   return stored;
 }
 
+/** Marca o pagamento REJECTED com o motivo, soma 1 em version; sem efeito financeiro (RN-R01). */
+export async function markPaymentRejected(
+  tx: PgDatabase<PgQueryResultHKT>,
+  id: string,
+  change: { readonly rejectedAt: Date; readonly rejectedBy: string; readonly reason: string },
+): Promise<PaymentRow> {
+  const rows = await tx
+    .update(payments)
+    .set({
+      status: "REJECTED",
+      rejectedAt: change.rejectedAt,
+      rejectedBy: change.rejectedBy,
+      rejectionReason: change.reason,
+      version: sql`${payments.version} + 1`,
+      updatedAt: sql`now()`,
+    })
+    .where(eq(payments.id, id))
+    .returning();
+  const stored = rows[0];
+  if (stored === undefined) throw new Error("payment reject returned no row");
+  return stored;
+}
+
 /** Grava a alocação do pagamento por parcela tocada. */
 export async function insertAllocations(tx: PgDatabase<PgQueryResultHKT>, rows: NewAllocationRow[]): Promise<void> {
   await tx.insert(paymentAllocations).values(rows);
