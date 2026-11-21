@@ -2,8 +2,11 @@ import type { ReactElement } from "react";
 import { NewLoanForm } from "@/components/loans/new-loan-form";
 import { PageHeader } from "@/components/shared/page-header";
 import { listPeople } from "@/lib/api/people";
+import { getDefaultTerms } from "@/lib/api/settings";
 import { createLoanAction } from "../actions";
-import { getDefaultTerms } from "./default-terms";
+
+/** Parâmetros padrão e pessoas vêm da API: nunca pré-renderizar no build. */
+export const dynamic = "force-dynamic";
 
 export default async function NovoContratoPage(): Promise<ReactElement> {
   const [defaults, { items }] = await Promise.all([getDefaultTerms(), listPeople({ limit: 100 })]);
