@@ -8,8 +8,11 @@ import { attachmentUploadUrlRequest } from "./core/attachment-upload-url";
 import { activateLoanRequest } from "./lending/activate-loan";
 import { createLoanRequest, defaultTermsResponse } from "./lending/create-loan";
 import { loanDetailResponse, loanListResponse } from "./lending/loan-views";
-import { payoffQuoteQuery } from "./lending/payoff-quote";
+import { renegotiateLoanRequest } from "./lending/renegotiate-loan";
+import { renewLoanRequest } from "./lending/renew-loan";
+import { payoffQuoteQuery, payoffQuoteResponse } from "./lending/payoff-quote";
 import { simulateLoanRequest, simulateLoanResponse } from "./lending/simulate-loan";
+import { updateLoanRequest } from "./lending/update-loan";
 import { writeOffLoanRequest } from "./lending/write-off-loan";
 import { allocationPreviewRequest } from "./payments/allocation-preview";
 import { createPaymentRequest } from "./payments/create-payment";
@@ -169,10 +172,42 @@ const cases: BodyCase[] = [
     invalid: { reason: "   " },
   },
   {
+    name: "renewLoanRequest",
+    schema: renewLoanRequest,
+    body: { firstDueDate: "2027-01-15" },
+    optional: { monthlyInterestRateBps: 500, installmentCount: 4, frequency: { unit: "MONTH", interval: 1 } },
+    invalid: { firstDueDate: "2027-02-30", monthlyInterestRateBps: -1, installmentCount: 0 },
+  },
+  {
+    name: "renegotiateLoanRequest",
+    schema: renegotiateLoanRequest,
+    body: { firstDueDate: "2027-01-15" },
+    optional: { monthlyInterestRateBps: 500, installmentCount: 4, frequency: { unit: "MONTH", interval: 1 } },
+    invalid: { firstDueDate: "2027-02-30", monthlyInterestRateBps: -1, installmentCount: 0 },
+  },
+  {
     name: "payoffQuoteQuery",
     schema: payoffQuoteQuery,
     body: { date: "2027-03-01" },
     invalid: { date: "01/03/2027" },
+  },
+  {
+    name: "payoffQuoteResponse",
+    schema: payoffQuoteResponse,
+    body: {
+      date: "2027-03-01",
+      amountCents: 432000,
+      principalCents: 360000,
+      interestCents: 60000,
+      lateChargesCents: 12000,
+    },
+    invalid: {
+      date: "01/03/2027",
+      amountCents: 4320.5,
+      principalCents: -1,
+      interestCents: "60000",
+      lateChargesCents: null,
+    },
   },
   {
     name: "allocationPreviewRequest",
@@ -323,6 +358,21 @@ const cases: BodyCase[] = [
     invalid: { personId: "", principalCents: 0, lateFeeBps: -200, gracePeriodDays: 1.5, internalNotes: "  " },
   },
   {
+    name: "updateLoanRequest",
+    schema: updateLoanRequest,
+    body: {},
+    optional: { ...simulation, ...charges, internalNotes: "cliente antigo" },
+    invalid: {
+      type: "BULLET",
+      principalCents: 0,
+      monthlyInterestRateBps: 6.33,
+      installmentCount: 0,
+      frequency: { unit: "YEAR", interval: 1 },
+      firstDueDate: "2026-12-32",
+      internalNotes: "  ",
+    },
+  },
+  {
     name: "loanListResponse",
     schema: loanListResponse,
     body: { items: [listItem], nextCursor: "abc" },
@@ -339,6 +389,7 @@ const cases: BodyCase[] = [
       personId: id(1),
       personName: "Maria da Silva",
       status: "ACTIVE",
+      version: 2,
       standing: "CURRENT",
       contractedAt: "2026-11-14",
       disbursedAt: "2026-11-14",
@@ -351,6 +402,7 @@ const cases: BodyCase[] = [
     },
     invalid: {
       status: "OPEN",
+      version: 0,
       standing: "LATE",
       disbursedAt: "2026-11-31",
       installments: [{ ...installment, status: "DONE" }],

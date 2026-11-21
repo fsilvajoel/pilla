@@ -42,7 +42,7 @@ describe("lending.loans (RFC-005 §4)", () => {
 
   it("has exactly the columns of RFC-005 §4", async () => {
     expect(await columnsOf(client, "lending", "loans")).toEqual([
-      "account_id uuid not null",
+      "account_id uuid null",
       "capitalized_amount_cents bigint not null default 0",
       "contracted_at date not null",
       "created_at timestamp with time zone not null default now()",

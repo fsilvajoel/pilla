@@ -51,6 +51,7 @@ export const exampleLoanDetail: LoanDetailResponse = {
   personName: "Maria da Silva",
   type: "INSTALLMENT",
   status: "ACTIVE",
+  version: 2,
   standing: "CURRENT",
   principalCents: 500000,
   monthlyInterestRateBps: 633,

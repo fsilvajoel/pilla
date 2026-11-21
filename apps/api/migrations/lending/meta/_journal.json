@@ -8,6 +8,13 @@
       "when": 1794862661734,
       "tag": "0000_lending_tables",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1795203660066,
+      "tag": "0001_loans-account-nullable",
+      "breakpoints": true
     }
   ]
 }

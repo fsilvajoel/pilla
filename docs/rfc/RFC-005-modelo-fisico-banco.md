@@ -95,7 +95,7 @@
 | first_due_date | date | |
 | contracted_at | date | |
 | disbursed_at | date null | `CHECK (status IN ('DRAFT','CANCELLED') OR disbursed_at IS NOT NULL)` |
-| account_id | uuid | → treasury (sem FK) |
+| account_id | uuid null | → treasury (sem FK); `CHECK (status IN ('DRAFT','CANCELLED') OR account_id IS NOT NULL)` |
 | origin_loan_id | uuid null FK loans | |
 | origin_type | text null | `RENEWAL`, `RENEGOTIATION`, `IMPORT` |
 | capitalized_amount_cents | bigint default 0 | RN-C17 |

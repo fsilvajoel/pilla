@@ -1,6 +1,7 @@
-// Semeia 6 pessoas fictícias (RNF-02) em DATABASE_URL local. Idempotente, numa única transação.
+// Semeia a conta base e 6 pessoas fictícias (RNF-02) em DATABASE_URL local. Idempotente, numa única transação.
 // Recusa host que não seja 127.0.0.1 ou localhost, para nunca misturar dado de teste com produção.
 import pg from "pg";
+import { BASE_ACCOUNT_ID, BASE_ACCOUNT_NAME } from "../src/treasury/infra/account-repository.ts";
 
 type PixType = "CPF" | "CNPJ" | "EMAIL" | "PHONE" | "RANDOM";
 
@@ -179,6 +180,19 @@ const pixKeys: readonly PixSeed[] = [
   { id: "00000000-0000-7000-8002-000000000008", ownerId: FABIO, type: "CPF", value: "27182818205", isPrimary: true },
 ];
 
+// Condições padrão de empréstimo (RFC-005 §4): mesmos valores de apps/api/src/lending/http/loans-draft.http.test.ts.
+// Sem esta linha, GET /settings/default-terms responde 404 e /emprestimos/novo não pré-preenche as taxas.
+const DEFAULT_TERMS_ID = "00000000-0000-7000-8003-000000000001";
+const SEED_CREATOR_ID = "00000000-0000-7000-8000-000000000000";
+const DEFAULT_TERMS = {
+  lateFeeBps: 200,
+  lateInterestMonthlyBps: 100,
+  gracePeriodDays: 0,
+  suggestedMonthlyRateBps: 1000,
+  roundingStepCents: 500,
+  effectiveFrom: "2026-01-01T00:00:00Z",
+} as const;
+
 const ALLOWED_HOSTS: readonly string[] = ["127.0.0.1", "localhost"];
 
 function readDatabaseUrl(): URL {
@@ -200,6 +214,10 @@ function readDatabaseUrl(): URL {
 }
 
 async function seed(client: pg.PoolClient): Promise<void> {
+  await client.query(`INSERT INTO treasury.accounts (id, name) VALUES ($1, $2) ON CONFLICT (id) DO NOTHING`, [
+    BASE_ACCOUNT_ID,
+    BASE_ACCOUNT_NAME,
+  ]);
   for (const p of persons) {
     await client.query(
       `INSERT INTO people.persons (id, full_name, cpf, phone, referred_by_id)
@@ -214,6 +232,22 @@ async function seed(client: pg.PoolClient): Promise<void> {
       [a.id, a.personId, a.street, a.number, a.district, a.city, a.state, a.postalCode, a.isPrimary],
     );
   }
+  await client.query(
+    `INSERT INTO lending.default_terms
+       (id, late_fee_bps, late_interest_monthly_bps, grace_period_days, suggested_monthly_rate_bps,
+        rounding_step_cents, effective_from, created_by)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8) ON CONFLICT (id) DO NOTHING`,
+    [
+      DEFAULT_TERMS_ID,
+      DEFAULT_TERMS.lateFeeBps,
+      DEFAULT_TERMS.lateInterestMonthlyBps,
+      DEFAULT_TERMS.gracePeriodDays,
+      DEFAULT_TERMS.suggestedMonthlyRateBps,
+      DEFAULT_TERMS.roundingStepCents,
+      DEFAULT_TERMS.effectiveFrom,
+      SEED_CREATOR_ID,
+    ],
+  );
   for (const k of pixKeys) {
     await client.query(
       `INSERT INTO people.pix_keys (id, owner_person_id, type, value, is_primary)
