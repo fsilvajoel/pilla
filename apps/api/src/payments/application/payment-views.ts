@@ -1,4 +1,10 @@
-import { paymentMethodSchema, paymentStatusSchema, type PaymentListItem, type PaymentResponse } from "@pilla/schemas";
+import {
+  paymentMethodSchema,
+  paymentStatusSchema,
+  type PaymentAllocation,
+  type PaymentListItem,
+  type PaymentResponse,
+} from "@pilla/schemas";
 import { ProblemException } from "../../core/http/problem-exception";
 import type { PaymentLoan } from "../../lending/public/loan-for-payment";
 import type { PaymentRow } from "../infra/schema";
@@ -36,11 +42,12 @@ export function toListItem(
   };
 }
 
-/** Resposta de POST /payments: sem alocação, que só existe depois da confirmação (F03). */
+/** Resposta de POST /payments (sem alocação) e de POST /payments/{id}/confirm (com a alocação gravada). */
 export function toPaymentResponse(
   row: PaymentRow,
   loan: PaymentLoan,
   personNames: ReadonlyMap<string, string>,
+  allocations: readonly PaymentAllocation[],
 ): PaymentResponse {
   const item = toListItem(row, new Map([[loan.id, loan.loanNumber]]), personNames);
   return {
@@ -48,6 +55,6 @@ export function toPaymentResponse(
     version: row.version,
     reversalReason: row.reversalReason,
     loanStatus: loan.status,
-    allocations: [],
+    allocations: [...allocations],
   };
 }

@@ -29,6 +29,9 @@ export const payments = paymentsSchema.table(
     reversedAt: instant("reversed_at"),
     reversedBy: uuid("reversed_by"),
     reversalReason: text("reversal_reason"),
+    rejectedAt: instant("rejected_at"),
+    rejectedBy: uuid("rejected_by"),
+    rejectionReason: text("rejection_reason"),
     createdAt: instant("created_at").notNull().defaultNow(),
     createdBy: uuid("created_by").notNull(),
     updatedAt: instant("updated_at").notNull().defaultNow(),
@@ -49,7 +52,7 @@ export const payments = paymentsSchema.table(
     check("payments_amount_cents_check", sql`${t.amountCents} > 0`),
     check("payments_method_check", sql`${t.method} IN ('PIX', 'BOLETO', 'CASH', 'BANK_TRANSFER')`),
     check("payments_channel_check", sql`${t.channel} IN ('ADMIN')`),
-    check("payments_status_check", sql`${t.status} IN ('PENDING_REVIEW', 'CONFIRMED', 'REVERSED')`),
+    check("payments_status_check", sql`${t.status} IN ('PENDING_REVIEW', 'CONFIRMED', 'REVERSED', 'REJECTED')`),
   ],
 );
 
