@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/sidebar";
 
 export const ADMIN_NAV_ITEMS: readonly { label: string; href: string }[] = [
+  { label: "Alertas", href: "/alertas" },
   { label: "Pessoas", href: "/pessoas" },
   { label: "Empréstimos", href: "/emprestimos" },
   { label: "Configurações", href: "/configuracoes" },
