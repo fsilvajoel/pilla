@@ -63,7 +63,8 @@ function openInstallmentOf(
   };
 }
 
-function openInstallments(
+/** Cada parcela com o pago e o que falta pagar (principal e juros), na ordem recebida. */
+export function openInstallments(
   rows: readonly InstallmentRow[],
   allocations: readonly ConfirmedAllocation[],
 ): { row: InstallmentRow; paid: number; open: OpenInstallment }[] {

@@ -35,10 +35,10 @@ import { findCurrentDefaultTerms, insertDefaultTerms } from "../infra/default-te
 import { selectInstallmentsByLoan, selectLoan, selectLoanPage } from "../infra/loan-queries";
 import { loanRepository, type LoanDraftChanges, type LoanStore } from "../infra/loan-repository";
 import type { DefaultTermsRow, InstallmentRow, LoanRow } from "../infra/schema";
+import { todayInBrasilia } from "./today";
 import { assessLoan, quotePayoff, rolloverFigures, type LoanAssessment } from "./loan-assessment";
 
 const NOT_FOUND_DETAIL = "Recurso não encontrado.";
-const TIME_ZONE = "America/Sao_Paulo";
 
 /** Contrato como a API devolve nas rotas de rascunho. */
 export type LoanDraftResponse = {
@@ -92,7 +92,7 @@ function decodeCursor(cursor: string): string {
   return loanNumber;
 }
 
-function personNameOf(names: Map<string, string>, personId: string): string {
+export function personNameOf(names: Map<string, string>, personId: string): string {
   const name = names.get(personId);
   if (name === undefined) throw new ProblemException("INTERNAL_ERROR", "Pessoa do contrato não encontrada.");
   return name;
@@ -123,11 +123,6 @@ function toResponse(row: LoanRow): LoanDraftResponse {
     disbursedAt: row.disbursedAt,
     version: row.version,
   };
-}
-
-/** Data de hoje em Brasília (D11), no formato AAAA-MM-DD. */
-function todayInBrasilia(now: Date): string {
-  return new Intl.DateTimeFormat("sv-SE", { timeZone: TIME_ZONE }).format(now);
 }
 
 function termsOf(row: DefaultTermsRow): DefaultTermsResponse {
