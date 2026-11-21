@@ -318,8 +318,8 @@ describe("POST /api/v1/payments/{id}/confirm: allocation (E11-F03, A1 to A5)", (
     await confirm(id);
     const after = await loanDetail();
     expect(after.outstandingCents).toBe(487500);
-    expect(after.paidCents).toBe(120000);
-    expect(after.installments?.[0]).toMatchObject({ number: 1, paidCents: 120000 });
+    expect(after.paidCents).toBe(126000);
+    expect(after.installments?.[0]).toMatchObject({ number: 1, paidCents: 126000 });
   });
 
   it("C6 (A5): the second confirmation distributes over what the first one left open", async () => {

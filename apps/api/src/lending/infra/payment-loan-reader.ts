@@ -1,7 +1,7 @@
 import { bps, cents, type LateTerms } from "@pilla/finance";
 import { loanStatusSchema } from "@pilla/schemas";
 import { asc, eq, inArray } from "drizzle-orm";
-import type { Database } from "../../db/database";
+import type { PgDatabase, PgQueryResultHKT } from "drizzle-orm/pg-core";
 import type { PaymentLoan } from "../domain/payment-loan";
 import { installments, loans, type LoanRow } from "./schema";
 
@@ -16,7 +16,11 @@ function lateTermsOf(loan: LoanRow): LateTerms {
 }
 
 /** Contrato, parcelas e sucessor lidos para o módulo de pagamentos; `forUpdate` trava a linha do contrato. */
-export async function readPaymentLoan(db: Database, loanId: string, forUpdate: boolean): Promise<PaymentLoan | null> {
+export async function readPaymentLoan(
+  db: PgDatabase<PgQueryResultHKT>,
+  loanId: string,
+  forUpdate: boolean,
+): Promise<PaymentLoan | null> {
   const query = db.select().from(loans).where(eq(loans.id, loanId));
   const loan = (await (forUpdate ? query.for("update") : query))[0];
   if (loan === undefined) return null;
@@ -46,7 +50,10 @@ export async function readPaymentLoan(db: Database, loanId: string, forUpdate: b
 }
 
 /** Número do contrato por id; ids desconhecidos ficam de fora. */
-export async function readLoanNumbers(db: Database, ids: readonly string[]): Promise<Map<string, string>> {
+export async function readLoanNumbers(
+  db: PgDatabase<PgQueryResultHKT>,
+  ids: readonly string[],
+): Promise<Map<string, string>> {
   if (ids.length === 0) return new Map();
   const rows = await db
     .select({ id: loans.id, loanNumber: loans.loanNumber })

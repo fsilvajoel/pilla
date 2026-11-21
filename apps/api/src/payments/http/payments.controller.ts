@@ -63,7 +63,7 @@ export class PaymentsController {
     return this.service.create(body, idempotencyKeyOf(idempotencyKey));
   }
 
-  /** Esboço (E11-T05): `If-Match` com a versão do pagamento e corpo vazio; a E11-T06 implementa. */
+  /** Confirma o pagamento (RF-21): `If-Match` com a versão do pagamento e corpo vazio. */
   @Post(":id/confirm")
   @HttpCode(200)
   confirm(
