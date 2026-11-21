@@ -1,6 +1,7 @@
-import { Body, Controller, Get, Headers, HttpCode, Inject, Post, Query } from "@nestjs/common";
+import { Body, Controller, Get, Headers, HttpCode, Inject, Param, Post, Query } from "@nestjs/common";
 import {
   allocationPreviewRequest,
+  idSchema,
   createPaymentRequest,
   paymentListQuery,
   type AllocationPreviewRequest,
@@ -27,6 +28,15 @@ function idempotencyKeyOf(header: string | undefined): string | undefined {
   return key.data;
 }
 
+/** Versão do cabeçalho `If-Match` (`3` ou `"3"`); null quando falta ou não é um inteiro (E10 D9). */
+function ifMatchVersion(header: string | undefined): number | null {
+  const match = /^"?(\d+)"?$/.exec(header?.trim() ?? "");
+  return match?.[1] === undefined ? null : Number(match[1]);
+}
+
+/** Corpo da confirmação: vazio; qualquer chave é recusada. */
+const confirmBody = z.strictObject({}).default({});
+
 // Só valida a entrada e traduz HTTP; as regras ficam em PaymentsService.
 @Controller("payments")
 export class PaymentsController {
@@ -51,6 +61,17 @@ export class PaymentsController {
     @Body(new ZodValidationPipe<CreatePaymentRequest>(createPaymentRequest)) body: CreatePaymentRequest,
   ): Promise<PaymentResponse> {
     return this.service.create(body, idempotencyKeyOf(idempotencyKey));
+  }
+
+  /** Esboço (E11-T05): `If-Match` com a versão do pagamento e corpo vazio; a E11-T06 implementa. */
+  @Post(":id/confirm")
+  @HttpCode(200)
+  confirm(
+    @Param("id", new ZodValidationPipe<string>(idSchema)) id: string,
+    @Headers("if-match") ifMatch: string | undefined,
+    @Body(new ZodValidationPipe<Record<string, never>>(confirmBody)) _body: Record<string, never>,
+  ): Promise<PaymentResponse> {
+    return this.service.confirm(id, ifMatchVersion(ifMatch));
   }
 
   @Get()

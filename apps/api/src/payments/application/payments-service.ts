@@ -114,6 +114,11 @@ export class PaymentsService {
     return this.respond(stored);
   }
 
+  /** Esboço (E11-T05): confirma o pagamento (RF-21), aloca e quita o contrato; implementado na E11-T06. */
+  confirm(_id: string, _expectedVersion: number | null): Promise<PaymentResponse> {
+    return Promise.reject(new Error("esboço: não implementado"));
+  }
+
   /** Lista de pagamentos (RFC-004 §3) com o número do contrato e o nome da pessoa. */
   async list(query: PaymentListQuery): Promise<PaymentListResponse> {
     const rows = await selectPaymentPage(this.db, {
