@@ -1,26 +1,9 @@
 import { bps, cents, type LateTerms } from "@pilla/finance";
+import { loanStatusSchema } from "@pilla/schemas";
 import { asc, eq, inArray } from "drizzle-orm";
 import type { Database } from "../../db/database";
-import type { LoanStatus } from "../domain/loan-status";
 import type { PaymentLoan } from "../domain/payment-loan";
 import { installments, loans, type LoanRow } from "./schema";
-
-const STATUSES: readonly LoanStatus[] = [
-  "DRAFT",
-  "ACTIVE",
-  "PAID_OFF",
-  "RENEWED",
-  "RENEGOTIATED",
-  "WRITTEN_OFF",
-  "CANCELLED",
-];
-
-/** O CHECK `loans_status_check` garante a lista; o estreitamento evita um `as` na leitura. */
-function statusOf(value: string): LoanStatus {
-  const status = STATUSES.find((candidate) => candidate === value);
-  if (status === undefined) throw new Error(`status de contrato desconhecido: ${value}`);
-  return status;
-}
 
 /** Condições de atraso copiadas no contrato (ADR-0008). */
 function lateTermsOf(loan: LoanRow): LateTerms {
@@ -47,7 +30,7 @@ export async function readPaymentLoan(db: Database, loanId: string, forUpdate: b
     id: loan.id,
     loanNumber: loan.loanNumber,
     personId: loan.personId,
-    status: statusOf(loan.status),
+    status: loanStatusSchema.parse(loan.status),
     accountId: loan.accountId,
     disbursedAt: loan.disbursedAt,
     successorLoanId: successors[0]?.id ?? null,
