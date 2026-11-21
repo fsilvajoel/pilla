@@ -1,5 +1,5 @@
+import type { PgDatabase, PgQueryResultHKT } from "drizzle-orm/pg-core";
 import { and, eq, isNull, sql } from "drizzle-orm";
-import type { Database } from "../../db/database";
 import { paymentAllocations, payments } from "./schema";
 
 export type ConfirmedAllocation = {
@@ -10,7 +10,10 @@ export type ConfirmedAllocation = {
 };
 
 /** Soma por parcela as alocações não estornadas de pagamentos CONFIRMED do contrato. */
-export async function readConfirmedAllocations(db: Database, loanId: string): Promise<ConfirmedAllocation[]> {
+export async function readConfirmedAllocations(
+  db: PgDatabase<PgQueryResultHKT>,
+  loanId: string,
+): Promise<ConfirmedAllocation[]> {
   const rows = await db
     .select({
       installmentId: paymentAllocations.installmentId,

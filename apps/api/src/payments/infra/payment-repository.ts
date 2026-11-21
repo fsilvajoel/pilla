@@ -1,7 +1,8 @@
 import { and, asc, desc, eq, sql, type SQL } from "drizzle-orm";
+import type { PgDatabase, PgQueryResultHKT } from "drizzle-orm/pg-core";
 import { recordAudit, type AuditEntry } from "../../core/public/audit";
 import type { Database } from "../../db/database";
-import { payments, type PaymentRow } from "./schema";
+import { paymentAllocations, payments, type PaymentRow } from "./schema";
 
 export type NewPaymentRow = typeof payments.$inferInsert;
 
@@ -81,4 +82,40 @@ export async function selectPaymentPage(db: Database, params: PaymentPageParams)
       desc(sql`case when not ${pending} then ${payments.id} end`),
     )
     .limit(params.limit + 1);
+}
+
+export type NewAllocationRow = typeof paymentAllocations.$inferInsert;
+
+/** Lê o pagamento travando a linha até o fim da transação de quem chama (confirmação, E11 D4). */
+export async function findPaymentForUpdate(tx: PgDatabase<PgQueryResultHKT>, id: string): Promise<PaymentRow | null> {
+  const rows = await tx.select().from(payments).where(eq(payments.id, id)).for("update");
+  return rows[0] ?? null;
+}
+
+/** Marca o pagamento CONFIRMED, soma 1 em version e grava a recuperação (RN-C20). */
+export async function markPaymentConfirmed(
+  tx: PgDatabase<PgQueryResultHKT>,
+  id: string,
+  change: { readonly confirmedAt: Date; readonly confirmedBy: string; readonly isRecovery: boolean },
+): Promise<PaymentRow> {
+  const rows = await tx
+    .update(payments)
+    .set({
+      status: "CONFIRMED",
+      confirmedAt: change.confirmedAt,
+      confirmedBy: change.confirmedBy,
+      isRecovery: change.isRecovery,
+      version: sql`${payments.version} + 1`,
+      updatedAt: sql`now()`,
+    })
+    .where(eq(payments.id, id))
+    .returning();
+  const stored = rows[0];
+  if (stored === undefined) throw new Error("payment confirm returned no row");
+  return stored;
+}
+
+/** Grava a alocação do pagamento por parcela tocada. */
+export async function insertAllocations(tx: PgDatabase<PgQueryResultHKT>, rows: NewAllocationRow[]): Promise<void> {
+  await tx.insert(paymentAllocations).values(rows);
 }
