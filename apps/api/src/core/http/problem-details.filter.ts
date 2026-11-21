@@ -5,7 +5,12 @@ import { errorStatus, type ErrorCode, type Problem } from "@pilla/schemas";
 import { inspect } from "node:util";
 import { ProblemException, type ProblemFieldError } from "./problem-exception";
 
-type Descriptor = { code: ErrorCode; detail: string; errors: readonly ProblemFieldError[] | undefined };
+type Descriptor = {
+  code: ErrorCode;
+  detail: string;
+  errors: readonly ProblemFieldError[] | undefined;
+  successorLoanId?: string;
+};
 
 const titles: Partial<Record<ErrorCode, string>> = {
   VALIDATION_FAILED: "Validação falhou",
@@ -15,7 +20,12 @@ const titles: Partial<Record<ErrorCode, string>> = {
 
 function describeException(exception: unknown): Descriptor {
   if (exception instanceof ProblemException) {
-    return { code: exception.code, detail: exception.detail, errors: exception.errors };
+    return {
+      code: exception.code,
+      detail: exception.detail,
+      errors: exception.errors,
+      ...(exception.successorLoanId === undefined ? {} : { successorLoanId: exception.successorLoanId }),
+    };
   }
   const status = exception instanceof HttpException ? exception.getStatus() : 500;
   if (status === 404) return { code: "NOT_FOUND", detail: "Recurso não encontrado.", errors: undefined };
@@ -24,7 +34,7 @@ function describeException(exception: unknown): Descriptor {
 }
 
 export function toProblem(exception: unknown): Problem {
-  const { code, detail, errors } = describeException(exception);
+  const { code, detail, errors, successorLoanId } = describeException(exception);
   if (code === "INTERNAL_ERROR") Logger.error(inspect(exception));
   return {
     title: titles[code] ?? code,
@@ -32,6 +42,7 @@ export function toProblem(exception: unknown): Problem {
     detail,
     code,
     ...(errors === undefined ? {} : { errors: [...errors] }),
+    ...(successorLoanId === undefined ? {} : { successorLoanId }),
   };
 }
 

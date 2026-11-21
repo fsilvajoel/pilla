@@ -8,11 +8,14 @@ export class ProblemException extends HttpException {
   readonly code: ErrorCode;
   readonly detail: string;
   readonly errors: readonly ProblemFieldError[] | undefined;
+  /** só em LOAN_CLOSED_FOR_PAYMENTS (RN-R09): contrato que sucedeu o fechado */
+  readonly successorLoanId: string | undefined;
 
-  constructor(code: ErrorCode, detail: string, errors?: readonly ProblemFieldError[]) {
+  constructor(code: ErrorCode, detail: string, errors?: readonly ProblemFieldError[], successorLoanId?: string) {
     super({ code, detail }, errorStatus[code]);
     this.code = code;
     this.detail = detail;
     this.errors = errors;
+    this.successorLoanId = successorLoanId;
   }
 }
