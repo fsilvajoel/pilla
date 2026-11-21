@@ -7,6 +7,8 @@ export class ApiProblem extends Error {
   readonly status: number;
   readonly code: ErrorCode | null;
   readonly fieldErrors: readonly FieldError[];
+  /** contrato sucessor, só em LOAN_CLOSED_FOR_PAYMENTS (RN-R09) */
+  readonly successorLoanId: string | null;
 
   constructor(status: number, problem: Problem | null) {
     super(problem?.detail ?? `Falha na API (HTTP ${String(status)})`);
@@ -14,6 +16,7 @@ export class ApiProblem extends Error {
     this.status = status;
     this.code = problem?.code ?? null;
     this.fieldErrors = problem?.errors ?? [];
+    this.successorLoanId = problem?.successorLoanId ?? null;
   }
 
   /** Mensagens por campo, prontas para o formulário. */

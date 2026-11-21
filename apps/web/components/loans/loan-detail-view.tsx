@@ -7,7 +7,8 @@ import { PageHeader } from "@/components/shared/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { installmentStatusLabel, loanStandingLabel, loanStatusLabel } from "@/lib/labels";
-import { canEdit, canRegisterPayment, canRollover, formatDateBr } from "./loan-actions";
+import { acceptsPayment } from "@/components/payments/payment-actions";
+import { canEdit, canRollover, formatDateBr } from "./loan-actions";
 
 type Installment = LoanDetailResponse["installments"][number];
 
@@ -55,26 +56,27 @@ export function LoanDetailView({ loan, children }: LoanDetailViewProps): ReactEl
         title={`Contrato ${loan.loanNumber}`}
         description={`${loan.personName} · ${loanStatusLabel[loan.status]}${loan.standing ? ` · ${loanStandingLabel[loan.standing]}` : ""}`}
         actions={
-          canEdit(loan.status) || canRegisterPayment(loan.status) || canRollover(loan.status) ? (
-            <div className="flex flex-wrap gap-2">
-              {canEdit(loan.status) && (
-                <Button asChild variant="outline">
-                  <Link href={`/emprestimos/${loan.id}/editar`}>Editar</Link>
+          <div className="flex flex-wrap gap-2">
+            {canEdit(loan.status) && (
+              <Button asChild variant="outline">
+                <Link href={`/emprestimos/${loan.id}/editar`}>Editar</Link>
+              </Button>
+            )}
+            {acceptsPayment(loan.status) && (
+              <Button asChild>
+                <Link href={`/emprestimos/${loan.id}/pagamento`}>Registrar pagamento</Link>
+              </Button>
+            )}
+            <Button asChild variant="outline">
+              <Link href={`/pagamentos?loanId=${loan.id}`}>Pagamentos do contrato</Link>
+            </Button>
+            {canRollover(loan.status) &&
+              ROLLOVER_LINKS.map((item) => (
+                <Button key={item.path} asChild variant="outline">
+                  <Link href={`/emprestimos/${loan.id}/${item.path}`}>{item.label}</Link>
                 </Button>
-              )}
-              {canRegisterPayment(loan.status) && (
-                <Button asChild>
-                  <Link href={`/emprestimos/${loan.id}/pagamento`}>Registrar pagamento</Link>
-                </Button>
-              )}
-              {canRollover(loan.status) &&
-                ROLLOVER_LINKS.map((item) => (
-                  <Button key={item.path} asChild variant="outline">
-                    <Link href={`/emprestimos/${loan.id}/${item.path}`}>{item.label}</Link>
-                  </Button>
-                ))}
-            </div>
-          ) : undefined
+              ))}
+          </div>
         }
       />
       <dl className="grid grid-cols-2 gap-4 sm:grid-cols-5">
