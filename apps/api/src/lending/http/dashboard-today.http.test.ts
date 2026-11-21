@@ -147,7 +147,7 @@ const A = uuid(11);
 const B = uuid(12);
 const D = uuid(13);
 
-const dueOf = (block: DashboardTodayResponse["dueToday"]): string[] =>
+const dueOf = (block: { items: { loanNumber: string; installmentNumber: number }[] }): string[] =>
   block.items.map((item) => `${item.loanNumber}#${String(item.installmentNumber)}`);
 
 describe("GET /api/v1/dashboard/today buckets (E13-F02A, A1 to A4, A14, A15)", () => {

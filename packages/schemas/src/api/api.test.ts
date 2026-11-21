@@ -10,6 +10,7 @@ import { createLoanRequest, defaultTermsResponse } from "./lending/create-loan";
 import { loanDetailResponse, loanListResponse } from "./lending/loan-views";
 import { renegotiateLoanRequest } from "./lending/renegotiate-loan";
 import { renewLoanRequest } from "./lending/renew-loan";
+import { dashboardTodayResponse } from "./lending/dashboard-today";
 import { payoffQuoteQuery, payoffQuoteResponse } from "./lending/payoff-quote";
 import { simulateLoanRequest, simulateLoanResponse } from "./lending/simulate-loan";
 import { updateLoanRequest } from "./lending/update-loan";
@@ -208,6 +209,19 @@ const cases: BodyCase[] = [
       interestCents: "60000",
       lateChargesCents: null,
     },
+  },
+  {
+    name: "dashboardTodayResponse",
+    schema: dashboardTodayResponse,
+    body: {
+      referenceDate: "2027-03-01",
+      weekEndDate: "2027-03-08",
+      dueToday: { count: 0, totalCents: 0, items: [] },
+      dueThisWeek: { count: 0, totalCents: 0, items: [] },
+      overdue: { count: 0, totalCents: 0, items: [] },
+      pendingReview: { count: 0, totalCents: 0, items: [] },
+    },
+    invalid: { referenceDate: "01/03/2027", weekEndDate: 20270308, dueToday: { count: -1 } },
   },
   {
     name: "allocationPreviewRequest",
