@@ -40,6 +40,8 @@ export type LoanStore = {
   settleOrigin(id: string, status: "RENEWED" | "RENEGOTIATED"): Promise<LoanRow>;
   /** Passa o ACTIVE para WRITTEN_OFF com o motivo, soma 1 em version e grava status_changed_at. */
   writeOff(id: string, reason: string): Promise<LoanRow>;
+  /** Passa o ACTIVE para PAID_OFF, soma 1 em version e grava status_changed_at (RN-C09). */
+  markPaidOff(id: string): Promise<LoanRow>;
   insertInstallments(rows: NewInstallmentRow[]): Promise<void>;
   /** Grava o evento no core.outbox na mesma transação (D7). */
   outbox(event: OutboxEvent): Promise<void>;
@@ -55,6 +57,11 @@ function firstRow(rows: LoanRow[], what: string): LoanRow {
   const row = rows[0];
   if (row === undefined) throw new Error(`${what} returned no row`);
   return row;
+}
+
+/** Operações de contrato sobre uma transação já aberta (de outro módulo, p. ex. a confirmação de pagamento). */
+export function loanStoreOf(tx: PgDatabase<PgQueryResultHKT>): LoanStore {
+  return storeOf(tx);
 }
 
 function storeOf(tx: PgDatabase<PgQueryResultHKT>): LoanStore {
@@ -136,6 +143,19 @@ function storeOf(tx: PgDatabase<PgQueryResultHKT>): LoanStore {
         .where(eq(loans.id, id))
         .returning();
       return firstRow(rows, "loan write-off");
+    },
+    async markPaidOff(id) {
+      const rows = await tx
+        .update(loans)
+        .set({
+          status: "PAID_OFF",
+          statusChangedAt: sql`now()`,
+          version: sql`${loans.version} + 1`,
+          updatedAt: sql`now()`,
+        })
+        .where(and(eq(loans.id, id), eq(loans.status, "ACTIVE")))
+        .returning();
+      return firstRow(rows, "loan pay-off");
     },
     async insertInstallments(rows) {
       await tx.insert(installments).values(rows);

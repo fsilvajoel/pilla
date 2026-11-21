@@ -1,3 +1,4 @@
+import type { PgDatabase, PgQueryResultHKT } from "drizzle-orm/pg-core";
 import { allocatePayment, cents, daysBetween, isoDate, outstandingBalance, type OpenInstallment } from "@pilla/finance";
 import {
   allocationPreviewResponse,
@@ -5,7 +6,6 @@ import {
   type AllocationPreviewResponse,
 } from "@pilla/schemas";
 import { ProblemException } from "../../core/http/problem-exception";
-import type { Database } from "../../db/database";
 import { isClosedForPayments } from "../../lending/domain/loan-status";
 import { loadLoanForPayment, type PaymentLoan } from "../../lending/public/loan-for-payment";
 import { confirmedAllocationsByLoan } from "../public/confirmed-allocations";
@@ -13,7 +13,7 @@ import { confirmedAllocationsByLoan } from "../public/confirmed-allocations";
 const NO_ALLOCATION = { principalCents: 0, interestCents: 0 };
 
 /** Parcelas em aberto: o valor de cada parcela do contrato menos as alocações confirmadas (E11 D5). */
-async function openInstallmentsOf(db: Database, loan: PaymentLoan): Promise<OpenInstallment[]> {
+async function openInstallmentsOf(db: PgDatabase<PgQueryResultHKT>, loan: PaymentLoan): Promise<OpenInstallment[]> {
   const confirmed = new Map((await confirmedAllocationsByLoan(db, loan.id)).map((item) => [item.installmentId, item]));
   return loan.installments.map((installment) => {
     const paid = confirmed.get(installment.id) ?? NO_ALLOCATION;
@@ -35,12 +35,22 @@ function paidAtError(message: string): ProblemException {
  * na data do pagamento, sem gravar nada. A F02 e a F03 reaproveitam este caso de uso.
  */
 export async function previewAllocation(
-  db: Database,
+  db: PgDatabase<PgQueryResultHKT>,
   request: AllocationPreviewRequest,
   today: string,
 ): Promise<AllocationPreviewResponse> {
   const loan = await loadLoanForPayment(db, request.loanId);
   if (loan === null) throw new ProblemException("NOT_FOUND", "Recurso não encontrado.");
+  return previewForLoan(db, loan, request, today);
+}
+
+/** Mesma prévia para um contrato já lido (a confirmação o lê travado, dentro da transação). */
+export async function previewForLoan(
+  db: PgDatabase<PgQueryResultHKT>,
+  loan: PaymentLoan,
+  request: AllocationPreviewRequest,
+  today: string,
+): Promise<AllocationPreviewResponse> {
   if (isClosedForPayments(loan.status)) {
     throw new ProblemException(
       "LOAN_CLOSED_FOR_PAYMENTS",
