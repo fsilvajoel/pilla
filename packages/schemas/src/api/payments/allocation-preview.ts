@@ -8,3 +8,7 @@ export const allocationPreviewRequest = z.strictObject({
   paidAt: isoDateSchema,
 });
 export type AllocationPreviewRequest = z.infer<typeof allocationPreviewRequest>;
+
+/** Esboço (E11-T01): o contrato real entra na E11-T02. */
+export const allocationPreviewResponse = z.never();
+export type AllocationPreviewResponse = z.infer<typeof allocationPreviewResponse>;
