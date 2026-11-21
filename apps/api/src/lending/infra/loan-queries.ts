@@ -52,6 +52,11 @@ export async function selectActiveLoans(db: Database): Promise<LoanRow[]> {
 }
 
 /** Contratos por id, em qualquer status (o painel mostra pagamentos pendentes de contratos DRAFT). */
-export function selectLoansByIds(_db: Database, _ids: readonly string[]): Promise<Map<string, LoanRow>> {
-  throw new Error("esboço: não implementado");
+export async function selectLoansByIds(db: Database, ids: readonly string[]): Promise<Map<string, LoanRow>> {
+  if (ids.length === 0) return new Map();
+  const rows = await db
+    .select()
+    .from(loans)
+    .where(inArray(loans.id, [...ids]));
+  return new Map(rows.map((row) => [row.id, row]));
 }

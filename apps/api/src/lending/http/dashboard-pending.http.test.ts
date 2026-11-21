@@ -295,3 +295,18 @@ describe("GET /api/v1/dashboard/today pendingReview block (E13-F02B, A1 to A7)",
     expect(body.pendingReview).toEqual({ count: 0, totalCents: 0, items: [] });
   });
 });
+
+describe("GET /api/v1/dashboard/today pendingReview inconsistency (E13-F02B)", () => {
+  it("C14: a pending payment whose contract does not exist answers 500 instead of a partial item", async () => {
+    await seedPayment({
+      id: uuid(201),
+      loanId: uuid(99),
+      personId: ANA,
+      status: "PENDING_REVIEW",
+      amountCents: 1000,
+      createdAt: "2026-11-19T10:00:00Z",
+    });
+    const { status } = await today();
+    expect(status).toBe(500);
+  });
+});
