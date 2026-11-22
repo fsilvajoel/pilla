@@ -27,6 +27,8 @@ export const paymentListItemSchema = z.strictObject({
   method: paymentMethodSchema,
   status: paymentStatusSchema,
   isRecovery: z.boolean(),
+  /** Versão para o `If-Match` de confirmar, rejeitar e estornar. */
+  version: z.int().positive(),
   createdAt: instantSchema,
   confirmedAt: instantSchema.nullable(),
   reversedAt: instantSchema.nullable(),
@@ -42,9 +44,8 @@ export const paymentAllocationSchema = z.strictObject({
 });
 export type PaymentAllocation = z.infer<typeof paymentAllocationSchema>;
 
-/** Resposta de POST /payments (201): o item mais a versão, o motivo do estorno, o status do contrato e as alocações. */
+/** Resposta de POST /payments (201): o item (com a versão), o motivo do estorno, o status do contrato e as alocações. */
 export const paymentResponse = paymentListItemSchema.extend({
-  version: z.int().positive(),
   reversalReason: z.string().nullable(),
   loanStatus: loanStatusSchema,
   allocations: z.array(paymentAllocationSchema),

@@ -36,6 +36,7 @@ export function toListItem(
     method: paymentMethodSchema.parse(row.method),
     status: paymentStatusSchema.parse(row.status),
     isRecovery: row.isRecovery,
+    version: row.version,
     createdAt: row.createdAt.toISOString(),
     confirmedAt: instantOf(row.confirmedAt),
     reversedAt: instantOf(row.reversedAt),
@@ -52,7 +53,6 @@ export function toPaymentResponse(
   const item = toListItem(row, new Map([[loan.id, loan.loanNumber]]), personNames);
   return {
     ...item,
-    version: row.version,
     reversalReason: row.reversalReason,
     loanStatus: loan.status,
     allocations: [...allocations],

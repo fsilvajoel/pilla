@@ -38,11 +38,6 @@ export function toPaymentActionError(error: unknown): Extract<PaymentActionResul
   return { ...result, ...(own === undefined ? {} : { message: own }), ...successor };
 }
 
-/** Versão esperada no `If-Match` (E10 D9). A lista não traz `version`: o pagamento nasce na 1 e cada transição soma 1. */
-export function expectedVersion(status: "PENDING_REVIEW" | "CONFIRMED"): number {
-  return status === "PENDING_REVIEW" ? 1 : 2;
-}
-
 /** Contrato que aceita registro de pagamento: rascunho, ativo e baixado (RN-R09, E11 D6). */
 export function acceptsPayment(status: string): boolean {
   return status === "DRAFT" || status === "ACTIVE" || status === "WRITTEN_OFF";

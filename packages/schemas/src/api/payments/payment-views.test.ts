@@ -74,7 +74,7 @@ describe("paymentListItemSchema", () => {
   });
 
   it("C31 (A15): is strict", () => {
-    expect(paymentListItemSchema.safeParse({ ...item, version: 1 }).success).toBe(false);
+    expect(paymentListItemSchema.safeParse({ ...item, receiptAttachmentId: null }).success).toBe(false);
   });
 });
 
