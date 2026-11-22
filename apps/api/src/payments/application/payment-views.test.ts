@@ -52,6 +52,7 @@ describe("payment views: dado que falta em outro módulo", () => {
     const names = new Map([[row.personId, "Ana Souza"]]);
     const numbers = new Map([[row.loanId, "2026-0001"]]);
     expect(toListItem(row, numbers, names).personName).toBe("Ana Souza");
+    expect(toListItem({ ...row, version: 3 }, numbers, names).version).toBe(3);
     expect(detailOf(() => toListItem(row, new Map(), names))).toBe(
       "INTERNAL_ERROR: Número do contrato do pagamento não encontrado.",
     );

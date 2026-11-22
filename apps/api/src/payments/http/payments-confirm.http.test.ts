@@ -257,6 +257,10 @@ describe("POST /api/v1/payments/{id}/confirm: allocation (E11-F03, A1 to A5)", (
       [id],
     );
     expect(stored.rows[0]).toMatchObject({ status: "CONFIRMED", version: 2 });
+    const listed = await request(baseUrl).get("/api/v1/payments?status=CONFIRMED");
+    expect((listed.body as { items: { id: string; version: number }[] }).items).toEqual([
+      expect.objectContaining({ id, version: 2 }),
+    ]);
     expect(stored.rows[0]?.confirmed_at).toBeInstanceOf(Date);
     expect(stored.rows[0]?.confirmed_by).toEqual(expect.any(String));
   });
