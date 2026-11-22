@@ -264,33 +264,33 @@ Formato de cada entrada:
 - decisão do Joel (21/11): enquanto não há login, `created_by` da nova vigência herda o da linha vigente; vira o ator real quando a épica de Acesso/login existir.
 
 ## E12-T01 (E12-F01)
-- status: aberta
+- status: resolvida
 - data: 2026-11-21
 - pergunta: a ativação de contrato importado (`originType` IMPORT) deve lançar DISBURSEMENT no caixa? O dinheiro saiu antes do sistema existir.
 - opções: a) sim, lança DISBURSEMENT como qualquer ativação (o aporte inicial cobre o histórico); b) não lança; o caixa importado entra por um ajuste de abertura
 - sugestão padrão: a) lança DISBURSEMENT (RENEWAL e RENEGOTIATION não lançam)
-- resposta: <preenchida pelo PM>
+- resposta: a) a sugestão padrão (aprovada pelo Joel em 21/11)
 
 ## E12-T03 (E12-F02)
-- status: aberta
+- status: resolvida
 - data: 2026-11-21
 - pergunta: retirada (ou ajuste negativo) maior que o saldo da conta deve ser aceita, deixando o caixa negativo?
 - opções: a) aceitar (o caixa registrado pode divergir do real; RN-C10 também só avisa); b) recusar com 422 `INSUFFICIENT_CASH`
 - sugestão padrão: a) aceitar
-- resposta: <preenchida pelo PM>
+- resposta: a) a sugestão padrão (aprovada pelo Joel em 21/11)
 
 ## E12-T07 (E12-F04)
-- status: aberta
+- status: resolvida
 - data: 2026-11-21
 - pergunta: definições do painel (RF-32): (1) "previsão" = principal + juros em aberto das parcelas de contratos ACTIVE com vencimento no mês, sem encargos?; (2) período = mês corrente em Brasília, com caixa, emprestado e perdas sendo posição de agora?; (3) "perdas" = principal em aberto dos contratos WRITTEN_OFF?; (4) "juros recebidos" separa encargos de mora em outro indicador?; (5) % comprometido = emprestado / (caixa + emprestado), com `max_committed_bps` só exibido, sem bloquear?
 - opções: a) as cinco definições acima; b) outras definições, a informar por item
 - sugestão padrão: a) as cinco definições acima
-- resposta: <preenchida pelo PM>
+- resposta: a) a sugestão padrão (aprovada pelo Joel em 21/11)
 
 ## E12-T09 (E12-F05)
-- status: aberta
+- status: resolvida
 - data: 2026-11-21
 - pergunta: o painel fica no topo de `/caixa` (uma tela só) e o aviso RN-C10 no diálogo "Ativar" usa o texto "O caixa registrado (R$ X) é menor que o valor do contrato (R$ Y). Você pode ativar mesmo assim.", sem bloquear?
 - opções: a) sim, uma tela e esse texto, sem bloqueio; b) painel em rota própria e/ou outro texto
 - sugestão padrão: a)
-- resposta: <preenchida pelo PM>
+- resposta: a) a sugestão padrão (aprovada pelo Joel em 21/11)
