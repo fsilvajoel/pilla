@@ -21,6 +21,7 @@ const item = {
   method: "PIX",
   status: "PENDING_REVIEW",
   isRecovery: false,
+  version: 1,
   createdAt: "2026-11-20T12:00:00-03:00",
   confirmedAt: null,
   reversedAt: null,
@@ -35,6 +36,12 @@ describe("paymentStatusSchema", () => {
 
   it.each(["pending", "PAID", ""])("C30 (A20): rejects %j", (status) => {
     expect(paymentStatusSchema.safeParse(status).success).toBe(false);
+  });
+});
+
+describe("paymentListItemSchema: version", () => {
+  it.each([0, -1, 1.5, "1"])("rejects version %j", (version) => {
+    expect(paymentListItemSchema.safeParse({ ...item, version }).success).toBe(false);
   });
 });
 
@@ -67,7 +74,7 @@ describe("paymentListItemSchema", () => {
   });
 
   it("C31 (A15): is strict", () => {
-    expect(paymentListItemSchema.safeParse({ ...item, version: 1 }).success).toBe(false);
+    expect(paymentListItemSchema.safeParse({ ...item, receiptAttachmentId: null }).success).toBe(false);
   });
 });
 

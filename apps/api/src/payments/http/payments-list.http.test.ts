@@ -77,6 +77,7 @@ type Item = {
   method: string;
   status: string;
   isRecovery: boolean;
+  version: number;
   createdAt: string;
   confirmedAt: string | null;
   reversedAt: string | null;
@@ -193,6 +194,7 @@ describe("GET /api/v1/payments: filters and fields (E11-F02, A15)", () => {
       method: "PIX",
       status: "PENDING_REVIEW",
       isRecovery: false,
+      version: 1,
       confirmedAt: null,
       reversedAt: null,
     });

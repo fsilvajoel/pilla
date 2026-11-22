@@ -12,7 +12,7 @@ import { DataTable, type DataTableColumn } from "@/components/shared/data-table"
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { paymentMethodLabel, paymentStatusLabel } from "@/lib/labels";
-import { expectedVersion, type PaymentRecordResult } from "./payment-actions";
+import type { PaymentRecordResult } from "./payment-actions";
 import { ReasonDialog } from "./reason-dialog";
 
 export type PaymentsTableProps = {
@@ -47,7 +47,7 @@ export function PaymentsTable({ payments, onConfirm, onReject, onReverse }: Paym
   function confirm(payment: PaymentListItem): void {
     setError(null);
     startTransition(async () => {
-      finish(payment.id, await onConfirm(payment.id, expectedVersion("PENDING_REVIEW")), "Pagamento confirmado.");
+      finish(payment.id, await onConfirm(payment.id, payment.version), "Pagamento confirmado.");
     });
   }
 
@@ -155,8 +155,8 @@ export function PaymentsTable({ payments, onConfirm, onReject, onReverse }: Paym
           const { kind, payment } = reasoning;
           const result =
             kind === "reverse"
-              ? await onReverse(payment.id, expectedVersion("CONFIRMED"), { reason })
-              : await onReject(payment.id, expectedVersion("PENDING_REVIEW"), { reason });
+              ? await onReverse(payment.id, payment.version, { reason })
+              : await onReject(payment.id, payment.version, { reason });
           const ok = finish(payment.id, result, kind === "reverse" ? "Pagamento estornado." : "Pagamento rejeitado.");
           if (ok) {
             setReasoning(null);
