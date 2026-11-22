@@ -1,129 +1,496 @@
 delivery: E12
 title: Treasury (ledger from events, deposits, withdrawals, adjustments, statement, dashboard)
-# Esqueleto: detalhar checks, done, protectedTests, budget e readFirst antes de executar (formato de E10.yaml).
+# Plano e decisões D1–D9 em docs/plano/E12.md; escopo e critérios de cada feature em docs/plano/E12-F0x/plano.md.
+# Cartões em inglês (ADR-0012). Dono recomendado: ver "Divisão entre trabalhadores" em E12.md.
+# bia: testes de schema e de domínio puro; claude (Sonnet/Opus): testes HTTP com PGlite, telas e E2E; baidu: backend simples.
+# Todo cartão que toca apps/web leva skills; cartão de tela leva também shadcn e tailwind-css (gate card-skills).
+# readFirst só com arquivos (o run_card do harness recusa pasta).
+# Dúvidas de produto com padrão assumido: docs/plano/pendencias-pm.md (E12-T01, E12-T03, E12-T07, E12-T09).
 cards:
-  # ---------------------------------------------------------------- E12-F01: consumidores do outbox
+  # ---------------------------------------------------------------- E12-F01: despachante do outbox e ledger por eventos
   - id: E12-T01
-    title: Write the tests for the outbox consumers that post ledger entries
+    title: Write the tests for the outbox dispatcher, the poller and the treasury ledger consumer
     kind: test-author
     assignee: claude
+    rules: [RN-T01, RN-T02, RN-T03]
     skills: [escrever-teste]
-    refs: [RFC-004 §7, RFC-005 §6, ADR-0006, docs/plano/E10.md D7, docs/plano/E12.md]
+    refs: [PRD-001 RN-T02, PRD-001 RN-T03, RFC-004 §7, RFC-005 §2, RFC-005 §6, ADR-0003, ADR-0004, ADR-0006, docs/plano/E10.md D6 D7, docs/plano/E12.md D1 D2 D3 D8, docs/plano/E12-F01/plano.md]
     dependsOn: [E11-T08]
     allowedPaths:
-      - apps/api/src/treasury/application/ledger-consumers.test.ts
+      - apps/api/src/core/infra/outbox-dispatcher.test.ts
+      - apps/api/src/treasury/application/ledger-consumer.test.ts
+      - apps/api/src/treasury/http/ledger-from-events.http.test.ts
+    protectedTests: []
+    checks:
+      - '! pnpm --filter @pilla/api exec vitest run src/core/infra/outbox-dispatcher.test.ts src/treasury/application/ledger-consumer.test.ts src/treasury/http/ledger-from-events.http.test.ts'
+      - node scripts/check-test-quality.mjs apps/api/src/core/infra/outbox-dispatcher.test.ts apps/api/src/treasury/application/ledger-consumer.test.ts apps/api/src/treasury/http/ledger-from-events.http.test.ts
+      - pnpm --filter @pilla/api typecheck
+    done:
+      - 'dispatcher (A9 to A12, C1 to C10): unpublished rows with attempts below 5 are read oldest first, at most 100 per round; an event with no interested consumer is marked published; processed_events prevents a second handle on redelivery; a throwing consumer rolls the whole event back (no ledger row, no processed_events row), adds 1 to attempts, stores last_error and the rest of the batch is still published; after 5 failures the event is no longer read'
+      - 'poller (A13, C11, C12): with a fake clock it calls the dispatcher every interval, never starts a round while one is running and stops on application shutdown'
+      - 'disbursement (A1 to A3, C13 to C15): LoanActivated without originType or with IMPORT writes one DISBURSEMENT PRINCIPAL of -principalCents, source LOAN loanId, entry_date disbursedAt, created_by SYSTEM_ACTOR_ID, source_event_id the event id; RENEWAL and RENEGOTIATION write nothing and the event is published'
+      - 'repayment (A4, A5, C16 to C18): PaymentConfirmed writes one REPAYMENT per non-zero component (LATE_CHARGES, INTEREST, PRINCIPAL) whose sum is amountCents; with isRecovery it writes a single REPAYMENT RECOVERY of amountCents'
+      - 'reversal (A6, A7, C19, C20): PaymentReversed writes one REVERSAL per REPAYMENT of the payment, same component and opposite amount, dated today in Brasília, so the payment rows sum to zero; with no REPAYMENT yet it fails, writes nothing, and a later round writes the REVERSAL'
+      - 'ignored and invalid (A8, A10, C21, C22): LoanWrittenOff, LoanPaidOff, LoanReopened, InstallmentPaid and an unknown type write nothing and are published; a payload that fails the event schema fails only that event'
+      - 'real flow (A14, C23, C24): activate a loan and confirm a payment through the API, run dispatchOutbox, and the account balance is -principal + paid; reverse and run again and it is -principal'
+    budget: {attempts: 4, toolCalls: 30, minutes: 20}
+    readFirst:
+      - docs/plano/E12-F01/plano.md
+      - apps/api/src/core/infra/outbox-writer.ts
+      - apps/api/src/core/infra/schema.ts
+      - apps/api/src/treasury/infra/schema.ts
+      - apps/api/src/treasury/infra/ledger-entries.test.ts
+      - packages/schemas/src/events/loan-activated.ts
+      - packages/schemas/src/events/payment-confirmed.ts
+      - packages/schemas/src/events/payment-reversed.ts
+      - apps/api/src/payments/http/payments-reverse.http.test.ts
+      - apps/api/src/core/http/test-app.ts
+      - apps/api/src/db/test-db.ts
   - id: E12-T02
-    title: Implement the idempotent outbox consumers into ledger_entries
+    title: Implement the outbox dispatcher, the poller and the treasury ledger consumer
     kind: implement
     assignee: claude
+    rules: [RN-T01, RN-T02, RN-T03]
     skills: [editar-arquivo, coding-guidelines, modular-design-principles]
-    refs: [RFC-004 §7, RFC-005 §6, ADR-0006, docs/plano/E12.md]
+    refs: [PRD-001 RN-T02, PRD-001 RN-T03, RFC-001 M2, RFC-004 §7, RFC-005 §6, ADR-0003, ADR-0006, docs/plano/E12.md D1 D2 D3 D8, docs/plano/E12-F01/plano.md]
     dependsOn: [E12-T01]
     allowedPaths:
+      - apps/api/src/core/infra/outbox-dispatcher.ts
+      - apps/api/src/core/infra/outbox-poller.ts
+      - apps/api/src/core/infra/system-actor.ts
       - apps/api/src/treasury/application/**
       - apps/api/src/treasury/infra/**
-      - apps/api/src/core/infra/outbox-dispatcher.ts
-  # ---------------------------------------------------------------- E12-F02: movimentações manuais
-  - id: E12-T03
-    title: Write the tests for deposit, withdrawal and adjustment entries
+      - apps/api/src/treasury/public/outbox-consumers.ts
+      - apps/api/src/app.module.ts
+    protectedTests:
+      - apps/api/src/core/infra/outbox-dispatcher.test.ts
+      - apps/api/src/treasury/application/ledger-consumer.test.ts
+      - apps/api/src/treasury/http/ledger-from-events.http.test.ts
+    checks:
+      - pnpm --filter @pilla/api exec vitest run src/core src/treasury src/payments src/lending
+      - pnpm --filter @pilla/api typecheck
+      - pnpm --filter @pilla/api lint
+      - pnpm depcruise
+    done:
+      - the protected tests pass (A1 to A14)
+      - core/infra/outbox-dispatcher.ts and outbox-poller.ts do not import treasury, lending or payments; consumers arrive through the OUTBOX_CONSUMERS token bound in app.module.ts to treasuryOutboxConsumers
+      - every ledger row written by the consumer has created_by SYSTEM_ACTOR_ID and source_event_id; no ledger row is ever updated or deleted (ADR-0006)
+      - the existing payments and lending tests stay green with the poller registered (tests call dispatchOutbox directly; the interval does not run inside them)
+    hints:
+      - processed_events insert with ON CONFLICT DO NOTHING and check the returned row count; the event payload is parsed with the schemas in packages/schemas/src/events
+      - a stuck event (attempts 5) is reprocessed by hand by resetting attempts; write that in a comment at the top of outbox-dispatcher.ts
+    budget: {attempts: 3, toolCalls: 40, minutes: 30}
+    readFirst:
+      - docs/plano/E12-F01/plano.md
+      - apps/api/src/core/infra/outbox-writer.ts
+      - apps/api/src/core/infra/schema.ts
+      - apps/api/src/treasury/infra/schema.ts
+      - apps/api/src/lending/public/brasilia-today.ts
+      - packages/schemas/src/events/envelope.ts
+      - apps/api/src/app.module.ts
+      - .dependency-cruiser.cjs
+  # ---------------------------------------------------------------- E12-F02: aporte, retirada e ajuste
+  - id: E12-T11
+    title: Write the schema tests for the account entry response
     kind: test-author
     assignee: bia
+    rules: [RN-T01]
     skills: [escrever-teste]
-    refs: [PRD-001 RF-30, RFC-004 §3, docs/plano/E12.md]
+    refs: [PRD-001 RF-30, RFC-004 §3, ADR-0004, docs/plano/E12.md D4, docs/plano/E12-F02/plano.md]
+    dependsOn: []
+    allowedPaths:
+      - packages/schemas/src/api/treasury/account-entry.test.ts
+    protectedTests: []
+    checks:
+      - '! pnpm --filter @pilla/schemas exec vitest run src/api/treasury/account-entry.test.ts'
+      - node scripts/check-test-quality.mjs packages/schemas/src/api/treasury/account-entry.test.ts
+      - pnpm --filter @pilla/schemas typecheck
+    done:
+      - 'response schema (A11, C17 to C20): accountEntryResponse accepts a manual entry (null component and source) and an automatic one (component and source from the enums); refuses a float amountCents, an unknown key and a type outside the six ledger types; amountCents may be negative'
+    budget: {attempts: 4, toolCalls: 25, minutes: 15}
+    readFirst:
+      - docs/plano/E12-F02/plano.md
+      - packages/schemas/src/api/treasury/account-entry.ts
+      - packages/schemas/src/api/api.test.ts
+  - id: E12-T03
+    title: Write the tests for POST /accounts/{id}/entries
+    kind: test-author
+    assignee: claude
+    rules: [RN-T01, RN-T04]
+    skills: [escrever-teste]
+    refs: [PRD-001 RF-30, RFC-004 §2, RFC-004 §3, RFC-004 §6, RFC-005 §6, ADR-0004, ADR-0006, docs/plano/E12.md D4, docs/plano/E12-F02/plano.md]
     dependsOn: [E12-T02]
     allowedPaths:
       - apps/api/src/treasury/http/account-entries.http.test.ts
+    protectedTests: []
+    checks:
+      - '! pnpm --filter @pilla/api exec vitest run src/treasury/http/account-entries.http.test.ts'
+      - node scripts/check-test-quality.mjs apps/api/src/treasury/http/account-entries.http.test.ts
+      - pnpm --filter @pilla/api typecheck
+    done:
+      - 'entries (A1 to A3, C1 to C3): CAPITAL_IN writes +amountCents, CAPITAL_OUT receives a positive amount and writes -amountCents, ADJUSTMENT writes the signed amount with its justification; component and source are null; 201 with accountEntryResponse'
+      - 'audit (A4, C4): each entry writes a ledger_entry.created audit row'
+      - 'idempotency (A5, C5): the same Idempotency-Key twice writes one entry and both answers carry the same id'
+      - 'date (A6, C6, C7): entryDate today in Brasília is accepted; tomorrow is 422 VALIDATION_FAILED on entryDate'
+      - 'account (A7, C8, C9): unknown account 404; inactive account 422 VALIDATION_FAILED on accountId'
+      - 'refusals (A8, A9, C10 to C15): system type, zero or fractional amount, negative withdrawal, adjustment without justification and unknown key give 400 VALIDATION_FAILED; no refusal writes an entry or an audit row'
+      - 'negative balance (A10, C16): a withdrawal above the balance is accepted (default of the PM question E12-T03)'
+    budget: {attempts: 4, toolCalls: 25, minutes: 15}
+    readFirst:
+      - docs/plano/E12-F02/plano.md
+      - packages/schemas/src/api/treasury/account-entry.ts
+      - apps/api/src/treasury/http/accounts.http.test.ts
+      - apps/api/src/treasury/infra/schema.ts
+      - apps/api/src/payments/http/payments-confirm.http.test.ts
+      - apps/api/src/core/http/test-app.ts
+      - apps/api/src/db/test-db.ts
   - id: E12-T04
-    title: Implement deposit, withdrawal and adjustment entries
+    title: Implement manual ledger entries (deposit, withdrawal, adjustment) with idempotency
     kind: implement
     assignee: baidu
+    rules: [RN-T01, RN-T04]
     skills: [editar-arquivo, coding-guidelines, modular-design-principles]
-    refs: [PRD-001 RF-30, RFC-004 §3, docs/plano/E12.md]
-    dependsOn: [E12-T03]
+    refs: [PRD-001 RF-30, RFC-004 §2, RFC-004 §3, RFC-004 §6, RFC-005 §6, ADR-0004, ADR-0006, docs/plano/E12.md D4, docs/plano/E12-F02/plano.md]
+    dependsOn: [E12-T03, E12-T11]
     allowedPaths:
+      - apps/api/migrations/treasury/0001_ledger_idempotency_key.sql # novo
+      - apps/api/migrations/treasury/meta/**
+      - apps/api/src/treasury/infra/schema.ts
       - apps/api/src/treasury/application/**
       - apps/api/src/treasury/http/**
-  # ---------------------------------------------------------------- E12-F03: extrato
-  - id: E12-T05
-    title: Write the tests for the account statement
+      - packages/schemas/src/api/treasury/account-entry.ts
+      - packages/schemas/src/index.ts
+      - packages/schemas/src/api/api.test.ts
+      - docs/rfc/RFC-005-modelo-fisico-banco.md
+      - apps/api/src/app.module.ts
+    protectedTests:
+      - apps/api/src/treasury/http/account-entries.http.test.ts
+      - packages/schemas/src/api/treasury/account-entry.test.ts
+    checks:
+      - pnpm --filter @pilla/api exec vitest run src/treasury
+      - pnpm --filter @pilla/schemas exec vitest run src/api
+      - pnpm --filter @pilla/api typecheck
+      - pnpm --filter @pilla/api lint
+      - pnpm check:schemas
+      - pnpm depcruise
+    done:
+      - the protected tests pass (A1 to A11)
+      - the entry, the audit row and the idempotency key are written in one transaction; a refusal writes nothing
+      - ledger_entries.idempotency_key (text, null, unique) comes from migration 0001 and RFC-005 §6 lists the new column
+    hints:
+      - today in Brasília comes from apps/api/src/lending/public/brasilia-today.ts
+      - created_by is the request actor, the same provisional actor payments uses
+    budget: {attempts: 3, toolCalls: 40, minutes: 30}
+    readFirst:
+      - docs/plano/E12-F02/plano.md
+      - apps/api/src/treasury/http/accounts.controller.ts
+      - apps/api/src/treasury/application/list-accounts.ts
+      - apps/api/src/treasury/infra/account-repository.ts
+      - apps/api/migrations/treasury/0000_treasury_schema.sql
+      - apps/api/src/core/http/problem-exception.ts
+      - apps/api/src/lending/public/brasilia-today.ts
+  # ---------------------------------------------------------------- E12-F03: extrato e saldo derivado
+  - id: E12-T12
+    title: Write the schema tests for the account statement and the account balance
     kind: test-author
     assignee: bia
+    rules: [RN-T01]
     skills: [escrever-teste]
-    refs: [PRD-001 RF-31, RFC-004 §3, ADR-0005, docs/plano/E12.md]
+    refs: [PRD-001 RF-31, RFC-004 §2, RFC-004 §3, ADR-0004, docs/plano/E12.md D5, docs/plano/E12-F03/plano.md]
+    dependsOn: []
+    allowedPaths:
+      - packages/schemas/src/api/treasury/account-statement.test.ts
+      - packages/schemas/src/api/treasury/account-summary.test.ts
+    protectedTests: []
+    checks:
+      - '! pnpm --filter @pilla/schemas exec vitest run src/api/treasury/account-statement.test.ts src/api/treasury/account-summary.test.ts'
+      - node scripts/check-test-quality.mjs packages/schemas/src/api/treasury/account-statement.test.ts packages/schemas/src/api/treasury/account-summary.test.ts
+      - pnpm --filter @pilla/schemas typecheck
+    done:
+      - 'statement (A9, C15 to C18): accountStatementResponse requires signed integers in amountCents, openingBalanceCents, closingBalanceCents and balanceAfterCents of every item, accepts null from, to and nextCursor, and refuses an unknown key and a float'
+      - 'account (A9, C19, C20): accountSummarySchema requires an integer balanceCents that may be negative and refuses it missing'
+    budget: {attempts: 4, toolCalls: 25, minutes: 15}
+    readFirst:
+      - docs/plano/E12-F03/plano.md
+      - packages/schemas/src/api/treasury/account-summary.ts
+      - packages/schemas/src/api/treasury/account-entry.ts
+      - packages/schemas/src/api/api.test.ts
+  - id: E12-T05
+    title: Write the tests for GET /accounts/{id}/entries and the balance in GET /accounts
+    kind: test-author
+    assignee: claude
+    rules: [RN-T01]
+    skills: [escrever-teste]
+    refs: [PRD-001 RF-31, RFC-004 §2, RFC-004 §3, RFC-005 §6, ADR-0005, docs/plano/E12.md D5, docs/plano/E12-F03/plano.md]
     dependsOn: [E12-T02]
     allowedPaths:
       - apps/api/src/treasury/http/account-statement.http.test.ts
+      - apps/api/src/treasury/http/accounts.http.test.ts
+    protectedTests: []
+    checks:
+      - '! pnpm --filter @pilla/api exec vitest run src/treasury/http/account-statement.http.test.ts src/treasury/http/accounts.http.test.ts'
+      - node scripts/check-test-quality.mjs apps/api/src/treasury/http/account-statement.http.test.ts apps/api/src/treasury/http/accounts.http.test.ts
+      - pnpm --filter @pilla/api typecheck
+    done:
+      - 'statement (A1, A2, C1, C2): without filters every entry in order with the running balanceAfterCents and closingBalanceCents the total; with from and to only the period, openingBalanceCents the sum before from and closingBalanceCents the last balanceAfterCents'
+      - 'order (A3, C3): entries on the same day follow created_at'
+      - 'pages (A4, C4, C5): limit and nextCursor reach the next page without repeating or skipping a row and the running balance stays right on page two'
+      - 'sources (A5, A7, C6, C7): automatic and manual entries carry type, component, sourceType and sourceId; an empty period gives empty items and opening equal to closing'
+      - 'refusals (A8, C8 to C12): from after to, an invalid date, limit 0 or 201 and a tampered cursor give 400; an unknown account 404'
+      - 'balance (A6, C13, C14): GET /accounts carries balanceCents equal to the unfiltered closingBalanceCents, 0 for an account with no entry; the old cases of accounts.http.test.ts only change to stay green'
+    budget: {attempts: 4, toolCalls: 25, minutes: 15}
+    readFirst:
+      - docs/plano/E12-F03/plano.md
+      - apps/api/src/treasury/http/accounts.http.test.ts
+      - apps/api/src/treasury/infra/schema.ts
+      - packages/schemas/src/api/treasury/account-summary.ts
+      - apps/api/src/payments/http/payments-confirm.http.test.ts
+      - apps/api/src/core/http/test-app.ts
+      - apps/api/src/db/test-db.ts
   - id: E12-T06
-    title: Implement the account statement with derived balance
+    title: Implement the account statement, the derived balance and the account-balance public port
     kind: implement
     assignee: baidu
+    rules: [RN-T01]
     skills: [editar-arquivo, coding-guidelines, modular-design-principles]
-    refs: [PRD-001 RF-31, ADR-0005, docs/plano/E12.md]
-    dependsOn: [E12-T05]
+    refs: [PRD-001 RF-31, RFC-001 M2, RFC-004 §2, RFC-004 §3, RFC-005 §6, ADR-0005, docs/plano/E12.md D5 D8, docs/plano/E12-F03/plano.md]
+    dependsOn: [E12-T05, E12-T12]
     allowedPaths:
       - apps/api/src/treasury/application/**
       - apps/api/src/treasury/http/**
       - apps/api/src/treasury/infra/**
-  # ---------------------------------------------------------------- E12-F04: painel
+      - apps/api/src/treasury/public/account-balance.ts
+      - packages/schemas/src/api/treasury/account-statement.ts
+      - packages/schemas/src/api/treasury/account-summary.ts
+      - packages/schemas/src/index.ts
+      - packages/schemas/src/api/api.test.ts
+      - apps/api/src/app.module.ts
+    protectedTests:
+      - apps/api/src/treasury/http/account-statement.http.test.ts
+      - apps/api/src/treasury/http/accounts.http.test.ts
+      - packages/schemas/src/api/treasury/account-statement.test.ts
+      - packages/schemas/src/api/treasury/account-summary.test.ts
+    checks:
+      - pnpm --filter @pilla/api exec vitest run src/treasury
+      - pnpm --filter @pilla/schemas exec vitest run src/api
+      - pnpm --filter @pilla/api typecheck
+      - pnpm --filter @pilla/api lint
+      - pnpm check:schemas
+      - pnpm depcruise
+    done:
+      - the protected tests pass (A1 to A9)
+      - no balance is stored (ADR-0005); the running balance is a window sum in the database
+      - apps/api/src/treasury/public/account-balance.ts exports accountBalanceCents(db, accountId) and totalBalanceCents(db) (active accounts) with plain numbers (no Drizzle row)
+      - the accountListResponse example in api.test.ts carries balanceCents
+    budget: {attempts: 3, toolCalls: 40, minutes: 30}
+    readFirst:
+      - docs/plano/E12-F03/plano.md
+      - apps/api/src/treasury/http/accounts.controller.ts
+      - apps/api/src/treasury/application/list-accounts.ts
+      - apps/api/src/treasury/infra/account-repository.ts
+      - apps/api/src/treasury/public/account-lookup.ts
+      - packages/schemas/src/api/treasury/account-summary.ts
+  # ---------------------------------------------------------------- E12-F04: painel da tesouraria
+  - id: E12-T13
+    title: Write the schema tests for the treasury summary
+    kind: test-author
+    assignee: bia
+    rules: [RN-T01]
+    skills: [escrever-teste]
+    refs: [PRD-001 RF-32, RFC-004 §3, ADR-0004, docs/plano/E12.md D7, docs/plano/E12-F04/plano.md]
+    dependsOn: []
+    allowedPaths:
+      - packages/schemas/src/api/treasury/treasury-summary.test.ts
+    protectedTests: []
+    checks:
+      - '! pnpm --filter @pilla/schemas exec vitest run src/api/treasury/treasury-summary.test.ts'
+      - node scripts/check-test-quality.mjs packages/schemas/src/api/treasury/treasury-summary.test.ts
+      - pnpm --filter @pilla/schemas typecheck
+    done:
+      - 'summary schema (A12, C16 to C20): treasurySummaryResponse requires integers; committedBps and availableBps between 0 and 10000 or both null, and summing 10000 when present; maxCommittedBps integer or null; month as YYYY-MM; refuses an unknown key and a float'
+    budget: {attempts: 4, toolCalls: 25, minutes: 15}
+    readFirst:
+      - docs/plano/E12-F04/plano.md
+      - packages/schemas/src/api/treasury/account-summary.ts
+      - packages/schemas/src/api/api.test.ts
   - id: E12-T07
-    title: Write the tests for the treasury dashboard figures
+    title: Write the tests for GET /treasury/summary and the lending portfolio-figures port
     kind: test-author
     assignee: claude
+    rules: [RN-T01, RN-C10]
     skills: [escrever-teste]
-    refs: [PRD-001 RF-32, ADR-0005, docs/plano/E12.md]
+    refs: [PRD-001 RF-32, RFC-004 §3, RFC-005 §6, ADR-0004, ADR-0005, docs/plano/E12.md D7 D8, docs/plano/E12-F04/plano.md]
     dependsOn: [E12-T06]
     allowedPaths:
-      - apps/api/src/treasury/http/dashboard.http.test.ts
+      - apps/api/src/treasury/http/treasury-summary.http.test.ts
+      - apps/api/src/lending/public/portfolio-figures.test.ts
+    protectedTests: []
+    checks:
+      - '! pnpm --filter @pilla/api exec vitest run src/treasury/http/treasury-summary.http.test.ts src/lending/public/portfolio-figures.test.ts'
+      - node scripts/check-test-quality.mjs apps/api/src/treasury/http/treasury-summary.http.test.ts apps/api/src/lending/public/portfolio-figures.test.ts
+      - pnpm --filter @pilla/api typecheck
+    done:
+      - 'empty (A1, A8, C1, C7): every value is 0 and committedBps and availableBps are null; cash plus lent at or below zero also gives null percentages'
+      - 'cash and lent (A2, C2): after a 100.000,00 deposit and activating a 30.000,00 loan, cashCents 7000000, lentCents 3000000, committedBps 3000, availableBps 7000'
+      - 'payment and reversal (A3, A4, C3, C4): confirming a payment lowers lentCents only by the principal paid, raises cash by the amount and the month interest and late charges by their components; reversing undoes it in the month of the reversal'
+      - 'write-off and recovery (A5, C5): writing off a loan moves its principal from lentCents to lossesCents; a recovery payment raises recoveredCents and cash and leaves interestReceivedCents'
+      - 'month (A6, A7, C6): forecastCents is principal plus interest still open on installments of ACTIVE loans due in the month; another month changes only the month figures and the forecast'
+      - 'refusals and no write (A9, A11, C8 to C10): month "2027-13", "2027-1" and "01/2027" give 400 VALIDATION_FAILED; the summary writes nothing'
+      - 'port (A10, C11 to C15): portfolioFigures matches the sum of the principal outstanding of each loan detail for a portfolio with loans in several states, counts a partially paid installment by what is left and leaves renewed loans out'
+    budget: {attempts: 4, toolCalls: 30, minutes: 20}
+    readFirst:
+      - docs/plano/E12-F04/plano.md
+      - apps/api/src/lending/application/loan-assessment.ts
+      - apps/api/src/lending/infra/loan-queries.ts
+      - apps/api/src/lending/public/open-installments.ts
+      - apps/api/src/payments/public/confirmed-allocations.ts
+      - apps/api/src/lending/http/loans-activate.http.test.ts
+      - apps/api/src/core/http/test-app.ts
+      - apps/api/src/db/test-db.ts
   - id: E12-T08
-    title: Implement the treasury dashboard
+    title: Implement the treasury summary and the lending portfolio-figures port
     kind: implement
     assignee: claude
+    rules: [RN-T01, RN-C10]
     skills: [editar-arquivo, coding-guidelines, modular-design-principles]
-    refs: [PRD-001 RF-32, ADR-0005, docs/plano/E12.md]
-    dependsOn: [E12-T07]
+    refs: [PRD-001 RF-32, RFC-001 M2, RFC-004 §3, ADR-0005, docs/plano/E12.md D7 D8, docs/plano/E12-F04/plano.md]
+    dependsOn: [E12-T07, E12-T13]
     allowedPaths:
       - apps/api/src/treasury/**
-      - apps/api/src/lending/public/**
-  # ---------------------------------------------------------------- E12-F05: web
-  - id: E12-T09
-    title: Add the account statement, entries and dashboard screens
+      - apps/api/src/lending/public/portfolio-figures.ts
+      - packages/schemas/src/api/treasury/treasury-summary.ts
+      - packages/schemas/src/index.ts
+      - apps/api/src/app.module.ts
+    protectedTests:
+      - apps/api/src/treasury/http/treasury-summary.http.test.ts
+      - apps/api/src/lending/public/portfolio-figures.test.ts
+      - packages/schemas/src/api/treasury/treasury-summary.test.ts
+    checks:
+      - pnpm --filter @pilla/api exec vitest run src/treasury src/lending
+      - pnpm --filter @pilla/schemas exec vitest run src/api
+      - pnpm --filter @pilla/api typecheck
+      - pnpm --filter @pilla/api lint
+      - pnpm check:schemas
+      - pnpm depcruise
+    done:
+      - the protected tests pass (A1 to A12)
+      - treasury reads loans only through apps/api/src/lending/public/portfolio-figures.ts; lending does not import treasury; depcruise has no cycle
+      - portfolio-figures reuses the open-installment assembly of loan-assessment.ts (no copied arithmetic) and nothing computed is stored (ADR-0005)
+    budget: {attempts: 3, toolCalls: 40, minutes: 30}
+    readFirst:
+      - docs/plano/E12-F04/plano.md
+      - apps/api/src/lending/application/loan-assessment.ts
+      - apps/api/src/lending/infra/loan-queries.ts
+      - apps/api/src/lending/public/open-installments.ts
+      - apps/api/src/lending/public/brasilia-today.ts
+      - apps/api/src/treasury/http/accounts.controller.ts
+      - .dependency-cruiser.cjs
+  # ---------------------------------------------------------------- E12-F05: cliente web e telas
+  - id: E12-T14
+    title: Implement the server-side API client for treasury
     kind: implement
     assignee: claude
-    skills: [shadcn, tailwind-css, react-best-practices, accessibility, coding-guidelines]
-    refs: [PRD-001 RF-30, PRD-001 RF-31, PRD-001 RF-32, docs/plano/E12.md]
-    dependsOn: [E12-T04, E12-T08, E10-T15, E9-T15]
+    rules: []
+    skills: [react-best-practices, coding-guidelines, security-best-practices]
+    refs: [ADR-0013, RFC-004 §3, docs/plano/E12.md D4 D5 D7, docs/plano/E12-F05/plano.md]
+    dependsOn: [E12-T04, E12-T06, E12-T08, E10-T15]
     allowedPaths:
       - apps/web/lib/api/treasury.ts
+    protectedTests: []
+    checks:
+      - pnpm --filter @pilla/web typecheck
+      - pnpm --filter @pilla/web lint
+    done:
+      - typed functions listAccounts, createAccountEntry (with Idempotency-Key), getAccountStatement (from, to, limit, cursor) and getTreasurySummary (month), on top of the E9 wrapper; responses parsed with @pilla/schemas; problem+json as ApiProblem; no any
+    budget: {attempts: 3, toolCalls: 30, minutes: 20}
+    readFirst:
+      - docs/plano/E12-F05/plano.md
+      - apps/web/lib/api/client.ts
+      - apps/web/lib/api/payments.ts
+      - apps/web/lib/api/problem.ts
+  - id: E12-T09
+    title: Build the treasury screen (dashboard, statement, new entry) and the cash warning on loan activation
+    kind: implement
+    assignee: claude
+    rules: [RN-T01, RN-C10]
+    skills: [shadcn, tailwind-css, react-best-practices, accessibility, coding-guidelines]
+    refs: [PRD-001 RF-30, PRD-001 RF-31, PRD-001 RF-32, PRD-001 RN-C10, ADR-0017, docs/plano/E12.md D6 D7 D9, docs/plano/E12-F05/plano.md]
+    dependsOn: [E12-T14, E10-T16, E9-T15]
+    allowedPaths:
       - apps/web/app/(admin)/caixa/**
-      - apps/web/app/(admin)/painel/**
       - apps/web/components/treasury/**
+      - apps/web/components/shared/admin-nav.tsx
+      - apps/web/components/loans/loan-draft-actions.tsx
+      - apps/web/lib/labels.ts
+      - apps/web/lib/labels.test.ts
+    protectedTests: []
+    checks:
+      - pnpm --filter @pilla/web typecheck
+      - pnpm --filter @pilla/web lint
+      - pnpm --filter @pilla/web test
+    done:
+      - /caixa shows on top the dashboard cards (cash, lent, committed and available percent, interest and late charges received in the month, recovered in the month, losses, month forecast) with a month picker; a null percent shows "—"
+      - below, the base account statement with date, type, component, amount (red with sign when negative), balance after and justification; period filter; "Carregar mais" by nextCursor; opening and closing balance of the period; empty state "Nenhum lançamento no período."
+      - '"Novo lançamento" opens a dialog with type (Aporte, Retirada, Ajuste), amount, date (default today in Brasília, no future) and justification (required for Ajuste, with Entrada/Saída sign); it posts with one Idempotency-Key per dialog opening, reloads dashboard and statement, and shows API errors in pt-BR in the dialog'
+      - the nav has "Caixa"; the "Ativar" dialog of a loan shows "O caixa registrado (R$ X) é menor que o valor do contrato (R$ Y). Você pode ativar mesmo assim." when the principal is above the account balance and keeps the confirm button enabled; with enough cash, no warning
+      - pt-BR labels of the ledger types and components live in lib/labels.ts; the old labels tests only change to stay green; no new frontend test (ADR-0017 amendment)
+      - 'visual review in the browser: /caixa opens; loading, empty and error states render; the activation warning shows; no console error'
+    budget: {attempts: 3, toolCalls: 50, minutes: 40}
+    readFirst:
+      - docs/plano/E12-F05/plano.md
+      - apps/web/app/(admin)/pagamentos/page.tsx
+      - apps/web/components/loans/loan-draft-actions.tsx
+      - apps/web/components/shared/admin-nav.tsx
+      - apps/web/components/shared/confirm-dialog.tsx
+      - apps/web/components/shared/data-table.tsx
+      - apps/web/components/shared/empty-state.tsx
+      - apps/web/components/shared/page-header.tsx
+      - apps/web/components/shared/form-field.tsx
+      - apps/web/lib/labels.ts
+      - apps/web/lib/today.ts
   # ---------------------------------------------------------------- E12-F06: E2E
   - id: E12-T10
-    title: Write the Playwright e2e of treasury entries, statement and dashboard
+    title: Write the Playwright e2e of deposits, adjustments, disbursement, repayment and reversal on the treasury screen
     kind: test-author
     assignee: claude
+    rules: []
     skills: [escrever-teste, accessibility]
-    refs: [PRD-001 RF-30, PRD-001 RF-31, PRD-001 RF-32, docs/plano/E12.md]
+    refs: [PRD-001 RF-30, PRD-001 RF-31, PRD-001 RF-32, PRD-001 RN-T01, PRD-001 RN-T02, PRD-001 RN-T03, PRD-001 RN-C10, docs/plano/E12.md, docs/plano/E12-F06/plano.md]
     dependsOn: [E12-T09]
     allowedPaths:
       - apps/web/e2e/treasury.e2e.ts
+    protectedTests: []
+    checks:
+      - pnpm --filter @pilla/web e2e
+    done:
+      - with compose up, migrate and seed - open /caixa, post a deposit and see the balance and the row in the statement; post a negative adjustment with a reason and a withdrawal and see the signs and the balance after
+      - create a loan whose principal is above the cash, open "Ativar", see the RN-C10 warning and activate anyway; back on /caixa see the negative DISBURSEMENT, the negative balance and the lent figure on the dashboard
+      - register and confirm a payment and see on /caixa the repayment per component and the month interest; reverse it and see the REVERSAL rows and the balance back
+      - every wait for an event effect re-reads the screen (expect with timeout or reload), never waitForTimeout; the test creates its own data with unique names
+      - no console errors
+    budget: {attempts: 3, toolCalls: 50, minutes: 40}
+    readFirst:
+      - docs/plano/E12-F06/plano.md
+      - apps/web/e2e/payments.e2e.ts
+      - apps/web/e2e/loans.e2e.ts
+      - apps/web/playwright.config.ts
 
 features:
   - id: E12-F01
-    title: Outbox consumers into the ledger
+    title: Outbox dispatcher and ledger entries from events
     cards: [E12-T01, E12-T02]
   - id: E12-F02
-    title: Deposits, withdrawals and adjustments
-    cards: [E12-T03, E12-T04]
+    title: Deposit, withdrawal and adjustment
+    cards: [E12-T11, E12-T03, E12-T04]
   - id: E12-F03
-    title: Account statement
-    cards: [E12-T05, E12-T06]
+    title: Account statement and derived balance
+    cards: [E12-T12, E12-T05, E12-T06]
   - id: E12-F04
     title: Treasury dashboard
-    cards: [E12-T07, E12-T08]
+    cards: [E12-T13, E12-T07, E12-T08]
   - id: E12-F05
-    title: Web treasury screens
-    cards: [E12-T09]
+    title: Web treasury client and screens
+    cards: [E12-T14, E12-T09]
   - id: E12-F06
     title: Treasury end-to-end test
     cards: [E12-T10]
