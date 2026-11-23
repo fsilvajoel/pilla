@@ -1,8 +1,11 @@
-// Esboço do E14-T01; a implementação (E14 D3) é do E14-T02.
+import { createHash, randomBytes } from "node:crypto";
+
+/** Valor do cookie de sessão: 32 bytes aleatórios em base64url (E14 D3). */
 export function newSessionToken(): string {
-  throw new Error("esboço: não implementado");
+  return randomBytes(32).toString("base64url");
 }
 
-export function sessionIdOf(_token: string): string {
-  throw new Error("esboço: não implementado");
+/** Id da linha em `sessions`: SHA-256 hex do token; o valor do cookie nunca é gravado (E14 D3). */
+export function sessionIdOf(token: string): string {
+  return createHash("sha256").update(token).digest("hex");
 }

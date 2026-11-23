@@ -1,4 +1,11 @@
 import { z } from "zod";
+import { idSchema } from "../../common";
 
-/** Esboço do E14-T01 (recusa tudo); o contrato de E14-F01 (id uuid, username 1..100, role ADMIN) é do E14-T02. */
-export const adminMeResponse: z.ZodType<{ id: string; username: string; role: "ADMIN" }> = z.never();
+/** Resposta de POST /auth/admin/login e GET /auth/admin/me (RFC-004 §3, ADR-0011). */
+export const adminMeResponse = z.strictObject({
+  id: idSchema,
+  username: z.string().min(1).max(100),
+  role: z.literal("ADMIN"),
+});
+
+export type AdminMeResponse = z.infer<typeof adminMeResponse>;

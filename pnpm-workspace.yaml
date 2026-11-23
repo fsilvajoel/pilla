@@ -5,3 +5,4 @@ packages:
 allowBuilds:
   lefthook: false
   esbuild: false
+  argon2: true
