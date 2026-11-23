@@ -109,8 +109,8 @@ describe("GET /api/v1/accounts", () => {
       [ACTIVE_ID, INACTIVE_ID],
     );
     await client.query(
-      `insert into treasury.ledger_entries (id, account_id, type, amount_cents, entry_date, created_by)
-       values ($1, $2, 'ADJUSTMENT', -500, '2026-01-10', $3)`,
+      `insert into treasury.ledger_entries (id, account_id, type, amount_cents, entry_date, justification, created_by)
+       values ($1, $2, 'ADJUSTMENT', -500, '2026-01-10', 'Tarifa bancária', $3)`,
       [ENTRY_A, ACTIVE_ID, USER],
     );
     const list = await getAccounts();
