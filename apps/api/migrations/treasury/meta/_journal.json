@@ -8,6 +8,13 @@
       "when": 1794870151879,
       "tag": "0000_treasury_schema",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1795440531945,
+      "tag": "0001_ledger_idempotency_key",
+      "breakpoints": true
     }
   ]
 }

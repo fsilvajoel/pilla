@@ -1,0 +1,2 @@
+ALTER TABLE "treasury"."ledger_entries" ADD COLUMN "idempotency_key" text;--> statement-breakpoint
+ALTER TABLE "treasury"."ledger_entries" ADD CONSTRAINT "ledger_entries_idempotency_key_key" UNIQUE("idempotency_key");
