@@ -30,6 +30,7 @@ import { personResponse } from "./people/person-response";
 import { updatePersonRequest } from "./people/update-person";
 import { problemSchema } from "./problem";
 import { accountEntryRequest } from "./treasury/account-entry";
+import { accountStatementQuery, accountStatementResponse } from "./treasury/account-statement";
 import { accountListResponse } from "./treasury/account-summary";
 
 // RFC-004 §3–§6. Ids fictícios em UUID v7; CPFs fictícios com dígitos válidos.
@@ -511,8 +512,29 @@ const cases: BodyCase[] = [
   {
     name: "accountListResponse",
     schema: accountListResponse,
-    body: { items: [{ id: id(4), name: "Conta principal", active: true }] },
+    body: { items: [{ id: id(4), name: "Conta principal", active: true, balanceCents: 1000000 }] },
     invalid: { items: [{ id: id(4), name: "", active: true }] },
+  },
+  {
+    name: "accountStatementResponse",
+    schema: accountStatementResponse,
+    body: {
+      accountId: id(4),
+      from: null,
+      to: null,
+      openingBalanceCents: 0,
+      closingBalanceCents: 0,
+      items: [],
+      nextCursor: null,
+    },
+    invalid: { from: "2027-13-01", openingBalanceCents: 1.5, items: "x", nextCursor: 1 },
+  },
+  {
+    name: "accountStatementQuery",
+    schema: accountStatementQuery,
+    body: {},
+    optional: { from: "2027-01-01", to: "2027-01-31", limit: "50", cursor: "abc" },
+    invalid: { from: "01/02/2027", to: "2027-02-30", limit: "201", cursor: "" },
   },
 ];
 

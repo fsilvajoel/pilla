@@ -1,11 +1,14 @@
 import { z } from "zod";
 import { idSchema } from "../../common";
+import { balanceCentsSchema } from "./account-statement";
 
 /** Conta resumida: opção da "Conta de destino" do pagamento (RF-20; RFC-005 `accounts`). */
 export const accountSummarySchema = z.strictObject({
   id: idSchema,
   name: z.string().trim().min(1).max(100),
   active: z.boolean(),
+  /** Saldo derivado: soma dos lançamentos da conta (ADR-0005), com sinal. */
+  balanceCents: balanceCentsSchema,
 });
 export type AccountSummary = z.infer<typeof accountSummarySchema>;
 
