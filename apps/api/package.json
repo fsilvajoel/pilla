@@ -13,7 +13,8 @@
     "db:regen": "node scripts/db-regen.mjs",
     "start": "node --env-file=../../.env --import tsx --eval \"import('./src/main.ts').then((m) => m.bootstrap(process.env))\"",
     "db:migrate": "node --env-file=../../.env --import tsx scripts/migrate.mts",
-    "db:seed": "node --env-file=../../.env --import tsx scripts/seed.mts"
+    "db:seed": "node --env-file=../../.env --import tsx scripts/seed.mts",
+    "db:seed-admin": "node --env-file=../../.env --import tsx scripts/seed-admin.mts"
   },
   "dependencies": {
     "@nestjs/common": "^12.5.1",
