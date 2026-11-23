@@ -4,7 +4,7 @@ import { vi } from "vitest";
 import { exampleLoanDetail } from "@/lib/mock-data";
 import { PaymentForm } from "./payment-form";
 
-const accounts = [{ id: "01936f8e-7b2c-7cde-8f00-000000000003", name: "Conta base", active: true }];
+const accounts = [{ id: "01936f8e-7b2c-7cde-8f00-000000000003", name: "Conta base", active: true, balanceCents: 0 }];
 
 const payment = {
   loanId: "01936f8e-7b2c-7cde-8f00-000000000002",

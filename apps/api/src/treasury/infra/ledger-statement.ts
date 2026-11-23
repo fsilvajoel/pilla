@@ -3,7 +3,7 @@ import type { Database } from "../../db/database";
 import { sumCents } from "./account-balances";
 import { accounts, ledgerEntries, type LedgerEntryRow } from "./schema";
 
-export type StatementEntryRow = Omit<LedgerEntryRow, "sourceEventId" | "createdBy"> & {
+export type StatementEntryRow = Omit<LedgerEntryRow, "sourceEventId" | "createdBy" | "idempotencyKey"> & {
   readonly balanceAfterCents: number;
 };
 
