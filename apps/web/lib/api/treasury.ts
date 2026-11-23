@@ -2,10 +2,12 @@ import {
   accountEntryResponse,
   accountListResponse,
   accountStatementResponse,
+  treasurySummaryResponse,
   type AccountEntryRequest,
   type AccountEntryResponse,
   type AccountListResponse,
   type AccountStatementResponse,
+  type TreasurySummaryResponse,
 } from "@pilla/schemas";
 import { apiFetch } from "./client";
 
@@ -51,8 +53,7 @@ export function getAccountStatement(
   });
 }
 
-// TODO(E12-T14): getTreasurySummary(month?) depende de treasurySummaryResponse (schema do T08, ainda ausente nesta branch).
-// Quando existir em @pilla/schemas, acrescentar:
-//   export function getTreasurySummary(month?: string): Promise<TreasurySummaryResponse> {
-//     return apiFetch({ path: "/treasury/summary", query: { month }, schema: treasurySummaryResponse });
-//   }
+/** GET /treasury/summary?month=AAAA-MM: indicadores do painel (RF-32, E12 D7); sem `month`, a API usa o mês corrente em Brasília. */
+export function getTreasurySummary(month?: string): Promise<TreasurySummaryResponse> {
+  return apiFetch({ path: "/treasury/summary", query: { month }, schema: treasurySummaryResponse });
+}

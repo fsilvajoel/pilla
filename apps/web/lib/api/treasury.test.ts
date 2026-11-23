@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiProblem } from "./problem";
-import { createAccountEntry, getAccountStatement, listAccounts } from "./treasury";
+import { createAccountEntry, getAccountStatement, getTreasurySummary, listAccounts } from "./treasury";
 
 const ID = "01890a5d-ac96-774b-bcce-b302099a8057";
 
@@ -65,5 +65,26 @@ describe("treasury client", () => {
     expect(init.method).toBe("POST");
     expect(new Headers(init.headers).get("idempotency-key")).toBe("chave-1");
     expect(err).toBeInstanceOf(ApiProblem);
+  });
+
+  it("getTreasurySummary chama GET /treasury/summary com e sem month", async () => {
+    respond({
+      month: "2026-11",
+      cashCents: 1000,
+      lentCents: 3000,
+      committedBps: 7500,
+      availableBps: 2500,
+      maxCommittedBps: null,
+      interestReceivedCents: 0,
+      lateChargesReceivedCents: 0,
+      recoveredCents: 0,
+      lossesCents: 0,
+      forecastCents: 500,
+    });
+    const res = await getTreasurySummary("2026-11");
+    expect(last().url).toBe("http://api.test/treasury/summary?month=2026-11");
+    expect(res.committedBps).toBe(7500);
+    await getTreasurySummary();
+    expect(last().url).toBe("http://api.test/treasury/summary");
   });
 });
