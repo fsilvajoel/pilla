@@ -23,7 +23,7 @@ cards:
       - node scripts/check-test-quality.mjs packages/schemas/src/api/imports/import-report.test.ts
       - pnpm --filter @pilla/schemas typecheck
     done:
-      - 'importReportResponse accepts the report shape of E16.md Contrato (totals as non-negative integers, rows with lineNumber >= 1, status REVIEW or REJECTED only, reasons from the closed ImportReviewReason list plus MISSING_REQUIRED for REJECTED)'
+      - 'importReportResponse accepts the report shape of E16.md Contrato (totals as non-negative integers, rows with lineNumber >= 1, status REVIEW or REJECTED only, reasons from the closed ImportReviewReason list plus MISSING_REQUIRED and ROW_FAILED for REJECTED)'
       - 'rejects an unknown reason, a negative total, a status OK in rows, an unknown extra field (strict) and a non-uuid personId or loanId'
       - 'personId and loanId are nullable (REJECTED rows have none)'
     budget: {attempts: 4, toolCalls: 20, minutes: 15}

@@ -6,7 +6,7 @@ Plano da feature. Cartões: E16-T07 (testes HTTP, sonnet) e E16-T08 (implementa�
 
 Entra (`apps/api/src/imports/`):
 - `infra/schema.ts` e migração `apps/api/migrations/imports/0000_imports.sql`: schema `imports`; `import_batches` (`id`, `file_sha256` único, contagens, `created_by`, `created_at`); `import_rows` (`batch_id`, `line_number`, `status`, `reasons text[]`, `person_id`, `loan_id`, `payment_id`; sem FK para outros módulos).
-- `application/import-service.ts`: calcula SHA-256 do corpo (409 `IMPORT_ALREADY_DONE` se já existe); `parseCsv` + `classifyRow` (F02); para cada linha, **uma transação**: pessoa (`createImportedPerson`, com reaproveitamento de nome na própria importação, D5), contrato (`importLoan`), pagamento (`recordImportedPayment`); erro inesperado na linha: rollback dela, linha `REJECTED` (`MISSING_REQUIRED` não se aplica: motivo `ROW_FAILED` registrado só no log e como REJECTED sem motivo de lista, ver Riscos) e segue. Ao fim grava lote, linhas e auditoria `import.created`.
+- `application/import-service.ts`: calcula SHA-256 do corpo (409 `IMPORT_ALREADY_DONE` se já existe); `parseCsv` + `classifyRow` (F02); para cada linha, **uma transação**: pessoa (`createImportedPerson`, com reaproveitamento de nome na própria importação, D5), contrato (`importLoan`), pagamento (`recordImportedPayment`); erro inesperado na linha: rollback dela, linha `REJECTED` com motivo `ROW_FAILED` e segue. Ao fim grava lote, linhas e auditoria `import.created`.
 - `http/imports.controller.ts`: `POST /imports/spreadsheet` (ADMIN, `text/csv`, corpo cru limitado a 2 MB) e `GET /imports/{id}`; DTO pelo `importReportResponse` da F01.
 - Registro em `app.module.ts`.
 
@@ -46,7 +46,7 @@ Ver `docs/plano/E16.md` (Contrato). `rows` do relatório: só REVIEW e REJECTED,
 
 ## Riscos
 
-- Linha que falha por erro inesperado: status REJECTED com `reasons` = `MISSING_REQUIRED` seria enganoso; propõe-se acrescentar o motivo `ROW_FAILED` à lista da F01 (se o revisor concordar na revisão dos testes, entra em E16-T01/T02; é mudança de um valor de enum).
+- Linha que falha por erro inesperado fica `REJECTED` com `ROW_FAILED` (motivo de rejeição da F01, junto de `MISSING_REQUIRED`).
 - Requisição longa (2000 linhas, uma transação cada): aceito no MVP (D2); o limite protege.
 - Lote gravado depois das linhas: queda no meio deixa contratos sem lote; reenviar o arquivo cria de novo. Aceito e avisado.
 

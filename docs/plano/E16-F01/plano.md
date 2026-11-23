@@ -5,7 +5,7 @@ Plano da feature. Cartões: E16-T01 (testes, haiku) e E16-T02 (implementação, 
 ## Escopo
 
 Entra:
-- `packages/schemas/src/api/imports/import-report.ts` (novo): `importReviewReasonSchema` (lista fechada: `SCHEDULE_MISMATCH`, `TYPE_UNKNOWN`, `RATE_MISSING`, `INSTALLMENTS_MISSING`, `FIRST_DUE_MISSING`, `DATE_NOT_PARSEABLE`, `CPF_INVALID`, `PAID_EXCEEDS_TOTAL`, `PAID_DATE_MISSING`, `DUPLICATE_PERSON_NAME`), `importRowStatusSchema`, `importReportResponse` (estrito).
+- `packages/schemas/src/api/imports/import-report.ts` (novo): `importReviewReasonSchema` e motivos de rejeição `MISSING_REQUIRED` e `ROW_FAILED` (lista fechada de revisão: `SCHEDULE_MISMATCH`, `TYPE_UNKNOWN`, `RATE_MISSING`, `INSTALLMENTS_MISSING`, `FIRST_DUE_MISSING`, `DATE_NOT_PARSEABLE`, `CPF_INVALID`, `PAID_EXCEEDS_TOTAL`, `PAID_DATE_MISSING`, `DUPLICATE_PERSON_NAME`), `importRowStatusSchema`, `importReportResponse` (estrito).
 - Código de erro `IMPORT_ALREADY_DONE` (409) no catálogo da RFC-004 §6.
 - Exportação em `packages/schemas/src/index.ts`.
 
@@ -30,7 +30,7 @@ Fora: tipos do CSV cru (ficam no domínio da API, F02); schema de requisição (
 
 - A1: o schema aceita o relatório do contrato e recusa campo extra (estrito).
 - A2: recusa total negativo ou não inteiro, `lineNumber` 0, status `OK` em `rows`, motivo desconhecido e `reasons` vazia.
-- A3: `personId` e `loanId` aceitam nulo; REJECTED traz `MISSING_REQUIRED`.
+- A3: `personId` e `loanId` aceitam nulo; REJECTED traz `MISSING_REQUIRED` ou `ROW_FAILED`.
 
 ## Casos de teste
 
