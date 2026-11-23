@@ -131,8 +131,8 @@ cards:
       - 'entries (A1 to A3, C1 to C3): CAPITAL_IN writes +amountCents, CAPITAL_OUT receives a positive amount and writes -amountCents, ADJUSTMENT writes the signed amount with its justification; component and source are null; 201 with accountEntryResponse'
       - 'audit (A4, C4): each entry writes a ledger_entry.created audit row'
       - 'idempotency (A5, C5): the same Idempotency-Key twice writes one entry and both answers carry the same id'
-      - 'date (A6, C6, C7): entryDate today in Brasília is accepted; tomorrow is 422 VALIDATION_FAILED on entryDate'
-      - 'account (A7, C8, C9): unknown account 404; inactive account 422 VALIDATION_FAILED on accountId'
+      - 'date (A6, C6, C7): entryDate today in Brasília is accepted; tomorrow is 400 VALIDATION_FAILED on entryDate'
+      - 'account (A7, C8, C9): unknown account 404; inactive account 400 VALIDATION_FAILED on accountId'
       - 'refusals (A8, A9, C10 to C15): system type, zero or fractional amount, negative withdrawal, adjustment without justification and unknown key give 400 VALIDATION_FAILED; no refusal writes an entry or an audit row'
       - 'negative balance (A10, C16): a withdrawal above the balance is accepted (default of the PM question E12-T03)'
     budget: {attempts: 4, toolCalls: 25, minutes: 15}

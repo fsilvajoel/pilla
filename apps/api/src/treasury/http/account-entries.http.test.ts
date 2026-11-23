@@ -222,9 +222,9 @@ describe("POST /api/v1/accounts/{id}/entries: data e conta", () => {
     expect(body.entryDate).toBe(TODAY);
   });
 
-  it("C7 (A6): tomorrow answers 422 VALIDATION_FAILED on entryDate and writes nothing", async () => {
+  it("C7 (A6): tomorrow answers 400 VALIDATION_FAILED on entryDate and writes nothing", async () => {
     const { status, body } = await post(ACCOUNT, { type: "CAPITAL_IN", amountCents: 100, entryDate: TOMORROW });
-    expect(status).toBe(422);
+    expect(status).toBe(400);
     expect(body.code).toBe("VALIDATION_FAILED");
     expect(body.errors?.map((error) => error.field)).toEqual(["entryDate"]);
     expect(await entries()).toHaveLength(0);
@@ -239,9 +239,9 @@ describe("POST /api/v1/accounts/{id}/entries: data e conta", () => {
     expect(await auditCount()).toBe(0);
   });
 
-  it("C9 (A7): an inactive account answers 422 VALIDATION_FAILED on accountId and writes nothing", async () => {
+  it("C9 (A7): an inactive account answers 400 VALIDATION_FAILED on accountId and writes nothing", async () => {
     const { status, body } = await post(INACTIVE, { type: "CAPITAL_IN", amountCents: 100, entryDate: TODAY });
-    expect(status).toBe(422);
+    expect(status).toBe(400);
     expect(body.code).toBe("VALIDATION_FAILED");
     expect(body.errors?.map((error) => error.field)).toEqual(["accountId"]);
     expect(await entries()).toHaveLength(0);
