@@ -13,8 +13,15 @@ import { BASE_ACCOUNT_ID, BASE_ACCOUNT_NAME, seedBaseAccount } from "../infra/ac
 
 const INACTIVE_ID = "01970000-0000-7000-8000-000000000001";
 const ACTIVE_ID = "01970000-0000-7000-8000-000000000002";
+const USER = "01970000-0000-7000-8000-000000000003";
+const ENTRY_A = "01970000-0000-7000-8000-000000000011";
+const ENTRY_B = "01970000-0000-7000-8000-000000000012";
 
 const env: ApiEnv = { host: "127.0.0.1", port: 3000, databaseUrl: "postgres://u:p@127.0.0.1:1/pilla" };
+
+interface AccountsBody {
+  items: { id: string; balanceCents: number }[];
+}
 
 let handle: MigratedTestDb;
 let client: PGlite;
@@ -38,6 +45,7 @@ afterAll(async () => {
   await handle.close();
 });
 beforeEach(async () => {
+  await client.query("delete from treasury.ledger_entries");
   await client.query("delete from treasury.accounts");
 });
 
@@ -56,8 +64,8 @@ describe("GET /api/v1/accounts", () => {
     expect(res.status).toBe(200);
     const parsed = accountListResponse.parse(res.body);
     expect(parsed.items).toEqual([
-      { id: ACTIVE_ID, name: "Atual", active: true },
-      { id: INACTIVE_ID, name: "Antiga", active: false },
+      { id: ACTIVE_ID, name: "Atual", active: true, balanceCents: 0 },
+      { id: INACTIVE_ID, name: "Antiga", active: false, balanceCents: 0 },
     ]);
   });
 
@@ -72,8 +80,42 @@ describe("GET /api/v1/accounts", () => {
     await seedBaseAccount(handle.db);
     const res = await getAccounts();
     expect(accountListResponse.parse(res.body).items).toEqual([
-      { id: BASE_ACCOUNT_ID, name: BASE_ACCOUNT_NAME, active: true },
+      { id: BASE_ACCOUNT_ID, name: BASE_ACCOUNT_NAME, active: true, balanceCents: 0 },
     ]);
     expect(BASE_ACCOUNT_NAME).toBe("Conta principal");
+  });
+
+  it("C13 (A6): balanceCents is the sum of the account entries and equals the unfiltered closing balance", async () => {
+    await client.query(
+      `insert into treasury.accounts (id, name, active) values ($1, 'Atual', true), ($2, 'Vazia', true)`,
+      [ACTIVE_ID, INACTIVE_ID],
+    );
+    await client.query(
+      `insert into treasury.ledger_entries (id, account_id, type, amount_cents, entry_date, created_by)
+       values ($1, $3, 'CAPITAL_IN', 100000, '2026-01-10', $4), ($2, $3, 'CAPITAL_OUT', -25000, '2026-01-12', $4)`,
+      [ENTRY_A, ENTRY_B, ACTIVE_ID, USER],
+    );
+    const list = await getAccounts();
+    const byId = new Map((list.body as AccountsBody).items.map((item) => [item.id, item]));
+    expect(byId.get(ACTIVE_ID)).toMatchObject({ balanceCents: 75000 });
+    const statement = await request(baseUrl).get(`/api/v1/accounts/${ACTIVE_ID}/entries`);
+    expect(statement.status).toBe(200);
+    expect((statement.body as { closingBalanceCents: number }).closingBalanceCents).toBe(75000);
+  });
+
+  it("C14 (A6): an account without entries has balanceCents 0, even next to one with entries", async () => {
+    await client.query(
+      `insert into treasury.accounts (id, name, active) values ($1, 'Atual', true), ($2, 'Vazia', true)`,
+      [ACTIVE_ID, INACTIVE_ID],
+    );
+    await client.query(
+      `insert into treasury.ledger_entries (id, account_id, type, amount_cents, entry_date, created_by)
+       values ($1, $2, 'ADJUSTMENT', -500, '2026-01-10', $3)`,
+      [ENTRY_A, ACTIVE_ID, USER],
+    );
+    const list = await getAccounts();
+    const byId = new Map((list.body as AccountsBody).items.map((item) => [item.id, item]));
+    expect(byId.get(INACTIVE_ID)).toMatchObject({ balanceCents: 0 });
+    expect(byId.get(ACTIVE_ID)).toMatchObject({ balanceCents: -500 });
   });
 });
