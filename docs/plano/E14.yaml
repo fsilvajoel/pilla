@@ -1,0 +1,446 @@
+delivery: E14
+title: Admin login and session (password hash, session cookie, global guard, real actor, admin seed, login screen, e2e)
+# Plano e decisões D1–D13 em docs/plano/E14.md; escopo e critérios de cada feature em docs/plano/E14-F0x/plano.md.
+# Cartões em inglês (ADR-0012). Todos com assignee claude; o modelo (opus, sonnet, haiku) está em "Divisão entre
+# trabalhadores" de E14.md: opus no que é segurança (T01, T03 a T06), sonnet no médio, haiku no script de seed (T10).
+# Todo cartão que toca apps/web leva skills; cartão de tela leva também shadcn e tailwind-css (gate card-skills).
+# readFirst só com arquivos (o run_card do harness recusa pasta).
+# Dúvidas de produto com padrão assumido: docs/plano/pendencias-pm.md (E14-T03, E14-T09, E14 esqueleto).
+cards:
+  # ---------------------------------------------------------------- E14-F01: contrato, hash e token
+  - id: E14-T01
+    title: Write the tests for the admin me response schema, the password hashing and the session token
+    kind: test-author
+    assignee: claude
+    rules: [RN-A05]
+    skills: [escrever-teste]
+    refs: [PRD-001 RN-A05, ADR-0011, RFC-003 §4.5, RFC-004 §3, docs/plano/E14.md D2 D3 D5, docs/plano/E14-F01/plano.md]
+    dependsOn: []
+    allowedPaths:
+      - packages/schemas/src/api/access/admin-me.test.ts
+      - apps/api/src/access/domain/password.test.ts
+      - apps/api/src/access/domain/session-token.test.ts
+    protectedTests: []
+    checks:
+      - '! pnpm --filter @pilla/schemas exec vitest run src/api/access/admin-me.test.ts'
+      - '! pnpm --filter @pilla/api exec vitest run src/access/domain/password.test.ts src/access/domain/session-token.test.ts'
+      - node scripts/check-test-quality.mjs packages/schemas/src/api/access/admin-me.test.ts apps/api/src/access/domain/password.test.ts apps/api/src/access/domain/session-token.test.ts
+    done:
+      - 'schema (A1, A2, C1 to C4): adminMeResponse accepts {id uuid, username 1..100, role "ADMIN"} and rejects extra keys, role CLIENT, a non-uuid id and an empty username'
+      - 'password (A3 to A6, C5 to C10): hashPassword returns an argon2id encoded string with m=19456, t=2, p=1 and a different salt each call; verifyPassword is true only for the same password, false for a wrong one, false (never throws) for a malformed hash; verifyAgainstDummy always returns false and runs a real verify'
+      - 'token (A7, A8, C11 to C13): newSessionToken returns a 43-char base64url token from 32 random bytes and two calls differ; sessionIdOf(token) is the 64-char lowercase hex SHA-256 of the token and is stable'
+    budget: {attempts: 3, toolCalls: 25, minutes: 15}
+    readFirst:
+      - docs/plano/E14-F01/plano.md
+      - packages/schemas/src/api/access/admin-login.ts
+      - packages/schemas/src/api/api.test.ts
+      - apps/api/src/access/infra/schema.ts
+      - docs/adr/0011-autenticacao-cpf-senha-sessao.md
+  - id: E14-T02
+    title: Implement the admin me response schema, the password hashing and the session token
+    kind: implement
+    assignee: claude
+    rules: [RN-A05]
+    skills: [editar-arquivo, coding-guidelines]
+    refs: [ADR-0011, RFC-003 §4.5, docs/plano/E14.md D2 D3, docs/plano/E14-F01/plano.md]
+    dependsOn: [E14-T01]
+    allowedPaths:
+      - packages/schemas/src/api/access/admin-me.ts
+      - packages/schemas/src/api/index.ts
+      - packages/schemas/src/index.ts
+      - apps/api/src/access/domain/password.ts
+      - apps/api/src/access/domain/session-token.ts
+      - apps/api/package.json
+      - pnpm-lock.yaml
+    protectedTests:
+      - packages/schemas/src/api/access/admin-me.test.ts
+      - apps/api/src/access/domain/password.test.ts
+      - apps/api/src/access/domain/session-token.test.ts
+    checks:
+      - pnpm --filter @pilla/schemas exec vitest run src/api
+      - pnpm --filter @pilla/api exec vitest run src/access/domain
+      - pnpm --filter @pilla/schemas typecheck
+      - pnpm --filter @pilla/api typecheck
+      - pnpm --filter @pilla/api lint
+      - pnpm depcruise
+    done:
+      - the protected tests pass (A1 to A8)
+      - argon2 is the only new dependency, added to apps/api only
+      - the argon2 parameters are named constants at the top of password.ts with a comment pointing to ADR-0011
+      - no function in access/domain logs or returns the plain password
+    hints:
+      - the dummy hash for verifyAgainstDummy is computed once at module load from a random string (no fixed password in the code)
+      - token uses crypto.randomBytes(32).toString("base64url"); id uses createHash("sha256").update(token).digest("hex")
+    budget: {attempts: 3, toolCalls: 25, minutes: 15}
+    readFirst:
+      - docs/plano/E14-F01/plano.md
+      - packages/schemas/src/api/access/admin-login.ts
+      - apps/api/package.json
+      - docs/travas.md
+  # ---------------------------------------------------------------- E14-F02: login, logout, me
+  - id: E14-T03
+    title: Write the HTTP tests for admin login, logout and me with session cookie and rate limit
+    kind: test-author
+    assignee: claude
+    rules: [RN-A05]
+    skills: [escrever-teste]
+    refs: [PRD-001 RN-A05, ADR-0011, RFC-003 §4.5, RFC-004 §3, RFC-004 §6, RFC-005, docs/plano/E14.md D3 D4 D5 D6, docs/plano/E14-F02/plano.md]
+    dependsOn: [E14-T02]
+    allowedPaths:
+      - apps/api/src/access/application/sessions.test.ts
+      - apps/api/src/access/http/auth.http.test.ts
+    protectedTests: []
+    checks:
+      - '! pnpm --filter @pilla/api exec vitest run src/access/application/sessions.test.ts src/access/http/auth.http.test.ts'
+      - node scripts/check-test-quality.mjs apps/api/src/access/application/sessions.test.ts apps/api/src/access/http/auth.http.test.ts
+      - pnpm --filter @pilla/api typecheck
+    done:
+      - 'login ok (A1 to A3, C1 to C4): right username and password give 200 with adminMeResponse and one Set-Cookie pilla_session with HttpOnly, Secure, SameSite=Lax and Path=/; the sessions row id is the SHA-256 of the cookie value, never the value itself; role ADMIN, ip from the request, expires_at = created_at + 12 h; admin_users.last_login_at is set'
+      - 'login fails (A4, A5, C5 to C9): unknown user, wrong password and inactive user all give 401 UNAUTHENTICATED with the same detail and no Set-Cookie and no session row; body with extra key or empty password gives 400 VALIDATION_FAILED; the response body never contains the password'
+      - 'rate limit (A6, C10, C11): the 6th login from the same IP inside one minute gives 429 TOO_MANY_REQUESTS problem+json, even with the right password; another IP still logs in'
+      - 'me (A7 to A9, C12 to C16): with a valid cookie gives 200 adminMeResponse; no cookie, unknown token, session idle for more than 2 h, session past expires_at and session of an inactive admin all give 401; an expired session row is deleted; last_seen_at moves forward only when older than 1 minute (fake clock)'
+      - 'logout (A10, C17, C18): with a valid cookie gives 204, deletes the row and returns an expired pilla_session cookie; the old cookie then gives 401 on me; without a cookie it also gives 204'
+    budget: {attempts: 4, toolCalls: 35, minutes: 25}
+    readFirst:
+      - docs/plano/E14-F02/plano.md
+      - apps/api/src/access/infra/schema.ts
+      - apps/api/src/access/infra/sessions.test.ts
+      - apps/api/src/access/domain/password.ts
+      - apps/api/src/access/domain/session-token.ts
+      - packages/schemas/src/api/access/admin-login.ts
+      - apps/api/src/core/http/test-app.ts
+      - apps/api/src/db/test-db.ts
+      - apps/api/src/payments/http/payments-reverse.http.test.ts
+  - id: E14-T04
+    title: Implement admin login, logout and me with server-side sessions and login rate limit
+    kind: implement
+    assignee: claude
+    rules: [RN-A05]
+    skills: [editar-arquivo, coding-guidelines, modular-design-principles]
+    refs: [ADR-0007, ADR-0011, RFC-003 §4.5, RFC-004 §3, RFC-004 §6, docs/plano/E14.md D1 D3 D4 D5 D6, docs/plano/E14-F02/plano.md]
+    dependsOn: [E14-T03]
+    allowedPaths:
+      - apps/api/src/access/application/**
+      - apps/api/src/access/infra/session-repository.ts
+      - apps/api/src/access/infra/admin-user-repository.ts
+      - apps/api/src/access/http/**
+      - apps/api/src/access/access.module.ts
+      - apps/api/src/core/http/problem-details.filter.ts
+      - apps/api/src/core/http/session-cookie.ts
+      - apps/api/package.json
+      - pnpm-lock.yaml
+    protectedTests:
+      - apps/api/src/access/application/sessions.test.ts
+      - apps/api/src/access/http/auth.http.test.ts
+      - apps/api/src/core/http/problem-details.filter.test.ts
+    checks:
+      - pnpm --filter @pilla/api exec vitest run src/access src/core
+      - pnpm --filter @pilla/api typecheck
+      - pnpm --filter @pilla/api lint
+      - pnpm depcruise
+    done:
+      - the protected tests pass (A1 to A10)
+      - '@nestjs/throttler is applied only to POST /auth/admin/login and its exception becomes 429 TOO_MANY_REQUESTS problem+json'
+      - the cookie is parsed from the Cookie header without new dependencies; session lifetimes (2 h idle, 12 h absolute, 1 min touch) are named constants
+      - no log line, error detail or response contains the password, the token or the password hash
+    hints:
+      - unknown or inactive user calls verifyAgainstDummy before answering 401 so the time does not reveal the user list
+      - the access module is not imported by any other module; AccessModule is added to AppModule in E14-T06
+    budget: {attempts: 3, toolCalls: 45, minutes: 35}
+    readFirst:
+      - docs/plano/E14-F02/plano.md
+      - apps/api/src/access/infra/schema.ts
+      - apps/api/src/access/domain/password.ts
+      - apps/api/src/access/domain/session-token.ts
+      - apps/api/src/core/http/problem-details.filter.ts
+      - apps/api/src/core/http/problem-exception.ts
+      - apps/api/src/payments/payments.module.ts
+      - .dependency-cruiser.cjs
+  # ---------------------------------------------------------------- E14-F03: guard global e ator da requisição
+  - id: E14-T05
+    title: Write the tests for the global admin guard, the public routes and the request actor
+    kind: test-author
+    assignee: claude
+    rules: [RN-A01, RN-A05]
+    skills: [escrever-teste]
+    refs: [PRD-001 RN-A01, ADR-0007, ADR-0011, RFC-004 §6, docs/plano/E14.md D1 D7 D8, docs/plano/E14-F03/plano.md]
+    dependsOn: [E14-T04]
+    allowedPaths:
+      - apps/api/src/access/http/admin-session.guard.test.ts
+      - apps/api/src/core/http/actor.test.ts
+      - apps/api/src/app.auth.test.ts
+    protectedTests: []
+    checks:
+      - '! pnpm --filter @pilla/api exec vitest run src/access/http/admin-session.guard.test.ts src/core/http/actor.test.ts src/app.auth.test.ts'
+      - node scripts/check-test-quality.mjs apps/api/src/access/http/admin-session.guard.test.ts apps/api/src/core/http/actor.test.ts apps/api/src/app.auth.test.ts
+      - pnpm --filter @pilla/api typecheck
+    done:
+      - 'guard (A1 to A4, C1 to C6): a route without @Public gives 401 UNAUTHENTICATED with no cookie, an unknown token or an expired session; a CLIENT session gives 403 FORBIDDEN; a valid ADMIN session passes and @CurrentActor() receives {type ADMIN, adminUserId, ip}'
+      - 'public routes (A5, C7, C8): GET /api/v1/health, the OpenAPI route and POST /api/v1/auth/admin/login answer without a cookie; POST /api/v1/auth/admin/logout and GET /api/v1/auth/me are not public'
+      - 'ip (A6, C9, C10): with the connection from 127.0.0.1 the actor ip is the first X-Forwarded-For address; without the header it is the connection address'
+      - 'whole app (A7, C11, C12): AppModule.forRoot with PGlite answers 401 on GET /api/v1/people and GET /api/v1/loans without a cookie, and 200 after logging in through POST /api/v1/auth/admin/login'
+      - 'test helper (A8, C13): createTestApp without the actor option injects TEST_ADMIN_ACTOR; with {actor: null} the controller sees no actor'
+    budget: {attempts: 4, toolCalls: 35, minutes: 25}
+    readFirst:
+      - docs/plano/E14-F03/plano.md
+      - apps/api/src/app.module.ts
+      - apps/api/src/app.test.ts
+      - apps/api/src/core/http/test-app.ts
+      - apps/api/src/core/http/configure-app.ts
+      - apps/api/src/core/public/audit.ts
+      - apps/api/src/access/http/auth.controller.ts
+      - apps/api/src/access/http/auth.http.test.ts
+  - id: E14-T06
+    title: Implement the global admin guard, @Public, @CurrentActor and the test app actor
+    kind: implement
+    assignee: claude
+    rules: [RN-A01, RN-A05]
+    skills: [editar-arquivo, coding-guidelines, modular-design-principles]
+    refs: [ADR-0007, ADR-0011, docs/plano/E14.md D1 D7 D8, docs/plano/E14-F03/plano.md]
+    dependsOn: [E14-T05]
+    allowedPaths:
+      - apps/api/src/access/http/admin-session.guard.ts
+      - apps/api/src/access/access.module.ts
+      - apps/api/src/core/public/actor.ts
+      - apps/api/src/core/http/actor.ts
+      - apps/api/src/core/http/public.ts
+      - apps/api/src/core/http/client-ip.ts
+      - apps/api/src/core/http/test-app.ts
+      - apps/api/src/core/http/test-actor.ts
+      - apps/api/src/core/http/health.controller.ts
+      - apps/api/src/core/http/openapi.ts
+      - apps/api/src/access/http/auth.controller.ts
+      - apps/api/src/app.module.ts
+    protectedTests:
+      - apps/api/src/access/http/admin-session.guard.test.ts
+      - apps/api/src/core/http/actor.test.ts
+      - apps/api/src/app.auth.test.ts
+      - apps/api/src/access/http/auth.http.test.ts
+      - apps/api/src/app.test.ts
+    checks:
+      - pnpm --filter @pilla/api test
+      - pnpm --filter @pilla/api typecheck
+      - pnpm --filter @pilla/api lint
+      - pnpm depcruise
+    done:
+      - the protected tests pass (A1 to A8) and the whole api suite stays green, including every existing *.http.test.ts without edits
+      - AdminSessionGuard is bound once as APP_GUARD in AppModule; the role rule lives only in the guard (ADR-0007)
+      - lending, payments, people and treasury import only core for the actor type and decorator, never access
+    hints:
+      - the guard reads the IS_PUBLIC metadata with Reflector over handler and class
+      - createTestApp(controllers, providers, {actor}) can add a global middleware that sets request.actor, so the guard is not needed in module tests
+    budget: {attempts: 3, toolCalls: 40, minutes: 30}
+    readFirst:
+      - docs/plano/E14-F03/plano.md
+      - apps/api/src/app.module.ts
+      - apps/api/src/core/http/test-app.ts
+      - apps/api/src/core/http/configure-app.ts
+      - apps/api/src/access/application/sessions.ts
+      - apps/api/src/access/http/auth.controller.ts
+      - .dependency-cruiser.cjs
+  # ---------------------------------------------------------------- E14-F04: ator real na auditoria e created_by
+  - id: E14-T07
+    title: Write the tests that admin actions record the session admin as actor and creator
+    kind: test-author
+    assignee: claude
+    rules: [RN-A03]
+    skills: [escrever-teste]
+    refs: [PRD-001 RN-A03, ADR-0007, RFC-005, docs/plano/E14.md D8 D11, docs/plano/E14-F04/plano.md]
+    dependsOn: [E14-T06]
+    allowedPaths:
+      - apps/api/src/payments/http/payments-actor.http.test.ts
+      - apps/api/src/lending/http/loans-actor.http.test.ts
+      - apps/api/src/lending/http/default-terms-actor.http.test.ts
+    protectedTests: []
+    checks:
+      - '! pnpm --filter @pilla/api exec vitest run src/payments/http/payments-actor.http.test.ts src/lending/http/loans-actor.http.test.ts src/lending/http/default-terms-actor.http.test.ts'
+      - node scripts/check-test-quality.mjs apps/api/src/payments/http/payments-actor.http.test.ts apps/api/src/lending/http/loans-actor.http.test.ts apps/api/src/lending/http/default-terms-actor.http.test.ts
+      - pnpm --filter @pilla/api typecheck
+    done:
+      - 'payments (A1, A2, C1 to C5): with an explicit actor in createTestApp, register, confirm, reject and reverse write created_by, confirmed_by, rejected_by and reversed_by equal to the actor adminUserId, and each audit_log row has actor_type ADMIN, actor_id the adminUserId and ip the actor ip'
+      - 'lending (A3, C6 to C9): create, update, activate, write-off, mark paid off and reopen write audit rows with actor_id the adminUserId and the request ip; loans.created_by is the adminUserId'
+      - 'default terms (A4, C10): PUT /settings/default-terms writes the new row with created_by the adminUserId, not the creator of the previous row, and the audit row has the same actor'
+      - 'no leftovers (A5, C11): no audit row written by these routes has actor_id null'
+    budget: {attempts: 3, toolCalls: 35, minutes: 25}
+    readFirst:
+      - docs/plano/E14-F04/plano.md
+      - apps/api/src/core/http/test-app.ts
+      - apps/api/src/core/http/test-actor.ts
+      - apps/api/src/core/public/actor.ts
+      - apps/api/src/core/public/audit.ts
+      - apps/api/src/payments/application/payments-service.ts
+      - apps/api/src/lending/application/loans-service.ts
+      - apps/api/src/payments/http/payments-reverse.http.test.ts
+  - id: E14-T08
+    title: Replace the provisional actor with the session admin in payments, lending and default terms
+    kind: implement
+    assignee: claude
+    rules: [RN-A03]
+    skills: [editar-arquivo, coding-guidelines]
+    refs: [PRD-001 RN-A03, docs/plano/E14.md D1 D11, docs/plano/E14-F04/plano.md]
+    dependsOn: [E14-T07]
+    allowedPaths:
+      - apps/api/src/payments/application/**
+      - apps/api/src/payments/http/*.controller.ts
+      - apps/api/src/lending/application/**
+      - apps/api/src/lending/public/**
+      - apps/api/src/lending/http/*.controller.ts
+      - apps/api/src/treasury/application/**
+      - apps/api/src/treasury/http/*.controller.ts
+    protectedTests:
+      - apps/api/src/payments/http/payments-actor.http.test.ts
+      - apps/api/src/lending/http/loans-actor.http.test.ts
+      - apps/api/src/lending/http/default-terms-actor.http.test.ts
+    checks:
+      - pnpm --filter @pilla/api test
+      - pnpm --filter @pilla/api typecheck
+      - pnpm --filter @pilla/api lint
+      - pnpm depcruise
+      - '! grep -rn "PROVISIONAL_ACTOR_ID" apps/api/src'
+    done:
+      - the protected tests pass (A1 to A5) and the whole api suite stays green
+      - PROVISIONAL_ACTOR_ID and the "Provisório até existir login" comment are gone; services receive the RequestActor as a parameter from the controller
+      - automatic writes (outbox consumers) keep SYSTEM_ACTOR_ID; if treasury manual entries (E12-F02) exist, their created_by is the session admin too
+    budget: {attempts: 3, toolCalls: 45, minutes: 30}
+    readFirst:
+      - docs/plano/E14-F04/plano.md
+      - apps/api/src/core/public/actor.ts
+      - apps/api/src/core/http/actor.ts
+      - apps/api/src/payments/application/payments-service.ts
+      - apps/api/src/lending/application/loans-service.ts
+      - apps/api/src/lending/public/mark-loan-paid-off.ts
+      - apps/api/src/lending/public/reopen-loan.ts
+  # ---------------------------------------------------------------- E14-F05: seed do primeiro admin
+  - id: E14-T09
+    title: Write the tests for the admin seed function
+    kind: test-author
+    assignee: claude
+    rules: [RN-A05]
+    skills: [escrever-teste]
+    refs: [PRD-001 RN-A05, ADR-0011, docs/plano/E14.md D9, docs/plano/E14-F05/plano.md]
+    dependsOn: [E14-T02]
+    allowedPaths:
+      - apps/api/src/access/application/seed-admin.test.ts
+    protectedTests: []
+    checks:
+      - '! pnpm --filter @pilla/api exec vitest run src/access/application/seed-admin.test.ts'
+      - node scripts/check-test-quality.mjs apps/api/src/access/application/seed-admin.test.ts
+      - pnpm --filter @pilla/api typecheck
+    done:
+      - 'create (A1, C1, C2): seedAdmin(db, {username, password}) on an empty table inserts one active admin with a uuid v7 id and an argon2id hash that verifies the password; it returns "created"'
+      - 'reset (A2, C3, C4): with the same username already present (even inactive) it replaces the hash, sets active true, bumps version, keeps the id and returns "updated"; other admins are untouched'
+      - 'policy (A3, C5 to C8): a password with 11 characters or more than 200, an empty username and a username over 100 are rejected with an error and nothing is written; leading and trailing spaces of the username are trimmed'
+      - 'no leak (A4, C9): the thrown error messages never contain the password'
+    budget: {attempts: 3, toolCalls: 25, minutes: 15}
+    readFirst:
+      - docs/plano/E14-F05/plano.md
+      - apps/api/src/access/infra/schema.ts
+      - apps/api/src/access/infra/admin-users.test.ts
+      - apps/api/src/access/domain/password.ts
+      - apps/api/src/db/test-db.ts
+  - id: E14-T10
+    title: Implement the admin seed function and the db:seed-admin script
+    kind: implement
+    assignee: claude
+    rules: [RN-A05]
+    skills: [editar-arquivo, coding-guidelines]
+    refs: [ADR-0011, docs/plano/E14.md D9, docs/plano/E14-F05/plano.md]
+    dependsOn: [E14-T09]
+    allowedPaths:
+      - apps/api/src/access/application/seed-admin.ts
+      - apps/api/scripts/seed-admin.mts
+      - apps/api/package.json
+      - apps/api/README.md
+    protectedTests:
+      - apps/api/src/access/application/seed-admin.test.ts
+    checks:
+      - pnpm --filter @pilla/api exec vitest run src/access/application/seed-admin.test.ts
+      - pnpm --filter @pilla/api typecheck
+      - pnpm --filter @pilla/api lint
+      - pnpm depcruise
+      - node scripts/check-env-example.mjs
+    done:
+      - the protected tests pass (A1 to A4)
+      - 'package.json has "db:seed-admin": "node --env-file=../../.env --import tsx scripts/seed-admin.mts"; the script takes --username, reads the password hidden from the terminal twice (or one line from stdin when not a TTY), refuses a non-localhost DATABASE_URL like seed.mts and prints only "created" or "updated" with the username'
+      - no new environment variable, no password in any versioned file; apps/api/README.md documents the command in two lines
+    hints:
+      - hidden prompt with node:readline and muted output; no new dependency
+    budget: {attempts: 3, toolCalls: 25, minutes: 15}
+    readFirst:
+      - docs/plano/E14-F05/plano.md
+      - apps/api/scripts/seed.mts
+      - apps/api/package.json
+      - apps/api/src/access/domain/password.ts
+  # ---------------------------------------------------------------- E14-F06: web, login e proteção
+  - id: E14-T11
+    title: Build the login screen, protect the admin layout and forward the session cookie
+    kind: implement
+    assignee: claude
+    rules: [RN-A05, RN-A01]
+    skills: [editar-arquivo, coding-guidelines, react-best-practices, shadcn, tailwind-css, accessibility]
+    refs: [PRD-001 RN-A05, ADR-0011, ADR-0013, RFC-004 §3, docs/plano/E14.md D4 D12, docs/plano/E14-F06/plano.md]
+    dependsOn: [E14-T06]
+    allowedPaths:
+      - apps/web/app/login/**
+      - apps/web/app/(admin)/layout.tsx
+      - apps/web/lib/api/client.ts
+      - apps/web/lib/api/session.ts
+      - apps/web/lib/api/auth.ts
+      - apps/web/components/shared/admin-shell.tsx
+      - apps/web/components/shared/logout-button.tsx
+    protectedTests: []
+    checks:
+      - pnpm --filter @pilla/web typecheck
+      - pnpm --filter @pilla/web lint
+      - pnpm --filter @pilla/web build
+      - pnpm depcruise
+    done:
+      - '/login shows username and password fields with labels, a submit button and the generic error "Usuário ou senha inválidos." on 401 and "Muitas tentativas. Aguarde um minuto." on 429; the password field is never echoed back in the page'
+      - 'the login server action calls POST /auth/admin/login with X-Forwarded-For from the request, copies the pilla_session value to a Next cookie with HttpOnly, Secure, SameSite=Lax, Path=/ and redirects to the "next" query only when it is an internal path, else to /'
+      - '(admin)/layout.tsx calls GET /auth/me and redirects to /login?next=<path> without a valid session; apiFetch forwards the cookie on every call and a 401 redirects to /login'
+      - 'AdminShell shows the username and a "Sair" button whose server action calls POST /auth/admin/logout, deletes the Next cookie and redirects to /login'
+      - no unit test for screens in this phase (E13 D10); behaviour is covered by E14-T12
+    budget: {attempts: 3, toolCalls: 45, minutes: 35}
+    readFirst:
+      - docs/plano/E14-F06/plano.md
+      - apps/web/app/(admin)/layout.tsx
+      - apps/web/lib/api/client.ts
+      - apps/web/lib/api/problem.ts
+      - apps/web/components/shared/admin-shell.tsx
+      - packages/schemas/src/api/access/admin-login.ts
+      - packages/schemas/src/api/access/admin-me.ts
+      - docs/adr/0013-estado-no-frontend.md
+  # ---------------------------------------------------------------- E14-F07: e2e
+  - id: E14-T12
+    title: Write the login e2e and make the existing e2e run with an admin session
+    kind: test-author
+    assignee: claude
+    rules: [RN-A05, RN-A03]
+    skills: [escrever-teste, accessibility]
+    refs: [PRD-001 RN-A05, ADR-0011, docs/plano/E14.md D9 D12 D13, docs/plano/E14-F07/plano.md]
+    dependsOn: [E14-T08, E14-T10, E14-T11]
+    allowedPaths:
+      - apps/web/e2e/auth.e2e.ts
+      - apps/web/e2e/global-setup.ts
+      - apps/web/e2e/.auth/.gitignore
+      - apps/web/playwright.config.ts
+      - apps/web/e2e/*.e2e.ts
+      - apps/web/e2e/*.spec.ts
+    protectedTests: []
+    checks:
+      - pnpm --filter @pilla/web exec playwright test
+      - pnpm --filter @pilla/web typecheck
+      - pnpm --filter @pilla/web lint
+    done:
+      - 'setup (A1): globalSetup creates an admin through db:seed-admin with a random password generated at run time, logs in through /login and saves storageState under e2e/.auth (ignored by git); no fixed password in any file'
+      - 'protected route (A2, C1): without a session, visiting /pessoas lands on /login?next=%2Fpessoas, and after logging in it lands on /pessoas'
+      - 'wrong password (A3, C2): a wrong password shows "Usuário ou senha inválidos." and stays on /login with no pilla_session cookie'
+      - 'logout (A4, C3): "Sair" lands on /login and going back to /pessoas asks for login again'
+      - 'existing e2e (A5): every existing spec uses the saved storageState and passes; the only change in them is the session setup'
+    budget: {attempts: 4, toolCalls: 40, minutes: 35}
+    readFirst:
+      - docs/plano/E14-F07/plano.md
+      - apps/web/playwright.config.ts
+      - apps/web/e2e/people.spec.ts
+      - apps/web/e2e/settings-alerts.e2e.ts
+      - apps/api/scripts/seed-admin.mts
