@@ -32,6 +32,7 @@ import { problemSchema } from "./problem";
 import { accountEntryRequest, accountEntryResponse } from "./treasury/account-entry";
 import { accountStatementQuery, accountStatementResponse } from "./treasury/account-statement";
 import { accountListResponse } from "./treasury/account-summary";
+import { treasurySummaryQuery, treasurySummaryResponse } from "./treasury/treasury-summary";
 
 // RFC-004 §3–§6. Ids fictícios em UUID v7; CPFs fictícios com dígitos válidos.
 const id = (n: number): string => `01936f8e-7b2c-7cde-8f00-${String(n).padStart(12, "0")}`;
@@ -531,6 +532,31 @@ const cases: BodyCase[] = [
     schema: accountListResponse,
     body: { items: [{ id: id(4), name: "Conta principal", active: true, balanceCents: 1000000 }] },
     invalid: { items: [{ id: id(4), name: "", active: true }] },
+  },
+  {
+    name: "treasurySummaryQuery",
+    schema: treasurySummaryQuery,
+    body: {},
+    optional: { month: "2027-01" },
+    invalid: { month: "2027-13" },
+  },
+  {
+    name: "treasurySummaryResponse",
+    schema: treasurySummaryResponse,
+    body: {
+      month: "2027-01",
+      cashCents: 7000000,
+      lentCents: 3000000,
+      committedBps: 3000,
+      availableBps: 7000,
+      maxCommittedBps: null,
+      interestReceivedCents: 0,
+      lateChargesReceivedCents: 0,
+      recoveredCents: 0,
+      lossesCents: 0,
+      forecastCents: 0,
+    },
+    invalid: { month: "2027-1", committedBps: 10001, cashCents: 1.5 },
   },
   {
     name: "accountStatementResponse",
