@@ -26,6 +26,7 @@ export default async function ContratoPage({
         <LoanDraftActions
           loanId={loan.id}
           version={loan.version}
+          principalCents={loan.principalCents}
           today={todayInBrt(new Date())}
           accounts={accounts}
           onActivate={activateLoanAction}
