@@ -1,0 +1,494 @@
+delivery: E15
+title: Customer portal (CPF-only read access, session, limits, loan views, admin switch)
+# Plano e decisões D1-D15 em docs/plano/E15.md; escopo e critérios de cada feature em docs/plano/E15-F0x/plano.md.
+# Cartões em inglês (ADR-0012). Dono recomendado: ver "Divisão entre trabalhadores" em E15.md.
+# assignee segue o harness (claude); o modelo recomendado vai em `model` (opus só em segurança/difícil, sonnet médio, haiku simples).
+# Todo cartão que toca apps/web leva skills; cartão de tela leva também shadcn e tailwind-css (gate card-skills).
+# Depende da E14 (login do ADMIN) só: E15-T05, E15-T06, E15-T11, E15-T13. O resto roda sem a E14.
+# readFirst só com arquivos (o run_card do harness recusa pasta).
+# Dúvidas de produto com padrão assumido: docs/plano/pendencias-pm.md (E15-T03, E15-T05, E15-T07, E15-T09).
+cards:
+  # ---------------------------------------------------------------- E15-F01: contratos Zod
+  - id: E15-T01
+    title: Write the schema tests for the portal session, portal loans and portal access contracts
+    kind: test-author
+    assignee: claude
+    model: haiku
+    rules: [RN-A02, RN-A04]
+    skills: [escrever-teste]
+    refs: [PRD-001 RF-61, PRD-001 RF-62, PRD-001 RF-63, ADR-0004, ADR-0007, RFC-004 §4, RFC-004 §5, docs/plano/E15.md D2 D10, docs/plano/E15-F01/plano.md]
+    dependsOn: []
+    allowedPaths:
+      - packages/schemas/src/api/access/portal-session.test.ts
+      - packages/schemas/src/api/access/portal-loans.test.ts
+      - packages/schemas/src/api/access/portal-access.test.ts
+    protectedTests: []
+    checks:
+      - '! pnpm --filter @pilla/schemas exec vitest run src/api/access'
+      - node scripts/check-test-quality.mjs packages/schemas/src/api/access/portal-session.test.ts packages/schemas/src/api/access/portal-loans.test.ts packages/schemas/src/api/access/portal-access.test.ts
+      - pnpm --filter @pilla/schemas typecheck
+    done:
+      - 'session (A1): createPortalSessionRequest accepts an 11-digit valid CPF and rejects punctuation, 10 or 12 digits, a wrong check digit, 11111111111, empty, a number and an extra key'
+      - 'portal loans (A2, A4): the detail accepts the RFC-004 §5 example completed with id, situation, lateChargesCents, per-installment paidCents and lateChargesCents, accepts nextInstallment null, rejects a decimal or negative cents value and an unknown situation or method; the list accepts an empty items array'
+      - 'no leak (A3): it.each over personId, personName, cpf, internalNotes, monthlyInterestRateBps, lateFeeBps, accountId, paymentId, pixEndToEndId, receipt, originType: each extra key is rejected at the top level of the detail and the list item, inside an installment and inside a payment'
+      - 'access (A5): setPortalAccessRequest accepts {enabled: true|false} and rejects a string, a missing key and an extra key; portalAccessResponse accepts enabledAt null and an instant'
+    budget: {attempts: 4, toolCalls: 25, minutes: 15}
+    readFirst:
+      - docs/plano/E15-F01/plano.md
+      - packages/schemas/src/common.ts
+      - packages/schemas/src/api/lending/loan-views.ts
+      - packages/schemas/src/api/lending/dashboard-today.ts
+      - packages/schemas/src/index.ts
+  - id: E15-T02
+    title: Implement the portal session, portal loans and portal access schemas
+    kind: implement
+    assignee: claude
+    model: haiku
+    rules: [RN-A02, RN-A04]
+    skills: [editar-arquivo, coding-guidelines]
+    refs: [PRD-001 RF-61, PRD-001 RF-62, PRD-001 RF-63, ADR-0004, RFC-004 §4, docs/plano/E15.md D2, docs/plano/E15-F01/plano.md]
+    dependsOn: [E15-T01]
+    allowedPaths:
+      - packages/schemas/src/api/access/portal-session.ts
+      - packages/schemas/src/api/access/portal-loans.ts
+      - packages/schemas/src/api/access/portal-access.ts
+      - packages/schemas/src/index.ts
+    protectedTests:
+      - packages/schemas/src/api/access/portal-session.test.ts
+      - packages/schemas/src/api/access/portal-loans.test.ts
+      - packages/schemas/src/api/access/portal-access.test.ts
+    checks:
+      - pnpm --filter @pilla/schemas exec vitest run src/api/access
+      - pnpm --filter @pilla/schemas typecheck
+      - pnpm --filter @pilla/schemas lint
+    done:
+      - the protected tests pass (A1 to A5)
+      - every object is z.strictObject; money uses centsSchema, dates isoDateSchema, ids idSchema; the installment status reuses installmentStatusSchema; types are exported with z.infer
+      - the new schemas are exported from packages/schemas/src/index.ts; no new dependency; no any
+    budget: {attempts: 3, toolCalls: 25, minutes: 15}
+    readFirst:
+      - docs/plano/E15-F01/plano.md
+      - packages/schemas/src/common.ts
+      - packages/schemas/src/api/lending/loan-views.ts
+      - packages/schemas/src/index.ts
+
+  # ---------------------------------------------------------------- E15-F02: sessão do portal
+  - id: E15-T03
+    title: Write the tests for the portal session, the IP rate limit, the CPF hash and the portal guard
+    kind: test-author
+    assignee: claude
+    model: opus
+    rules: [RN-A02, RN-A04]
+    skills: [escrever-teste]
+    refs: [PRD-001 RN-A04, PRD-001 CA-09b, ADR-0007, ADR-0011, RFC-004 §4, RFC-004 §6, RFC-005 §7, docs/legal/pontos-legais.md L-08, docs/plano/E15.md D1 D3 D4 D5 D6 D7, docs/plano/E15-F02/plano.md]
+    dependsOn: [E15-T02]
+    allowedPaths:
+      - apps/api/src/access/application/portal-rate-limit.test.ts
+      - apps/api/src/access/http/portal-session.http.test.ts
+      - apps/api/src/access/http/portal-guard.http.test.ts
+      - apps/api/src/core/http/env.test.ts
+    protectedTests: []
+    checks:
+      - '! pnpm --filter @pilla/api exec vitest run src/access/application/portal-rate-limit.test.ts src/access/http/portal-session.http.test.ts src/access/http/portal-guard.http.test.ts src/core/http/env.test.ts'
+      - node scripts/check-test-quality.mjs apps/api/src/access/application/portal-rate-limit.test.ts apps/api/src/access/http/portal-session.http.test.ts apps/api/src/access/http/portal-guard.http.test.ts
+      - pnpm --filter @pilla/api typecheck
+    done:
+      - 'entry (A1, C7 to C9): an enabled person gets 204 and a pilla_portal cookie with HttpOnly, Secure, SameSite=Lax and Path=/api/v1/portal; sessions.id is the SHA-256 of the token and the token is not in the database; role CLIENT, person_id, ip, expires_at = now + 2 h; one OK row in access_logs; Cache-Control no-store'
+      - 'generic answer (A2, C10): an unknown CPF, a person with no portal_access row and a disabled person return the same status, body and headers (401 UNAUTHENTICATED, fixed detail) and no Set-Cookie; the log rows are NOT_FOUND, NOT_FOUND and DISABLED; the same queries run in the same order in all three cases'
+      - 'hash (A3, C11): cpf_hash is the HMAC-SHA256 of the CPF with the configured key; the CPF in plain text is in no table, response or captured log line; another key gives another hash'
+      - 'rate limit (A4, A5, A6, C1 to C6): 30 attempts from one IP in 60 s pass, the 31st gets 429 TOO_MANY_REQUESTS with Retry-After and a RATE_LIMITED row and does not look up the person; another IP is not affected; with an injected clock the IP enters again once the window empties; RATE_LIMITED rows do not count; 40 parallel attempts let at most 30 through; a malformed CPF is 400, counts in the window and does not look up the person'
+      - 'guard (A7 to A9, A11, C15 to C21): no cookie, a junk cookie, a deleted session, an inactive session (30 min) and an expired session (2 h) are 401; a valid session hands over personId and renews last_seen_at but never past expires_at; disabling portal_access after login makes the next call 401; an ADMIN session does not pass the portal guard; a new login deletes the same person''s expired sessions and keeps the valid ones'
+      - 'logout (A10, C14): DELETE removes the session row, sends an expired cookie and answers 204 also without a cookie'
+      - 'env (A12, C22, C23): readApiEnv fails without PILLA_ACCESS_HASH_KEY and with fewer than 32 characters; the message does not contain the value'
+    budget: {attempts: 4, toolCalls: 40, minutes: 30}
+    readFirst:
+      - docs/plano/E15-F02/plano.md
+      - apps/api/src/access/infra/schema.ts
+      - apps/api/src/access/infra/sessions.test.ts
+      - apps/api/src/access/infra/access-logs.test.ts
+      - apps/api/src/access/infra/portal-access.test.ts
+      - apps/api/src/core/http/test-app.ts
+      - apps/api/src/core/http/env.test.ts
+      - apps/api/src/core/http/problem-details.filter.ts
+      - apps/api/src/db/test-db.ts
+      - packages/schemas/src/api/access/portal-session.ts
+  - id: E15-T04
+    title: Implement the portal session service, the rate limit, the cookie and the portal guard
+    kind: implement
+    assignee: claude
+    model: opus
+    rules: [RN-A02, RN-A04]
+    skills: [editar-arquivo, coding-guidelines, modular-design-principles]
+    refs: [PRD-001 RN-A04, ADR-0007, ADR-0011, RFC-004 §4, RFC-005 §7, docs/plano/E15.md D1 D3 D4 D5 D6 D7, docs/plano/E15-F02/plano.md]
+    dependsOn: [E15-T03]
+    allowedPaths:
+      - apps/api/src/access/application/**
+      - apps/api/src/access/http/**
+      - apps/api/src/access/public/**
+      - apps/api/src/access/access.module.ts
+      - apps/api/src/people/public/person-by-cpf.ts
+      - apps/api/src/people/infra/person-repository.ts
+      - apps/api/src/core/http/env.ts
+      - apps/api/src/app.module.ts
+      - infra/.env.example
+    protectedTests:
+      - apps/api/src/access/application/portal-rate-limit.test.ts
+      - apps/api/src/access/http/portal-session.http.test.ts
+      - apps/api/src/access/http/portal-guard.http.test.ts
+      - apps/api/src/core/http/env.test.ts
+    checks:
+      - pnpm --filter @pilla/api exec vitest run src/access src/core/http src/people
+      - pnpm --filter @pilla/api typecheck
+      - pnpm --filter @pilla/api lint
+      - pnpm depcruise
+    done:
+      - the protected tests pass (A1 to A13)
+      - 'access/ imports only people/public and its own schema; it never imports lending or payments; people/public exposes only findPersonIdByCpf (returns the id, never the row)'
+      - 'the token comes from crypto.randomBytes(32); only its SHA-256 is stored; the cookie is read from the Cookie header by hand (no new dependency); constants (30 attempts, 60 s, 30 min, 2 h) are named and in one file'
+      - 'the entry does the same sequence of queries and writes the access_logs row before deciding; the CPF is never logged, stored or put in an error'
+      - 'PILLA_ACCESS_HASH_KEY is required by readApiEnv and listed in infra/.env.example with no real value'
+    hints:
+      - pg_advisory_xact_lock(hashtext(ip)) at the start of the entry transaction, then count and insert
+      - Retry-After = seconds until the oldest counted attempt leaves the window, at least 1
+    budget: {attempts: 3, toolCalls: 50, minutes: 40}
+    readFirst:
+      - docs/plano/E15-F02/plano.md
+      - apps/api/src/access/infra/schema.ts
+      - apps/api/src/people/public/person-lookup.ts
+      - apps/api/src/people/infra/schema.ts
+      - apps/api/src/core/http/env.ts
+      - apps/api/src/core/http/problem-exception.ts
+      - apps/api/src/core/public/ids.ts
+      - apps/api/src/lending/public/brasilia-today.ts
+      - apps/api/src/app.module.ts
+      - infra/.env.example
+
+  # ---------------------------------------------------------------- E15-F03: habilitar/desabilitar (depende da E14)
+  - id: E15-T05
+    title: Write the HTTP tests for PUT and GET /portal-access/{personId}
+    kind: test-author
+    assignee: claude
+    model: sonnet
+    rules: [RN-A03]
+    skills: [escrever-teste]
+    refs: [PRD-001 RF-60, PRD-001 RN-A03, ADR-0006, ADR-0007, RFC-004 §3, RFC-005 §2, RFC-005 §7, docs/plano/E15.md D13, docs/plano/E15-F03/plano.md]
+    dependsOn: [E15-T02, E15-T04, E14 admin login guard]
+    allowedPaths:
+      - apps/api/src/access/http/portal-access.http.test.ts
+    protectedTests: []
+    checks:
+      - '! pnpm --filter @pilla/api exec vitest run src/access/http/portal-access.http.test.ts'
+      - node scripts/check-test-quality.mjs apps/api/src/access/http/portal-access.http.test.ts
+      - pnpm --filter @pilla/api typecheck
+    done:
+      - 'enable (A1): a person with a CPF gets a portal_access row (enabled, enabled_at now, enabled_by the session admin) and one audit_log row PORTAL_ACCESS_ENABLED (actor_type ADMIN, actor_id the admin, entity_type portal_access, entity_id the person, before null, after {enabled: true}, ip)'
+      - 'disable (A2): enabled false, enabled_at and enabled_by kept, version + 1, one PORTAL_ACCESS_DISABLED audit row, the CLIENT sessions of that person are deleted and the sessions of another person are kept'
+      - 'idempotent (A3): repeating the current state returns 200, writes no audit row and does not change version'
+      - 'errors (A4, A6): unknown person 404; enabling a person with no CPF 422 PERSON_WITHOUT_CPF and nothing written; disabling a person with no CPF and no row 200 and no row created; no admin session 401; a CLIENT portal session 403; no response carries the CPF'
+      - 'transaction (A5): a failing audit insert rolls the portal_access change back'
+      - 'GET (A7): returns the state; a person who never had a row gives enabled false and enabledAt null'
+      - 'integration (A8): after disabling, the portal guard answers 401 for that person'
+    budget: {attempts: 4, toolCalls: 35, minutes: 25}
+    readFirst:
+      - docs/plano/E15-F03/plano.md
+      - apps/api/src/access/infra/portal-access.test.ts
+      - apps/api/src/core/public/audit.ts
+      - apps/api/src/lending/http/default-terms-update.http.test.ts
+      - apps/api/src/core/http/test-app.ts
+      - packages/schemas/src/api/access/portal-access.ts
+  - id: E15-T06
+    title: Implement PUT and GET /portal-access/{personId} with audit and session revocation
+    kind: implement
+    assignee: claude
+    model: sonnet
+    rules: [RN-A03]
+    skills: [editar-arquivo, coding-guidelines, modular-design-principles]
+    refs: [PRD-001 RF-60, ADR-0006, ADR-0007, RFC-004 §3, docs/plano/E15.md D13, docs/plano/E15-F03/plano.md]
+    dependsOn: [E15-T05]
+    allowedPaths:
+      - apps/api/src/access/application/portal-access-service.ts
+      - apps/api/src/access/http/portal-access.controller.ts
+      - apps/api/src/access/access.module.ts
+      - apps/api/src/people/public/person-lookup.ts
+      - apps/api/src/core/http/messages.ts
+      - docs/rfc/RFC-004-api-e-eventos.md
+    protectedTests:
+      - apps/api/src/access/http/portal-access.http.test.ts
+    checks:
+      - pnpm --filter @pilla/api exec vitest run src/access src/people
+      - pnpm --filter @pilla/api typecheck
+      - pnpm --filter @pilla/api lint
+      - pnpm depcruise
+    done:
+      - the protected tests pass (A1 to A8)
+      - 'the upsert, the audit insert and the session delete run in one transaction; version goes up only on a real change'
+      - 'PERSON_WITHOUT_CPF has its pt-BR message in the messages file and its row in RFC-004 §6 (only if the PM answer of E15-T05 approved it)'
+      - 'the admin id and the ip come from the E14 guard; access/ still imports only people/public and core/public'
+    budget: {attempts: 3, toolCalls: 40, minutes: 30}
+    readFirst:
+      - docs/plano/E15-F03/plano.md
+      - apps/api/src/access/infra/schema.ts
+      - apps/api/src/core/public/audit.ts
+      - apps/api/src/people/public/person-lookup.ts
+      - apps/api/src/lending/http/default-terms.controller.ts
+      - apps/api/src/lending/infra/default-terms-repository.ts
+
+  # ---------------------------------------------------------------- E15-F04: leituras do portal
+  - id: E15-T07
+    title: Write the tests for the portal loan list and detail (isolation, leak and read-only)
+    kind: test-author
+    assignee: claude
+    model: opus
+    rules: [RN-A02, RN-A04, RN-E01, RN-E02]
+    skills: [escrever-teste]
+    refs: [PRD-001 RF-61, PRD-001 RF-62, PRD-001 RF-63, PRD-001 CA-09, ADR-0005, ADR-0007, RFC-004 §4, RFC-004 §5, docs/plano/E15.md D1 D2 D8 D9 D10 D11, docs/plano/E15-F04/plano.md]
+    dependsOn: [E15-T02, E15-T04]
+    allowedPaths:
+      - apps/api/src/lending/http/portal-loans.http.test.ts
+      - apps/api/src/payments/public/loan-payments.test.ts
+    protectedTests: []
+    checks:
+      - '! pnpm --filter @pilla/api exec vitest run src/lending/http/portal-loans.http.test.ts src/payments/public/loan-payments.test.ts'
+      - node scripts/check-test-quality.mjs apps/api/src/lending/http/portal-loans.http.test.ts apps/api/src/payments/public/loan-payments.test.ts
+      - pnpm --filter @pilla/api typecheck
+    done:
+      - 'list (A1): only the session person''s ACTIVE and PAID_OFF loans, ACTIVE first; situation CURRENT, OVERDUE or PAID_OFF; outstandingCents and nextDueDate (null when paid off); no loans gives {items: []}'
+      - 'detail (A2, A3, A11): an ACTIVE current loan, an ACTIVE overdue loan (late charges > 0, installment OVERDUE, date injected) and a PAID_OFF loan match the admin GET /loans/{id} figures on the same date; nextInstallment is the first unpaid installment with total minus paid, null when paid off'
+      - 'payments (A4, C16 to C18): only CONFIRMED and not reversed, oldest first, only paidAt, amountCents and method; PENDING_REVIEW, REJECTED and REVERSED seeded rows never show'
+      - 'isolation (A5, A6): with the session of A, the detail of B''s loan and of an unknown id return 404 with an identical body; A''s list has no loan of B; ?personId= and ?cpf= are ignored; A''s DRAFT, CANCELLED and WRITTEN_OFF loans are 404 for A'
+      - 'leak (A7): the JSON keys of the list and the detail (nested too) are exactly the schema keys; the serialized body does not contain the seeded CPF, name, phone, email, PIX key, internal notes or receipt text, and no payment id or account id'
+      - 'guard (A8): no cookie, an expired session, access disabled after login and an ADMIN session all answer 401'
+      - 'read-only (A9, A10): POST, PUT, PATCH and DELETE on /portal/loans and /portal/loans/{id} are never 2xx; a row count of every table is the same before and after a battery of reads'
+    budget: {attempts: 4, toolCalls: 45, minutes: 35}
+    readFirst:
+      - docs/plano/E15-F04/plano.md
+      - apps/api/src/lending/http/loans-read.http.test.ts
+      - apps/api/src/lending/http/dashboard-today.http.test.ts
+      - apps/api/src/lending/infra/schema.ts
+      - apps/api/src/payments/infra/schema.ts
+      - apps/api/src/people/infra/schema.ts
+      - apps/api/src/access/infra/schema.ts
+      - apps/api/src/core/http/test-app.ts
+      - packages/schemas/src/api/access/portal-loans.ts
+  - id: E15-T08
+    title: Implement GET /portal/loans and GET /portal/loans/{id} with the portal guard
+    kind: implement
+    assignee: claude
+    model: sonnet
+    rules: [RN-A02, RN-E01, RN-E02]
+    skills: [editar-arquivo, coding-guidelines, modular-design-principles]
+    refs: [PRD-001 RF-61, PRD-001 RF-62, PRD-001 RF-63, ADR-0005, ADR-0007, RFC-004 §4, docs/plano/E15.md D1 D2 D8 D9 D10 D11, docs/plano/E15-F04/plano.md]
+    dependsOn: [E15-T07]
+    allowedPaths:
+      - apps/api/src/lending/http/portal-loans.controller.ts
+      - apps/api/src/lending/application/portal-loans-service.ts
+      - apps/api/src/lending/infra/loan-queries.ts
+      - apps/api/src/lending/lending.module.ts
+      - apps/api/src/payments/public/loan-payments.ts
+      - apps/api/src/payments/infra/payment-repository.ts
+    protectedTests:
+      - apps/api/src/lending/http/portal-loans.http.test.ts
+      - apps/api/src/payments/public/loan-payments.test.ts
+    checks:
+      - pnpm --filter @pilla/api exec vitest run src/lending src/payments src/access
+      - pnpm --filter @pilla/api typecheck
+      - pnpm --filter @pilla/api lint
+      - pnpm depcruise
+    done:
+      - the protected tests pass (A1 to A11)
+      - 'the person filter is in the SQL (WHERE id = :id AND person_id = :personId AND status IN (ACTIVE, PAID_OFF)); personId comes only from @PortalPerson()'
+      - 'the DTO is built field by field (a whitelist), never by spreading a row, and parsed with portalLoanListResponse or portalLoanDetailResponse before it is sent; Cache-Control no-store'
+      - 'it reuses assessLoan, confirmedAllocationsByLoan and todayInBrasilia; no new calculation; payments/public/loan-payments.ts returns only paidAt, amountCents, method'
+      - 'lending imports access/public, access never imports lending (depcruise)'
+    budget: {attempts: 3, toolCalls: 45, minutes: 35}
+    readFirst:
+      - docs/plano/E15-F04/plano.md
+      - apps/api/src/lending/application/loan-assessment.ts
+      - apps/api/src/lending/application/loans-service.ts
+      - apps/api/src/lending/http/loans.controller.ts
+      - apps/api/src/lending/infra/loan-queries.ts
+      - apps/api/src/payments/public/confirmed-allocations.ts
+      - apps/api/src/payments/infra/allocation-reader.ts
+      - apps/api/src/access/public/portal-session.guard.ts
+      - packages/schemas/src/api/access/portal-loans.ts
+
+  # ---------------------------------------------------------------- E15-F05A: web, entrada e lista
+  - id: E15-T09
+    title: Add the /portal CPF screen and the /portal/contratos list in plain language
+    kind: implement
+    assignee: claude
+    model: sonnet
+    rules: [RN-A04]
+    skills:
+      - shadcn
+      - tailwind-css
+      - react-best-practices
+      - accessibility
+      - coding-guidelines
+    refs: [PRD-001 RF-61, PRD-001 RF-64, PRD-001 RN-A04, ADR-0011, ADR-0013, docs/plano/E15.md D12 D14 D15, docs/plano/E15-F05A/plano.md]
+    dependsOn: [E15-T04, E15-T08]
+    allowedPaths:
+      - apps/web/lib/portal-texts.ts
+      - apps/web/lib/portal-format.ts
+      - apps/web/lib/api/portal.ts
+      - apps/web/app/(portal)/portal/**
+      - apps/web/components/portal/**
+    protectedTests: []
+    checks:
+      - pnpm --filter @pilla/web typecheck
+      - pnpm --filter @pilla/web lint
+    done:
+      - 'portal-texts.ts holds every portal text, exactly the table in E15-F05A/plano.md; no text outside it; the only acronym is CPF'
+      - '/portal shows the CPF form (label, help, autocomplete off, pasted dots and dash are stripped before sending); a Server Action calls POST /portal/session and writes the pilla_portal cookie (httpOnly, secure outside dev, sameSite lax, path /api/v1/portal or the proxy equivalent) from the API Set-Cookie; 401, 429 and other errors show the texts of the table; the CPF is never in the URL or in an error'
+      - '/portal/contratos lists one card per loan with situation (text and colour), amounts in reais and the next installment; empty list shows the empty text; "Ver detalhes" links to /portal/contratos/{id}; a 401 goes back to /portal with the expired-session text'
+      - '"Sair" calls DELETE /portal/session, clears the cookie and returns to /portal; the layout has no ADMIN navigation; pages are force-dynamic with cache no-store'
+      - 'visual review in the browser at 360 px and desktop: entry, each error, list with current, overdue, paid off and empty; no console error'
+    budget: {attempts: 3, toolCalls: 50, minutes: 40}
+    readFirst:
+      - docs/plano/E15-F05A/plano.md
+      - apps/web/lib/api/client.ts
+      - apps/web/lib/api/loans.ts
+      - apps/web/lib/labels.ts
+      - apps/web/app/(admin)/layout.tsx
+      - apps/web/app/layout.tsx
+      - apps/web/components/shared/empty-state.tsx
+      - apps/web/components/shared/form-field.tsx
+      - packages/schemas/src/api/access/portal-loans.ts
+
+  # ---------------------------------------------------------------- E15-F05B: web, detalhe
+  - id: E15-T10
+    title: Add the /portal/contratos/[id] detail screen in plain language
+    kind: implement
+    assignee: claude
+    model: sonnet
+    rules: []
+    skills:
+      - shadcn
+      - tailwind-css
+      - react-best-practices
+      - react-best-practices#rendering-conditional-render
+      - accessibility
+      - coding-guidelines
+    refs: [PRD-001 RF-62, PRD-001 RF-64, ADR-0013, docs/plano/E15.md D9 D12 D14 D15, docs/plano/E15-F05B/plano.md]
+    dependsOn: [E15-T09]
+    allowedPaths:
+      - apps/web/lib/portal-texts.ts
+      - apps/web/app/(portal)/portal/contratos/**
+      - apps/web/components/portal/**
+    protectedTests: []
+    checks:
+      - pnpm --filter @pilla/web typecheck
+      - pnpm --filter @pilla/web lint
+    done:
+      - 'the page shows the summary (Valor emprestado, Total a pagar, Já pago, Falta pagar), the next-installment sentence, the installments table with the plain status words and the payments table with Pix, Boleto, Dinheiro and Transferência, exactly the texts of E15-F05B/plano.md, all taken from portal-texts.ts'
+      - 'the late-charges notice shows only when lateChargesCents > 0; a paid-off loan shows "Contrato quitado. Nada a pagar." and no next installment or notice; no payments shows the empty sentence'
+      - '404 shows "Não encontramos este contrato." (same text for unknown and for another client''s loan) with a link back; 401 returns to /portal with the expired-session text'
+      - 'on 360 px each installment is a stacked block; nothing the API does not return is shown (no name, CPF, contact, rates)'
+      - 'visual review in the browser: current, overdue with charges, partial, paid off, no payments, 404; no console error'
+    budget: {attempts: 3, toolCalls: 40, minutes: 30}
+    readFirst:
+      - docs/plano/E15-F05B/plano.md
+      - apps/web/lib/portal-texts.ts
+      - apps/web/lib/api/portal.ts
+      - apps/web/app/(portal)/portal/contratos/page.tsx
+      - apps/web/components/portal
+      - apps/web/components/shared/status-badge.tsx
+      - packages/schemas/src/api/access/portal-loans.ts
+
+  # ---------------------------------------------------------------- E15-F06: web ADMIN (depende da E14)
+  - id: E15-T11
+    title: Add the "Acesso ao portal" switch to the person sheet
+    kind: implement
+    assignee: claude
+    model: haiku
+    rules: [RN-A03]
+    skills:
+      - shadcn
+      - tailwind-css
+      - react-best-practices
+      - accessibility
+      - coding-guidelines
+    refs: [PRD-001 RF-60, ADR-0013, docs/plano/E15.md D13 D14, docs/plano/E15-F06/plano.md]
+    dependsOn: [E15-T06, E14 admin login]
+    allowedPaths:
+      - apps/web/lib/api/portal-access.ts
+      - apps/web/app/(admin)/pessoas/**
+      - apps/web/components/people/portal-access-card.tsx
+    protectedTests: []
+    checks:
+      - pnpm --filter @pilla/web typecheck
+      - pnpm --filter @pilla/web lint
+    done:
+      - 'the person sheet has the card "Acesso ao portal do cliente" with the state ("Acesso liberado desde dd/mm/aaaa" or "Acesso não liberado") and a Switch; a short text says the client enters only with the CPF and sees only their own contracts'
+      - 'turning it on calls PUT {enabled: true} and shows "Acesso liberado."; off shows "Acesso desligado. O cliente sai do portal na hora."; API errors use the shared error component'
+      - 'a person with no CPF has the switch off and disabled with "Cadastre o CPF para liberar o acesso."'
+      - 'visual review in the browser: on, off, no CPF, error; no console error'
+    budget: {attempts: 3, toolCalls: 30, minutes: 25}
+    readFirst:
+      - docs/plano/E15-F06/plano.md
+      - apps/web/lib/api/people.ts
+      - apps/web/app/(admin)/pessoas/actions.ts
+      - apps/web/components/shared/form-field.tsx
+      - packages/schemas/src/api/access/portal-access.ts
+
+  # ---------------------------------------------------------------- E15-F07A: E2E do portal
+  - id: E15-T12
+    title: Add the portal E2E (entry, list, detail, isolation, generic error, logout)
+    kind: implement
+    assignee: claude
+    model: sonnet
+    rules: [RN-A02, RN-A04]
+    skills:
+      - escrever-teste
+      - coding-guidelines
+    refs: [PRD-001 RF-61, PRD-001 RF-62, PRD-001 RF-64, PRD-001 CA-09, ADR-0017, docs/plano/E15.md D3 D10 D15, docs/plano/E15-F07A/plano.md]
+    dependsOn: [E15-T10, E10-T18]
+    allowedPaths:
+      - apps/web/e2e/portal.e2e.ts
+      - apps/web/e2e/support/portal-seed.ts
+    protectedTests: []
+    checks:
+      - pnpm --filter @pilla/web typecheck
+      - pnpm --filter @pilla/web lint
+      - pnpm --filter @pilla/web e2e -- portal.e2e.ts
+    done:
+      - 'the flow of E15-F07A (steps 1 to 5) passes against the real API with no console error and no fixed wait; the test creates its own people (valid unique CPFs), loans and payments and seeds access.admin_users and access.portal_access directly (it does not need the E14)'
+      - 'client A sees only A''s loan, "Em atraso", the plain-language detail, and gets "Não encontramos este contrato." for B''s loan id; logout then going back asks for the CPF again; an unknown CPF and a CPF with no access show the same sentence'
+      - 'no CPF in plain text appears in the HTML or the URL of any portal page'
+      - 'step 6 (rate limit) runs through the API if the E2E stack can fix the client IP, otherwise the card records why in a comment and leaves it to the F02 HTTP tests'
+    budget: {attempts: 3, toolCalls: 50, minutes: 40}
+    readFirst:
+      - docs/plano/E15-F07A/plano.md
+      - apps/web/e2e/payments.e2e.ts
+      - apps/web/e2e/loans.e2e.ts
+      - apps/web/playwright.config.ts
+      - apps/web/lib/portal-texts.ts
+
+  # ---------------------------------------------------------------- E15-F07B: E2E do ADMIN (depende da E14)
+  - id: E15-T13
+    title: Add the admin E2E for enabling and disabling portal access
+    kind: implement
+    assignee: claude
+    model: haiku
+    rules: [RN-A03]
+    skills:
+      - escrever-teste
+      - coding-guidelines
+    refs: [PRD-001 RF-60, ADR-0017, docs/plano/E15.md D13, docs/plano/E15-F07B/plano.md]
+    dependsOn: [E15-T11, E15-T12, E14 admin login]
+    allowedPaths:
+      - apps/web/e2e/portal-access.e2e.ts
+    protectedTests: []
+    checks:
+      - pnpm --filter @pilla/web typecheck
+      - pnpm --filter @pilla/web lint
+      - pnpm --filter @pilla/web e2e -- portal-access.e2e.ts
+    done:
+      - 'logs in as ADMIN with the E14 helper, creates a person with a CPF, and shows that /portal refuses that CPF; turns the switch on and the CPF enters and sees an empty list; turns it off and the open client session falls on its next action and a new entry is refused'
+      - 'both audit rows (PORTAL_ACCESS_ENABLED and PORTAL_ACCESS_DISABLED) exist; a person with no CPF shows the switch disabled with the text'
+      - 'no fixed wait; own data; no console error'
+    budget: {attempts: 3, toolCalls: 35, minutes: 30}
+    readFirst:
+      - docs/plano/E15-F07B/plano.md
+      - apps/web/e2e/portal.e2e.ts
+      - apps/web/e2e/people.spec.ts

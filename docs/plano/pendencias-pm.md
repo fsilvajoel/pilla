@@ -294,3 +294,43 @@ Formato de cada entrada:
 - opções: a) sim, uma tela e esse texto, sem bloqueio; b) painel em rota própria e/ou outro texto
 - sugestão padrão: a)
 - resposta: a) a sugestão padrão (aprovada pelo Joel em 21/11)
+
+## E15-T03 (E15-F02)
+- status: aberta
+- data: 2026-11-23
+- pergunta: valores do acesso do portal (RN-A04, CA-09b). O PRD fixa só "30 consultas de CPFs diferentes em 1 minuto do mesmo IP = bloqueio temporário". Faltam: quanto dura o bloqueio, quanto dura a sessão do cliente, e como o servidor enxerga o IP.
+- opções: a) 30 tentativas por IP em janela de 60 s; o bloqueio dura até a janela esvaziar (no máximo 60 s); sessão com 30 min de inatividade e teto de 2 h; IP lido de `request.ip` (atrás de proxy o deploy precisa de `trust proxy`, decisão de infra); b) outros valores, a informar por item
+- sugestão padrão: a)
+- resposta:
+
+## E15-T03 (E15-F02)
+- status: aberta
+- data: 2026-11-23
+- pergunta: o `access_logs.cpf_hash` (RFC-005 §7: hash do CPF digitado) precisa de uma chave secreta nova, `PILLA_ACCESS_HASH_KEY` (HMAC-SHA256), porque hash simples de CPF (11 dígitos) se quebra por força bruta. Pode entrar variável de ambiente nova (obrigatória, só no `.env`, nunca no git)?
+- opções: a) sim, HMAC com chave nova obrigatória; b) hash SHA-256 simples, sem variável nova (mais fraco, o log deixa de proteger o CPF)
+- sugestão padrão: a)
+- resposta:
+
+## E15-T05 (E15-F03)
+- status: aberta
+- data: 2026-11-23
+- pergunta: RF-60 (ADMIN habilita/desabilita acesso): (1) pessoa sem CPF (importada, ficha aceita CPF vazio) pode ser habilitada? (2) a tela precisa ler o estado atual do acesso, mas a RFC-004 §3 só tem o `PUT`; pode entrar um `GET /portal-access/{personId}` de leitura?
+- opções: a) (1) não: 422 com código novo `PERSON_WITHOUT_CPF` (entra na RFC-004 §6) e a tela explica "Cadastre o CPF para liberar o acesso."; (2) sim, `GET /portal-access/{personId}`; b) (1) permitir habilitar sem CPF (não adianta, o cliente entra por CPF); (2) estado vem dentro da ficha da pessoa, sem endpoint novo
+- sugestão padrão: a)
+- resposta:
+
+## E15-T07 (E15-F04)
+- status: aberta
+- data: 2026-11-23
+- pergunta: o que o cliente vê no portal (RF-61, RF-62): (1) quais contratos entram na lista; (2) quais pagamentos entram em "pagamentos registrados"; (3) qual é o valor de "próxima parcela".
+- opções: a) (1) só contratos ACTIVE e PAID_OFF; renovado, renegociado, baixado, rascunho e cancelado não aparecem; (2) só pagamentos CONFIRMED e não estornados (pendente, rejeitado e estornado não aparecem); (3) total da parcela menos o já pago, sem encargos, que saem separados como "encargos de atraso"; b) mostrar também contratos renovados/renegociados/baixados como "Encerrado", e/ou pagamentos pendentes como "em conferência"
+- sugestão padrão: a) é o mínimo que o PRD pede e não expõe estado interno (baixa) nem pagamento ainda não conferido
+- resposta:
+
+## E15-T09 (E15-F05A)
+- status: aberta
+- data: 2026-11-23
+- pergunta: textos da tela de entrada do portal (RF-64) e o que mostrar quando o CPF é recusado. RN-A04 manda mensagem genérica; qual texto e há "fale com quem fez o seu empréstimo"?
+- opções: a) usar a tabela de textos de `docs/plano/E15-F05A/plano.md` ("Não foi possível entrar com este CPF. Se você acha que deveria ter acesso, fale com quem fez o seu empréstimo."; sem mostrar nome nem iniciais do cliente depois de entrar); b) outros textos, a informar
+- sugestão padrão: a)
+- resposta:
