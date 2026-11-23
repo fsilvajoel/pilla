@@ -38,7 +38,15 @@ describe("treasury client", () => {
   });
 
   it("getAccountStatement monta a query e omite o que não foi informado", async () => {
-    respond({ items: [], nextCursor: null, openingBalanceCents: 0, closingBalanceCents: 0 });
+    respond({
+      accountId: ID,
+      from: null,
+      to: null,
+      items: [],
+      nextCursor: null,
+      openingBalanceCents: 0,
+      closingBalanceCents: 0,
+    });
     await getAccountStatement(ID, { from: "2026-11-01", limit: 20, cursor: "abc" });
     expect(last().url).toBe(`http://api.test/accounts/${ID}/entries?from=2026-11-01&limit=20&cursor=abc`);
     await getAccountStatement(ID);
