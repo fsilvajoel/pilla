@@ -1,4 +1,5 @@
 import { Inject, Module, type DynamicModule, type OnApplicationShutdown } from "@nestjs/common";
+import { AccessModule } from "./access/access.module";
 import { HealthController } from "./core/http/health.controller";
 import type { ApiEnv } from "./core/http/env";
 import { OpenApiController } from "./core/http/openapi";
@@ -20,7 +21,7 @@ export class AppModule implements OnApplicationShutdown {
     return {
       module: AppModule,
       global: true,
-      imports: [PeopleModule, LendingModule, PaymentsModule],
+      imports: [PeopleModule, LendingModule, PaymentsModule, AccessModule],
       controllers: [HealthController, OpenApiController, AccountsController],
       providers: [
         { provide: DATABASE_HANDLE, useFactory: (): DatabaseHandle => createDatabase(env.databaseUrl) },

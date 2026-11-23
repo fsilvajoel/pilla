@@ -1,20 +1,47 @@
 import type { AdminMeResponse } from "@pilla/schemas";
 import type { Database } from "../../db/database";
+import { newSessionToken, sessionIdOf } from "../domain/session-token";
+import { sessionRepository } from "../infra/session-repository";
+
+// Validade da sessão (E14 D3, pendência de PM E14-T03): constantes no código, sem variável de ambiente.
+const MINUTE_MS = 60_000;
+const HOUR_MS = 60 * MINUTE_MS;
+/** Inatividade máxima desde `last_seen_at`. */
+export const SESSION_IDLE_MS = 2 * HOUR_MS;
+/** Teto absoluto desde a criação, gravado em `expires_at`. */
+export const SESSION_ABSOLUTE_MS = 12 * HOUR_MS;
+/** `last_seen_at` só é regravado quando está mais velho que isto. */
+export const SESSION_TOUCH_MS = MINUTE_MS;
 
 /** Sessão recém-criada: o token vai só no cookie; a linha guarda o hash (E14 D3). */
 export type NewAdminSession = { readonly token: string; readonly expiresAt: Date };
 
-/** Esboço do E14-T03; a implementação é do E14-T04. */
-export function createAdminSession(_db: Database, _adminUserId: string, _ip: string): Promise<NewAdminSession> {
-  return Promise.reject(new Error("esboço: não implementado"));
+/** Cria a sessão ADMIN no relógio da aplicação; grava só o SHA-256 do token. */
+export async function createAdminSession(db: Database, adminUserId: string, ip: string): Promise<NewAdminSession> {
+  const token = newSessionToken();
+  const createdAt = new Date();
+  const expiresAt = new Date(createdAt.getTime() + SESSION_ABSOLUTE_MS);
+  await sessionRepository(db).insertAdmin({ id: sessionIdOf(token), adminUserId, ip, createdAt, expiresAt });
+  return { token, expiresAt };
 }
 
-/** Esboço do E14-T03: admin da sessão viva, ou `null` (ausente, vencida ou admin inativo). */
-export function resolveAdminSession(_db: Database, _token: string): Promise<AdminMeResponse | null> {
-  return Promise.reject(new Error("esboço: não implementado"));
+/** Admin da sessão viva, ou `null` (ausente, vencida ou admin inativo). Sessão morta é apagada ao aparecer. */
+export async function resolveAdminSession(db: Database, token: string): Promise<AdminMeResponse | null> {
+  const repository = sessionRepository(db);
+  const id = sessionIdOf(token);
+  const session = await repository.findAdmin(id);
+  if (session === null) return null;
+  const now = new Date();
+  const idleMs = now.getTime() - session.lastSeenAt.getTime();
+  if (!session.active || idleMs > SESSION_IDLE_MS || now.getTime() >= session.expiresAt.getTime()) {
+    await repository.remove(id);
+    return null;
+  }
+  if (idleMs > SESSION_TOUCH_MS) await repository.touch(id, now);
+  return { id: session.adminUserId, username: session.username, role: "ADMIN" };
 }
 
-/** Esboço do E14-T03: apaga a sessão do token, se existir. */
-export function endSession(_db: Database, _token: string): Promise<void> {
-  return Promise.reject(new Error("esboço: não implementado"));
+/** Apaga a sessão do token, se existir. */
+export async function endSession(db: Database, token: string): Promise<void> {
+  await sessionRepository(db).remove(sessionIdOf(token));
 }
