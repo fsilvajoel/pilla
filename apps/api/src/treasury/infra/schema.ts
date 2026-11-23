@@ -50,11 +50,14 @@ export const ledgerEntries = treasurySchema.table(
     justification: text("justification"),
     createdBy: uuid("created_by").notNull(),
     createdAt: instant("created_at").notNull().defaultNow(),
+    // Só nos lançamentos manuais (E12 D4); nulo não colide no unique.
+    idempotencyKey: text("idempotency_key"),
   },
   (t) => [
     index("ledger_entries_account_id_entry_date_idx").on(t.accountId, t.entryDate),
     index("ledger_entries_source_type_source_id_idx").on(t.sourceType, t.sourceId),
     unique("ledger_entries_source_event_id_component_key").on(t.sourceEventId, t.component),
+    unique("ledger_entries_idempotency_key_key").on(t.idempotencyKey),
     check(
       "ledger_entries_type_check",
       sql`${t.type} IN ('CAPITAL_IN', 'CAPITAL_OUT', 'DISBURSEMENT', 'REPAYMENT', 'REVERSAL', 'ADJUSTMENT')`,

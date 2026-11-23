@@ -29,7 +29,7 @@ import { createPixKeyRequest, pixKeySchema, updatePixKeyRequest } from "./people
 import { personResponse } from "./people/person-response";
 import { updatePersonRequest } from "./people/update-person";
 import { problemSchema } from "./problem";
-import { accountEntryRequest } from "./treasury/account-entry";
+import { accountEntryRequest, accountEntryResponse } from "./treasury/account-entry";
 import { accountListResponse } from "./treasury/account-summary";
 
 // RFC-004 §3–§6. Ids fictícios em UUID v7; CPFs fictícios com dígitos válidos.
@@ -507,6 +507,23 @@ const cases: BodyCase[] = [
     schema: paymentListResponse,
     body: { items: [], nextCursor: null },
     invalid: { items: "x", nextCursor: 1 },
+  },
+  {
+    name: "accountEntryResponse",
+    schema: accountEntryResponse,
+    body: {
+      id: id(5),
+      accountId: id(4),
+      type: "CAPITAL_OUT",
+      component: null,
+      amountCents: -25000,
+      entryDate: "2027-01-02",
+      justification: null,
+      sourceType: null,
+      sourceId: null,
+      createdAt: "2027-01-02T12:00:00-03:00",
+    },
+    invalid: { id: "x", type: "TRANSFER", amountCents: 10.5, entryDate: "02/01/2027", createdAt: "ontem" },
   },
   {
     name: "accountListResponse",
