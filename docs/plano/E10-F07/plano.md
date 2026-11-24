@@ -23,3 +23,24 @@ Fora: o efeito contábil (consumidor na E12).
 ## Casos de teste
 - C1 a C4: caminho feliz e evento.
 - C5 a C7: recusas.
+
+## Contrato
+
+`POST /loans/{id}/write-off`, `If-Match`, corpo `writeOffLoanRequest` `{reason}` (`reasonSchema`, texto útil). Resposta 200 com o contrato WRITTEN_OFF. Evento `LoanWrittenOff` (`packages/schemas/src/events/loan-written-off.ts`) com `outstandingPrincipalCents` = principal em aberto (da F05). Regra: RN-C19 (justificativa obrigatória; o saldo deixa de ser cobrado e de contar como capital emprestado).
+
+## Domínio das entradas
+
+| Entrada | Aceito | Rejeitado | Erro | Fonte |
+|---|---|---|---|---|
+| `reason` | texto com 1 caractere útil ou mais | vazio, só espaços | 400 `VALIDATION_FAILED` em `reason` | RN-C19 |
+| status | ACTIVE | demais | 409 `LOAN_NOT_EDITABLE` | RFC-004 §3 |
+| `If-Match` | versão atual | outra | 409 `VERSION_CONFLICT` | D9 |
+
+## Dependências
+
+F05 (principal em aberto). Corre em paralelo com F06. Destrava F09 e F10.
+
+## Riscos
+
+- Baixa é irreversível no MVP: a tela (F09) exige o motivo e confirmação.
+- Nada é gravado na recusa (nem auditoria nem outbox).
