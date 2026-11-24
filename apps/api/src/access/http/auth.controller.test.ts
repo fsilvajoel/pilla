@@ -9,11 +9,11 @@ const noDb = {} as Database;
 describe("AuthController without a session cookie", () => {
   it("logout still expires the cookie and does not touch the database", async () => {
     const setHeader = vi.fn();
-    await new AuthController(noDb).logout(undefined, { setHeader });
+    await new AuthController(noDb, true).logout(undefined, { setHeader });
     expect(setHeader).toHaveBeenCalledWith("Set-Cookie", expect.stringContaining("pilla_session=;"));
   });
 
   it("me gives UNAUTHENTICATED", async () => {
-    await expect(new AuthController(noDb).me(undefined)).rejects.toMatchObject({ code: "UNAUTHENTICATED" });
+    await expect(new AuthController(noDb, true).me(undefined)).rejects.toMatchObject({ code: "UNAUTHENTICATED" });
   });
 });

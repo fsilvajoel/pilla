@@ -1,5 +1,7 @@
 import type { AdminMeResponse } from "@pilla/schemas";
 import type { Database } from "../../db/database";
+import { ProblemException } from "../../core/http/problem-exception";
+import { adminUserRepository } from "../infra/admin-user-repository";
 import { newSessionToken, sessionIdOf } from "../domain/session-token";
 import { sessionRepository } from "../infra/session-repository";
 
@@ -39,6 +41,18 @@ export async function resolveAdminSession(db: Database, token: string): Promise<
   }
   if (idleMs > SESSION_TOUCH_MS) await repository.touch(id, now);
   return { id: session.adminUserId, username: session.username, role: "ADMIN" };
+}
+
+/** Admin ativo de desenvolvimento (PILLA_AUTH_ENFORCED=false): usado como ator quando não há sessão. */
+export async function resolveDevAdmin(db: Database): Promise<AdminMeResponse> {
+  const admin = await adminUserRepository(db).findFirstActive();
+  if (admin === null) {
+    throw new ProblemException(
+      "UNAUTHENTICATED",
+      "Autenticação desligada, mas não há administrador ativo no banco: rode db:seed-admin.",
+    );
+  }
+  return { id: admin.id, username: admin.username, role: "ADMIN" };
 }
 
 /** Sessão viva do token: ADMIN com o administrador, ou só o papel CLIENT (o portal ainda não tem rotas). */

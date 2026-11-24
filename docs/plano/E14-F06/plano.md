@@ -10,7 +10,7 @@ Entra:
 - `lib/api/client.ts`: repassa o cookie em toda chamada; 401 redireciona para `/login`.
 - `AdminShell`: nome do admin e botão "Sair" (server action: `POST /auth/admin/logout`, apaga o cookie do Next, vai para `/login`).
 
-Fora: `proxy.ts`/middleware (D12); "lembrar de mim"; troca de senha pela tela; portal do cliente.
+Dentro: `apps/web/proxy.ts` (D12 reaberta: redireciona sem cookie; a API segue valendo). Fora: "lembrar de mim"; troca de senha pela tela; portal do cliente.
 
 ## Domínio das entradas
 

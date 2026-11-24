@@ -115,4 +115,17 @@ describe("apiFetch", () => {
     await expect(apiFetch({ path: "/people", schema })).rejects.toThrow("PILLA_API_URL não definida");
     expect(fetchMock).not.toHaveBeenCalled();
   });
+
+  it("401 com autenticação ligada redireciona para /login", async () => {
+    fetchMock.mockResolvedValue(jsonResponse("{}", 401));
+    await expect(apiFetch({ path: "/people", schema })).rejects.toMatchObject({
+      digest: expect.stringContaining("NEXT_REDIRECT") as string,
+    });
+  });
+
+  it("401 com PILLA_AUTH_ENFORCED=false não redireciona: devolve o problema", async () => {
+    vi.stubEnv("PILLA_AUTH_ENFORCED", "false");
+    fetchMock.mockResolvedValue(jsonResponse("{}", 401));
+    await expect(apiFetch({ path: "/people", schema })).rejects.toBeInstanceOf(ApiProblem);
+  });
 });

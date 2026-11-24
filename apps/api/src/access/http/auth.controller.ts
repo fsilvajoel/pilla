@@ -6,7 +6,8 @@ import { expiredSessionCookie, readSessionCookie, sessionCookie } from "../../co
 import { ZodValidationPipe } from "../../core/http/zod-validation.pipe";
 import { DATABASE, type Database } from "../../db/database";
 import { loginAdmin } from "../application/login";
-import { endSession, resolveAdminSession } from "../application/sessions";
+import { endSession, resolveAdminSession, resolveDevAdmin } from "../application/sessions";
+import { AUTH_ENFORCED } from "./auth-enforced";
 import { clientIp, type ClientRequest } from "./client-ip";
 import { LoginThrottlerGuard } from "./login-throttler.guard";
 
@@ -20,8 +21,11 @@ const NO_SESSION = "Sessão ausente ou expirada.";
 export class AuthController {
   private readonly db: Database;
 
-  constructor(@Inject(DATABASE) db: Database) {
+  private readonly enforced: boolean;
+
+  constructor(@Inject(DATABASE) db: Database, @Inject(AUTH_ENFORCED) enforced: boolean) {
     this.db = db;
+    this.enforced = enforced;
   }
 
   @Public()
@@ -54,7 +58,8 @@ export class AuthController {
   async me(@Headers("cookie") cookie: string | undefined): Promise<AdminMeResponse> {
     const token = readSessionCookie(cookie);
     const admin = token === undefined ? null : await resolveAdminSession(this.db, token);
-    if (admin === null) throw new ProblemException("UNAUTHENTICATED", NO_SESSION);
-    return admin;
+    if (admin !== null) return admin;
+    if (!this.enforced) return resolveDevAdmin(this.db);
+    throw new ProblemException("UNAUTHENTICATED", NO_SESSION);
   }
 }
