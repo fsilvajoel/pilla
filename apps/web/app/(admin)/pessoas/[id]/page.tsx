@@ -1,10 +1,12 @@
 import type { ReactElement } from "react";
 import { notFound } from "next/navigation";
+import { PortalAccessCard } from "@/components/people/portal-access-card";
 import { PersonSheet } from "@/components/people/person-sheet";
 import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { getPerson } from "@/lib/api/people";
+import { getPortalAccess, type PortalAccessResponse } from "@/lib/api/portal-access";
 import { ApiProblem } from "@/lib/api/problem";
 import {
   addAddressAction,
@@ -15,6 +17,7 @@ import {
   deletePixKeyAction,
   setPrimaryAddressAction,
   setPrimaryPixKeyAction,
+  setPortalAccessAction,
 } from "../actions";
 import type { PersonDetailResponse } from "@pilla/schemas";
 
@@ -33,6 +36,13 @@ export default async function PessoaPage({ params }: PageProps): Promise<ReactEl
       notFound();
     }
     throw error;
+  }
+
+  let portalAccess: PortalAccessResponse | null = null;
+  try {
+    portalAccess = await getPortalAccess(person.id);
+  } catch {
+    // A ficha abre mesmo sem o estado do acesso; o cartão mostra o aviso e deixa a chave desligada.
   }
 
   return (
@@ -56,6 +66,12 @@ export default async function PessoaPage({ params }: PageProps): Promise<ReactEl
         onUpdatePixKey={updatePixKeyAction}
         onDeletePixKey={deletePixKeyAction}
         onSetPrimaryPixKey={setPrimaryPixKeyAction.bind(null, person.id)}
+      />
+      <PortalAccessCard
+        personId={person.id}
+        hasCpf={Boolean(person.cpf)}
+        initial={portalAccess}
+        onChange={setPortalAccessAction}
       />
     </div>
   );
