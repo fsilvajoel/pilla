@@ -168,6 +168,7 @@ Resposta `200`:
 | 409 | `PAYMENT_NOT_PENDING` | confirmar ou rejeitar pagamento que não está PENDING_REVIEW |
 | 409 | `PAYMENT_NOT_CONFIRMED` | estornar pagamento que não está CONFIRMED |
 | 409 | `IMPORT_ALREADY_DONE` | importar planilha cujo conteúdo (SHA-256) já foi importado; devolve o id do lote existente |
+| 409 | `IDEMPOTENCY_KEY_REUSED` | mesma `Idempotency-Key` reenviada com conta, tipo, valor, data ou justificativa diferentes (inclui a corrida de duas requisições); só repetir o mesmo pedido devolve a mesma resposta |
 | 422 | `LOAN_NOT_EDITABLE` | editar contrato fora de DRAFT |
 | 422 | `INSUFFICIENT_ACCOUNT_BALANCE` | RN-C10 |
 | 422 | `FIRST_DUE_DATE_BEFORE_DISBURSEMENT` | RN-C04 |
