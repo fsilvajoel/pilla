@@ -1,5 +1,6 @@
 import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
+import { cookieSecure } from "./cookie-secure";
 
 /** Nome do cookie de sessão, o mesmo da API (E14 D4). */
 export const SESSION_COOKIE = "pilla_session";
@@ -25,7 +26,7 @@ export async function readSessionToken(): Promise<string | undefined> {
 /** Grava o cookie de sessão do Next (E14 D4): HttpOnly, Secure, SameSite=Lax, Path=/, sem Max-Age. */
 export async function writeSessionToken(token: string): Promise<void> {
   const store = await cookies();
-  store.set(SESSION_COOKIE, token, { httpOnly: true, secure: true, sameSite: "lax", path: "/" });
+  store.set(SESSION_COOKIE, token, { httpOnly: true, secure: cookieSecure(), sameSite: "lax", path: "/" });
 }
 
 export async function clearSessionToken(): Promise<void> {
