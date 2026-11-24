@@ -1,0 +1,55 @@
+{
+  "feature": "E12-F02",
+  "stages": {
+    "plan": {
+      "status": "done",
+      "worker": "sonnet",
+      "commit": "7de9f72"
+    },
+    "refinement": {
+      "status": "done",
+      "worker": "sonnet",
+      "commit": "3f55fc2"
+    },
+    "tests": {
+      "status": "done",
+      "worker": "sonnet",
+      "commits": [
+        "9e7fa3d",
+        "dd9787f"
+      ]
+    },
+    "testReview": {
+      "status": "pending"
+    },
+    "implement": {
+      "status": "done",
+      "worker": "sonnet",
+      "commits": [
+        "f385211",
+        "feb32c4"
+      ]
+    },
+    "review": {
+      "status": "pending"
+    }
+  },
+  "sources": [
+    "apps/api/migrations/treasury/0001_ledger_idempotency_key.sql",
+    "apps/api/migrations/treasury/meta/**",
+    "apps/api/src/treasury/infra/schema.ts",
+    "apps/api/src/treasury/application/**",
+    "apps/api/src/treasury/http/**",
+    "packages/schemas/src/api/treasury/account-entry.ts",
+    "packages/schemas/src/index.ts",
+    "packages/schemas/src/api/api.test.ts",
+    "apps/api/src/app.module.ts"
+  ],
+  "domainSources": [],
+  "exemptSources": [],
+  "tests": [
+    "apps/api/src/treasury/http/account-entries.http.test.ts",
+    "packages/schemas/src/api/treasury/account-entry.test.ts"
+  ],
+  "e2e": []
+}
