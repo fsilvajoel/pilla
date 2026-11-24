@@ -210,6 +210,8 @@ cards:
       - apps/api/src/core/http/health.controller.ts
       - apps/api/src/core/http/openapi.ts
       - apps/api/src/access/http/auth.controller.ts
+      - apps/api/src/access/application/sessions.ts
+      - apps/api/src/access/infra/session-repository.ts
       - apps/api/src/app.module.ts
     protectedTests:
       - apps/api/src/access/http/admin-session.guard.test.ts
