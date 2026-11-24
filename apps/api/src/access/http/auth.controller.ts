@@ -58,8 +58,10 @@ export class AuthController {
   async me(@Headers("cookie") cookie: string | undefined): Promise<AdminMeResponse> {
     const token = readSessionCookie(cookie);
     const admin = token === undefined ? null : await resolveAdminSession(this.db, token);
-    if (admin !== null) return admin;
-    if (!this.enforced) return resolveDevAdmin(this.db);
-    throw new ProblemException("UNAUTHENTICATED", NO_SESSION);
+    if (admin === null) {
+      if (this.enforced) throw new ProblemException("UNAUTHENTICATED", NO_SESSION);
+      return resolveDevAdmin(this.db);
+    }
+    return admin;
   }
 }

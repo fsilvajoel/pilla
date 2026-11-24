@@ -1,5 +1,5 @@
 import { createServer } from "node:net";
-import type { INestApplication } from "@nestjs/common";
+import { Logger, type INestApplication } from "@nestjs/common";
 import { healthResponseSchema, problemSchema } from "@pilla/schemas";
 import { Test } from "@nestjs/testing";
 import request from "supertest";
@@ -103,6 +103,18 @@ describe("bootstrap", () => {
     const res = await fetch(`http://127.0.0.1:${String(port)}/api/v1/health`);
     expect(res.status).toBe(200);
     expect(healthResponseSchema.safeParse(await res.json()).success).toBe(true);
+  });
+
+  it("avisa no log quando a autenticação está desligada", async () => {
+    const warn = vi.spyOn(Logger.prototype, "warn").mockImplementation(() => undefined);
+    app = await bootstrap({
+      PILLA_API_PORT: String(await freePort()),
+      DATABASE_URL: databaseUrl,
+      PILLA_ACCESS_HASH_KEY: accessHashKey,
+      PILLA_AUTH_ENFORCED: "false",
+    });
+    expect(warn).toHaveBeenCalledWith("autenticação DESLIGADA, só desenvolvimento");
+    warn.mockRestore();
   });
 
   it("rejeita ambiente inválido com as mensagens de env", async () => {

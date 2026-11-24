@@ -142,6 +142,7 @@ describe("PUT /portal-access/{personId}: enable", () => {
 
   it("C1: enabling again after a disable updates the same row, moves enabled_at and counts the version", async () => {
     await put(WITH_CPF, { enabled: true });
+    vi.setSystemTime(new Date(T0.getTime() + 1_800_000));
     await put(WITH_CPF, { enabled: false });
     vi.setSystemTime(new Date(T0.getTime() + 3_600_000));
     const r = await put(WITH_CPF, { enabled: true });
