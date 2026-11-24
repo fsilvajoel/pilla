@@ -35,3 +35,28 @@ Fora:
 - C8 a C12: renegociação.
 - C13 e C14: origem inválida.
 - C15 a C18: schemas.
+
+## Contrato
+
+Schemas existentes: `renewLoanRequest` e `renegotiateLoanRequest` (`firstDueDate` obrigatório; `monthlyInterestRateBps`, `installmentCount`, `frequency` opcionais; estritos). Resposta 201 com o novo DRAFT (mesmo formato da criação). `POST /loans/{id}/renew` e `/renegotiate` exigem `If-Match` da origem. Eventos `LoanRenewed` e `LoanRenegotiated` só saem na ativação do novo (F04), não aqui.
+
+## Domínio das entradas
+
+| Entrada | Aceito | Rejeitado | Erro | Fonte |
+|---|---|---|---|---|
+| origem | ACTIVE | os demais | 409 `LOAN_NOT_EDITABLE` | RFC-004 §3 |
+| juros e encargos vencidos (renovar) | todos pagos | algum em aberto | 422 `RENEWAL_REQUIRES_INTEREST_PAID` | RN-C14 |
+| `firstDueDate` | AAAA-MM-DD | ausente ou inválido | 400 `VALIDATION_FAILED` | RN-C15 |
+| ajustes | taxa em bps, prazo inteiro positivo, periodicidade válida | chave desconhecida | 400 | RN-C15, RN-C17 |
+
+Renovar: principal do novo = principal em aberto (RN-C15). Renegociar: principal do novo = saldo devedor na data, `capitalized_amount_cents` = saldo menos principal em aberto (RN-C17).
+
+## Dependências
+
+F05 (saldo e principal em aberto) e F04 (ativação fecha o ciclo). Destrava F09.
+
+## Riscos
+
+- Renovação com pagamento parcial de juros é recusada; o caminho é a renegociação (RN-C14).
+- Os testes de ativação (F04) são protegidos nesta feature: a mudança de origem na ativação não pode regredir.
+- Fluxo de duas etapas (DRAFT agora, origem muda na ativação): ver D8 de `E10.md`.

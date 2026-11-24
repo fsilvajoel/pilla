@@ -5,7 +5,7 @@ Plano da feature. Cartões: E10-T07 (testes, claude) e E10-T08 (implementação,
 ## Escopo
 
 Entra:
-- `POST /api/v1/loans/{id}/activate` (`activateLoanRequest`: `disbursedAt`, `accountId`, `firstDueDate`), com `If-Match`. Em uma transação:
+- `POST /api/v1/loans/{id}/activate` (`activateLoanRequest`: `disbursedAt`, `accountId`; o `firstDueDate` vem gravado no DRAFT), com `If-Match`. Em uma transação:
   - checa a conta por `treasury/public`;
   - gera as parcelas por `@pilla/finance` (schedule);
   - grava `disbursed_at`, `account_id`, ACTIVE e `status_changed_at`;
@@ -32,3 +32,27 @@ Fora:
 - C1 a C5: feliz (parcelas, outbox, auditoria, datas).
 - C6 a C10: recusas, cada uma conferindo que não houve escrita.
 - C11 a C13: renovação, renegociação e origem que já não está ACTIVE.
+
+## Contrato
+
+`POST /api/v1/loans/{id}/activate`, `If-Match`, corpo `activateLoanRequest` `{disbursedAt, accountId}`. Resposta 200 com o contrato ACTIVE. Eventos de `packages/schemas/src/events`: `LoanActivated`, e `LoanRenewed` ou `LoanRenegotiated` quando o DRAFT tem origem (D8). Cronograma só de `@pilla/finance` (schedule), com o `rounding_step` do contrato (RN-C03).
+
+## Domínio das entradas
+
+| Entrada | Aceito | Rejeitado | Erro | Fonte |
+|---|---|---|---|---|
+| `disbursedAt` | AAAA-MM-DD, padrão hoje em Brasília | formato inválido | 422 `VALIDATION_FAILED` | D11 |
+| `accountId` | conta ativa | inexistente, inativa | 422 em `accountId` | RN-C05 |
+| `firstDueDate` gravado | depois de `disbursedAt` | igual ou anterior | 422 `FIRST_DUE_DATE_BEFORE_DISBURSEMENT` | RN-C04 |
+| `status` | DRAFT | os demais | 409 `LOAN_NOT_EDITABLE` | RN-C06 |
+| `If-Match` | versão atual | outra | 409 `VERSION_CONFLICT` | D9 |
+
+## Dependências
+
+F01, F02 (conta ativa) e F03 (DRAFT). Destrava F05 e F06 (a renovação só fecha o ciclo aqui). Consumidor do outbox é da E12.
+
+## Riscos
+
+- Ativação de RENEWAL/RENEGOTIATION sem dinheiro (RN-C16, RN-C18) mas com `accountId` obrigatório no schema e no check do banco: ver `E10-pendencias-pm.md`, item 1.
+- Duas ativações simultâneas: a versão (`If-Match`) e a transação evitam parcela duplicada.
+- Falha ao gravar no outbox deve desfazer tudo (mesma transação).

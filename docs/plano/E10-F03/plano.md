@@ -32,3 +32,26 @@ Fora: ativar (F04), editar `default_terms` (E13, RF-41), simulação (D2).
 - C14 a C16: cancelamento. DRAFT, ACTIVE e auditoria.
 - C17: condições padrão com duas vigências.
 - C18 a C20: schema `updateLoanRequest`.
+
+## Contrato
+
+Schemas (`packages/schemas/src/api/lending`): `createLoanRequest` (já existe: `personId`, `type`, `principalCents`, `monthlyInterestRateBps`, `installmentCount`, `frequency`, `firstDueDate`, `lateFeeBps`, `lateInterestMonthlyBps`, `gracePeriodDays`, `internalNotes?`; SINGLE_PAYMENT exige `installmentCount` 1), `updateLoanRequest` (parcial estrito, sem `personId`) e `defaultTermsResponse` (`lateFeeBps`, `lateInterestMonthlyBps`, `gracePeriodDays`, `suggestedMonthlyRateBps`, `roundingStepCents`).
+
+| Rota | Entrada | Saída | Erros |
+|---|---|---|---|
+| `POST /loans` | `createLoanRequest` | 201 com o contrato DRAFT e o aviso RN-C11 | 422 `VALIDATION_FAILED` |
+| `PATCH /loans/{id}` | `updateLoanRequest`, `If-Match` | 200 com o contrato | 409 `VERSION_CONFLICT`, 409 `LOAN_NOT_EDITABLE`, 404 |
+| `POST /loans/{id}/cancel` | `If-Match` | 200 CANCELLED | 409 `VERSION_CONFLICT`, 409 `LOAN_NOT_EDITABLE` |
+| `GET /settings/default-terms` | - | `defaultTermsResponse` | - |
+
+Controller `apps/api/src/lending/http/loans.controller.ts` só valida e traduz HTTP; regras em `LoansService`.
+
+## Dependências
+
+F01 (transições) e F02 (`personExists`). Destrava F04, F05 e F08. O seed das condições padrão (E10-T20) é pré-requisito do E2E em banco novo (F10), não dos testes desta feature.
+
+## Riscos
+
+- `If-Match` ausente: a RFC-004 §6 só define 409 `VERSION_CONFLICT` para versão desatualizada (ver `E10-pendencias-pm.md`, item 3).
+- O aviso RN-C11 conta contratos ACTIVE e atrasados; o atraso vem do cálculo da F05, então aqui é só contagem.
+- Número do contrato sem lacunas ou repetição: a sequência é incrementada na mesma transação do insert.

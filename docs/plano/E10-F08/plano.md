@@ -31,3 +31,24 @@ Fora:
 - Ativar e Cancelar só aparecem em DRAFT.
 - Não há erro no console.
 - Typecheck e lint passam.
+
+## Contrato
+
+Funções tipadas em `apps/web/lib/api/loans.ts` e `treasury.ts` para cada rota de lending da E10 e `GET /accounts`, com respostas validadas por `loanListResponse`, `loanDetailResponse`, `defaultTermsResponse`, `accountListResponse`. Erros problem+json viram `ApiProblem`; as telas mostram a mensagem em pt-BR via `toLoanActionError`. Server Actions em `apps/web/app/(admin)/emprestimos/actions.ts`.
+
+## Cenários (revisão visual, sem teste de tela)
+
+- Novo contrato com taxas do padrão, criação e redirecionamento ao detalhe.
+- Lista com filtro de status e de situação; estado vazio.
+- Detalhe de DRAFT com Ativar e Cancelar; detalhe de ACTIVE sem as ações.
+- API fora do ar: estado de erro, sem tela em branco.
+
+## Dependências
+
+E9-T13 e E9-T15 (shell e cliente), F05 (rotas de leitura), F03 e F04 (criar, ativar, cancelar). Destrava F09, F11 e F12.
+
+## Riscos
+
+- Mock restante: o grep por `lib/mock-data.ts` no código de empréstimos deve vir vazio.
+- O `If-Match` precisa da versão real do contrato; resolvido na F11.
+- Tela de simulação continua no navegador (D2).

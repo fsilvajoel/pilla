@@ -26,3 +26,36 @@ Fora: criar ou editar contas (E12), lançamentos de ledger (E11/E12), saldo de c
 - C3 a C5: conta ativa, inativa e inexistente.
 - C6, C7: lista de contas e seed repetido.
 - C8 a C11: alocações (confirmado, PENDING_REVIEW, REVERSED, duas parcelas).
+
+## Contrato
+
+```ts
+// people/public
+findPersonNames(ids: string[]): Promise<Map<string, string>>;
+personExists(id: string): Promise<boolean>;
+// treasury/public
+isActiveAccount(id: string): Promise<boolean>;
+// payments/public
+confirmedAllocationsByLoan(loanId: string): Promise<ConfirmedAllocation[]>; // por parcela: principal, juros, encargos
+```
+
+Rota: `GET /api/v1/accounts` responde `accountListResponse` (`packages/schemas/src/api/treasury/account-summary.ts`), contas ativas primeiro. Seed em `apps/api/scripts/seed.mts` (`pnpm --filter @pilla/api db:seed`), conta base de id fixo, `ON CONFLICT DO NOTHING`.
+
+## Domínio das entradas
+
+| Entrada | Aceito | Rejeitado | Fonte |
+|---|---|---|---|
+| `ids` de `findPersonNames` | lista de uuids (pode ter inexistentes) | - (inexistente é omitido) | RFC-004 §3 |
+| `accountId` de `isActiveAccount` | uuid | - (inexistente ou inativa dá `false`) | RN-T04 |
+| `loanId` de `confirmedAllocationsByLoan` | uuid | - (sem alocação dá lista vazia) | RN-R01 |
+| alocação contada | pagamento CONFIRMED, `reversed_at` nulo | PENDING_REVIEW, REVERSED | RFC-005 §5 |
+
+## Dependências
+
+F01. Destrava F03 (pessoa e conta), F04 (conta ativa) e F05 (alocações). Exige `ApiEnv` e módulos registrados em `app.module.ts`.
+
+## Riscos
+
+- Uma porta que vaza linha do Drizzle quebra a regra de módulos (RFC-001 M2); o depcruise do cartão pega.
+- Seed não idempotente duplicaria a conta base; o caso C7 roda duas vezes.
+- A lista de contas é só leitura aqui; cadastro e saldo são da E12.

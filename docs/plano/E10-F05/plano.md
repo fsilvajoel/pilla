@@ -39,3 +39,25 @@ Fora:
 - C7 a C12: detalhe, com parcela paga, parcial (mora só sobre o saldo em aberto), vencida (com e sem carência de encargos) e estorno.
 - C13 a C16: cotação.
 - C17 e C18: schema.
+
+## Contrato
+
+Schemas já existentes em `packages/schemas/src/api/lending/loan-views.ts`: `loanListResponse` (`items` de `loanListItemSchema`: `id`, `loanNumber`, `personName`, `principalCents`, `outstandingCents`, `status`, `standing` nulo fora de ACTIVE, `nextDueDate`; mais `nextCursor`), `loanDetailResponse` (condições copiadas, `totalCents`, `interestCents`, `paidCents`, `outstandingCents`, `installments` com `number`, `dueDate`, `totalCents`, `paidCents`, `lateChargesCents`, `status`) e, novo nesta feature, `payoffQuoteResponse` / `payoffQuoteQuery` em `payoff-quote.ts`.
+
+| Rota | Entrada | Erros |
+|---|---|---|
+| `GET /loans` | `personId`, `status`, `standing`, `cursor`, `limit` | 400 `VALIDATION_FAILED` |
+| `GET /loans/{id}` | - | 404 |
+| `GET /loans/{id}/payoff-quote` | `?date=AAAA-MM-DD` | 422 data anterior a `disbursedAt`; 409 `LOAN_NOT_EDITABLE` fora de ACTIVE |
+
+Consultas em `infra/loan-queries.ts`; cálculo de encargos, status e saldo só de `@pilla/finance` (`late-charges`, `balance`, `allocation`), sem aritmética duplicada na API.
+
+## Dependências
+
+F02 (nomes e alocações), F04 (contratos ACTIVE com parcelas). Destrava F06, F07, F08 e a E11 (que lê a cotação).
+
+## Riscos
+
+- Dependência de data: os testes fixam o "hoje" (`brasilia-today`) para o resultado não variar.
+- Estorno: alocação de pagamento REVERSED não conta em `paidCents`.
+- Valor calculado gravado por engano violaria a ADR-0005.

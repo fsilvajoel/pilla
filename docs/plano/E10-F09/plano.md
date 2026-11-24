@@ -21,3 +21,32 @@ Fora: registrar o pagamento de quitação (E11).
 - Os erros aparecem em pt-BR.
 - Não há erro no console.
 - Typecheck e lint passam.
+
+## Contrato
+
+Rotas e a rota da API que cada uma chama:
+
+| Tela | API |
+|---|---|
+| `/emprestimos/[id]/renovar` | `POST /loans/{id}/renew` |
+| `/emprestimos/[id]/renegociar` | `POST /loans/{id}/renegotiate` |
+| `/emprestimos/[id]/baixa` | `POST /loans/{id}/write-off` |
+| `/emprestimos/[id]/quitacao` | `GET /loans/{id}/payoff-quote?date=` |
+
+A prévia de principal e parte capitalizada usa o cálculo de `rollover-preview.ts` com os dados do detalhe; o servidor recalcula ao criar.
+
+## Cenários (revisão visual)
+
+- Renovar com juros em aberto: mensagem de recusa em pt-BR junto ao botão.
+- Renegociar: prévia do novo principal e do capitalizado, e redirecionamento ao novo DRAFT.
+- Baixa sem motivo: o botão não envia; com motivo, o contrato aparece WRITTEN_OFF.
+- Quitação: data padrão hoje, total e três componentes; aviso de que o pagamento é registrado na E11.
+
+## Dependências
+
+F06, F07 e F08. Destrava F10.
+
+## Riscos
+
+- A prévia local divergir do valor do servidor; vale o do servidor (ADR-0005).
+- Links aparecendo fora de ACTIVE: a condição fica no detalhe.

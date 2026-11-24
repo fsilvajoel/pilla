@@ -17,3 +17,20 @@ Fora:
 ## Critérios de aceite
 - `pnpm --filter @pilla/web e2e` passa.
 - Não há erro no console.
+
+## Cenários
+
+- C1: criar DRAFT para pessoa do seed, editar (tela da F12), ativar com a conta base e ver 6 parcelas.
+- C2: criar outro DRAFT e cancelar.
+- C3: baixar um terceiro contrato com motivo e ver WRITTEN_OFF.
+- C4: renovar com juros em aberto e ver a recusa em pt-BR.
+
+## Dependências
+
+F09, F11 (versão real no `If-Match`) e F12 (tela de edição). Exige banco novo com `db:migrate` e `db:seed` (conta base e condições padrão, E10-T20), senão `GET /settings/default-terms` falha.
+
+## Riscos
+
+- Sem teste de tela (emenda de 19/11 à ADR-0017): este E2E é a única cobertura de UI da épica.
+- Dados do seed fixos: os contratos criados pelo teste usam números únicos para rodar mais de uma vez.
+- Playwright pede mais memória que a VM de desenvolvimento costuma ter; rodar sozinho.
