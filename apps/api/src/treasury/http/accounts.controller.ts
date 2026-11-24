@@ -19,13 +19,13 @@ import { accountStatement } from "../application/account-statement";
 import { createAccountEntry } from "../application/create-account-entry";
 import { listAccountSummaries } from "../application/list-accounts";
 
-const idempotencyKeySchema = z.string().min(1).max(200).optional();
+const idempotencyKeySchema = z.string().min(1).max(100).optional();
 
 function idempotencyKeyOf(header: string | undefined): string | undefined {
   const key = idempotencyKeySchema.safeParse(header);
   if (!key.success) {
     throw new ProblemException("VALIDATION_FAILED", "Dados inválidos.", [
-      { field: "Idempotency-Key", message: "Use de 1 a 200 caracteres." },
+      { field: "Idempotency-Key", message: "Use de 1 a 100 caracteres." },
     ]);
   }
   return key.data;
