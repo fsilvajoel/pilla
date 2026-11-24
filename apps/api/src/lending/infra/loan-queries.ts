@@ -2,6 +2,9 @@ import { and, asc, desc, eq, inArray, lt } from "drizzle-orm";
 import type { Database } from "../../db/database";
 import { installments, loans, type InstallmentRow, type LoanRow } from "./schema";
 
+/** Status que o cliente enxerga (E15 D8, pendência E15-T07): ACTIVE antes de PAID_OFF na ordem alfabética. */
+const PORTAL_STATUSES = ["ACTIVE", "PAID_OFF"] as const;
+
 export type LoanPageFilter = {
   readonly personId: string | null;
   readonly status: string | null;
@@ -59,4 +62,22 @@ export async function selectLoansByIds(db: Database, ids: readonly string[]): Pr
     .from(loans)
     .where(inArray(loans.id, [...ids]));
   return new Map(rows.map((row) => [row.id, row]));
+}
+
+/** Contratos do cliente que o portal mostra (ACTIVE e PAID_OFF): o filtro da pessoa vai na consulta (E15 D8, CA-09). */
+export async function selectPortalLoans(db: Database, personId: string): Promise<LoanRow[]> {
+  return db
+    .select()
+    .from(loans)
+    .where(and(eq(loans.personId, personId), inArray(loans.status, [...PORTAL_STATUSES])))
+    .orderBy(asc(loans.status), desc(loans.loanNumber));
+}
+
+/** Um contrato do cliente: de outra pessoa ou fora dos status do portal não existe (E15 D10). */
+export async function selectPortalLoan(db: Database, personId: string, id: string): Promise<LoanRow | null> {
+  const rows = await db
+    .select()
+    .from(loans)
+    .where(and(eq(loans.id, id), eq(loans.personId, personId), inArray(loans.status, [...PORTAL_STATUSES])));
+  return rows[0] ?? null;
 }
