@@ -41,6 +41,20 @@ export async function resolveAdminSession(db: Database, token: string): Promise<
   return { id: session.adminUserId, username: session.username, role: "ADMIN" };
 }
 
+/** Sessão viva do token: ADMIN com o administrador, ou só o papel CLIENT (o portal ainda não tem rotas). */
+export type ResolvedSession = { readonly role: "ADMIN"; readonly admin: AdminMeResponse } | { readonly role: "CLIENT" };
+
+/** Sessão viva de qualquer papel, ou `null` (ausente ou vencida); a ADMIN segue as regras de `resolveAdminSession`. */
+export async function resolveSession(db: Database, token: string): Promise<ResolvedSession | null> {
+  const admin = await resolveAdminSession(db, token);
+  if (admin !== null) return { role: "ADMIN", admin };
+  const times = await sessionRepository(db).findTimes(sessionIdOf(token));
+  if (times?.role !== "CLIENT") return null;
+  const now = Date.now();
+  const alive = now - times.lastSeenAt.getTime() <= SESSION_IDLE_MS && now < times.expiresAt.getTime();
+  return alive ? { role: "CLIENT" } : null;
+}
+
 /** Apaga a sessão do token, se existir. */
 export async function endSession(db: Database, token: string): Promise<void> {
   await sessionRepository(db).remove(sessionIdOf(token));

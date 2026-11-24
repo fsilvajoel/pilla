@@ -11,6 +11,9 @@ export type AdminSessionView = {
   readonly active: boolean;
 };
 
+/** Instantes de validade de qualquer sessão, com o papel dela. */
+export type SessionTimes = { readonly role: string; readonly lastSeenAt: Date; readonly expiresAt: Date };
+
 export type NewAdminSessionRow = {
   readonly id: string;
   readonly adminUserId: string;
@@ -37,6 +40,13 @@ export function sessionRepository(db: Database) {
         .from(sessions)
         .innerJoin(adminUsers, eq(sessions.adminUserId, adminUsers.id))
         .where(and(eq(sessions.id, id), eq(sessions.role, "ADMIN")));
+      return rows[0] ?? null;
+    },
+    async findTimes(id: string): Promise<SessionTimes | null> {
+      const rows = await db
+        .select({ role: sessions.role, lastSeenAt: sessions.lastSeenAt, expiresAt: sessions.expiresAt })
+        .from(sessions)
+        .where(eq(sessions.id, id));
       return rows[0] ?? null;
     },
     async touch(id: string, at: Date): Promise<void> {
