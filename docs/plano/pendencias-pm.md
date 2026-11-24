@@ -358,3 +358,43 @@ Formato de cada entrada:
 - opções: a) usar a tabela de textos de `docs/plano/E15-F05A/plano.md` ("Não foi possível entrar com este CPF. Se você acha que deveria ter acesso, fale com quem fez o seu empréstimo."; sem mostrar nome nem iniciais do cliente depois de entrar); b) outros textos, a informar
 - sugestão padrão: a)
 - resposta:
+
+## E16-T03 (E16-F02)
+- status: aberta
+- data: 2026-11-23
+- pergunta: não há amostra da planilha no repositório (nem exemplo, nem estrutura). Quais são as colunas do CSV e como cada uma vira campo? Linha sem nome, sem valor emprestado ou sem data de contrato utilizável deve ser rejeitada (fora da lista "a revisar", só no relatório) ou virar contrato mesmo assim?
+- opções: a) usar o conjunto sugerido em `E16.md` D3 (`nome, cpf, data_contrato, valor_emprestado, taxa_mensal, parcelas, primeiro_vencimento, periodicidade, tipo, valor_parcela, total_pago, data_ultimo_pagamento, observacao`) e rejeitar só o que não tem nome, valor ou data; b) o Joel informa as colunas reais (ideal: planilha anonimizada, nunca a real) e rejeição só sem nome ou valor
+- sugestão padrão: a) colunas sugeridas e rejeição só sem nome, valor ou data de contrato (a troca de nomes mexe só em `column-map.ts`); pedir ao Joel uma planilha anonimizada antes da implementação do E16-T04
+- resposta:
+
+## E16-T04 (E16-F04)
+- status: aberta
+- data: 2026-11-23
+- pergunta: como evitar duplicidade? (1) pessoa sem CPF com mesmo nome de pessoa já cadastrada antes da importação; (2) arquivo reenviado com pequenas alterações
+- opções: a) nunca casar por nome com pessoa existente (só dentro do mesmo arquivo, marcando "a revisar"); reenvio do mesmo arquivo recusado por hash, arquivo alterado cria de novo, com aviso na tela; b) casar por nome exato com pessoa existente e marcar "a revisar"
+- sugestão padrão: a) mais seguro: não funde duas pessoas diferentes por engano; o Joel funde manualmente na revisão
+- resposta:
+
+## E16-T05 (E16-F03)
+- status: aberta
+- data: 2026-11-23
+- pergunta: o número do contrato importado segue a sequência anual (`AAAA-NNNN`) do ano de `data_contrato`, ou a planilha tem numeração própria a preservar?
+- opções: a) sequência anual do ano do contrato (consome a numeração desse ano); b) guardar o número da planilha em observação interna e usar a sequência do ano corrente
+- sugestão padrão: a) sequência anual do ano de `data_contrato`, único e já validado pelo CHECK de `loans.loan_number`
+- resposta:
+
+## E16-T06 (E16-F03)
+- status: aberta
+- data: 2026-11-23
+- pergunta: o pagamento consolidado importado precisa de um `method`; o schema aceita PIX, BOLETO, CASH, BANK_TRANSFER. Qual usar? E a data do pagamento ausente?
+- opções: a) `CASH` e, sem `data_ultimo_pagamento`, a data de hoje com motivo `PAID_DATE_MISSING`; b) incluir um método `IMPORTED` (mudança de schema e de constraint em payments)
+- sugestão padrão: a) `CASH` (sem mudar schema de pagamentos); a origem importada fica rastreável pelo lote em `imports.import_rows`
+- resposta:
+
+## E16-T07 (E16-F02)
+- status: aberta
+- data: 2026-11-23
+- pergunta: qual a tolerância para considerar o cronograma da planilha igual ao calculado pelo sistema (arredondamento de parcela)? Fora dela a linha vira PERSONALIZADO em "a revisar".
+- opções: a) 0 centavo (bate ao centavo); b) até 1 centavo por parcela; c) outro valor
+- sugestão padrão: a) 0 centavo; é uma constante única em `classify-row.ts`, ajustável depois de ver o primeiro relatório real
+- resposta:

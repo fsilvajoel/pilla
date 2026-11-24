@@ -1,0 +1,357 @@
+delivery: E16
+title: Spreadsheet history import (RF-70)
+# Plano e decisões D1–D11 em docs/plano/E16.md; escopo e critérios de cada feature em docs/plano/E16-F0x/plano.md.
+# Cartões em inglês (ADR-0012). Trabalhador (assignee): haiku simples, sonnet médio, opus só o difícil (ver E16.md).
+# Todo cartão que toca apps/web leva skills; cartão de tela leva também shadcn e tailwind-css (gate card-skills).
+# readFirst só com arquivos (o run_card do harness recusa pasta), exceto onde indicado.
+# Dúvidas de produto com padrão assumido: docs/plano/pendencias-pm.md (E16-T03 a E16-T07).
+# Dependência externa: E11 pronta; E12-T02 só para o teste de ledger (A9) do E16-T07.
+cards:
+  - id: E16-T01
+    title: Write the schema tests for importReportResponse and the review reasons
+    kind: test-author
+    assignee: haiku
+    rules: [RF-70]
+    skills: [escrever-teste]
+    refs: [PRD-001 RF-70, RFC-004 §3, RFC-004 §6, ADR-0004, docs/plano/E16.md D3 D4 D9, docs/plano/E16-F01/plano.md]
+    dependsOn: []
+    allowedPaths:
+      - packages/schemas/src/api/imports/import-report.test.ts
+    protectedTests: []
+    checks:
+      - '! pnpm --filter @pilla/schemas exec vitest run src/api/imports/import-report.test.ts'
+      - node scripts/check-test-quality.mjs packages/schemas/src/api/imports/import-report.test.ts
+      - pnpm --filter @pilla/schemas typecheck
+    done:
+      - 'importReportResponse accepts the report shape of E16.md Contrato (totals as non-negative integers, rows with lineNumber >= 1, status REVIEW or REJECTED only, reasons from the closed ImportReviewReason list plus MISSING_REQUIRED and ROW_FAILED for REJECTED)'
+      - 'rejects an unknown reason, a negative total, a status OK in rows, an unknown extra field (strict) and a non-uuid personId or loanId'
+      - 'personId and loanId are nullable (REJECTED rows have none)'
+    budget: {attempts: 4, toolCalls: 20, minutes: 15}
+    readFirst:
+      - docs/plano/E16-F01/plano.md
+      - packages/schemas/src/api/treasury/account-statement.test.ts
+      - packages/schemas/src/api/api.test.ts
+  - id: E16-T02
+    title: Implement the import report schemas and the IMPORT_ALREADY_DONE error code
+    kind: implement
+    assignee: haiku
+    rules: [RF-70]
+    skills: [editar-arquivo, coding-guidelines, modular-design-principles]
+    refs: [PRD-001 RF-70, RFC-004 §3, RFC-004 §6, docs/plano/E16.md D3 D4 D8 D9, docs/plano/E16-F01/plano.md]
+    dependsOn: [E16-T01]
+    allowedPaths:
+      - packages/schemas/src/api/imports/import-report.ts
+      - packages/schemas/src/index.ts
+      - packages/schemas/src/api/api.test.ts
+      - docs/rfc/RFC-004-api-e-eventos.md
+    protectedTests:
+      - packages/schemas/src/api/imports/import-report.test.ts
+    checks:
+      - pnpm --filter @pilla/schemas exec vitest run src/api/imports
+      - pnpm --filter @pilla/schemas typecheck
+      - pnpm --filter @pilla/schemas lint
+      - pnpm check:schemas
+    done:
+      - 'the protected tests pass'
+      - 'importReviewReasonSchema is exported with the closed list of D4; IMPORT_ALREADY_DONE (409) is added to the RFC-004 §6 catalog and to the schema package error codes if one exists there'
+      - 'no new dependency'
+    budget: {attempts: 4, toolCalls: 25, minutes: 15}
+    readFirst:
+      - docs/plano/E16-F01/plano.md
+      - packages/schemas/src/api/treasury/account-statement.ts
+      - packages/schemas/src/index.ts
+  - id: E16-T03
+    title: Write the tests for the CSV parser, the column map and the row classification
+    kind: test-author
+    assignee: opus
+    rules: [RF-70, RN-P01]
+    skills: [escrever-teste]
+    refs: [PRD-001 RF-70, PRD-001 RN-P01, RFC-002 §3, ADR-0004, ADR-0005, docs/plano/E16.md D3 D4 D5 D7, docs/plano/E16-F02/plano.md]
+    dependsOn: [E16-T02]
+    allowedPaths:
+      - apps/api/src/imports/domain/parse-csv.test.ts
+      - apps/api/src/imports/domain/classify-row.test.ts
+      - apps/api/src/imports/domain/column-map.test.ts
+    protectedTests: []
+    checks:
+      - '! pnpm --filter @pilla/api exec vitest run src/imports/domain'
+      - node scripts/check-test-quality.mjs apps/api/src/imports/domain/parse-csv.test.ts apps/api/src/imports/domain/classify-row.test.ts apps/api/src/imports/domain/column-map.test.ts
+      - pnpm --filter @pilla/api typecheck
+    done:
+      - 'parser (A1 to A4): separator , or ; detected, BOM and CRLF tolerated, quoted fields with separators, empty file or missing required header fails with a typed error, more than 2000 rows fails'
+      - 'column-map (A5, A6): money 1234,56 and 1234.56 to integer cents, 5 and 5,5 to bps, dates ISO and DD/MM/AAAA, unparseable value gives null not a throw, header names without accents in any order'
+      - 'classifyRow OK (A7): INSTALLMENT, SINGLE_PAYMENT and INTEREST_ONLY rows whose rebuilt schedule matches valor_parcela to the cent are OK with type deduced from tipo or parcelas'
+      - 'classifyRow REVIEW (A8, A9): one test per reason SCHEDULE_MISMATCH, TYPE_UNKNOWN, RATE_MISSING, INSTALLMENTS_MISSING, FIRST_DUE_MISSING, DATE_NOT_PARSEABLE, CPF_INVALID, PAID_EXCEEDS_TOTAL, PAID_DATE_MISSING; the plan is CUSTOM with installments summing to valor_parcela times parcelas (principal and interest split, total of each installment equal to valor_parcela) or a single principal installment when valor_parcela is absent'
+      - 'classifyRow REJECTED (A10): missing nome, valor_emprestado <= 0 or unusable data_contrato gives REJECTED MISSING_REQUIRED and no plan'
+      - 'CPF (A11): blank CPF is OK with personWithoutCpf true (RN-P01); invalid check digit gives CPF_INVALID and cpf null; valid CPF kept as 11 digits'
+      - 'payment (A12): total_pago produces one consolidated payment plan with allocatePayment over the installments in order; paid equal to the total marks paidOff; paid above the total gives PAID_EXCEEDS_TOTAL and the allocatable amount only; all fixtures use packages/schemas fake-cpf, never real data'
+    budget: {attempts: 4, toolCalls: 40, minutes: 30}
+    readFirst:
+      - docs/plano/E16-F02/plano.md
+      - packages/finance/src/schedule.ts
+      - packages/finance/src/allocation.ts
+      - packages/finance/src/split.ts
+      - packages/schemas/src/fake-cpf.ts
+      - docs/rfc/RFC-002-motor-de-calculo-financeiro.md
+  - id: E16-T04
+    title: Implement the CSV parser, the column map and the row classification (pure domain)
+    kind: implement
+    assignee: sonnet
+    rules: [RF-70, RN-P01]
+    skills: [editar-arquivo, coding-guidelines, modular-design-principles]
+    refs: [PRD-001 RF-70, RFC-002, ADR-0002, docs/plano/E16.md D1 D3 D4 D5 D7, docs/plano/E16-F02/plano.md]
+    dependsOn: [E16-T03]
+    allowedPaths:
+      - apps/api/src/imports/domain/**
+    protectedTests:
+      - apps/api/src/imports/domain/parse-csv.test.ts
+      - apps/api/src/imports/domain/classify-row.test.ts
+      - apps/api/src/imports/domain/column-map.test.ts
+    checks:
+      - pnpm --filter @pilla/api exec vitest run src/imports/domain
+      - pnpm --filter @pilla/api typecheck
+      - pnpm --filter @pilla/api lint
+      - pnpm depcruise
+    done:
+      - 'the protected tests pass (A1 to A12)'
+      - 'domain/ imports only @pilla/finance, @pilla/schemas and itself: no Nest, Drizzle, other module or Date.now (reference date is a parameter)'
+      - 'column-map.ts is the only file that knows the spreadsheet header names'
+      - 'all money is integer cents (ADR-0004), no float arithmetic'
+    budget: {attempts: 4, toolCalls: 40, minutes: 30}
+    readFirst:
+      - docs/plano/E16-F02/plano.md
+      - packages/finance/src/index.ts
+      - packages/finance/src/schedule.ts
+      - packages/finance/src/allocation.ts
+  - id: E16-T05
+    title: Write the tests for the imported person, imported loan and imported payment write ports
+    kind: test-author
+    assignee: opus
+    rules: [RF-70, RN-P01, RN-C09]
+    skills: [escrever-teste]
+    refs: [PRD-001 RF-70, PRD-001 RN-P01, RFC-004 §7, RFC-005 §4, ADR-0002, ADR-0005, ADR-0006, docs/plano/E10.md D10, docs/plano/E16.md D5 D6 D7, docs/plano/E16-F03/plano.md]
+    dependsOn: [E16-T02]
+    allowedPaths:
+      - apps/api/src/people/public/create-imported-person.test.ts
+      - apps/api/src/lending/public/import-loan.test.ts
+      - apps/api/src/payments/public/record-imported-payment.test.ts
+    protectedTests: []
+    checks:
+      - '! pnpm --filter @pilla/api exec vitest run src/people/public/create-imported-person.test.ts src/lending/public/import-loan.test.ts src/payments/public/record-imported-payment.test.ts'
+      - node scripts/check-test-quality.mjs apps/api/src/people/public/create-imported-person.test.ts apps/api/src/lending/public/import-loan.test.ts apps/api/src/payments/public/record-imported-payment.test.ts
+      - pnpm --filter @pilla/api typecheck
+    done:
+      - 'person port (A1 to A3): creates a person with cpf null (RN-P01) or with a valid CPF; an existing CPF returns the existing person id and reused true; runs in the caller transaction (rolls back with it)'
+      - 'loan port (A4 to A8): inserts an ACTIVE loan with originType IMPORT, disbursedAt = contractedAt, base account, number from the contract year sequence, late terms copied from the current defaults, the given installments (CUSTOM, INSTALLMENT, SINGLE_PAYMENT or INTEREST_ONLY with the first installment only); writes loan.imported audit and a LoanActivated event with originType IMPORT; refuses a missing or inactive account'
+      - 'payment port (A9 to A13): writes one CONFIRMED payment (channel ADMIN, method as given, isRecovery false) with allocations per installment and a PaymentConfirmed event; amount above the open total stores only the allocatable amount and returns excessCents; paid in full calls markLoanPaidOff (LoanPaidOff event, status PAID_OFF); amount zero writes nothing'
+      - 'no port commits on its own and none touches another module tables directly (depcruise)'
+      - 'events pass their schemas in packages/schemas/src/events'
+    budget: {attempts: 4, toolCalls: 45, minutes: 35}
+    readFirst:
+      - docs/plano/E16-F03/plano.md
+      - apps/api/src/lending/public/mark-loan-paid-off.ts
+      - apps/api/src/lending/application/loans-service.ts
+      - apps/api/src/lending/infra/loan-repository.ts
+      - apps/api/src/payments/application/payments-service.ts
+      - apps/api/src/people/application/people.service.ts
+      - apps/api/src/db/test-db.ts
+      - packages/schemas/src/events/loan-activated.ts
+  - id: E16-T06
+    title: Implement the imported person, imported loan and imported payment write ports
+    kind: implement
+    assignee: sonnet
+    rules: [RF-70, RN-P01, RN-C09]
+    skills: [editar-arquivo, coding-guidelines, modular-design-principles]
+    refs: [PRD-001 RF-70, RFC-001 M2, RFC-004 §7, ADR-0002, ADR-0006, docs/plano/E16.md D1 D5 D6 D7, docs/plano/E16-F03/plano.md]
+    dependsOn: [E16-T05]
+    allowedPaths:
+      - apps/api/src/people/public/create-imported-person.ts
+      - apps/api/src/people/application/**
+      - apps/api/src/people/infra/**
+      - apps/api/src/lending/public/import-loan.ts
+      - apps/api/src/lending/application/**
+      - apps/api/src/lending/infra/**
+      - apps/api/src/payments/public/record-imported-payment.ts
+      - apps/api/src/payments/application/**
+      - apps/api/src/payments/infra/**
+    protectedTests:
+      - apps/api/src/people/public/create-imported-person.test.ts
+      - apps/api/src/lending/public/import-loan.test.ts
+      - apps/api/src/payments/public/record-imported-payment.test.ts
+    checks:
+      - pnpm --filter @pilla/api exec vitest run src/people src/lending src/payments
+      - pnpm --filter @pilla/api typecheck
+      - pnpm --filter @pilla/api lint
+      - pnpm depcruise
+    done:
+      - 'the protected tests pass (A1 to A13)'
+      - 'no migration and no new column in people, lending or payments'
+      - 'existing people, lending and payments tests stay green'
+      - 'ports take the caller transaction and are exported only from each module public/'
+    budget: {attempts: 4, toolCalls: 45, minutes: 35}
+    readFirst:
+      - docs/plano/E16-F03/plano.md
+      - apps/api/src/lending/public/mark-loan-paid-off.ts
+      - apps/api/src/lending/infra/loan-repository.ts
+      - apps/api/src/payments/application/payments-service.ts
+  - id: E16-T07
+    title: Write the HTTP tests for POST /imports/spreadsheet and GET /imports/{id}
+    kind: test-author
+    assignee: sonnet
+    rules: [RF-70, RN-P01]
+    skills: [escrever-teste]
+    refs: [PRD-001 RF-70, PRD-001 RN-P01, RFC-004 §3, RFC-004 §6, RFC-005 §6, ADR-0006, docs/plano/E16.md D2 D6 D7 D8 D9 D10, docs/plano/E16-F04/plano.md]
+    dependsOn: [E16-T04, E16-T06]
+    allowedPaths:
+      - apps/api/src/imports/http/imports.http.test.ts
+      - apps/api/src/imports/http/imports-ledger.http.test.ts
+    protectedTests: []
+    checks:
+      - '! pnpm --filter @pilla/api exec vitest run src/imports/http'
+      - node scripts/check-test-quality.mjs apps/api/src/imports/http/imports.http.test.ts apps/api/src/imports/http/imports-ledger.http.test.ts
+      - pnpm --filter @pilla/api typecheck
+    done:
+      - 'auth (A1): only ADMIN; 401 and 403 as the other admin routes'
+      - 'validation (A2): empty body, header without a required column, over 2000 rows or over 2 MB answers 422 or 400 VALIDATION_FAILED and creates nothing'
+      - 'happy path (A3, A4): a fictional CSV with consistent, review and rejected rows answers 201 with totals; consistent rows create person, ACTIVE loan with originType IMPORT and one CONFIRMED payment; review rows create a CUSTOM loan listed with reasons; rejected rows create nothing'
+      - 'persons (A5): same valid CPF reuses the person, blank CPF creates cpf null and counts personsWithoutCpf, same name without CPF in one file reuses the person with DUPLICATE_PERSON_NAME'
+      - 'isolation (A6): a failing row (forced) is REJECTED and the other rows are kept'
+      - 'idempotency (A7): the same file again answers 409 IMPORT_ALREADY_DONE with the first batch id and creates nothing'
+      - 'report (A8): GET returns the same report, only REVIEW and REJECTED rows listed, 404 for an unknown id; the audit log has import.created'
+      - 'ledger (A9, needs E12-T02): after dispatchOutbox the account has a negative DISBURSEMENT dated data_contrato per loan and REPAYMENT rows dated data_ultimo_pagamento'
+      - 'no test uses real data (fake CPFs from packages/schemas)'
+    budget: {attempts: 4, toolCalls: 45, minutes: 35}
+    readFirst:
+      - docs/plano/E16-F04/plano.md
+      - apps/api/src/core/http/test-app.ts
+      - apps/api/src/db/test-db.ts
+      - apps/api/src/payments/http/payments-reverse.http.test.ts
+      - apps/api/src/treasury/http/ledger-from-events.http.test.ts
+  - id: E16-T08
+    title: Implement the imports module (tables, POST /imports/spreadsheet, GET /imports/{id})
+    kind: implement
+    assignee: sonnet
+    rules: [RF-70, RN-P01]
+    skills: [editar-arquivo, coding-guidelines, modular-design-principles]
+    refs: [PRD-001 RF-70, RFC-001 M2, RFC-004 §3, RFC-005 §6, ADR-0002, ADR-0006, docs/plano/E16.md D1 D2 D8 D9 D10, docs/plano/E16-F04/plano.md]
+    dependsOn: [E16-T07]
+    allowedPaths:
+      - apps/api/src/imports/**
+      - apps/api/migrations/imports/0000_imports.sql
+      - apps/api/migrations/imports/meta/**
+      - apps/api/src/app.module.ts
+      - apps/api/src/db/**
+    protectedTests:
+      - apps/api/src/imports/http/imports.http.test.ts
+      - apps/api/src/imports/http/imports-ledger.http.test.ts
+    checks:
+      - pnpm --filter @pilla/api exec vitest run src/imports src/people src/lending src/payments src/treasury
+      - pnpm --filter @pilla/api typecheck
+      - pnpm --filter @pilla/api lint
+      - pnpm check:schemas
+      - pnpm depcruise
+    done:
+      - 'the protected tests pass (A1 to A9)'
+      - 'one transaction per row; the batch row and its audit are written in their own transaction after the rows'
+      - 'imports reaches people, lending and payments only through their public/ ports; no module imports imports'
+      - 'migration creates schema imports with import_batches (file_sha256 unique) and import_rows, no cross-module foreign key'
+      - 'no tool or library outside the lockfile; multipart not needed (text/csv body)'
+    budget: {attempts: 4, toolCalls: 50, minutes: 40}
+    readFirst:
+      - docs/plano/E16-F04/plano.md
+      - apps/api/src/payments/payments.module.ts
+      - apps/api/src/app.module.ts
+      - apps/api/src/treasury/infra/schema.ts
+  - id: E16-T09
+    title: Implement the web client for the imports API
+    kind: implement
+    assignee: haiku
+    rules: [RF-70]
+    skills: [editar-arquivo, coding-guidelines, next-best-practices]
+    refs: [PRD-001 RF-70, docs/plano/E16.md D11, docs/plano/E16-F05/plano.md]
+    dependsOn: [E16-T08]
+    allowedPaths:
+      - apps/web/lib/api/imports.ts
+    protectedTests: []
+    checks:
+      - pnpm --filter @pilla/web typecheck
+      - pnpm --filter @pilla/web lint
+    done:
+      - 'uploadSpreadsheet(file) sends the CSV text with Content-Type text/csv and getImport(id) returns the importReportResponse; both typed with @pilla/schemas, no any'
+      - 'a 409 IMPORT_ALREADY_DONE is returned as a typed result carrying the existing batch id, not thrown as a generic error'
+    budget: {attempts: 4, toolCalls: 20, minutes: 15}
+    readFirst:
+      - docs/plano/E16-F05/plano.md
+      - apps/web/lib/api
+  - id: E16-T10
+    title: Implement the /importacao screen (upload, summary and the "a revisar" list)
+    kind: implement
+    assignee: sonnet
+    rules: [RF-70]
+    skills: [editar-arquivo, coding-guidelines, shadcn, tailwind-css, accessibility]
+    refs: [PRD-001 RF-70, docs/plano/E16.md D9 D11, docs/plano/E16-F05/plano.md]
+    dependsOn: [E16-T09]
+    allowedPaths:
+      - apps/web/app/(admin)/importacao/**
+      - apps/web/components/**
+      - apps/web/lib/labels.ts
+    protectedTests: []
+    checks:
+      - pnpm --filter @pilla/web typecheck
+      - pnpm --filter @pilla/web lint
+      - pnpm --filter @pilla/web test
+    done:
+      - 'file picker accepts .csv, shows the expected column list (D3) and a warning that uploading an altered file again creates the records again'
+      - 'after upload shows the totals and a table of REVIEW and REJECTED rows with line number, reasons in pt-BR (labels.ts) and links to the loan and the person'
+      - '409 shows a message with a link to the existing report; loading, empty and error states exist'
+      - 'menu admin gets the Importação item; no unit test for the screen (ADR-0017 amendment)'
+    budget: {attempts: 3, toolCalls: 45, minutes: 40}
+    readFirst:
+      - docs/plano/E16-F05/plano.md
+      - apps/web/app/(admin)/layout.tsx
+      - apps/web/app/(admin)/configuracoes
+      - apps/web/lib/labels.ts
+  - id: E16-T11
+    title: Write the end-to-end test for importing a spreadsheet
+    kind: test-author
+    assignee: sonnet
+    rules: [RF-70, RN-P01]
+    skills: [escrever-teste, accessibility]
+    refs: [PRD-001 RF-70, PRD-001 RN-P01, docs/plano/E16.md, docs/plano/E16-F06/plano.md]
+    dependsOn: [E16-T10]
+    allowedPaths:
+      - apps/web/e2e/imports.e2e.ts
+    protectedTests: []
+    checks:
+      - pnpm --filter @pilla/web e2e
+    done:
+      - 'with compose up, migrate and seed: upload a fictional CSV (consistent, review, rejected and blank-CPF rows) on /importacao and see the totals and the "a revisar" table with the right reasons'
+      - 'open a listed loan: it is ACTIVE, shows the imported payment and, for a review row, type Personalizado; open a person without CPF and see the pending CPF'
+      - 'on /caixa see the DISBURSEMENT and REPAYMENT rows with the historical dates after the dispatcher runs (re-read with expect timeout, never waitForTimeout)'
+      - 'upload the same file again and see the already-imported message; no console errors; unique names per run'
+    budget: {attempts: 3, toolCalls: 50, minutes: 40}
+    readFirst:
+      - docs/plano/E16-F06/plano.md
+      - apps/web/e2e/payments.e2e.ts
+      - apps/web/e2e/treasury.e2e.ts
+      - apps/web/playwright.config.ts
+
+features:
+  - id: E16-F01
+    title: Import report schemas
+    cards: [E16-T01, E16-T02]
+  - id: E16-F02
+    title: CSV parser, column map and row classification
+    cards: [E16-T03, E16-T04]
+  - id: E16-F03
+    title: Write ports for imported person, loan and payment
+    cards: [E16-T05, E16-T06]
+  - id: E16-F04
+    title: Imports module and API
+    cards: [E16-T07, E16-T08]
+  - id: E16-F05
+    title: Web client and import screen
+    cards: [E16-T09, E16-T10]
+  - id: E16-F06
+    title: Import end-to-end test
+    cards: [E16-T11]
