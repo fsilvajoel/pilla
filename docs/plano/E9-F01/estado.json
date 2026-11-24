@@ -8,6 +8,20 @@
       "status": "done",
       "verdict": "ajustado",
       "round": 1
+    },
+    "tests": {
+      "status": "skipped",
+      "note": "cartão E9-T01 é implement com checks de comando (critérios só e2e); não há cartão de teste"
+    },
+    "implement": {
+      "status": "done",
+      "worker": "claude",
+      "commit": "216c191",
+      "note": "conferido em 23/11: db:migrate 2x e db:seed 2x contra o Postgres dev (6 pessoas, 8 endereços, 8 chaves PIX, idempotente) e check-allowed-deps OK; check-env-example reporta PILLA_COOKIE_SECURE só no .env (fora do E9)"
+    },
+    "review": {
+      "status": "pending",
+      "note": "revisão final (stages.review) sem veredito registrado: o revisao.md da feature é só do refinamento funcional"
     }
   },
   "sources": [

@@ -12,16 +12,24 @@
       "worker": "copilot"
     },
     "tests": {
-      "status": "pending"
+      "status": "done",
+      "worker": "sonnet (substitui bia)",
+      "commit": "f78114a",
+      "note": "E9-T09"
     },
     "testReview": {
-      "status": "pending"
+      "status": "pending",
+      "note": "sem revisão formal dos testes registrada"
     },
     "implement": {
-      "status": "pending"
+      "status": "done",
+      "worker": "sonnet",
+      "commit": "1170269",
+      "note": "E9-T10; person-sheet.http.test.ts (10) verde em 23/11"
     },
     "review": {
-      "status": "pending"
+      "status": "pending",
+      "note": "revisão final (stages.review) sem veredito registrado: o revisao.md da feature é só do refinamento funcional"
     }
   },
   "sources": [

@@ -46,19 +46,24 @@
       }
     },
     "tests": {
-      "status": "pending"
+      "status": "done",
+      "worker": "bia/sonnet",
+      "commit": "884b61b",
+      "note": "testes + stubs em 884b61b; endurecidos em bb1ec4c; gate expect-red FAIL abaixo é anterior à implementação (20/11 03:11) e não foi regravado"
     },
     "testReview": {
-      "status": "pending"
+      "status": "pending",
+      "note": "sem revisão formal dos testes registrada"
     },
     "implement": {
       "status": "done",
       "worker": "orquestrador com subagentes Sonnet (fora do harness)",
       "commit": "b8d0e66",
-      "note": "Implementado fora do fluxo do harness em 20/11. Gates conferidos por pnpm verify (typecheck, lint, cobertura 100%, 320 testes)."
+      "note": "Implementado fora do fluxo do harness em 20/11. Gates conferidos por pnpm verify (typecheck, lint, cobertura 100%, 320 testes). Reconferido em 23/11: 22 arquivos/341 testes do api (core/http, app, people) e schemas/api verdes."
     },
     "review": {
-      "status": "pending"
+      "status": "pending",
+      "note": "revisão final (stages.review) sem veredito registrado: o revisao.md da feature é só do refinamento funcional"
     }
   },
   "sources": [

@@ -22,16 +22,29 @@
           "result": "red",
           "detail": "contrato: 35 falham/20 passam (os 20 verdes testam o createPersonRequest e o resumo ja existentes); http: 44 falham/0 passam (404 por rota inexistente). Falhas por asserção sobre esboço."
         }
+      ],
+      "note": "red inicial em 237dd27; testes do cartão E9-T05 em 2af0968",
+      "commits": [
+        "237dd27",
+        "2af0968"
       ]
     },
     "testReview": {
-      "status": "pending"
+      "status": "pending",
+      "note": "sem revisão formal dos testes registrada"
     },
     "implement": {
-      "status": "pending"
+      "status": "done",
+      "worker": "sonnet",
+      "commits": [
+        "8f3ec0d",
+        "16898f6"
+      ],
+      "note": "E9-T04 (schemas) e E9-T06 (controller/módulo); people.http.test.ts (51) e people.test.ts verdes em 23/11; integrado por 340ff7f"
     },
     "review": {
-      "status": "pending"
+      "status": "pending",
+      "note": "revisão final (stages.review) sem veredito registrado: o revisao.md da feature é só do refinamento funcional"
     }
   },
   "sources": [
