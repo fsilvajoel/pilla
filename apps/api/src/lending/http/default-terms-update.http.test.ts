@@ -14,7 +14,12 @@ import { migratedTestDb } from "../../db/test-db";
 const PERSON_ID = "01970000-0000-7000-8000-000000000001";
 const ADMIN_ID = "01970000-0000-7000-8000-000000000009";
 const SEED_TERMS_ID = "01970000-0000-7000-8000-0000000000d1";
-const env: ApiEnv = { host: "127.0.0.1", port: 3000, databaseUrl: "postgres://u:p@127.0.0.1:1/pilla" };
+const env: ApiEnv = {
+  host: "127.0.0.1",
+  port: 3000,
+  databaseUrl: "postgres://u:p@127.0.0.1:1/pilla",
+  accessHashKey: "chave-de-teste-do-hash-com-mais-de-32-caracteres",
+};
 
 const SEED = {
   lateFeeBps: 200,

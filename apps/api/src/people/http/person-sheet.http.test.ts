@@ -22,7 +22,12 @@ const ADDRESS_2 = "01970000-0000-7000-8000-000000000011";
 const PIX_1 = "01970000-0000-7000-8000-000000000012";
 const PIX_2 = "01970000-0000-7000-8000-000000000013";
 
-const env: ApiEnv = { host: "127.0.0.1", port: 3000, databaseUrl: "postgres://u:p@127.0.0.1:1/pilla" };
+const env: ApiEnv = {
+  host: "127.0.0.1",
+  port: 3000,
+  databaseUrl: "postgres://u:p@127.0.0.1:1/pilla",
+  accessHashKey: "chave-de-teste-do-hash-com-mais-de-32-caracteres",
+};
 
 let client: PGlite;
 let admin: AdminAgent;

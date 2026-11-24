@@ -15,7 +15,12 @@ import { TEST_ADMIN_ACTOR } from "./test-actor";
 import { createTestApp } from "./test-app";
 
 // Ator da requisição (E14 D7, D8; E14-F03 C9, C10, C13). Senha fictícia, só deste teste.
-const env: ApiEnv = { host: "127.0.0.1", port: 3000, databaseUrl: "postgres://u:p@127.0.0.1:1/pilla" };
+const env: ApiEnv = {
+  host: "127.0.0.1",
+  port: 3000,
+  databaseUrl: "postgres://u:p@127.0.0.1:1/pilla",
+  accessHashKey: "chave-de-teste-do-hash-com-mais-de-32-caracteres",
+};
 const ADMIN = "01970000-0000-7000-8000-000000000f11";
 const PASSWORD = "senha ficticia de teste 11";
 const PROBE = "/api/v1/probe-actor";

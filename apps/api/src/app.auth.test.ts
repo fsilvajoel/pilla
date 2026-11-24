@@ -13,13 +13,25 @@ import { DATABASE_HANDLE } from "./db/database";
 import { migratedTestDb } from "./db/test-db";
 
 // App inteiro com o guard global (E14 D7, D8; E14-F03 C11, C12). Senha fictícia, só deste teste.
-const env: ApiEnv = { host: "127.0.0.1", port: 3000, databaseUrl: "postgres://u:p@127.0.0.1:1/pilla" };
+const env: ApiEnv = {
+  host: "127.0.0.1",
+  port: 3000,
+  databaseUrl: "postgres://u:p@127.0.0.1:1/pilla",
+  accessHashKey: "chave-de-teste-do-hash-com-mais-de-32-caracteres",
+};
 const ADMIN = "01970000-0000-7000-8000-000000000f31";
 const PASSWORD = "senha ficticia de teste 31";
 const ROUTES = ["/api/v1/people", "/api/v1/loans"];
 const SOME_ID = "01970000-0000-7000-8000-000000000f39";
 /** As únicas rotas abertas (E14 D7). Qualquer outra rota do app tem de exigir sessão. */
-const PUBLIC_ROUTES = ["GET /api/v1/health", "GET /api/v1/openapi.json", "POST /api/v1/auth/admin/login"];
+const PUBLIC_ROUTES = [
+  "GET /api/v1/health",
+  "GET /api/v1/openapi.json",
+  "POST /api/v1/auth/admin/login",
+  // Entrada e saída do portal: abertas ao guard ADMIN; o cliente tem a própria sessão (E15 D7).
+  "POST /api/v1/portal/session",
+  "DELETE /api/v1/portal/session",
+];
 
 type Verb = "get" | "post" | "put" | "patch" | "delete";
 type Route = { readonly verb: Verb; readonly path: string };

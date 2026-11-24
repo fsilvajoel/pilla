@@ -18,7 +18,12 @@ const DRAFT_ID = "01970000-0000-7000-8000-0000000000c1";
 const ORIGIN_ID = "01970000-0000-7000-8000-0000000000c2";
 const UNKNOWN_LOAN_ID = "01970000-0000-7000-8000-0000000000ff";
 
-const env: ApiEnv = { host: "127.0.0.1", port: 3000, databaseUrl: "postgres://u:p@127.0.0.1:1/pilla" };
+const env: ApiEnv = {
+  host: "127.0.0.1",
+  port: 3000,
+  databaseUrl: "postgres://u:p@127.0.0.1:1/pilla",
+  accessHashKey: "chave-de-teste-do-hash-com-mais-de-32-caracteres",
+};
 
 // CA-01 (T-14): 5.000,00 a 6,33% em 6 parcelas mensais; primeiro vencimento 2026-12-14.
 const DISBURSED_AT = "2026-11-14";

@@ -15,7 +15,12 @@ import { newSessionToken, sessionIdOf } from "../domain/session-token";
 
 // Guard global ADMIN (E14 D7, RN-A01, ADR-0011; E14-F03 C1 a C8): o AppModule inteiro, com um controller de sonda
 // sem @Public que devolve o ator recebido. Senha fictícia, só deste teste.
-const env: ApiEnv = { host: "127.0.0.1", port: 3000, databaseUrl: "postgres://u:p@127.0.0.1:1/pilla" };
+const env: ApiEnv = {
+  host: "127.0.0.1",
+  port: 3000,
+  databaseUrl: "postgres://u:p@127.0.0.1:1/pilla",
+  accessHashKey: "chave-de-teste-do-hash-com-mais-de-32-caracteres",
+};
 const ADMIN = "01970000-0000-7000-8000-000000000f01";
 const PERSON = "01970000-0000-7000-8000-000000000f02";
 const PASSWORD = "senha ficticia de teste 21";

@@ -1,5 +1,6 @@
 import { Inject, Module, type DynamicModule, type OnApplicationShutdown } from "@nestjs/common";
 import { APP_GUARD } from "@nestjs/core";
+import { ACCESS_HASH_KEY } from "./access/application/access-hash-key";
 import { AccessModule } from "./access/access.module";
 import { AdminSessionGuard } from "./access/http/admin-session.guard";
 import { HealthController } from "./core/http/health.controller";
@@ -33,12 +34,13 @@ export class AppModule implements OnApplicationShutdown {
       providers: [
         { provide: DATABASE_HANDLE, useFactory: (): DatabaseHandle => createDatabase(env.databaseUrl) },
         { provide: DATABASE, useFactory: (handle: DatabaseHandle) => handle.db, inject: [DATABASE_HANDLE] },
+        { provide: ACCESS_HASH_KEY, useValue: env.accessHashKey },
         // Guard global ADMIN (E14 D7): ligado uma vez só, aqui.
         { provide: APP_GUARD, useClass: AdminSessionGuard },
         { provide: OUTBOX_CONSUMERS, useValue: treasuryOutboxConsumers },
         ...(outboxPoller ? [OutboxPoller] : []),
       ],
-      exports: [DATABASE],
+      exports: [DATABASE, ACCESS_HASH_KEY],
     };
   }
 

@@ -16,7 +16,12 @@ import { sessionIdOf } from "../domain/session-token";
 // O IP do cliente vem em X-Forwarded-For (a conexão do teste é do loopback, como a do Next, E14 D7).
 // O limite de tentativas conta por IP e fica em memória: cada teste usa um IP próprio.
 // Senhas abaixo são fictícias, só deste teste.
-const env: ApiEnv = { host: "127.0.0.1", port: 3000, databaseUrl: "postgres://u:p@127.0.0.1:1/pilla" };
+const env: ApiEnv = {
+  host: "127.0.0.1",
+  port: 3000,
+  databaseUrl: "postgres://u:p@127.0.0.1:1/pilla",
+  accessHashKey: "chave-de-teste-do-hash-com-mais-de-32-caracteres",
+};
 const ADMIN = "01970000-0000-7000-8000-000000000e01";
 const INACTIVE = "01970000-0000-7000-8000-000000000e02";
 const PASSWORD = "senha ficticia de teste 01";

@@ -11,7 +11,12 @@ import { migratedTestDb } from "../../db/test-db";
 
 // E12-F03 C1 a C12 (A1 a A5, A7, A8): extrato da conta com saldo acumulado, período e paginação por cursor.
 // Os lançamentos entram direto no ledger: o teste não depende do despachante do outbox.
-const env: ApiEnv = { host: "127.0.0.1", port: 3000, databaseUrl: "postgres://u:p@127.0.0.1:1/pilla" };
+const env: ApiEnv = {
+  host: "127.0.0.1",
+  port: 3000,
+  databaseUrl: "postgres://u:p@127.0.0.1:1/pilla",
+  accessHashKey: "chave-de-teste-do-hash-com-mais-de-32-caracteres",
+};
 const uuid = (n: number): string => `01970000-0000-7000-8000-${String(1000000000000 + n).slice(1)}`;
 const ACCOUNT = uuid(1);
 const OTHER_ACCOUNT = uuid(2);
