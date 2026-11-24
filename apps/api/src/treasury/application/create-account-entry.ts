@@ -1,15 +1,13 @@
 import type { AccountEntryRequest, AccountEntryResponse } from "@pilla/schemas";
 import { accountEntryResponse } from "@pilla/schemas";
 import { ProblemException } from "../../core/http/problem-exception";
+import type { RequestActor } from "../../core/public/actor";
 import type { AuditEntry } from "../../core/public/audit";
 import { nextId } from "./monotonic-id";
 import type { Database } from "../../db/database";
 import { todayInBrasilia } from "../../lending/public/brasilia-today";
 import { findAccountActive, findEntryByIdempotencyKey, insertEntryWithAudit } from "./ledger-repository";
 import type { LedgerEntryRow } from "../infra/schema";
-
-// Provisório até existir login (Acesso), o mesmo ator de payments.
-const PROVISIONAL_ACTOR_ID = "00000000-0000-7000-8004-000000000001";
 
 function invalid(field: string, message: string): ProblemException {
   return new ProblemException("VALIDATION_FAILED", "Dados inválidos.", [{ field, message }]);
@@ -35,11 +33,11 @@ function toResponse(row: LedgerEntryRow): AccountEntryResponse {
   });
 }
 
-function auditOf(row: LedgerEntryRow, at: Date): AuditEntry {
+function auditOf(actor: RequestActor, row: LedgerEntryRow, at: Date): AuditEntry {
   return {
     id: nextId(),
     actorType: "ADMIN",
-    actorId: null,
+    actorId: actor.adminUserId,
     action: "ledger_entry.created",
     entityType: "ledger_entry",
     entityId: row.id,
@@ -54,7 +52,7 @@ function auditOf(row: LedgerEntryRow, at: Date): AuditEntry {
       createdBy: row.createdBy,
     },
     at,
-    ip: null,
+    ip: actor.ip,
   };
 }
 
@@ -68,6 +66,7 @@ export async function createAccountEntry(
   request: AccountEntryRequest,
   idempotencyKey: string | undefined,
   now: Date,
+  actor: RequestActor,
 ): Promise<AccountEntryResponse> {
   if (idempotencyKey !== undefined) {
     const existing = await findEntryByIdempotencyKey(db, idempotencyKey);
@@ -86,10 +85,10 @@ export async function createAccountEntry(
       amountCents: signedAmount(request),
       entryDate: request.entryDate,
       justification: request.justification ?? null,
-      createdBy: PROVISIONAL_ACTOR_ID,
+      createdBy: actor.adminUserId,
       ...(idempotencyKey === undefined ? {} : { idempotencyKey }),
     },
-    (row) => auditOf(row, now),
+    (row) => auditOf(actor, row, now),
   );
   return toResponse(stored);
 }

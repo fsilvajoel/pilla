@@ -1,5 +1,6 @@
 import type { PgDatabase, PgQueryResultHKT } from "drizzle-orm/pg-core";
 import { loanPaidOffV1 } from "@pilla/schemas";
+import type { RequestActor } from "../../core/public/actor";
 import { newId } from "../../core/public/ids";
 import { loanStoreOf } from "../infra/loan-repository";
 
@@ -9,6 +10,8 @@ export type PaidOffLoan = {
   /** Data do pagamento que zerou o saldo (E10 D3). */
   readonly paidOffAt: string;
   readonly at: Date;
+  /** Quem fez a ação que levou a esta mudança (E14 D11). */
+  readonly actor: RequestActor;
 };
 
 /**
@@ -21,14 +24,14 @@ export async function markLoanPaidOff(tx: PgDatabase<PgQueryResultHKT>, loan: Pa
   await store.audit({
     id: newId(),
     actorType: "ADMIN",
-    actorId: null,
+    actorId: loan.actor.adminUserId,
     action: "loan.paid_off",
     entityType: "loan",
     entityId: loan.loanId,
     before: { status: "ACTIVE", version: row.version - 1 },
     after: { status: row.status, version: row.version },
     at: loan.at,
-    ip: null,
+    ip: loan.actor.ip,
   });
   await store.outbox(
     loanPaidOffV1.parse({

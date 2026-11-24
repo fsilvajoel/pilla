@@ -16,6 +16,8 @@ import {
   type ReversePaymentRequest,
 } from "@pilla/schemas";
 import { z } from "zod";
+import { CurrentActor } from "../../core/http/actor";
+import type { RequestActor } from "../../core/public/actor";
 import { ProblemException } from "../../core/http/problem-exception";
 import { ZodValidationPipe } from "../../core/http/zod-validation.pipe";
 import { PaymentsService } from "../application/payments-service";
@@ -63,8 +65,9 @@ export class PaymentsController {
   create(
     @Headers("idempotency-key") idempotencyKey: string | undefined,
     @Body(new ZodValidationPipe<CreatePaymentRequest>(createPaymentRequest)) body: CreatePaymentRequest,
+    @CurrentActor() actor: RequestActor,
   ): Promise<PaymentResponse> {
-    return this.service.create(body, idempotencyKeyOf(idempotencyKey));
+    return this.service.create(body, idempotencyKeyOf(idempotencyKey), actor);
   }
 
   /** Confirma o pagamento (RF-21): `If-Match` com a versão do pagamento e corpo vazio. */
@@ -74,8 +77,9 @@ export class PaymentsController {
     @Param("id", new ZodValidationPipe<string>(idSchema)) id: string,
     @Headers("if-match") ifMatch: string | undefined,
     @Body(new ZodValidationPipe<Record<string, never>>(confirmBody)) _body: Record<string, never>,
+    @CurrentActor() actor: RequestActor,
   ): Promise<PaymentResponse> {
-    return this.service.confirm(id, ifMatchVersion(ifMatch));
+    return this.service.confirm(id, ifMatchVersion(ifMatch), actor);
   }
 
   /** Rejeita o pagamento pendente (RF-20): `If-Match` com a versão e `{reason}`. */
@@ -85,8 +89,9 @@ export class PaymentsController {
     @Param("id", new ZodValidationPipe<string>(idSchema)) id: string,
     @Headers("if-match") ifMatch: string | undefined,
     @Body(new ZodValidationPipe<RejectPaymentRequest>(rejectPaymentRequest)) body: RejectPaymentRequest,
+    @CurrentActor() actor: RequestActor,
   ): Promise<PaymentResponse> {
-    return this.service.reject(id, ifMatchVersion(ifMatch), body);
+    return this.service.reject(id, ifMatchVersion(ifMatch), body, actor);
   }
 
   /** Estorna o pagamento confirmado (RF-22): `If-Match` com a versão e `{reason}`. */
@@ -96,8 +101,9 @@ export class PaymentsController {
     @Param("id", new ZodValidationPipe<string>(idSchema)) id: string,
     @Headers("if-match") ifMatch: string | undefined,
     @Body(new ZodValidationPipe<ReversePaymentRequest>(reversePaymentRequest)) body: ReversePaymentRequest,
+    @CurrentActor() actor: RequestActor,
   ): Promise<PaymentResponse> {
-    return this.service.reverse(id, ifMatchVersion(ifMatch), body);
+    return this.service.reverse(id, ifMatchVersion(ifMatch), body, actor);
   }
 
   @Get()

@@ -10,6 +10,8 @@ import {
   type AccountStatementResponse,
 } from "@pilla/schemas";
 import { z } from "zod";
+import { CurrentActor } from "../../core/http/actor";
+import type { RequestActor } from "../../core/public/actor";
 import { ProblemException } from "../../core/http/problem-exception";
 import { ZodValidationPipe } from "../../core/http/zod-validation.pipe";
 import { DATABASE, type Database } from "../../db/database";
@@ -48,8 +50,9 @@ export class AccountsController {
     @Param("id", new ZodValidationPipe<string>(idSchema)) id: string,
     @Headers("idempotency-key") idempotencyKey: string | undefined,
     @Body(new ZodValidationPipe<AccountEntryRequest>(accountEntryRequest)) body: AccountEntryRequest,
+    @CurrentActor() actor: RequestActor,
   ): Promise<AccountEntryResponse> {
-    return createAccountEntry(this.db, id, body, idempotencyKeyOf(idempotencyKey), new Date());
+    return createAccountEntry(this.db, id, body, idempotencyKeyOf(idempotencyKey), new Date(), actor);
   }
 
   @Get(":id/entries")

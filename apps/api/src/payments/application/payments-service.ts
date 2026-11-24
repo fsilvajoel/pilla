@@ -18,6 +18,7 @@ import {
 import { isReversalBlocked, reopensOnReversal } from "../../lending/domain/reversal";
 import { ProblemException } from "../../core/http/problem-exception";
 import type { PgDatabase, PgQueryResultHKT } from "drizzle-orm/pg-core";
+import type { RequestActor } from "../../core/public/actor";
 import { recordAudit, type AuditEntry } from "../../core/public/audit";
 import { writeOutboxEvent } from "../../core/infra/outbox-writer";
 import { newId } from "../../core/public/ids";
@@ -43,9 +44,6 @@ import type { PaymentRow } from "../infra/schema";
 import { toListItem, toPaymentResponse } from "./payment-views";
 import { confirmedAllocationsByLoan } from "../public/confirmed-allocations";
 import { previewAllocation, previewForLoan } from "./preview-allocation";
-
-// Provisório até existir login (Acesso): `created_by` é obrigatório e ainda não há ator real.
-const PROVISIONAL_ACTOR_ID = "00000000-0000-7000-8004-000000000001";
 
 function invalid(field: string, message: string): ProblemException {
   return new ProblemException("VALIDATION_FAILED", "Dados inválidos.", [{ field, message }]);
@@ -123,6 +121,7 @@ function auditSnapshot(row: PaymentRow): Record<string, unknown> {
 }
 
 function auditOf(
+  actor: RequestActor,
   row: PaymentRow,
   at: Date,
   action: string,
@@ -132,14 +131,14 @@ function auditOf(
   return {
     id: newId(),
     actorType: "ADMIN",
-    actorId: null,
+    actorId: actor.adminUserId,
     action,
     entityType: "payment",
     entityId: row.id,
     before: before === null ? null : auditSnapshot(before),
     after: { ...auditSnapshot(row), ...extra },
     at,
-    ip: null,
+    ip: actor.ip,
   };
 }
 
@@ -179,7 +178,11 @@ export class PaymentsService {
    * nem efeito no saldo. Valor, data e situação do contrato seguem a mesma regra da prévia. A mesma Idempotency-Key
    * devolve o pagamento já criado (E11 D8).
    */
-  async create(request: CreatePaymentRequest, idempotencyKey: string | undefined): Promise<PaymentResponse> {
+  async create(
+    request: CreatePaymentRequest,
+    idempotencyKey: string | undefined,
+    actor: RequestActor,
+  ): Promise<PaymentResponse> {
     if (idempotencyKey !== undefined) {
       const existing = await findPaymentByIdempotencyKey(this.db, idempotencyKey);
       if (existing !== null) return this.respond(existing, []);
@@ -204,9 +207,9 @@ export class PaymentsService {
         status: "PENDING_REVIEW",
         isRecovery: loan.status === "WRITTEN_OFF",
         ...(idempotencyKey === undefined ? {} : { idempotencyKey }),
-        createdBy: PROVISIONAL_ACTOR_ID,
+        createdBy: actor.adminUserId,
       },
-      (row) => auditOf(row, now, "payment.registered", null),
+      (row) => auditOf(actor, row, now, "payment.registered", null),
     );
     return this.respond(stored, []);
   }
@@ -235,7 +238,7 @@ export class PaymentsService {
    * recalcula a distribuição em `paidAt` com o estado de agora, grava a alocação, marca CONFIRMED, quita o
    * contrato ACTIVE que zerou e grava auditoria e eventos. Qualquer recusa desfaz tudo.
    */
-  async confirm(id: string, expectedVersion: number | null): Promise<PaymentResponse> {
+  async confirm(id: string, expectedVersion: number | null, actor: RequestActor): Promise<PaymentResponse> {
     const now = new Date();
     const confirmed = await this.db.transaction(async (tx) => {
       const current = await lockPendingPayment(tx, id, expectedVersion);
@@ -256,7 +259,7 @@ export class PaymentsService {
       });
       const stored = await markPaymentConfirmed(tx, id, {
         confirmedAt: now,
-        confirmedBy: PROVISIONAL_ACTOR_ID,
+        confirmedBy: actor.adminUserId,
         isRecovery: loan.status === "WRITTEN_OFF",
       });
       await insertAllocations(
@@ -271,7 +274,7 @@ export class PaymentsService {
           principalCents: item.principalCents,
         })),
       );
-      await recordAudit(tx, auditOf(stored, now, "payment.confirmed", current));
+      await recordAudit(tx, auditOf(actor, stored, now, "payment.confirmed", current));
       await writeOutboxEvent(
         tx,
         paymentConfirmedV1.parse({
@@ -317,7 +320,13 @@ export class PaymentsService {
         );
       }
       if (preview.paysOff) {
-        await markLoanPaidOff(tx, { loanId: loan.id, personId: loan.personId, paidOffAt: stored.paidAt, at: now });
+        await markLoanPaidOff(tx, {
+          loanId: loan.id,
+          personId: loan.personId,
+          paidOffAt: stored.paidAt,
+          at: now,
+          actor,
+        });
       }
       const allocations: PaymentAllocation[] = preview.allocations.map((item) => ({
         installmentNumber: item.installmentNumber,
@@ -334,16 +343,21 @@ export class PaymentsService {
    * Rejeita o pagamento pendente (RF-20, E11 D12): trava o pagamento, confere PENDING_REVIEW e a versão, grava
    * REJECTED com o motivo e a auditoria `payment.rejected`. Sem alocação, evento nem efeito no contrato (RN-R01).
    */
-  async reject(id: string, expectedVersion: number | null, request: RejectPaymentRequest): Promise<PaymentResponse> {
+  async reject(
+    id: string,
+    expectedVersion: number | null,
+    request: RejectPaymentRequest,
+    actor: RequestActor,
+  ): Promise<PaymentResponse> {
     const now = new Date();
     const stored = await this.db.transaction(async (tx) => {
       const current = await lockPendingPayment(tx, id, expectedVersion);
       const rejected = await markPaymentRejected(tx, id, {
         rejectedAt: now,
-        rejectedBy: PROVISIONAL_ACTOR_ID,
+        rejectedBy: actor.adminUserId,
         reason: request.reason,
       });
-      await recordAudit(tx, auditOf(rejected, now, "payment.rejected", current, { reason: request.reason }));
+      await recordAudit(tx, auditOf(actor, rejected, now, "payment.rejected", current, { reason: request.reason }));
       return rejected;
     });
     return this.respond(stored, []);
@@ -354,7 +368,12 @@ export class PaymentsService {
    * bloqueia contrato RENEWED/RENEGOTIATED (RN-R11), marca as alocações e o pagamento (nada é apagado, RN-R07),
    * reabre o contrato PAID_OFF que voltou a ter principal ou juros em aberto (RN-R10) e grava auditoria e eventos.
    */
-  async reverse(id: string, expectedVersion: number | null, request: ReversePaymentRequest): Promise<PaymentResponse> {
+  async reverse(
+    id: string,
+    expectedVersion: number | null,
+    request: ReversePaymentRequest,
+    actor: RequestActor,
+  ): Promise<PaymentResponse> {
     const now = new Date();
     const stored = await this.db.transaction(async (tx) => {
       const current = await lockConfirmedPayment(tx, id, expectedVersion);
@@ -370,10 +389,10 @@ export class PaymentsService {
       const marked = await markAllocationsReversed(tx, id, now);
       const reversed = await markPaymentReversed(tx, id, {
         reversedAt: now,
-        reversedBy: PROVISIONAL_ACTOR_ID,
+        reversedBy: actor.adminUserId,
         reason: request.reason,
       });
-      await recordAudit(tx, auditOf(reversed, now, "payment.reversed", current, { reason: request.reason }));
+      await recordAudit(tx, auditOf(actor, reversed, now, "payment.reversed", current, { reason: request.reason }));
       await writeOutboxEvent(
         tx,
         paymentReversedV1.parse({
@@ -400,7 +419,7 @@ export class PaymentsService {
       // ADR-0005: o saldo vem do cronograma menos as alocações que seguem confirmadas, não de um valor guardado.
       const outstanding = await openPrincipalAndInterest(tx, loan);
       if (reopensOnReversal(loan.status, outstanding)) {
-        await reopenLoan(tx, { loanId: loan.id, reason: request.reason, at: now });
+        await reopenLoan(tx, { loanId: loan.id, reason: request.reason, at: now, actor });
       }
       return reversed;
     });

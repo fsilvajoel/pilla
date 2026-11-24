@@ -1,5 +1,7 @@
 import { Body, Controller, Get, Inject, Put } from "@nestjs/common";
 import { updateDefaultTermsRequest, type DefaultTermsResponse, type UpdateDefaultTermsRequest } from "@pilla/schemas";
+import { CurrentActor } from "../../core/http/actor";
+import type { RequestActor } from "../../core/public/actor";
 import { ZodValidationPipe } from "../../core/http/zod-validation.pipe";
 import { LoansService } from "../application/loans-service";
 
@@ -19,7 +21,8 @@ export class DefaultTermsController {
   @Put("default-terms")
   update(
     @Body(new ZodValidationPipe<UpdateDefaultTermsRequest>(updateDefaultTermsRequest)) body: UpdateDefaultTermsRequest,
+    @CurrentActor() actor: RequestActor,
   ): Promise<DefaultTermsResponse> {
-    return this.service.updateDefaultTerms(body);
+    return this.service.updateDefaultTerms(body, actor);
   }
 }
