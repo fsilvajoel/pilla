@@ -17,13 +17,19 @@
       "commit": "f8118aa"
     },
     "testReview": {
-      "status": "pending"
+      "status": "done",
+      "worker": "opus",
+      "verdict": "aprovado com ressalvas",
+      "note": "revisão estática de apps/web/e2e/treasury.e2e.ts; arquivo não registrado em e2e"
     },
     "implement": {
-      "status": "pending"
+      "status": "pending",
+      "note": "e2e nunca executado verde; não rodado na revisão por colisão de portas 3100/3101 com pre-push em andamento"
     },
     "review": {
-      "status": "pending"
+      "status": "needs_input",
+      "worker": "opus",
+      "note": "revisão final não concluída: A1 sem evidência de execução"
     }
   },
   "sources": [],

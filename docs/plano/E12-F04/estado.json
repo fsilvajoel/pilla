@@ -20,7 +20,9 @@
       ]
     },
     "testReview": {
-      "status": "pending"
+      "status": "done",
+      "worker": "opus",
+      "verdict": "aprovado"
     },
     "implement": {
       "status": "done",
@@ -28,7 +30,10 @@
       "commit": "1b7eae0"
     },
     "review": {
-      "status": "pending"
+      "status": "needs_input",
+      "worker": "opus",
+      "verdict": "aprovado com ressalvas",
+      "note": "gates tests-reviewed/coverage em FAIL (estado sem criteria/scenarios/testShas; sources com glob); mutation/e2e não rodados; achados em D6"
     }
   },
   "sources": [
