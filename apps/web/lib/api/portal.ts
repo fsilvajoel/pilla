@@ -31,6 +31,48 @@ export const portalLoanListResponse = z.strictObject({
 });
 export type PortalLoanListResponse = z.infer<typeof portalLoanListResponse>;
 
+export const portalInstallmentStatusSchema = z.enum(["OPEN", "PARTIAL", "PAID", "OVERDUE", "OVERDUE_PARTIAL"]);
+export type PortalInstallmentStatus = z.infer<typeof portalInstallmentStatusSchema>;
+
+export const portalPaymentMethodSchema = z.enum(["PIX", "BOLETO", "CASH", "BANK_TRANSFER"]);
+export type PortalPaymentMethod = z.infer<typeof portalPaymentMethodSchema>;
+
+export const portalLoanDetailResponse = z.strictObject({
+  id: idSchema,
+  loanNumber: loanNumberSchema,
+  situation: portalSituationSchema,
+  principalCents: z.int().nonnegative(),
+  totalCents: z.int().nonnegative(),
+  paidCents: z.int().nonnegative(),
+  outstandingCents: z.int().nonnegative(),
+  lateChargesCents: z.int().nonnegative(),
+  nextInstallment: z
+    .strictObject({
+      number: z.int().positive(),
+      dueDate: isoDateSchema,
+      amountCents: z.int().nonnegative(),
+    })
+    .nullable(),
+  installments: z.array(
+    z.strictObject({
+      number: z.int().positive(),
+      dueDate: isoDateSchema,
+      amountCents: z.int().nonnegative(),
+      paidCents: z.int().nonnegative(),
+      lateChargesCents: z.int().nonnegative(),
+      status: portalInstallmentStatusSchema,
+    }),
+  ),
+  payments: z.array(
+    z.strictObject({
+      paidAt: z.union([isoDateSchema, z.iso.datetime({ offset: true })]),
+      amountCents: z.int().nonnegative(),
+      method: portalPaymentMethodSchema,
+    }),
+  ),
+});
+export type PortalLoanDetailResponse = z.infer<typeof portalLoanDetailResponse>;
+
 function baseUrl(): string {
   const url = process.env.PILLA_API_URL;
   if (!url) throw new Error("PILLA_API_URL não definida");
@@ -121,6 +163,17 @@ export async function deletePortalSession(token: string | undefined): Promise<vo
 /** GET /portal/loans: contratos da pessoa da sessão (RF-61). 401 chega como `ApiProblem`. */
 export async function getPortalLoans(token: string | undefined): Promise<PortalLoanListResponse> {
   const { data } = await portalFetch({ path: "/portal/loans", token, schema: portalLoanListResponse });
+  if (data === null) throw new ApiProblem(500, null);
+  return data;
+}
+
+/** GET /portal/loans/{id}: detalhe de um contrato da pessoa da sessão (RF-62). 404 vale para "não é seu" também. */
+export async function getPortalLoan(token: string | undefined, id: string): Promise<PortalLoanDetailResponse> {
+  const { data } = await portalFetch({
+    path: `/portal/loans/${encodeURIComponent(id)}`,
+    token,
+    schema: portalLoanDetailResponse,
+  });
   if (data === null) throw new ApiProblem(500, null);
   return data;
 }
