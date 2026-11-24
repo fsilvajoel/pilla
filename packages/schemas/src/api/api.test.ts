@@ -29,6 +29,7 @@ import { personDetailResponse } from "./people/person-detail";
 import { createPixKeyRequest, pixKeySchema, updatePixKeyRequest } from "./people/pix-key";
 import { personResponse } from "./people/person-response";
 import { updatePersonRequest } from "./people/update-person";
+import { importReportResponse } from "./imports/import-report";
 import { problemSchema } from "./problem";
 import { accountEntryRequest, accountEntryResponse } from "./treasury/account-entry";
 import { accountStatementQuery, accountStatementResponse } from "./treasury/account-statement";
@@ -585,6 +586,27 @@ const cases: BodyCase[] = [
     body: {},
     optional: { from: "2027-01-01", to: "2027-01-31", limit: "50", cursor: "abc" },
     invalid: { from: "01/02/2027", to: "2027-02-30", limit: "201", cursor: "" },
+  },
+  {
+    name: "importReportResponse",
+    schema: importReportResponse,
+    body: {
+      id: id(5),
+      createdAt: "2027-01-02T12:00:00-03:00",
+      totals: {
+        rows: 2,
+        ok: 1,
+        review: 1,
+        rejected: 0,
+        personsCreated: 2,
+        personsReused: 0,
+        personsWithoutCpf: 1,
+        loansCreated: 2,
+        paymentsCreated: 1,
+      },
+      rows: [{ lineNumber: 3, status: "REVIEW", reasons: ["SCHEDULE_MISMATCH"], personId: id(6), loanId: id(7) }],
+    },
+    invalid: { id: "x", createdAt: "ontem", totals: { rows: -1 }, rows: "x" },
   },
 ];
 
