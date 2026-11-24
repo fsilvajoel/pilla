@@ -3,9 +3,8 @@ import type { Database } from "../../db/database";
 import { todayInBrasilia } from "../../lending/public/brasilia-today";
 import { portfolioFigures } from "../../lending/public/portfolio-figures";
 import { totalBalanceCents } from "../public/account-balance";
+import { committedShares } from "./committed-shares";
 import { baseAccountMaxCommittedBps, monthLedgerTotals } from "../infra/summary-queries";
-
-const FULL_BPS = 10000;
 
 /** Primeiro e último dia (inclusivos) do mês AAAA-MM. */
 function monthBounds(month: string): { monthStart: string; monthEnd: string } {
@@ -30,14 +29,13 @@ export async function treasurySummary(
     baseAccountMaxCommittedBps(db),
   ]);
   const lentCents = figures.activeOutstandingPrincipalCents;
-  const base = cashCents + lentCents;
-  const committedBps = base > 0 ? Math.floor((lentCents * FULL_BPS) / base) : null;
+  const { committedBps, availableBps } = committedShares(cashCents, lentCents);
   return {
     month,
     cashCents,
     lentCents,
     committedBps,
-    availableBps: committedBps === null ? null : FULL_BPS - committedBps,
+    availableBps,
     maxCommittedBps,
     interestReceivedCents: totals.interestCents,
     lateChargesReceivedCents: totals.lateChargesCents,
