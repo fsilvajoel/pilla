@@ -172,7 +172,7 @@ cards:
     rules: [RN-A03]
     skills: [escrever-teste]
     refs: [PRD-001 RF-60, PRD-001 RN-A03, ADR-0006, ADR-0007, RFC-004 §3, RFC-005 §2, RFC-005 §7, docs/plano/E15.md D13, docs/plano/E15-F03/plano.md]
-    dependsOn: [E15-T02, E15-T04, E14 admin login guard]
+    dependsOn: [E15-T02, E15-T04, E14-T06]
     allowedPaths:
       - apps/api/src/access/http/portal-access.http.test.ts
     protectedTests: []
@@ -409,7 +409,7 @@ cards:
       - accessibility
       - coding-guidelines
     refs: [PRD-001 RF-60, ADR-0013, docs/plano/E15.md D13 D14, docs/plano/E15-F06/plano.md]
-    dependsOn: [E15-T06, E14 admin login]
+    dependsOn: [E15-T06, E14-T11]
     allowedPaths:
       - apps/web/lib/api/portal-access.ts
       - apps/web/app/(admin)/pessoas/**
@@ -475,7 +475,7 @@ cards:
       - escrever-teste
       - coding-guidelines
     refs: [PRD-001 RF-60, ADR-0017, docs/plano/E15.md D13, docs/plano/E15-F07B/plano.md]
-    dependsOn: [E15-T11, E15-T12, E14 admin login]
+    dependsOn: [E15-T11, E15-T12, E14-T11]
     allowedPaths:
       - apps/web/e2e/portal-access.e2e.ts
     protectedTests: []
