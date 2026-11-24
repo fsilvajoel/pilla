@@ -19,6 +19,8 @@ import {
   type UpdateLoanRequest,
   type WriteOffLoanRequest,
 } from "@pilla/schemas";
+import { CurrentActor } from "../../core/http/actor";
+import type { RequestActor } from "../../core/public/actor";
 import { ZodValidationPipe } from "../../core/http/zod-validation.pipe";
 import { loanListQuery, type LoanListQuery } from "./loan-list-query";
 import {
@@ -73,8 +75,9 @@ export class LoansController {
   async create(
     @Body(new ZodValidationPipe<CreateLoanRequest>(createLoanRequest)) body: CreateLoanRequest,
     @Res({ passthrough: true }) response: HeaderSetter,
+    @CurrentActor() actor: RequestActor,
   ): Promise<CreateLoanResponse> {
-    const loan = await this.service.create(body);
+    const loan = await this.service.create(body, actor);
     response.setHeader("Location", `/api/v1/loans/${loan.id}`);
     return loan;
   }
@@ -84,8 +87,9 @@ export class LoansController {
     @Param("id", new ZodValidationPipe<string>(idSchema)) id: string,
     @Headers("if-match") ifMatch: string | undefined,
     @Body(new ZodValidationPipe<UpdateLoanRequest>(updateLoanRequest)) body: UpdateLoanRequest,
+    @CurrentActor() actor: RequestActor,
   ): Promise<LoanDraftResponse> {
-    return this.service.update(id, ifMatchVersion(ifMatch), body);
+    return this.service.update(id, ifMatchVersion(ifMatch), body, actor);
   }
 
   @Post(":id/cancel")
@@ -93,8 +97,9 @@ export class LoansController {
   cancel(
     @Param("id", new ZodValidationPipe<string>(idSchema)) id: string,
     @Headers("if-match") ifMatch: string | undefined,
+    @CurrentActor() actor: RequestActor,
   ): Promise<LoanDraftResponse> {
-    return this.service.cancel(id, ifMatchVersion(ifMatch));
+    return this.service.cancel(id, ifMatchVersion(ifMatch), actor);
   }
 
   @Post(":id/activate")
@@ -103,8 +108,9 @@ export class LoansController {
     @Param("id", new ZodValidationPipe<string>(idSchema)) id: string,
     @Headers("if-match") ifMatch: string | undefined,
     @Body(new ZodValidationPipe<ActivateLoanRequest>(activateLoanRequest)) body: ActivateLoanRequest,
+    @CurrentActor() actor: RequestActor,
   ): Promise<LoanDraftResponse> {
-    return this.service.activate(id, ifMatchVersion(ifMatch), body);
+    return this.service.activate(id, ifMatchVersion(ifMatch), body, actor);
   }
 
   @Post(":id/renew")
@@ -112,8 +118,9 @@ export class LoansController {
     @Param("id", new ZodValidationPipe<string>(idSchema)) id: string,
     @Body(new ZodValidationPipe<RenewLoanRequest>(renewLoanRequest)) body: RenewLoanRequest,
     @Res({ passthrough: true }) response: HeaderSetter,
+    @CurrentActor() actor: RequestActor,
   ): Promise<RolloverDraftResponse> {
-    const loan = await this.service.renew(id, body);
+    const loan = await this.service.renew(id, body, actor);
     response.setHeader("Location", `/api/v1/loans/${loan.id}`);
     return loan;
   }
@@ -123,8 +130,9 @@ export class LoansController {
     @Param("id", new ZodValidationPipe<string>(idSchema)) id: string,
     @Body(new ZodValidationPipe<RenegotiateLoanRequest>(renegotiateLoanRequest)) body: RenegotiateLoanRequest,
     @Res({ passthrough: true }) response: HeaderSetter,
+    @CurrentActor() actor: RequestActor,
   ): Promise<RolloverDraftResponse> {
-    const loan = await this.service.renegotiate(id, body);
+    const loan = await this.service.renegotiate(id, body, actor);
     response.setHeader("Location", `/api/v1/loans/${loan.id}`);
     return loan;
   }
@@ -135,7 +143,8 @@ export class LoansController {
     @Param("id", new ZodValidationPipe<string>(idSchema)) id: string,
     @Headers("if-match") ifMatch: string | undefined,
     @Body(new ZodValidationPipe<WriteOffLoanRequest>(writeOffLoanRequest)) body: WriteOffLoanRequest,
+    @CurrentActor() actor: RequestActor,
   ): Promise<LoanDraftResponse> {
-    return this.service.writeOff(id, ifMatchVersion(ifMatch), body);
+    return this.service.writeOff(id, ifMatchVersion(ifMatch), body, actor);
   }
 }

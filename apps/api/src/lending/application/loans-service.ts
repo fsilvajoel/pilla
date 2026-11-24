@@ -25,6 +25,7 @@ import {
   type WriteOffLoanRequest,
 } from "@pilla/schemas";
 import { ProblemException } from "../../core/http/problem-exception";
+import type { RequestActor } from "../../core/public/actor";
 import { recordAudit, type AuditEntry } from "../../core/public/audit";
 import { newId } from "../../core/public/ids";
 import { DATABASE, type Database } from "../../db/database";
@@ -135,18 +136,25 @@ function termsOf(row: DefaultTermsRow): DefaultTermsResponse {
   };
 }
 
-function auditEntry(action: string, loanId: string, before: LoanRow | null, after: LoanRow, at: Date): AuditEntry {
+function auditEntry(
+  actor: RequestActor,
+  action: string,
+  loanId: string,
+  before: LoanRow | null,
+  after: LoanRow,
+  at: Date,
+): AuditEntry {
   return {
     id: newId(),
     actorType: "ADMIN",
-    actorId: null,
+    actorId: actor.adminUserId,
     action,
     entityType: "loan",
     entityId: loanId,
     before: before === null ? null : toResponse(before),
     after: toResponse(after),
     at,
-    ip: null,
+    ip: actor.ip,
   };
 }
 
@@ -168,7 +176,7 @@ export class LoansService {
     this.db = db;
   }
 
-  async create(request: CreateLoanRequest): Promise<CreateLoanResponse> {
+  async create(request: CreateLoanRequest, actor: RequestActor): Promise<CreateLoanResponse> {
     if (!(await personExists(this.db, request.personId))) {
       throw new ProblemException("VALIDATION_FAILED", "Dados inválidos.", [
         { field: "personId", message: "Pessoa não encontrada." },
@@ -199,14 +207,19 @@ export class LoansService {
         roundingStepCents: terms.roundingStepCents,
         ...(request.internalNotes === undefined ? {} : { internalNotes: request.internalNotes }),
       });
-      await store.audit(auditEntry("loan.created", row.id, null, row, now));
+      await store.audit(auditEntry(actor, "loan.created", row.id, null, row, now));
       const activeLoansCount = await store.countActiveByPerson(request.personId);
       return { ...toResponse(row), warning: { activeLoansCount } };
     });
   }
 
-  async update(id: string, expectedVersion: number | null, request: UpdateLoanRequest): Promise<LoanDraftResponse> {
-    return this.inDraft(id, expectedVersion, "loan.updated", async (store, current) => {
+  async update(
+    id: string,
+    expectedVersion: number | null,
+    request: UpdateLoanRequest,
+    actor: RequestActor,
+  ): Promise<LoanDraftResponse> {
+    return this.inDraft(actor, id, expectedVersion, "loan.updated", async (store, current) => {
       const merged = {
         type: request.type ?? current.type,
         installmentCount: request.installmentCount ?? current.installmentCount,
@@ -220,13 +233,18 @@ export class LoansService {
     });
   }
 
-  async cancel(id: string, expectedVersion: number | null): Promise<LoanDraftResponse> {
-    return this.inDraft(id, expectedVersion, "loan.cancelled", (store) => store.cancel(id));
+  async cancel(id: string, expectedVersion: number | null, actor: RequestActor): Promise<LoanDraftResponse> {
+    return this.inDraft(actor, id, expectedVersion, "loan.cancelled", (store) => store.cancel(id));
   }
 
   // Ativa o DRAFT (E10-F04): parcelas pelo @pilla/finance, evento no outbox e, em renovação ou renegociação,
   // a origem passa a RENEWED/RENEGOTIATED na mesma transação (D8).
-  async activate(id: string, expectedVersion: number | null, request: ActivateLoanRequest): Promise<LoanDraftResponse> {
+  async activate(
+    id: string,
+    expectedVersion: number | null,
+    request: ActivateLoanRequest,
+    actor: RequestActor,
+  ): Promise<LoanDraftResponse> {
     if (!(await isActiveAccount(this.db, request.accountId))) {
       throw new ProblemException("VALIDATION_FAILED", "Dados inválidos.", [
         { field: "accountId", message: "Conta não encontrada ou inativa." },
@@ -265,7 +283,7 @@ export class LoansService {
           totalCents: Number(item.total),
         })),
       );
-      await store.audit(auditEntry("loan.activated", id, current, activated, now));
+      await store.audit(auditEntry(actor, "loan.activated", id, current, activated, now));
       await store.outbox(
         loanActivatedV1.parse({
           id: newId(),
@@ -285,24 +303,29 @@ export class LoansService {
           },
         }),
       );
-      if (origin !== null) await settleOrigin(store, origin, activated, now);
+      if (origin !== null) await settleOrigin(actor, store, origin, activated, now);
       return toResponse(activated);
     });
   }
 
   // Renovar (E10-F06): só com juros e encargos vencidos pagos; o novo DRAFT leva o principal em aberto (RN-C14, RN-C15).
-  async renew(id: string, request: RenewLoanRequest): Promise<RolloverDraftResponse> {
-    return this.draftFromOrigin(id, request, "RENEWAL");
+  async renew(id: string, request: RenewLoanRequest, actor: RequestActor): Promise<RolloverDraftResponse> {
+    return this.draftFromOrigin(actor, id, request, "RENEWAL");
   }
 
   // Renegociar (E10-F06): o novo DRAFT leva o saldo devedor; o que excede o principal é capitalizado (RN-C17).
-  async renegotiate(id: string, request: RenegotiateLoanRequest): Promise<RolloverDraftResponse> {
-    return this.draftFromOrigin(id, request, "RENEGOTIATION");
+  async renegotiate(id: string, request: RenegotiateLoanRequest, actor: RequestActor): Promise<RolloverDraftResponse> {
+    return this.draftFromOrigin(actor, id, request, "RENEGOTIATION");
   }
 
   // Baixa como perda (E10-F07, RN-C19): ACTIVE vira WRITTEN_OFF com o motivo; o evento leva o principal em aberto.
   // Sem movimentação de dinheiro; o efeito contábil é do consumidor (E12).
-  async writeOff(id: string, expectedVersion: number | null, request: WriteOffLoanRequest): Promise<LoanDraftResponse> {
+  async writeOff(
+    id: string,
+    expectedVersion: number | null,
+    request: WriteOffLoanRequest,
+    actor: RequestActor,
+  ): Promise<LoanDraftResponse> {
     // Leituras fora da transação (o PGlite tem uma só conexão); a trava e as conferências ficam dentro.
     const installments = await this.installmentsOf(id);
     const allocations = await confirmedAllocationsByLoan(this.db, id);
@@ -318,7 +341,7 @@ export class LoansService {
       const now = new Date();
       const figures = rolloverFigures(current, installments, allocations, isoDate(todayInBrasilia(now)));
       const written = await store.writeOff(id, request.reason);
-      await store.audit(auditEntry("loan.written_off", id, current, written, now));
+      await store.audit(auditEntry(actor, "loan.written_off", id, current, written, now));
       await store.outbox(
         loanWrittenOffV1.parse({
           id: newId(),
@@ -340,32 +363,31 @@ export class LoansService {
   }
 
   // Nova vigência (RF-40, ADR-0006): insere linha, nunca altera; igual ao vigente não grava nada.
-  async updateDefaultTerms(request: UpdateDefaultTermsRequest): Promise<DefaultTermsResponse> {
+  async updateDefaultTerms(request: UpdateDefaultTermsRequest, actor: RequestActor): Promise<DefaultTermsResponse> {
     return this.db.transaction(async (tx) => {
       const current = await findCurrentDefaultTerms(tx);
       if (current === null) throw new ProblemException("NOT_FOUND", NOT_FOUND_DETAIL);
       const before = termsOf(current);
       if (isDeepStrictEqual(before, request)) return before;
       const now = new Date();
-      // Provisório até existir login (Acesso): created_by herda o da linha vigente; vira o ator real depois.
       const insertedId = newId();
       await insertDefaultTerms(tx, {
         id: insertedId,
         ...request,
         effectiveFrom: now,
-        createdBy: current.createdBy,
+        createdBy: actor.adminUserId,
       });
       await recordAudit(tx, {
         id: newId(),
         actorType: "ADMIN",
-        actorId: null,
+        actorId: actor.adminUserId,
         action: "default_terms.updated",
         entityType: "default_terms",
         entityId: insertedId,
         before,
         after: request,
         at: now,
-        ip: null,
+        ip: actor.ip,
       });
       return request;
     });
@@ -471,6 +493,7 @@ export class LoansService {
 
   // A origem só muda de status na ativação do novo contrato (D8); aqui nada é gravado nela, no ledger nem no outbox.
   private async draftFromOrigin(
+    actor: RequestActor,
     id: string,
     request: RolloverRequest,
     kind: RolloverKind,
@@ -523,7 +546,7 @@ export class LoansService {
         gracePeriodDays: origin.gracePeriodDays,
         roundingStepCents: origin.roundingStepCents,
       });
-      await store.audit(auditEntry("loan.created", row.id, null, row, now));
+      await store.audit(auditEntry(actor, "loan.created", row.id, null, row, now));
       return {
         ...toResponse(row),
         originLoanId: origin.id,
@@ -545,6 +568,7 @@ export class LoansService {
 
   // Trava o contrato, confere versão e DRAFT, aplica a mudança e grava a auditoria na mesma transação.
   private inDraft(
+    actor: RequestActor,
     id: string,
     expectedVersion: number | null,
     action: string,
@@ -560,7 +584,7 @@ export class LoansService {
         throw new ProblemException("LOAN_NOT_EDITABLE", "Só contrato em rascunho pode ser alterado.");
       }
       const updated = await apply(store, current);
-      await store.audit(auditEntry(action, id, current, updated, new Date()));
+      await store.audit(auditEntry(actor, action, id, current, updated, new Date()));
       return toResponse(updated);
     });
   }
@@ -589,10 +613,18 @@ function scheduleInputOf(row: LoanRow, disbursedAt: string): ScheduleInput {
 }
 
 // Origem de renovação ou renegociação: vira RENEWED/RENEGOTIATED e grava o evento (D8; sem DISBURSEMENT, RN-C16).
-async function settleOrigin(store: LoanStore, origin: LoanRow, successor: LoanRow, now: Date): Promise<void> {
+async function settleOrigin(
+  actor: RequestActor,
+  store: LoanStore,
+  origin: LoanRow,
+  successor: LoanRow,
+  now: Date,
+): Promise<void> {
   const renegotiation = successor.originType === "RENEGOTIATION";
   const settled = await store.settleOrigin(origin.id, renegotiation ? "RENEGOTIATED" : "RENEWED");
-  await store.audit(auditEntry(renegotiation ? "loan.renegotiated" : "loan.renewed", origin.id, origin, settled, now));
+  await store.audit(
+    auditEntry(actor, renegotiation ? "loan.renegotiated" : "loan.renewed", origin.id, origin, settled, now),
+  );
   const envelope = { id: newId(), version: 1, occurredAt: now.toISOString(), aggregateId: origin.id };
   await store.outbox(
     renegotiation
