@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import type { Database } from "../../db/database";
-import { confirmedAllocationsByLoan } from "../../payments/public/confirmed-allocations";
+import { confirmedAllocationsByLoans, type ConfirmedAllocation } from "../../payments/public/confirmed-allocations";
 import { openInstallments } from "../application/loan-assessment";
 import { selectActiveLoans, selectInstallmentsByLoan } from "../infra/loan-queries";
 import { loans, type InstallmentRow, type LoanRow } from "../infra/schema";
@@ -18,13 +18,13 @@ export type PortfolioFigures = {
 type LoanFigures = { readonly outstandingPrincipalCents: number; readonly forecastCents: number };
 
 /** Principal em aberto do contrato e, do mês, principal mais juros em aberto (sem encargos). */
-async function loanFigures(
-  db: Database,
+function loanFigures(
   loan: LoanRow,
   installmentsByLoan: Map<string, InstallmentRow[]>,
+  allocationsByLoan: Map<string, ConfirmedAllocation[]>,
   month: PortfolioMonth,
-): Promise<LoanFigures> {
-  const allocations = await confirmedAllocationsByLoan(db, loan.id);
+): LoanFigures {
+  const allocations = allocationsByLoan.get(loan.id) ?? [];
   const items = openInstallments(installmentsByLoan.get(loan.id) ?? [], allocations);
   let outstandingPrincipalCents = 0;
   let forecastCents = 0;
@@ -39,11 +39,10 @@ async function loanFigures(
 }
 
 async function figuresOf(db: Database, rows: readonly LoanRow[], month: PortfolioMonth): Promise<LoanFigures[]> {
-  const byLoan = await selectInstallmentsByLoan(
-    db,
-    rows.map((row) => row.id),
-  );
-  return Promise.all(rows.map((row) => loanFigures(db, row, byLoan, month)));
+  const ids = rows.map((row) => row.id);
+  const byLoan = await selectInstallmentsByLoan(db, ids);
+  const allocations = await confirmedAllocationsByLoans(db, ids);
+  return rows.map((row) => loanFigures(row, byLoan, allocations, month));
 }
 
 const sumOf = (figures: readonly LoanFigures[], pick: (figure: LoanFigures) => number): number =>
