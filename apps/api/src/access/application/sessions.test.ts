@@ -3,7 +3,7 @@ import type { PgliteDatabase } from "drizzle-orm/pglite";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { migratedTestDb, type MigratedTestDb } from "../../db/test-db";
 import { sessionIdOf } from "../domain/session-token";
-import { createAdminSession, endSession, resolveAdminSession } from "./sessions";
+import { createAdminSession, endSession, resolveAdminSession, resolveSession } from "./sessions";
 
 // Serviço de sessão do ADMIN (E14 D3, E14-F02 C12 a C16): inatividade de 2 h, teto de 12 h, admin ativo,
 // last_seen_at no máximo uma vez por minuto e sessão vencida apagada quando aparece. Relógio falso só no Date.
@@ -166,5 +166,47 @@ describe("endSession", () => {
     await createAdminSession(db, ADMIN, IP);
     await expect(endSession(db, "B".repeat(43))).resolves.toBeUndefined();
     expect(await rowsOf()).toHaveLength(1);
+  });
+});
+
+describe("resolveSession", () => {
+  const PERSON = "01970000-0000-7000-8000-000000000e0a";
+  const clientSession = async (token: string): Promise<void> => {
+    await client.query(
+      `insert into access.sessions (id, role, person_id, ip, created_at, last_seen_at, expires_at)
+       values ($1, 'CLIENT', $2, $3, $4, $4, $5)`,
+      [sessionIdOf(token), PERSON, IP, T0, new Date(T0.getTime() + 12 * HOUR)],
+    );
+  };
+
+  it("gives the admin of a live ADMIN session", async () => {
+    const { token } = await createAdminSession(db, ADMIN, IP);
+    expect(await resolveSession(db, token)).toEqual({
+      role: "ADMIN",
+      admin: { id: ADMIN, username: "joana", role: "ADMIN" },
+    });
+  });
+
+  it("gives null for an unknown token", async () => {
+    expect(await resolveSession(db, "A".repeat(43))).toBeNull();
+  });
+
+  it("gives only the CLIENT role for a live CLIENT session", async () => {
+    await clientSession("C".repeat(43));
+    at(10 * MINUTE);
+    expect(await resolveSession(db, "C".repeat(43))).toEqual({ role: "CLIENT" });
+  });
+
+  it("gives null for a CLIENT session idle for more than 2 h", async () => {
+    await clientSession("C".repeat(43));
+    at(2 * HOUR + 1000);
+    expect(await resolveSession(db, "C".repeat(43))).toBeNull();
+  });
+
+  it("gives null for a CLIENT session past expires_at", async () => {
+    await clientSession("C".repeat(43));
+    await client.query("update access.sessions set last_seen_at = $1", [new Date(T0.getTime() + 12 * HOUR - 1000)]);
+    at(12 * HOUR);
+    expect(await resolveSession(db, "C".repeat(43))).toBeNull();
   });
 });
