@@ -1,0 +1,15 @@
+{
+  "feature": "E15-F05A",
+  "stages": {
+    "plan": {
+      "status": "done",
+      "commit": "bf4dbcf"
+    },
+    "implement": {
+      "status": "done",
+      "commits": [
+        "8df115c"
+      ]
+    }
+  }
+}

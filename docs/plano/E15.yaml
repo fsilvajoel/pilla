@@ -492,3 +492,32 @@ cards:
       - docs/plano/E15-F07B/plano.md
       - apps/web/e2e/portal.e2e.ts
       - apps/web/e2e/people.spec.ts
+
+features:
+  - id: E15-F01
+    title: Portal and portal-access Zod contracts
+    cards: [E15-T01, E15-T02]
+  - id: E15-F02
+    title: Portal session (CPF entry, rate limit, cookie, guard)
+    cards: [E15-T03, E15-T04]
+  - id: E15-F03
+    title: ADMIN enables and disables portal access
+    cards: [E15-T05, E15-T06]
+  - id: E15-F04
+    title: Portal loan list and detail with isolation and no leaks
+    cards: [E15-T07, E15-T08]
+  - id: E15-F05A
+    title: Web portal CPF entry and contract list
+    cards: [E15-T09]
+  - id: E15-F05B
+    title: Web portal contract detail
+    cards: [E15-T10]
+  - id: E15-F06
+    title: Web ADMIN portal access switch on the person sheet
+    cards: [E15-T11]
+  - id: E15-F07A
+    title: Portal customer e2e
+    cards: [E15-T12]
+  - id: E15-F07B
+    title: Admin e2e for enabling and disabling portal access
+    cards: [E15-T13]

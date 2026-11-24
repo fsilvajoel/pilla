@@ -33,19 +33,18 @@
       "status": "needs_input",
       "worker": "opus",
       "verdict": "aprovado com ressalvas",
-      "note": "gates tests-reviewed/coverage em FAIL (estado sem criteria/scenarios/testShas; sources com glob); mutation/e2e não rodados; achados em D6"
+      "note": "criteria/scenarios/testShas e sources reais preenchidos (24/11, ver docs/plano/E12-estado-pendencias.md); gates tests-reviewed e coverage ainda a rodar; mutation/e2e não rodados; achados em D6"
     }
   },
   "sources": [
-    "apps/api/src/treasury/application/**",
-    "apps/api/src/treasury/http/**",
-    "apps/api/src/treasury/infra/**",
+    "apps/api/src/treasury/application/account-statement.ts",
+    "apps/api/src/treasury/application/list-accounts.ts",
+    "apps/api/src/treasury/infra/account-balances.ts",
+    "apps/api/src/treasury/infra/account-repository.ts",
+    "apps/api/src/treasury/infra/ledger-statement.ts",
     "apps/api/src/treasury/public/account-balance.ts",
     "packages/schemas/src/api/treasury/account-statement.ts",
-    "packages/schemas/src/api/treasury/account-summary.ts",
-    "packages/schemas/src/index.ts",
-    "packages/schemas/src/api/api.test.ts",
-    "apps/api/src/app.module.ts"
+    "packages/schemas/src/api/treasury/account-summary.ts"
   ],
   "domainSources": [],
   "exemptSources": [],
@@ -55,5 +54,139 @@
     "packages/schemas/src/api/treasury/account-statement.test.ts",
     "packages/schemas/src/api/treasury/account-summary.test.ts"
   ],
-  "e2e": []
+  "e2e": [],
+  "criteria": [
+    {
+      "id": "A1",
+      "camadas": [
+        "unit"
+      ]
+    },
+    {
+      "id": "A2",
+      "camadas": [
+        "unit"
+      ]
+    },
+    {
+      "id": "A3",
+      "camadas": [
+        "unit"
+      ]
+    },
+    {
+      "id": "A4",
+      "camadas": [
+        "unit"
+      ]
+    },
+    {
+      "id": "A5",
+      "camadas": [
+        "unit"
+      ]
+    },
+    {
+      "id": "A6",
+      "camadas": [
+        "unit"
+      ]
+    },
+    {
+      "id": "A7",
+      "camadas": [
+        "unit"
+      ]
+    },
+    {
+      "id": "A8",
+      "camadas": [
+        "unit"
+      ]
+    },
+    {
+      "id": "A9",
+      "camadas": [
+        "unit"
+      ]
+    }
+  ],
+  "scenarios": [
+    {
+      "id": "C1",
+      "criterio": "A1",
+      "camada": "unit",
+      "arquivo": "apps/api/src/treasury/http/account-statement.http.test.ts",
+      "teste": "C1 (A1): without filters lists every entry in order with the running balance"
+    },
+    {
+      "id": "C2",
+      "criterio": "A2",
+      "camada": "unit",
+      "arquivo": "apps/api/src/treasury/http/account-statement.http.test.ts",
+      "teste": "C2 (A2): from and to keep only the period, with opening before from and closing at the last balance"
+    },
+    {
+      "id": "C3",
+      "criterio": "A3",
+      "camada": "unit",
+      "arquivo": "apps/api/src/treasury/http/account-statement.http.test.ts",
+      "teste": "C3 (A3): entries on the same day follow created_at, not the id"
+    },
+    {
+      "id": "C4",
+      "criterio": "A4",
+      "camada": "unit",
+      "arquivo": "apps/api/src/treasury/http/account-statement.http.test.ts",
+      "teste": "C4 (A4): limit and nextCursor walk the pages without repeating or skipping a row"
+    },
+    {
+      "id": "C6",
+      "criterio": "A5",
+      "camada": "unit",
+      "arquivo": "apps/api/src/treasury/http/account-statement.http.test.ts",
+      "teste": "C6 (A5): automatic and manual entries carry type, component, sourceType and sourceId"
+    },
+    {
+      "id": "C13",
+      "criterio": "A6",
+      "camada": "unit",
+      "arquivo": "apps/api/src/treasury/http/accounts.http.test.ts",
+      "teste": "C13 (A6): balanceCents is the sum of the account entries and equals the unfiltered closing balance"
+    },
+    {
+      "id": "C7",
+      "criterio": "A7",
+      "camada": "unit",
+      "arquivo": "apps/api/src/treasury/http/account-statement.http.test.ts",
+      "teste": "C7 (A7): a period without entries gives empty items and opening equal to closing"
+    },
+    {
+      "id": "C8",
+      "criterio": "A8",
+      "camada": "unit",
+      "arquivo": "apps/api/src/treasury/http/account-statement.http.test.ts",
+      "teste": "C8 (A8): from after to gives 400 VALIDATION_FAILED"
+    },
+    {
+      "id": "C15",
+      "criterio": "A9",
+      "camada": "unit",
+      "arquivo": "packages/schemas/src/api/treasury/account-statement.test.ts",
+      "teste": "accepts a statement with items"
+    },
+    {
+      "id": "C19",
+      "criterio": "A9",
+      "camada": "unit",
+      "arquivo": "packages/schemas/src/api/treasury/account-summary.test.ts",
+      "teste": "accepts an account with an integer balanceCents"
+    }
+  ],
+  "testShas": {
+    "apps/api/src/treasury/http/account-statement.http.test.ts": "7ba113f806d8f9090fb39ec999a05006341060b1",
+    "apps/api/src/treasury/http/accounts.http.test.ts": "76aa960073a1d86f216f53f13b19711285fb63da",
+    "packages/schemas/src/api/treasury/account-statement.test.ts": "6b61fc394f009fcba7813df0de277f3a6167bfdd",
+    "packages/schemas/src/api/treasury/account-summary.test.ts": "28827423addef5148c00a3ee784a9b93d1be69c4"
+  }
 }

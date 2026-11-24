@@ -469,3 +469,26 @@ cards:
       - apps/web/e2e/people.spec.ts
       - apps/web/e2e/settings-alerts.e2e.ts
       - apps/api/scripts/seed-admin.mts
+
+features:
+  - id: E14-F01
+    title: Admin me response schema, password hashing and session token
+    cards: [E14-T01, E14-T02]
+  - id: E14-F02
+    title: Admin login, logout and me with session cookie
+    cards: [E14-T03, E14-T04]
+  - id: E14-F03
+    title: Global admin guard, public routes and request actor
+    cards: [E14-T05, E14-T06, E14-T05b]
+  - id: E14-F04
+    title: Session admin as the actor in audit and created_by
+    cards: [E14-T07, E14-T08]
+  - id: E14-F05
+    title: First admin seed
+    cards: [E14-T09, E14-T10]
+  - id: E14-F06
+    title: Web login screen and protected admin routes
+    cards: [E14-T11]
+  - id: E14-F07
+    title: Login and session in the existing e2e
+    cards: [E14-T12]

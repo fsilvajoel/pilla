@@ -36,5 +36,24 @@
   "domainSources": [],
   "exemptSources": [],
   "tests": [],
-  "e2e": []
+  "e2e": [
+    "apps/web/e2e/treasury.e2e.ts"
+  ],
+  "criteria": [
+    {
+      "id": "A1",
+      "camadas": [
+        "e2e"
+      ]
+    }
+  ],
+  "scenarios": [
+    {
+      "id": "C1",
+      "criterio": "A1",
+      "camada": "e2e",
+      "arquivo": "apps/web/e2e/treasury.e2e.ts",
+      "teste": "warns about low cash on activation, then disbursement, repayment and reversal reach the treasury"
+    }
+  ]
 }

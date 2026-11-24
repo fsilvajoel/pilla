@@ -30,17 +30,15 @@
       "status": "needs_input",
       "worker": "opus",
       "verdict": "aprovado com ressalvas",
-      "note": "gates tests-reviewed/coverage em FAIL (estado sem criteria/scenarios/testShas; sources com glob); mutation/e2e não rodados; achados em D6"
+      "note": "criteria/scenarios/testShas e sources reais preenchidos (24/11, ver docs/plano/E12-estado-pendencias.md); gates tests-reviewed e coverage ainda a rodar; mutation/e2e não rodados; achados em D6"
     }
   },
   "sources": [
     "apps/api/src/core/infra/outbox-dispatcher.ts",
     "apps/api/src/core/infra/outbox-poller.ts",
     "apps/api/src/core/infra/system-actor.ts",
-    "apps/api/src/treasury/application/**",
-    "apps/api/src/treasury/infra/**",
-    "apps/api/src/treasury/public/outbox-consumers.ts",
-    "apps/api/src/app.module.ts"
+    "apps/api/src/treasury/application/ledger-consumer.ts",
+    "apps/api/src/treasury/public/outbox-consumers.ts"
   ],
   "domainSources": [],
   "exemptSources": [],
@@ -61,5 +59,196 @@
       "at": "2026-11-24T00:51:49.375Z",
       "detail": "cobertura da feature não atendida; apps/api/src/treasury/application/**: arquivo de `sources` não existe; apps/api/src/treasury/infra/**: arquivo de `sources` não existe"
     }
+  },
+  "criteria": [
+    {
+      "id": "A1",
+      "camadas": [
+        "unit"
+      ]
+    },
+    {
+      "id": "A2",
+      "camadas": [
+        "unit"
+      ]
+    },
+    {
+      "id": "A3",
+      "camadas": [
+        "unit"
+      ]
+    },
+    {
+      "id": "A4",
+      "camadas": [
+        "unit"
+      ]
+    },
+    {
+      "id": "A5",
+      "camadas": [
+        "unit"
+      ]
+    },
+    {
+      "id": "A6",
+      "camadas": [
+        "unit"
+      ]
+    },
+    {
+      "id": "A7",
+      "camadas": [
+        "unit"
+      ]
+    },
+    {
+      "id": "A8",
+      "camadas": [
+        "unit"
+      ]
+    },
+    {
+      "id": "A9",
+      "camadas": [
+        "unit"
+      ]
+    },
+    {
+      "id": "A10",
+      "camadas": [
+        "unit"
+      ]
+    },
+    {
+      "id": "A11",
+      "camadas": [
+        "unit"
+      ]
+    },
+    {
+      "id": "A12",
+      "camadas": [
+        "unit"
+      ]
+    },
+    {
+      "id": "A13",
+      "camadas": [
+        "unit"
+      ]
+    },
+    {
+      "id": "A14",
+      "camadas": [
+        "unit"
+      ]
+    }
+  ],
+  "scenarios": [
+    {
+      "id": "C13",
+      "criterio": "A1",
+      "camada": "unit",
+      "arquivo": "apps/api/src/treasury/application/ledger-consumer.test.ts",
+      "teste": "C13 (A1): a new loan activation writes a DISBURSEMENT of -principal in the event account"
+    },
+    {
+      "id": "C14",
+      "criterio": "A2",
+      "camada": "unit",
+      "arquivo": "apps/api/src/treasury/application/ledger-consumer.test.ts",
+      "teste": "C14 (A2): originType %s writes nothing and the event is published"
+    },
+    {
+      "id": "C15",
+      "criterio": "A3",
+      "camada": "unit",
+      "arquivo": "apps/api/src/treasury/application/ledger-consumer.test.ts",
+      "teste": "C15 (A3): an IMPORT activation writes the DISBURSEMENT"
+    },
+    {
+      "id": "C16",
+      "criterio": "A4",
+      "camada": "unit",
+      "arquivo": "apps/api/src/treasury/application/ledger-consumer.test.ts",
+      "teste": "C16 (A4): one REPAYMENT per component with the sum over the allocations"
+    },
+    {
+      "id": "C18",
+      "criterio": "A5",
+      "camada": "unit",
+      "arquivo": "apps/api/src/treasury/application/ledger-consumer.test.ts",
+      "teste": "C18 (A5): a recovery payment writes a single REPAYMENT RECOVERY of amountCents"
+    },
+    {
+      "id": "C19",
+      "criterio": "A6",
+      "camada": "unit",
+      "arquivo": "apps/api/src/treasury/application/ledger-consumer.test.ts",
+      "teste": "C19 (A6): a reversal mirrors every REPAYMENT, dated today in Brasília, and the payment sums to zero"
+    },
+    {
+      "id": "C20",
+      "criterio": "A7",
+      "camada": "unit",
+      "arquivo": "apps/api/src/treasury/application/ledger-consumer.test.ts",
+      "teste": "C20 (A7): a reversal before its REPAYMENT fails and succeeds on a later run"
+    },
+    {
+      "id": "C21",
+      "criterio": "A8",
+      "camada": "unit",
+      "arquivo": "apps/api/src/treasury/application/ledger-consumer.test.ts",
+      "teste": "C21 (A8): subscribes exactly to LoanActivated, PaymentConfirmed and PaymentReversed"
+    },
+    {
+      "id": "C4",
+      "criterio": "A9",
+      "camada": "unit",
+      "arquivo": "apps/api/src/core/infra/outbox-dispatcher.test.ts",
+      "teste": "C4: running twice, or again after clearing published_at, never handles the event twice"
+    },
+    {
+      "id": "C6",
+      "criterio": "A10",
+      "camada": "unit",
+      "arquivo": "apps/api/src/core/infra/outbox-dispatcher.test.ts",
+      "teste": "C6: a failing event gets attempts + 1 and last_error while the rest of the batch is published"
+    },
+    {
+      "id": "C10",
+      "criterio": "A11",
+      "camada": "unit",
+      "arquivo": "apps/api/src/core/infra/outbox-dispatcher.test.ts",
+      "teste": "C10: reads at most 100 events per run, in occurred_at then id order"
+    },
+    {
+      "id": "C9",
+      "criterio": "A12",
+      "camada": "unit",
+      "arquivo": "apps/api/src/core/infra/outbox-dispatcher.test.ts",
+      "teste": "C9: an error in a later consumer rolls back the earlier writes and processed_events"
+    },
+    {
+      "id": "C11",
+      "criterio": "A13",
+      "camada": "unit",
+      "arquivo": "apps/api/src/core/infra/outbox-dispatcher.test.ts",
+      "teste": "C11: calls the dispatcher every 2000 ms with the database and the consumers, and stops on destroy"
+    },
+    {
+      "id": "C23",
+      "criterio": "A14",
+      "camada": "unit",
+      "arquivo": "apps/api/src/treasury/http/ledger-from-events.http.test.ts",
+      "teste": "C23: activation plus confirmation leave the account balance at -principal + paid"
+    }
+  ],
+  "testShas": {
+    "apps/api/src/core/infra/outbox-dispatcher.test.ts": "900280091615b8773c4f837a81bfe1868a3d9ea9",
+    "apps/api/src/treasury/application/ledger-consumer.test.ts": "ee794b0f9872bddd5fe1779db67b2338037eaa28",
+    "apps/api/src/treasury/http/ledger-from-events.http.test.ts": "db515d4998c9f46e19f66021a5850e3855d065b6"
   }
 }

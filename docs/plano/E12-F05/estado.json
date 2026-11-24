@@ -38,15 +38,67 @@
   },
   "sources": [
     "apps/web/lib/api/treasury.ts",
-    "apps/web/app/(admin)/caixa/**",
-    "apps/web/components/treasury/**",
+    "apps/web/app/(admin)/caixa/actions.ts",
+    "apps/web/app/(admin)/caixa/error.tsx",
+    "apps/web/app/(admin)/caixa/loading.tsx",
+    "apps/web/app/(admin)/caixa/page.tsx",
+    "apps/web/components/treasury/entry-actions.ts",
+    "apps/web/components/treasury/entry-dialog.tsx",
+    "apps/web/components/treasury/statement-filters.tsx",
+    "apps/web/components/treasury/statement-table.tsx",
+    "apps/web/components/treasury/summary-cards.tsx",
+    "apps/web/components/treasury/treasury-format.ts",
     "apps/web/components/shared/admin-nav.tsx",
     "apps/web/components/loans/loan-draft-actions.tsx",
-    "apps/web/lib/labels.ts",
-    "apps/web/lib/labels.test.ts"
+    "apps/web/lib/labels.ts"
   ],
   "domainSources": [],
   "exemptSources": [],
   "tests": [],
-  "e2e": []
+  "e2e": [
+    "apps/web/e2e/treasury.e2e.ts"
+  ],
+  "criteria": [
+    {
+      "id": "A2",
+      "camadas": [
+        "e2e"
+      ]
+    },
+    {
+      "id": "A3",
+      "camadas": [
+        "e2e"
+      ]
+    },
+    {
+      "id": "A6",
+      "camadas": [
+        "e2e"
+      ]
+    }
+  ],
+  "scenarios": [
+    {
+      "id": "C1",
+      "criterio": "A2",
+      "camada": "e2e",
+      "arquivo": "apps/web/e2e/treasury.e2e.ts",
+      "teste": "posts deposit, adjustment and withdrawal and shows signs, balance after and the statement row"
+    },
+    {
+      "id": "C2",
+      "criterio": "A3",
+      "camada": "e2e",
+      "arquivo": "apps/web/e2e/treasury.e2e.ts",
+      "teste": "posts deposit, adjustment and withdrawal and shows signs, balance after and the statement row"
+    },
+    {
+      "id": "C3",
+      "criterio": "A6",
+      "camada": "e2e",
+      "arquivo": "apps/web/e2e/treasury.e2e.ts",
+      "teste": "warns about low cash on activation, then disbursement, repayment and reversal reach the treasury"
+    }
+  ]
 }
