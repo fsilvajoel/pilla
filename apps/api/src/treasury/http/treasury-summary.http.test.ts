@@ -10,6 +10,7 @@ import type { ApiEnv } from "../../core/http/env";
 import { dispatchOutbox } from "../../core/infra/outbox-dispatcher";
 import { DATABASE_HANDLE } from "../../db/database";
 import { migratedTestDb } from "../../db/test-db";
+import { BASE_ACCOUNT_ID } from "../infra/account-repository";
 import { treasuryOutboxConsumers } from "../public/outbox-consumers";
 
 // E12-F04 (RF-32, RN-T01; E12 D7, D8; ADR-0005: o painel calcula na hora e não grava nada).
@@ -200,7 +201,11 @@ describe("GET /api/v1/treasury/summary (E12-F04, D7)", () => {
   });
 
   it("C2 (A2): capital of 100.000,00 and a 30.000,00 loan commit 30% of the money", async () => {
-    await client.query("update treasury.accounts set max_committed_bps = 8000 where id = $1", [ACCOUNT]);
+    // O teto vem da conta base (D6), não da primeira conta ativa.
+    await client.query(
+      "insert into treasury.accounts (id, name, active, max_committed_bps) values ($1, 'Conta base', true, 8000)",
+      [BASE_ACCOUNT_ID],
+    );
     await seedCapital(CAPITAL_ENTRY, CAPITAL, "CAPITAL_IN");
     await activate();
     // Caixa 10.000.000 - 3.000.000; comprometido 3.000.000 × 10000 / 10.000.000 = 3000.

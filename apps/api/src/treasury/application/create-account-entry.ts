@@ -18,6 +18,24 @@ function signedAmount(request: AccountEntryRequest): number {
   return request.type === "CAPITAL_OUT" ? -request.amountCents : request.amountCents;
 }
 
+/** A chave só repete o mesmo pedido: conta, tipo, valor, data e justificativa iguais ao já gravado. */
+function sameRequest(row: LedgerEntryRow, accountId: string, request: AccountEntryRequest): boolean {
+  return (
+    row.accountId === accountId &&
+    row.type === request.type &&
+    row.amountCents === signedAmount(request) &&
+    row.entryDate === request.entryDate &&
+    row.justification === (request.justification ?? null)
+  );
+}
+
+function replayOf(row: LedgerEntryRow, accountId: string, request: AccountEntryRequest): AccountEntryResponse {
+  if (!sameRequest(row, accountId, request)) {
+    throw new ProblemException("IDEMPOTENCY_KEY_REUSED", "Idempotency-Key já usada em outro pedido.");
+  }
+  return toResponse(row);
+}
+
 function toResponse(row: LedgerEntryRow): AccountEntryResponse {
   return accountEntryResponse.parse({
     id: row.id,
@@ -58,7 +76,7 @@ function auditOf(actor: RequestActor, row: LedgerEntryRow, at: Date): AuditEntry
 
 /**
  * Lançamento manual na conta (RF-30, RN-T01): grava o lançamento e a auditoria numa transação. Com a mesma
- * `Idempotency-Key`, devolve o lançamento já gravado.
+ * `Idempotency-Key`, devolve o lançamento já gravado se o pedido for o mesmo e recusa com 409 se for outro.
  */
 export async function createAccountEntry(
   db: Database,
@@ -70,16 +88,17 @@ export async function createAccountEntry(
 ): Promise<AccountEntryResponse> {
   if (idempotencyKey !== undefined) {
     const existing = await findEntryByIdempotencyKey(db, idempotencyKey);
-    if (existing !== null) return toResponse(existing);
+    if (existing !== null) return replayOf(existing, accountId, request);
   }
   const active = await findAccountActive(db, accountId);
   if (active === null) throw new ProblemException("NOT_FOUND", "Recurso não encontrado.");
   if (!active) throw invalid("accountId", "Conta inativa.");
   if (request.entryDate > todayInBrasilia(now)) throw invalid("entryDate", "A data não pode ser futura.");
+  const id = nextId();
   const stored = await insertEntryWithAudit(
     db,
     {
-      id: nextId(),
+      id,
       accountId,
       type: request.type,
       amountCents: signedAmount(request),
@@ -90,5 +109,5 @@ export async function createAccountEntry(
     },
     (row) => auditOf(actor, row, now),
   );
-  return toResponse(stored);
+  return stored.id === id ? toResponse(stored) : replayOf(stored, accountId, request);
 }

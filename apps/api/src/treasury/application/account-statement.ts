@@ -34,18 +34,25 @@ export async function accountStatement(
   accountId: string,
   query: AccountStatementQuery,
 ): Promise<AccountStatementResponse> {
-  if (!(await accountExists(db, accountId))) throw new ProblemException("NOT_FOUND", "Recurso não encontrado.");
-  const afterId = query.cursor === undefined ? null : decodeCursor(query.cursor);
-  if (afterId !== null && !(await ledgerEntryExists(db, accountId, afterId))) {
-    throw invalid("cursor", "Cursor inválido.");
-  }
   const from = query.from ?? null;
   const to = query.to ?? null;
-  const [openingBalanceCents, closingBalanceCents, rows] = await Promise.all([
-    from === null ? Promise.resolve(0) : balanceBefore(db, accountId, from),
-    balanceUpTo(db, accountId, to),
-    selectStatementPage(db, { accountId, from, to, limit: query.limit, afterId }),
-  ]);
+  // Um snapshot só: abertura, fechamento e página não podem enxergar gravações diferentes (o fechamento tem que
+  // bater com o `balanceAfterCents` do último item).
+  const { openingBalanceCents, closingBalanceCents, rows } = await db.transaction(
+    async (tx) => {
+      if (!(await accountExists(tx, accountId))) throw new ProblemException("NOT_FOUND", "Recurso não encontrado.");
+      const afterId = query.cursor === undefined ? null : decodeCursor(query.cursor);
+      if (afterId !== null && !(await ledgerEntryExists(tx, accountId, afterId))) {
+        throw invalid("cursor", "Cursor inválido.");
+      }
+      return {
+        openingBalanceCents: from === null ? 0 : await balanceBefore(tx, accountId, from),
+        closingBalanceCents: await balanceUpTo(tx, accountId, to),
+        rows: await selectStatementPage(tx, { accountId, from, to, limit: query.limit, afterId }),
+      };
+    },
+    { isolationLevel: "repeatable read" },
+  );
   const page = rows.slice(0, query.limit);
   const last = page.at(-1);
   return {

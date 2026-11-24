@@ -1,5 +1,5 @@
 import { and, asc, eq, gt, gte, lt, lte, or, sql, type SQL } from "drizzle-orm";
-import type { Database } from "../../db/database";
+import type { PgDatabase, PgQueryResultHKT } from "drizzle-orm/pg-core";
 import { sumCents } from "./account-balances";
 import { accounts, ledgerEntries, type LedgerEntryRow } from "./schema";
 
@@ -15,12 +15,16 @@ export type StatementPageParams = {
   readonly afterId: string | null;
 };
 
-export async function accountExists(db: Database, accountId: string): Promise<boolean> {
+export async function accountExists(db: PgDatabase<PgQueryResultHKT>, accountId: string): Promise<boolean> {
   const rows = await db.select({ id: accounts.id }).from(accounts).where(eq(accounts.id, accountId));
   return rows.length > 0;
 }
 
-export async function ledgerEntryExists(db: Database, accountId: string, entryId: string): Promise<boolean> {
+export async function ledgerEntryExists(
+  db: PgDatabase<PgQueryResultHKT>,
+  accountId: string,
+  entryId: string,
+): Promise<boolean> {
   const rows = await db
     .select({ id: ledgerEntries.id })
     .from(ledgerEntries)
@@ -29,7 +33,11 @@ export async function ledgerEntryExists(db: Database, accountId: string, entryId
 }
 
 /** Saldo da conta até a data (inclusive) ou o saldo atual sem data. */
-export async function balanceUpTo(db: Database, accountId: string, to: string | null): Promise<number> {
+export async function balanceUpTo(
+  db: PgDatabase<PgQueryResultHKT>,
+  accountId: string,
+  to: string | null,
+): Promise<number> {
   const rows = await db
     .select({ total: sumCents })
     .from(ledgerEntries)
@@ -38,7 +46,11 @@ export async function balanceUpTo(db: Database, accountId: string, to: string | 
 }
 
 /** Saldo da conta antes da data (exclusive). */
-export async function balanceBefore(db: Database, accountId: string, date: string): Promise<number> {
+export async function balanceBefore(
+  db: PgDatabase<PgQueryResultHKT>,
+  accountId: string,
+  date: string,
+): Promise<number> {
   const rows = await db
     .select({ total: sumCents })
     .from(ledgerEntries)
@@ -51,7 +63,10 @@ export async function balanceBefore(db: Database, accountId: string, date: strin
  * sobre a conta inteira (por isso `from` e o cursor filtram depois da soma). Lê `limit + 1` linhas para saber se há
  * próxima página; a posição do cursor sai do próprio banco, sem perder a precisão do instante.
  */
-export async function selectStatementPage(db: Database, params: StatementPageParams): Promise<StatementEntryRow[]> {
+export async function selectStatementPage(
+  db: PgDatabase<PgQueryResultHKT>,
+  params: StatementPageParams,
+): Promise<StatementEntryRow[]> {
   const order = sql`${ledgerEntries.entryDate}, ${ledgerEntries.createdAt}, ${ledgerEntries.id}`;
   const ranked = db.$with("ranked").as(
     db
