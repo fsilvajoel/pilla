@@ -1,3 +1,47 @@
+# Revisão final E5-F02 (fechamento do E5, 23/11)
+
+revisor: reviewer
+base: `3faea69` (docs/mvp-planning); teste `person-repository.test.ts` b78b1319d1e85282b19c11271ca4ebf1db8be927 (= sha assinado em `estado.json:127`)
+
+## Critérios de aceite
+- [x] A1 — `person-repository.ts:8-10`: `await db.insert(persons).values(row)`, sem retorno. C1 (`person-repository.test.ts:19-58`): `resolves.toBeUndefined()` e linha literal com email, birth_date, referred_by_id e notes nulos, active true, version 1.
+- [x] A2 — mesmo código; C2 (`test.ts:60-109`): João com `cpf` nulo e `referredById` da Ana, todos os campos literais (RN-P01 permite nulo, RN-P02 indicador existente).
+- [x] A3 — `person-repository.ts:9`: sem if/try/catch; o erro do banco sobe. C3 (`test.ts:111-132`) exige `cause.message` com `persons_cpf_key`, que bate com `migrations/people/0001_people_tables.sql:58` (índice único parcial, só não nulos).
+- [x] A4 — `person-repository.ts:13-16`: `select().from(persons).where(eq(persons.id, id))` e `rows[0] ?? null`. C4 (`test.ts:147-176`): camelCase, `birthDate` texto (`schema.ts:29`, `date()` modo string), `createdAt`/`updatedAt` `Date`, sem chave snake_case; C5 (`test.ts:178-182`): `null`.
+- [x] A5 — 100% linhas/ramos/funções de `person-repository.ts` (3/3, 2/2, 2/2); typecheck e lint verdes; sem `@stub E5` em `apps/api/src` nem exclusão em `vitest.config.ts`.
+
+Contrato: imports, `NewPersonRow` e as duas assinaturas batem literalmente com `plano.md:23-31` e com o `done` do E5-T06 (`E5.yaml`). Sem `any`, `@ts-ignore` nem `eslint-disable`. `NewPersonRow` já é consumido por `person-update.ts:3` (E5-F05), sem quebrar.
+
+## Gates (rodados nesta revisão)
+| Gate | Resultado |
+|---|---|
+| `vitest run person-repository.test.ts --coverage` (check do E5-T06) | PASS (5/5, 100%) |
+| `pnpm --filter @pilla/api typecheck` / `lint` | PASS / PASS |
+| `pnpm gate tests-reviewed E5-F02` | PASS (sha assinado = sha do arquivo) |
+| `pnpm gate coverage E5-F02` | PASS |
+| `pnpm gate e2e E5-F02` | PASS (nenhum critério e2e) |
+| `pnpm gate mutation E5-F02` | não rodado de novo: "nada a medir" (`domainSources` vazio), aceito pelo plano (infra pura) e pelo D4 |
+
+## Achados da rodada anterior
+- RN-P01 citada no comentário (`person-repository.ts:7`): resolvido.
+- `testes.md` presente (`docs/plano/E5-F02/testes.md`): resolvido.
+- `stages.testReview`/`implement` em `done`: resolvido.
+- Mutação sem medição: aceita; registrada e fechada em `docs/defeitos/D4.md`.
+
+## Coerência das demais features do E5 (estado.json x código x testes)
+Conferido: todo `scenarios[].teste` existe no `arquivo` citado; todo arquivo de `tests` existe e tem o sha assinado; `tests-reviewed`, `coverage` e `e2e` rodados de novo; os `domainSources` (ids.ts, loan-status.ts, reversal.ts) não mudaram depois da medição de mutação registrada. 64/64 testes verdes nos arquivos de teste do E5 mais `persons.test.ts`.
+- E5-F01 (ids, audit): coerente; tests-reviewed, coverage (100%) e e2e PASS.
+- E5-F03 (loan-status): coerente; PASS nos três.
+- E5-F04 (reversal): coerente; PASS nos três.
+- E5-F05 (update, write-error, list): **incoerente hoje**. `pnpm gate coverage E5-F05` dá FAIL: `person-list.ts` com lines 38/39, branches 18/20. O E9-T06 (`16898f6`, mesclado em `340ff7f`) mudou `person-list.ts` depois da revisão aprovada (`967acd2`): fold de acento (`person-list.ts:40-50`) e guarda de regex (`person-list.ts:59-61`), que deixam `person-list.ts:64` e o ramo acentuado de `person-list.ts:44` sem teste nos arquivos de `tests` da E5-F05. `defensive-branches.test.ts:49` e `person-list.d5.test.ts` cobrem a linha 64, mas não estão em `tests` de nenhum `estado.json`, e o ramo da linha 44 continua sem cobertura mesmo com eles (95% de ramos). O `review: done` da E5-F05 vale para o código de 19/11, não para o HEAD. Além disso, `estado.json` da E5-F05 só tem os gates `expect-red` e `tests-reviewed`; sem `coverage`, `mutation` e `e2e` gravados, o `status.py` a deixa em `mutation_e2e` (88%) e o E5 não chega a 100%.
+  - fora do escopo desta revisão (E5-F02); não alterado aqui. Ação do orquestrador: abrir `docs/defeitos/D6.md` (origem `revisão`, feature E5-F05, camada unit) para cobrir o ramo acentuado e a busca só de pontuação nos testes da feature (ou incluir os arquivos em `tests`) e rodar `pnpm gate coverage E5-F05` de novo.
+
+## Lacunas
+- nenhuma em critério de aceite da E5-F02.
+
+## Veredito
+aprovado (E5-F02). Ressalva para o fechamento do E5: E5-F05 com gate coverage em FAIL no HEAD, acima.
+
 # Revisão final E5-F02
 
 revisor: reviewer

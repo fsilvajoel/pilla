@@ -22,7 +22,8 @@
       "status": "done"
     },
     "review": {
-      "status": "pending"
+      "status": "done",
+      "verdict": "aprovado"
     }
   },
   "sources": [
@@ -64,12 +65,12 @@
     },
     "tests-reviewed": {
       "status": "PASS",
-      "at": "2026-11-19T19:38:43.679Z",
+      "at": "2026-11-24T00:52:01.786Z",
       "detail": "1 teste(s) com sha assinado"
     },
     "coverage": {
       "status": "PASS",
-      "at": "2026-11-19T19:38:49.310Z",
+      "at": "2026-11-24T00:52:11.488Z",
       "detail": "100% nos arquivos da feature em apps/api (src/people/infra/person-repository.ts)"
     },
     "mutation": {
@@ -79,7 +80,7 @@
     },
     "e2e": {
       "status": "PASS",
-      "at": "2026-11-19T19:21:01.361Z",
+      "at": "2026-11-24T00:52:11.676Z",
       "detail": "nenhum e2e na feature (nenhum critério e2e)"
     }
   },
