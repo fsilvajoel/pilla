@@ -1,0 +1,16 @@
+{
+  "feature": "E14-F06",
+  "stages": {
+    "plan": {
+      "status": "done",
+      "commit": "e484b71"
+    },
+    "implement": {
+      "status": "done",
+      "commits": [
+        "8b7af93"
+      ],
+      "note": "sem teste de tela (E13 D10); o commit 8b7af93 não cita o cartão E14-T11"
+    }
+  }
+}

@@ -36,19 +36,16 @@
       "status": "needs_input",
       "worker": "opus",
       "verdict": "aprovado com ressalvas",
-      "note": "gates tests-reviewed/coverage em FAIL (estado sem criteria/scenarios/testShas; sources com glob); mutation/e2e não rodados; achados em D6"
+      "note": "criteria/scenarios/testShas e sources reais preenchidos (24/11, ver docs/plano/E12-estado-pendencias.md); gates tests-reviewed e coverage ainda a rodar; mutation/e2e não rodados; achados em D6"
     }
   },
   "sources": [
-    "apps/api/migrations/treasury/0001_ledger_idempotency_key.sql",
-    "apps/api/migrations/treasury/meta/**",
+    "apps/api/src/treasury/application/create-account-entry.ts",
+    "apps/api/src/treasury/application/ledger-repository.ts",
+    "apps/api/src/treasury/application/monotonic-id.ts",
+    "apps/api/src/treasury/http/accounts.controller.ts",
     "apps/api/src/treasury/infra/schema.ts",
-    "apps/api/src/treasury/application/**",
-    "apps/api/src/treasury/http/**",
-    "packages/schemas/src/api/treasury/account-entry.ts",
-    "packages/schemas/src/index.ts",
-    "packages/schemas/src/api/api.test.ts",
-    "apps/api/src/app.module.ts"
+    "packages/schemas/src/api/treasury/account-entry.ts"
   ],
   "domainSources": [],
   "exemptSources": [],
@@ -56,5 +53,143 @@
     "apps/api/src/treasury/http/account-entries.http.test.ts",
     "packages/schemas/src/api/treasury/account-entry.test.ts"
   ],
-  "e2e": []
+  "e2e": [],
+  "criteria": [
+    {
+      "id": "A1",
+      "camadas": [
+        "unit"
+      ]
+    },
+    {
+      "id": "A2",
+      "camadas": [
+        "unit"
+      ]
+    },
+    {
+      "id": "A3",
+      "camadas": [
+        "unit"
+      ]
+    },
+    {
+      "id": "A4",
+      "camadas": [
+        "unit"
+      ]
+    },
+    {
+      "id": "A5",
+      "camadas": [
+        "unit"
+      ]
+    },
+    {
+      "id": "A6",
+      "camadas": [
+        "unit"
+      ]
+    },
+    {
+      "id": "A7",
+      "camadas": [
+        "unit"
+      ]
+    },
+    {
+      "id": "A8",
+      "camadas": [
+        "unit"
+      ]
+    },
+    {
+      "id": "A10",
+      "camadas": [
+        "unit"
+      ]
+    },
+    {
+      "id": "A11",
+      "camadas": [
+        "unit"
+      ]
+    }
+  ],
+  "scenarios": [
+    {
+      "id": "C1",
+      "criterio": "A1",
+      "camada": "unit",
+      "arquivo": "apps/api/src/treasury/http/account-entries.http.test.ts",
+      "teste": "C1 (A1): a deposit writes +amountCents with no component or source and answers 201"
+    },
+    {
+      "id": "C2",
+      "criterio": "A2",
+      "camada": "unit",
+      "arquivo": "apps/api/src/treasury/http/account-entries.http.test.ts",
+      "teste": "C2 (A2): a withdrawal receives a positive amount and writes -amountCents"
+    },
+    {
+      "id": "C3",
+      "criterio": "A3",
+      "camada": "unit",
+      "arquivo": "apps/api/src/treasury/http/account-entries.http.test.ts",
+      "teste": "C3 (A3): an adjustment writes the signed amount with its justification, positive and negative"
+    },
+    {
+      "id": "C4",
+      "criterio": "A4",
+      "camada": "unit",
+      "arquivo": "apps/api/src/treasury/http/account-entries.http.test.ts",
+      "teste": "C4 (A4): each entry writes a ledger_entry.created audit row"
+    },
+    {
+      "id": "C5",
+      "criterio": "A5",
+      "camada": "unit",
+      "arquivo": "apps/api/src/treasury/http/account-entries.http.test.ts",
+      "teste": "C5 (A5): the same Idempotency-Key twice writes one entry and both answers carry the same id"
+    },
+    {
+      "id": "C7",
+      "criterio": "A6",
+      "camada": "unit",
+      "arquivo": "apps/api/src/treasury/http/account-entries.http.test.ts",
+      "teste": "C7 (A6): tomorrow answers 400 VALIDATION_FAILED on entryDate and writes nothing"
+    },
+    {
+      "id": "C8",
+      "criterio": "A7",
+      "camada": "unit",
+      "arquivo": "apps/api/src/treasury/http/account-entries.http.test.ts",
+      "teste": "C8 (A7): an unknown account answers 404 NOT_FOUND and writes nothing"
+    },
+    {
+      "id": "C15",
+      "criterio": "A8",
+      "camada": "unit",
+      "arquivo": "apps/api/src/treasury/http/account-entries.http.test.ts",
+      "teste": "C15 (A8, A9): %s answers 400 VALIDATION_FAILED and writes no entry or audit row"
+    },
+    {
+      "id": "C16",
+      "criterio": "A10",
+      "camada": "unit",
+      "arquivo": "apps/api/src/treasury/http/account-entries.http.test.ts",
+      "teste": "C16 (A10): a withdrawal above the balance is accepted and leaves a negative balance"
+    },
+    {
+      "id": "C17",
+      "criterio": "A11",
+      "camada": "unit",
+      "arquivo": "packages/schemas/src/api/treasury/account-entry.test.ts",
+      "teste": "accepts a manual entry with null component and source"
+    }
+  ],
+  "testShas": {
+    "apps/api/src/treasury/http/account-entries.http.test.ts": "04fdd61d9aeb6e8ca22b53a0eed2394e3fe5ae00",
+    "packages/schemas/src/api/treasury/account-entry.test.ts": "1049d38d11f2fe649c172062950a6b7c585ece5f"
+  }
 }

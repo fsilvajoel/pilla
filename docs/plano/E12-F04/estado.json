@@ -33,15 +33,16 @@
       "status": "needs_input",
       "worker": "opus",
       "verdict": "aprovado com ressalvas",
-      "note": "gates tests-reviewed/coverage em FAIL (estado sem criteria/scenarios/testShas; sources com glob); mutation/e2e não rodados; achados em D6"
+      "note": "criteria/scenarios/testShas e sources reais preenchidos (24/11, ver docs/plano/E12-estado-pendencias.md); gates tests-reviewed e coverage ainda a rodar; mutation/e2e não rodados; achados em D6"
     }
   },
   "sources": [
-    "apps/api/src/treasury/**",
+    "apps/api/src/treasury/application/treasury-summary.ts",
+    "apps/api/src/treasury/application/committed-shares.ts",
+    "apps/api/src/treasury/http/treasury-summary.controller.ts",
+    "apps/api/src/treasury/infra/summary-queries.ts",
     "apps/api/src/lending/public/portfolio-figures.ts",
-    "packages/schemas/src/api/treasury/treasury-summary.ts",
-    "packages/schemas/src/index.ts",
-    "apps/api/src/app.module.ts"
+    "packages/schemas/src/api/treasury/treasury-summary.ts"
   ],
   "domainSources": [],
   "exemptSources": [],
@@ -50,5 +51,157 @@
     "apps/api/src/lending/public/portfolio-figures.test.ts",
     "packages/schemas/src/api/treasury/treasury-summary.test.ts"
   ],
-  "e2e": []
+  "e2e": [],
+  "criteria": [
+    {
+      "id": "A1",
+      "camadas": [
+        "unit"
+      ]
+    },
+    {
+      "id": "A2",
+      "camadas": [
+        "unit"
+      ]
+    },
+    {
+      "id": "A3",
+      "camadas": [
+        "unit"
+      ]
+    },
+    {
+      "id": "A4",
+      "camadas": [
+        "unit"
+      ]
+    },
+    {
+      "id": "A5",
+      "camadas": [
+        "unit"
+      ]
+    },
+    {
+      "id": "A7",
+      "camadas": [
+        "unit"
+      ]
+    },
+    {
+      "id": "A8",
+      "camadas": [
+        "unit"
+      ]
+    },
+    {
+      "id": "A9",
+      "camadas": [
+        "unit"
+      ]
+    },
+    {
+      "id": "A10",
+      "camadas": [
+        "unit"
+      ]
+    },
+    {
+      "id": "A11",
+      "camadas": [
+        "unit"
+      ]
+    },
+    {
+      "id": "A12",
+      "camadas": [
+        "unit"
+      ]
+    }
+  ],
+  "scenarios": [
+    {
+      "id": "C1",
+      "criterio": "A1",
+      "camada": "unit",
+      "arquivo": "apps/api/src/treasury/http/treasury-summary.http.test.ts",
+      "teste": "C1 (A1): an empty base answers zero everywhere, null percentages and the current Brasília month"
+    },
+    {
+      "id": "C2",
+      "criterio": "A2",
+      "camada": "unit",
+      "arquivo": "apps/api/src/treasury/http/treasury-summary.http.test.ts",
+      "teste": "C2 (A2): capital of 100.000,00 and a 30.000,00 loan commit 30% of the money"
+    },
+    {
+      "id": "C3",
+      "criterio": "A3",
+      "camada": "unit",
+      "arquivo": "apps/api/src/treasury/http/treasury-summary.http.test.ts",
+      "teste": "C3 (A3): a confirmed payment lowers lent by the principal paid and adds interest and late charges"
+    },
+    {
+      "id": "C4",
+      "criterio": "A4",
+      "camada": "unit",
+      "arquivo": "apps/api/src/treasury/http/treasury-summary.http.test.ts",
+      "teste": "C4 (A4): reversing the payment undoes it in the month of the reversal"
+    },
+    {
+      "id": "C5",
+      "criterio": "A5",
+      "camada": "unit",
+      "arquivo": "apps/api/src/treasury/http/treasury-summary.http.test.ts",
+      "teste": "C5 (A5): writing off moves the principal from lent to losses; recovery goes to cash, not to interest"
+    },
+    {
+      "id": "C6",
+      "criterio": "A7",
+      "camada": "unit",
+      "arquivo": "apps/api/src/treasury/http/treasury-summary.http.test.ts",
+      "teste": "C6 (A7): another month changes only the month figures and the forecast"
+    },
+    {
+      "id": "C7",
+      "criterio": "A8",
+      "camada": "unit",
+      "arquivo": "apps/api/src/treasury/http/treasury-summary.http.test.ts",
+      "teste": "C7 (A8): cash plus lent at zero or below gives null percentages"
+    },
+    {
+      "id": "C8",
+      "criterio": "A9",
+      "camada": "unit",
+      "arquivo": "apps/api/src/treasury/http/treasury-summary.http.test.ts",
+      "teste": "C8 a C10 (A9): month %j answers 400"
+    },
+    {
+      "id": "C11",
+      "criterio": "A10",
+      "camada": "unit",
+      "arquivo": "apps/api/src/lending/public/portfolio-figures.test.ts",
+      "teste": "sums open principal by status and matches the payoff quote of every active loan"
+    },
+    {
+      "id": "C21",
+      "criterio": "A11",
+      "camada": "unit",
+      "arquivo": "apps/api/src/treasury/http/treasury-summary.http.test.ts",
+      "teste": "A11: reading the summary writes nothing"
+    },
+    {
+      "id": "C16",
+      "criterio": "A12",
+      "camada": "unit",
+      "arquivo": "packages/schemas/src/api/treasury/treasury-summary.test.ts",
+      "teste": "accepts a complete summary"
+    }
+  ],
+  "testShas": {
+    "apps/api/src/treasury/http/treasury-summary.http.test.ts": "f87585e46c50d8ffe9c2a9cecc734aae5940060c",
+    "apps/api/src/lending/public/portfolio-figures.test.ts": "e98552232e0e97b696723a7c90134d31b2db22d7",
+    "packages/schemas/src/api/treasury/treasury-summary.test.ts": "9aed870f2a22abb2b3814978dd32d393f53ff2ff"
+  }
 }
