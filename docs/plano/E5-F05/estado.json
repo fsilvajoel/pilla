@@ -138,8 +138,23 @@
     },
     "tests-reviewed": {
       "status": "PASS",
-      "at": "2026-11-19T22:51:51.943Z",
+      "at": "2026-11-24T02:02:01.946Z",
       "detail": "3 teste(s) com sha assinado"
+    },
+    "coverage": {
+      "status": "PASS",
+      "at": "2026-11-24T02:02:43.559Z",
+      "detail": "100% nos arquivos da feature em apps/api (src/people/infra/person-update.ts, src/people/infra/person-write-error.ts, src/people/infra/person-list.ts)"
+    },
+    "mutation": {
+      "status": "PASS",
+      "at": "2026-11-24T02:02:43.680Z",
+      "detail": "nada a medir: `domainSources` vazio e nenhum critério mut"
+    },
+    "e2e": {
+      "status": "PASS",
+      "at": "2026-11-24T02:02:43.841Z",
+      "detail": "nenhum e2e na feature (nenhum critério e2e)"
     }
   },
   "tests": [
@@ -342,5 +357,10 @@
         "person-list.ts: lower() do Postgres vs toLowerCase() do JS (baixa, não verificado)"
       ]
     }
-  }
+  },
+  "regressionTests": [
+    "apps/api/src/people/infra/person-list.fold.test.ts",
+    "apps/api/src/people/infra/defensive-branches.test.ts",
+    "apps/api/src/people/infra/person-list.d5.test.ts"
+  ]
 }

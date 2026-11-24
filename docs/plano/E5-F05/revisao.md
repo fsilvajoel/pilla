@@ -110,3 +110,25 @@ Estado: os testes serão refeitos pela Bia; `scenarios`/`expect-red` do `estado.
 ## Decisão do Joel (19/11): Q2 = a
 
 Cursor malformado lança `Error("invalid cursor")` na infra; a borda HTTP traduz para 400 `VALIDATION_FAILED` depois (fora desta feature). Mudou: critério A17 e cenário C19 no plano (quatro cursores literais: `"abc"`, `"bm90IGpzb24="`, `"eyJmdWxsTmFtZSI6ImFuYSJ9"`, `"eyJmdWxsTmFtZSI6MSwiaWQiOiJ4In0="`); linha do cursor na tabela de domínio; T15 com o C19 no `done` (nove cenários, nove testes); T16 com a validação do cursor no `done` e hint de narrowing sem `any`; A17 em `estado.json`; pergunta resolvida em `pendencias-pm.md`. O T15 precisa ser refeito pela Bia.
+
+## Reabertura (23/11): cobertura de `person-list.ts` depois do E9-T06
+
+revisor: Claude Sonnet (executor do reparo); base `e98ea11` (docs/mvp-planning)
+
+Motivo: a revisão do E5-F02 achou `pnpm gate coverage E5-F05` em FAIL. O E9-T06 (`16898f6`) mudou `person-list.ts` (fold de acento, guarda de regex) depois da revisão aprovada de 19/11, e o `estado.json` não tinha os gates `coverage`, `mutation` e `e2e`.
+
+Feito
+- Teste novo `apps/api/src/people/infra/person-list.fold.test.ts` (3 testes): busca com acento (`José`, `CONCEIÇÃO`), busca sem acento (`jose conceicao`) contra nome acentuado, e busca só de pontuação (`-`, ` . `) valendo como nome e sem casar CPF (linha 64). Os testes assinados não foram editados.
+- `estado.json`: `regressionTests` com o teste novo, `defensive-branches.test.ts` e `person-list.d5.test.ts`. Ficam fora de `tests` de propósito: `tests` exige sha assinado, e a assinatura está bloqueada porque `expect-red` está FAIL (rodado depois da implementação; ver `manualApproval`).
+
+Gates rodados
+| Gate | Resultado |
+|---|---|
+| `tests-reviewed` | PASS (3 testes assinados, inalterados) |
+| `coverage` | PASS (100% nos três `sources`) |
+| `mutation` | PASS (nada a medir, `domainSources` vazio) |
+| `e2e` | PASS (nenhum critério e2e) |
+| `check_status_consistency.py` | sem achados |
+| `status.py` | E5 em 100% (5/5 features) |
+
+Veredito: aprovado, com ressalva. O teste novo é de regressão, escrito pelo mesmo agente que corrige, sem revisão independente nem sha assinado. `expect-red` segue FAIL por herança (aprovação manual do Joel). Os três achados abertos do `manualApproval.review` (busca mista letra+dígito, cursor não-UUID, `lower()` Postgres vs JS) não são tratados aqui; o segundo e o terceiro têm cobertura parcial no D5.
