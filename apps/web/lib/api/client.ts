@@ -1,5 +1,6 @@
 import type { z } from "zod";
 import { ApiProblem, parseProblem } from "./problem";
+import { SESSION_COOKIE, readSessionToken, redirectToLogin } from "./session";
 
 // Só roda no servidor (ADR-0013): o navegador nunca chama a API. O pacote `server-only` não está na lista de
 // dependências permitidas, então a trava é esta checagem em tempo de execução.
@@ -13,6 +14,11 @@ function baseUrl(): string {
   return url.replace(/\/+$/, "");
 }
 
+/** URL absoluta de um caminho da API. */
+export function apiUrl(path: string): string {
+  return `${baseUrl()}${path}`;
+}
+
 export type QueryValue = string | number | undefined;
 
 export interface ApiRequest<T> {
@@ -24,6 +30,8 @@ export interface ApiRequest<T> {
   headers?: Record<string, string>;
   /** Schema Zod da resposta de sucesso (de @pilla/schemas). */
   schema: z.ZodType<T>;
+  /** Padrão `true`: um 401 manda para `/login`. O layout desliga para decidir o `next` sozinho. */
+  redirectOnUnauthorized?: boolean;
 }
 
 async function readJson(res: Response): Promise<unknown> {
@@ -43,10 +51,12 @@ export async function apiFetch<T>(req: ApiRequest<T>): Promise<T> {
   for (const [key, value] of Object.entries(req.query ?? {})) {
     if (value !== undefined && value !== "") url.searchParams.set(key, String(value));
   }
+  const token = await readSessionToken();
   const res = await fetch(url, {
     method: req.method ?? "GET",
     headers: {
       accept: "application/json, application/problem+json",
+      ...(token === undefined ? {} : { cookie: `${SESSION_COOKIE}=${token}` }),
       ...req.headers,
       ...(req.body === undefined ? {} : { "content-type": "application/json" }),
     },
@@ -54,6 +64,7 @@ export async function apiFetch<T>(req: ApiRequest<T>): Promise<T> {
     cache: "no-store",
   });
   const json = await readJson(res);
+  if (res.status === 401 && req.redirectOnUnauthorized !== false) redirectToLogin();
   if (!res.ok) throw parseProblem(res.status, json);
   const parsed = req.schema.safeParse(json);
   if (!parsed.success) throw new ApiProblem(res.status, null);
