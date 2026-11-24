@@ -30,6 +30,9 @@ function describeException(exception: unknown): Descriptor {
   const status = exception instanceof HttpException ? exception.getStatus() : 500;
   if (status === 404) return { code: "NOT_FOUND", detail: "Recurso não encontrado.", errors: undefined };
   if (status === 400) return { code: "VALIDATION_FAILED", detail: "Dados inválidos.", errors: undefined };
+  if (status === 429) {
+    return { code: "TOO_MANY_REQUESTS", detail: "Muitas tentativas. Aguarde um minuto.", errors: undefined };
+  }
   return { code: "INTERNAL_ERROR", detail: "Erro interno do servidor.", errors: undefined };
 }
 

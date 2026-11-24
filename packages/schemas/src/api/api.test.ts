@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { z } from "zod";
 import { cpfSchema, loanNumberSchema, phoneSchema } from "../common";
 import { adminLoginRequest } from "./access/admin-login";
+import { adminMeResponse } from "./access/admin-me";
 import { portalAccessRequest } from "./access/portal-access";
 import { portalSessionRequest } from "./access/portal-session";
 import { attachmentUploadUrlRequest } from "./core/attachment-upload-url";
@@ -150,6 +151,12 @@ const cases: BodyCase[] = [
     schema: adminLoginRequest,
     body: { username: "admin", password: "uma senha longa" },
     invalid: { username: "   ", password: "" },
+  },
+  {
+    name: "adminMeResponse",
+    schema: adminMeResponse,
+    body: { id: "01936f8e-7b2c-7cde-8f00-000000000001", username: "admin", role: "ADMIN" },
+    invalid: { id: "x", username: "", role: "CLIENT" },
   },
   {
     name: "portalAccessRequest",

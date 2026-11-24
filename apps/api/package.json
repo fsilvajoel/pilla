@@ -13,14 +13,17 @@
     "db:regen": "node scripts/db-regen.mjs",
     "start": "node --env-file=../../.env --import tsx --eval \"import('./src/main.ts').then((m) => m.bootstrap(process.env))\"",
     "db:migrate": "node --env-file=../../.env --import tsx scripts/migrate.mts",
-    "db:seed": "node --env-file=../../.env --import tsx scripts/seed.mts"
+    "db:seed": "node --env-file=../../.env --import tsx scripts/seed.mts",
+    "db:seed-admin": "node --env-file=../../.env --import tsx scripts/seed-admin.mts"
   },
   "dependencies": {
     "@nestjs/common": "^12.5.1",
     "@nestjs/core": "^12.5.1",
     "@nestjs/platform-express": "^12.5.1",
+    "@nestjs/throttler": "6.8.0",
     "@pilla/finance": "workspace:*",
     "@pilla/schemas": "workspace:*",
+    "argon2": "^0.45.2",
     "drizzle-orm": "^0.45.4",
     "pg": "^8.23.1",
     "reflect-metadata": "^0.2.2",

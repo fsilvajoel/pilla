@@ -15,6 +15,7 @@ export * from "./events/installment-overdue";
 export * from "./api/problem";
 export * from "./api/lending/simulate-loan";
 export * from "./api/access/admin-login";
+export * from "./api/access/admin-me";
 export * from "./api/access/portal-access";
 export * from "./api/access/portal-session";
 export * from "./api/lending/activate-loan";

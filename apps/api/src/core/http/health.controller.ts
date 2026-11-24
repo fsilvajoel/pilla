@@ -2,7 +2,9 @@ import { Controller, Get, Inject } from "@nestjs/common";
 import type { HealthResponse } from "@pilla/schemas";
 import { sql } from "drizzle-orm";
 import { DATABASE, type Database } from "../../db/database";
+import { Public } from "./public";
 
+@Public()
 @Controller("health")
 export class HealthController {
   private readonly db: Database;

@@ -1,4 +1,7 @@
 import { Inject, Module, type DynamicModule, type OnApplicationShutdown } from "@nestjs/common";
+import { APP_GUARD } from "@nestjs/core";
+import { AccessModule } from "./access/access.module";
+import { AdminSessionGuard } from "./access/http/admin-session.guard";
 import { HealthController } from "./core/http/health.controller";
 import type { ApiEnv } from "./core/http/env";
 import { OpenApiController } from "./core/http/openapi";
@@ -20,11 +23,13 @@ export class AppModule implements OnApplicationShutdown {
     return {
       module: AppModule,
       global: true,
-      imports: [PeopleModule, LendingModule, PaymentsModule],
+      imports: [PeopleModule, LendingModule, PaymentsModule, AccessModule],
       controllers: [HealthController, OpenApiController, AccountsController],
       providers: [
         { provide: DATABASE_HANDLE, useFactory: (): DatabaseHandle => createDatabase(env.databaseUrl) },
         { provide: DATABASE, useFactory: (handle: DatabaseHandle) => handle.db, inject: [DATABASE_HANDLE] },
+        // Guard global ADMIN (E14 D7): ligado uma vez só, aqui.
+        { provide: APP_GUARD, useClass: AdminSessionGuard },
       ],
       exports: [DATABASE],
     };

@@ -1,6 +1,7 @@
 import { Controller, Get } from "@nestjs/common";
 import { healthResponseSchema, problemSchema } from "@pilla/schemas";
 import { z } from "zod";
+import { Public } from "./public";
 
 type JsonSchema = z.core.JSONSchema.BaseSchema;
 type SchemaRef = { readonly $ref: string };
@@ -58,6 +59,7 @@ export function buildOpenApiDocument(): OpenApiDocument {
   };
 }
 
+@Public()
 @Controller("openapi.json")
 export class OpenApiController {
   @Get()

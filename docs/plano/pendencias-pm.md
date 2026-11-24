@@ -294,3 +294,27 @@ Formato de cada entrada:
 - opções: a) sim, uma tela e esse texto, sem bloqueio; b) painel em rota própria e/ou outro texto
 - sugestão padrão: a)
 - resposta: a) a sugestão padrão (aprovada pelo Joel em 21/11)
+
+## E14-T03 (E14-F02)
+- status: aberta
+- data: 2026-11-23
+- pergunta: quanto tempo dura a sessão do admin e quantas tentativas de login erradas são aceitas antes de bloquear?
+- opções: a) sessão cai após 2 h sem uso e no máximo 12 h depois do login; 5 tentativas por minuto por IP, depois espera um minuto; b) outros prazos e limites, a informar
+- sugestão padrão: a)
+- resposta:
+
+## E14-T09 (E14-F05)
+- status: aberta
+- data: 2026-11-23
+- pergunta: qual a regra de senha do admin, e criar admin ou recuperar senha esquecida pode ser só pelo comando no servidor (sem tela e sem e-mail) no MVP?
+- opções: a) senha de 12 a 200 caracteres, sem exigir número ou símbolo; criação e recuperação só pelo comando `db:seed-admin`; b) outra regra e/ou tela de troca de senha no MVP
+- sugestão padrão: a)
+- resposta:
+
+## E14 (esqueleto)
+- status: aberta
+- data: 2026-11-23
+- pergunta: o RF-60 (acesso do cliente ao portal) fica fora da E14 e entra junto com a entrega do portal?
+- opções: a) fora da E14, entra com o portal; b) entra na E14
+- sugestão padrão: a)
+- resposta:
