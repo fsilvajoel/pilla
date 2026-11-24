@@ -8,11 +8,14 @@ import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { FormField } from "@/components/shared/form-field";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { formatMoney } from "@/components/treasury/treasury-format";
 import type { LoanActionResult } from "./loan-actions";
 
 export type LoanDraftActionsProps = {
   readonly loanId: string;
   readonly version: number;
+  /** valor do contrato, para o aviso de caixa (RN-C10) */
+  readonly principalCents: number;
   /** hoje em Brasília (E10 D11), padrão da data de desembolso */
   readonly today: string;
   readonly accounts: readonly AccountSummary[];
@@ -24,7 +27,7 @@ const selectClass = "h-8 w-full rounded-lg border border-input bg-transparent px
 
 /** Ativar (data e conta) e Cancelar (só confirmação) de um contrato em DRAFT (E10 D12). */
 export function LoanDraftActions(props: LoanDraftActionsProps): ReactElement {
-  const { loanId, version, today, accounts, onActivate, onCancel } = props;
+  const { loanId, version, principalCents, today, accounts, onActivate, onCancel } = props;
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [disbursedAt, setDisbursedAt] = useState(today);
@@ -32,6 +35,9 @@ export function LoanDraftActions(props: LoanDraftActionsProps): ReactElement {
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Readonly<Record<string, string>>>({});
   const [confirmOpen, setConfirmOpen] = useState(false);
+
+  const chosen = accounts.find((account) => account.id === accountId);
+  const cashShort = chosen !== undefined && principalCents > chosen.balanceCents;
 
   function finish(result: LoanActionResult, success: string): void {
     if (result.ok) {
@@ -103,6 +109,12 @@ export function LoanDraftActions(props: LoanDraftActionsProps): ReactElement {
               ))}
           </select>
         </FormField>
+        {cashShort && (
+          <p role="status" className="text-sm text-amber-700 dark:text-amber-400">
+            O caixa registrado ({formatMoney(chosen.balanceCents)}) é menor que o valor do contrato (
+            {formatMoney(principalCents)}). Você pode ativar mesmo assim.
+          </p>
+        )}
         {error && (
           <p role="alert" className="text-sm text-destructive">
             {error}

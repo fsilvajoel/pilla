@@ -159,6 +159,7 @@
 | entry_date | date | |
 | justification | text null | obrigatório em `ADJUSTMENT` |
 | created_by, created_at | | |
+| idempotency_key | text null | `UNIQUE`; só nos lançamentos manuais (`Idempotency-Key` de `POST /accounts/{id}/entries`); nulo não colide |
 
 Índices: `(account_id, entry_date)`, `(source_type, source_id)`.
 

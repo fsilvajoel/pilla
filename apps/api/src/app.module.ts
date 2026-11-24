@@ -6,9 +6,12 @@ import { HealthController } from "./core/http/health.controller";
 import type { ApiEnv } from "./core/http/env";
 import { OpenApiController } from "./core/http/openapi";
 import { AccountsController } from "./treasury/http/accounts.controller";
+import { TreasurySummaryController } from "./treasury/http/treasury-summary.controller";
 import { LendingModule } from "./lending/lending.module";
 import { PaymentsModule } from "./payments/payments.module";
 import { PeopleModule } from "./people/people.module";
+import { OUTBOX_CONSUMERS, OutboxPoller } from "./core/infra/outbox-poller";
+import { treasuryOutboxConsumers } from "./treasury/public/outbox-consumers";
 import { createDatabase, DATABASE, DATABASE_HANDLE, type DatabaseHandle } from "./db/database";
 
 @Module({})
@@ -24,12 +27,14 @@ export class AppModule implements OnApplicationShutdown {
       module: AppModule,
       global: true,
       imports: [PeopleModule, LendingModule, PaymentsModule, AccessModule],
-      controllers: [HealthController, OpenApiController, AccountsController],
+      controllers: [HealthController, OpenApiController, AccountsController, TreasurySummaryController],
       providers: [
         { provide: DATABASE_HANDLE, useFactory: (): DatabaseHandle => createDatabase(env.databaseUrl) },
         { provide: DATABASE, useFactory: (handle: DatabaseHandle) => handle.db, inject: [DATABASE_HANDLE] },
         // Guard global ADMIN (E14 D7): ligado uma vez só, aqui.
         { provide: APP_GUARD, useClass: AdminSessionGuard },
+        { provide: OUTBOX_CONSUMERS, useValue: treasuryOutboxConsumers },
+        OutboxPoller,
       ],
       exports: [DATABASE],
     };

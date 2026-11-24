@@ -39,6 +39,7 @@ describe("treasury.ledger_entries (RFC-005 §6)", () => {
       "created_by uuid not null",
       "entry_date date not null",
       "id uuid not null",
+      "idempotency_key text null",
       "justification text null",
       "source_event_id uuid null",
       "source_id uuid null",
@@ -89,6 +90,7 @@ describe("treasury.ledger_entries (RFC-005 §6)", () => {
   it("has the indexes of RFC-005 §6", async () => {
     expect(await indexesOf(client, "treasury", "ledger_entries")).toEqual([
       "CREATE INDEX ledger_entries_account_id_entry_date_idx ON treasury.ledger_entries USING btree (account_id, entry_date)",
+      "CREATE UNIQUE INDEX ledger_entries_idempotency_key_key ON treasury.ledger_entries USING btree (idempotency_key)",
       "CREATE UNIQUE INDEX ledger_entries_pkey ON treasury.ledger_entries USING btree (id)",
       "CREATE UNIQUE INDEX ledger_entries_source_event_id_component_key ON treasury.ledger_entries USING btree (source_event_id, component)",
       "CREATE INDEX ledger_entries_source_type_source_id_idx ON treasury.ledger_entries USING btree (source_type, source_id)",

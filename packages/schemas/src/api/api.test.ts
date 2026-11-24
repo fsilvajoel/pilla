@@ -30,8 +30,10 @@ import { createPixKeyRequest, pixKeySchema, updatePixKeyRequest } from "./people
 import { personResponse } from "./people/person-response";
 import { updatePersonRequest } from "./people/update-person";
 import { problemSchema } from "./problem";
-import { accountEntryRequest } from "./treasury/account-entry";
+import { accountEntryRequest, accountEntryResponse } from "./treasury/account-entry";
+import { accountStatementQuery, accountStatementResponse } from "./treasury/account-statement";
 import { accountListResponse } from "./treasury/account-summary";
+import { treasurySummaryQuery, treasurySummaryResponse } from "./treasury/treasury-summary";
 
 // RFC-004 §3–§6. Ids fictícios em UUID v7; CPFs fictícios com dígitos válidos.
 const id = (n: number): string => `01936f8e-7b2c-7cde-8f00-${String(n).padStart(12, "0")}`;
@@ -516,10 +518,73 @@ const cases: BodyCase[] = [
     invalid: { items: "x", nextCursor: 1 },
   },
   {
+    name: "accountEntryResponse",
+    schema: accountEntryResponse,
+    body: {
+      id: id(5),
+      accountId: id(4),
+      type: "CAPITAL_OUT",
+      component: null,
+      amountCents: -25000,
+      entryDate: "2027-01-02",
+      justification: null,
+      sourceType: null,
+      sourceId: null,
+      createdAt: "2027-01-02T12:00:00-03:00",
+    },
+    invalid: { id: "x", type: "TRANSFER", amountCents: 10.5, entryDate: "02/01/2027", createdAt: "ontem" },
+  },
+  {
     name: "accountListResponse",
     schema: accountListResponse,
-    body: { items: [{ id: id(4), name: "Conta principal", active: true }] },
+    body: { items: [{ id: id(4), name: "Conta principal", active: true, balanceCents: 1000000 }] },
     invalid: { items: [{ id: id(4), name: "", active: true }] },
+  },
+  {
+    name: "treasurySummaryQuery",
+    schema: treasurySummaryQuery,
+    body: {},
+    optional: { month: "2027-01" },
+    invalid: { month: "2027-13" },
+  },
+  {
+    name: "treasurySummaryResponse",
+    schema: treasurySummaryResponse,
+    body: {
+      month: "2027-01",
+      cashCents: 7000000,
+      lentCents: 3000000,
+      committedBps: 3000,
+      availableBps: 7000,
+      maxCommittedBps: null,
+      interestReceivedCents: 0,
+      lateChargesReceivedCents: 0,
+      recoveredCents: 0,
+      lossesCents: 0,
+      forecastCents: 0,
+    },
+    invalid: { month: "2027-1", committedBps: 10001, cashCents: 1.5 },
+  },
+  {
+    name: "accountStatementResponse",
+    schema: accountStatementResponse,
+    body: {
+      accountId: id(4),
+      from: null,
+      to: null,
+      openingBalanceCents: 0,
+      closingBalanceCents: 0,
+      items: [],
+      nextCursor: null,
+    },
+    invalid: { from: "2027-13-01", openingBalanceCents: 1.5, items: "x", nextCursor: 1 },
+  },
+  {
+    name: "accountStatementQuery",
+    schema: accountStatementQuery,
+    body: {},
+    optional: { from: "2027-01-01", to: "2027-01-31", limit: "50", cursor: "abc" },
+    invalid: { from: "01/02/2027", to: "2027-02-30", limit: "201", cursor: "" },
   },
 ];
 

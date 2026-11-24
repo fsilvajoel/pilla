@@ -7,8 +7,8 @@ Plano da feature. Cartões: E12-T11 (testes de schema, bia), E12-T03 (testes HTT
 Entra:
 - `POST /api/v1/accounts/{id}/entries` com `accountEntryRequest` (já existe, com regras testadas em `api.test.ts`) e
   cabeçalho opcional `Idempotency-Key`. Em uma transação:
-  1. conta inexistente: 404 `NOT_FOUND`; conta inativa: 422 `VALIDATION_FAILED` com `accountId`;
-  2. `entryDate` depois de hoje em Brasília: 422 `VALIDATION_FAILED` com `entryDate`;
+  1. conta inexistente: 404 `NOT_FOUND`; conta inativa: 400 `VALIDATION_FAILED` com `accountId`;
+  2. `entryDate` depois de hoje em Brasília: 400 `VALIDATION_FAILED` com `entryDate`;
   3. grava o lançamento: CAPITAL_IN com `+amountCents`, CAPITAL_OUT com `-amountCents`, ADJUSTMENT com o valor como veio;
      `component`, `source_type`, `source_id` e `source_event_id` nulos; `justification` como veio; `created_by` = ator
      da requisição (provisório, como em payments);
@@ -28,11 +28,11 @@ Fora: editar ou apagar lançamento (ADR-0006: a correção é um ajuste novo); l
 
 | Entrada | Formato | Mínimo | Máximo | Rejeitados | Erro | Fonte |
 |---|---|---|---|---|---|---|
-| `id` | UUID | - | - | "x" | 400; inexistente 404; inativa 422 | RFC-004 §2 |
+| `id` | UUID | - | - | "x" | 400; inexistente 404; inativa 400 | RFC-004 §2 |
 | `type` | CAPITAL_IN, CAPITAL_OUT, ADJUSTMENT | - | - | DISBURSEMENT, REPAYMENT, REVERSAL, "x" | 400 `VALIDATION_FAILED` | RF-30 |
 | `amountCents` (aporte, retirada) | inteiro positivo | 1 | limite de `positiveCentsSchema` | 0, -1, 10.5, "100" | 400 | ADR-0004 |
 | `amountCents` (ajuste) | inteiro com sinal | limite de `signedCentsSchema` | idem | 0, 10.5 | 400 | ADR-0004 |
-| `entryDate` | YYYY-MM-DD | - | hoje em Brasília | "02/01/2027", amanhã | 400 formato; 422 futuro | ADR-0004 |
+| `entryDate` | YYYY-MM-DD | - | hoje em Brasília | "02/01/2027", amanhã | 400 formato e futuro | ADR-0004 |
 | `justification` | texto (`reasonSchema`) | 1 caractere útil | limite do `reasonSchema` | "", "   " | 400; obrigatória no ajuste | RF-30, RFC-005 |
 | `Idempotency-Key` | texto | 1 | 200 | "" | 400 | RFC-004 §2 |
 
@@ -43,8 +43,8 @@ Fora: editar ou apagar lançamento (ADR-0006: a correção é um ajuste novo); l
 - A3: ajuste grava o valor com o sinal recebido e a justificativa.
 - A4: auditoria gravada para cada lançamento.
 - A5: mesma `Idempotency-Key` duas vezes grava um só lançamento e as duas respostas trazem o mesmo `id`.
-- A6: `entryDate` de hoje é aceito; de amanhã dá 422 `VALIDATION_FAILED` em `entryDate`.
-- A7: conta inexistente dá 404; conta inativa dá 422 `VALIDATION_FAILED` em `accountId`.
+- A6: `entryDate` de hoje é aceito; de amanhã dá 400 `VALIDATION_FAILED` em `entryDate`.
+- A7: conta inexistente dá 404; conta inativa dá 400 `VALIDATION_FAILED` em `accountId`.
 - A8: corpo inválido (tipo de sistema, valor zero ou fracionado, retirada negativa, ajuste sem justificativa, chave
   desconhecida) dá 400 `VALIDATION_FAILED`.
 - A9: nenhuma recusa grava lançamento ou auditoria.

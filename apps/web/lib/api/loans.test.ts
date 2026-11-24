@@ -131,7 +131,7 @@ describe("lending client", () => {
     respond({ date: "2026-11-20", amountCents: 3, principalCents: 1, interestCents: 1, lateChargesCents: 1 });
     await getPayoffQuote(ID, "2026-11-20");
     expect(last().url).toBe(`http://api.test/loans/${ID}/payoff-quote?date=2026-11-20`);
-    respond({ items: [{ id: ID, name: "Caixa", active: true }] });
+    respond({ items: [{ id: ID, name: "Caixa", active: true, balanceCents: 0 }] });
     expect((await listAccounts()).items).toHaveLength(1);
     expect(last().url).toBe("http://api.test/accounts");
   });

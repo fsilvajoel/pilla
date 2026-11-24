@@ -11,7 +11,7 @@ Entra:
   - `lentCents`: principal em aberto (principal das parcelas menos o principal alocado e não estornado) dos contratos
     ACTIVE;
   - `committedBps` = `floor(lentCents * 10000 / (cashCents + lentCents))` e `availableBps` = `10000 - committedBps`;
-    ambos nulos se `cashCents + lentCents <= 0`; `maxCommittedBps` da conta base (pode ser nulo; só exibido);
+    ambos nulos se `cashCents < 0` ou `cashCents + lentCents <= 0`; `maxCommittedBps` da conta base (pode ser nulo; só exibido);
   - do mês (`entry_date` no mês): `interestReceivedCents` = soma de INTEREST (REPAYMENT e REVERSAL),
     `lateChargesReceivedCents` = idem LATE_CHARGES, `recoveredCents` = idem RECOVERY;
   - `lossesCents`: principal em aberto dos contratos WRITTEN_OFF (total, não do mês);

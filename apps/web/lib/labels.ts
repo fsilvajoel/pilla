@@ -1,4 +1,11 @@
-import type { InstallmentStatus, LoanStanding, LoanStatus, PaymentMethod, PaymentStatus } from "@pilla/schemas";
+import type {
+  AccountStatementEntry,
+  InstallmentStatus,
+  LoanStanding,
+  LoanStatus,
+  PaymentMethod,
+  PaymentStatus,
+} from "@pilla/schemas";
 
 // Rótulos das telas, os mesmos do glossário (docs/glossario.md).
 
@@ -42,4 +49,22 @@ export const paymentStatusLabel: Readonly<Record<PaymentStatus, string>> = {
   CONFIRMED: "Confirmado",
   REVERSED: "Estornado",
   REJECTED: "Rejeitado",
+};
+
+/** Tipo do lançamento do caixa (RFC-005 §6). */
+export const ledgerEntryTypeLabel: Readonly<Record<AccountStatementEntry["type"], string>> = {
+  CAPITAL_IN: "Aporte",
+  CAPITAL_OUT: "Retirada",
+  DISBURSEMENT: "Desembolso",
+  REPAYMENT: "Pagamento recebido",
+  REVERSAL: "Estorno",
+  ADJUSTMENT: "Ajuste",
+};
+
+/** Componente do lançamento do caixa; sem componente, o extrato mostra "—". */
+export const ledgerComponentLabel: Readonly<Record<NonNullable<AccountStatementEntry["component"]>, string>> = {
+  PRINCIPAL: "Principal",
+  INTEREST: "Juros",
+  LATE_CHARGES: "Encargos de atraso",
+  RECOVERY: "Recuperação",
 };
