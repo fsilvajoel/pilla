@@ -3,8 +3,9 @@ import type { z } from "zod";
 import { cpfSchema, loanNumberSchema, phoneSchema } from "../common";
 import { adminLoginRequest } from "./access/admin-login";
 import { adminMeResponse } from "./access/admin-me";
-import { portalAccessRequest } from "./access/portal-access";
-import { portalSessionRequest } from "./access/portal-session";
+import { portalAccessRequest, portalAccessResponse, setPortalAccessRequest } from "./access/portal-access";
+import { portalLoanDetailResponse, portalLoanListResponse } from "./access/portal-loans";
+import { createPortalSessionRequest, portalSessionRequest } from "./access/portal-session";
 import { attachmentUploadUrlRequest } from "./core/attachment-upload-url";
 import { activateLoanRequest } from "./lending/activate-loan";
 import { createLoanRequest, defaultTermsResponse } from "./lending/create-loan";
@@ -172,6 +173,48 @@ const cases: BodyCase[] = [
     schema: portalSessionRequest,
     body: { cpf: "52998224725" },
     invalid: { cpf: "529.982.247-25" },
+  },
+  {
+    name: "setPortalAccessRequest",
+    schema: setPortalAccessRequest,
+    body: { enabled: false },
+    invalid: { enabled: "no" },
+  },
+  {
+    name: "portalAccessResponse",
+    schema: portalAccessResponse,
+    body: { personId: id(1), enabled: false, enabledAt: null },
+    invalid: { personId: "x", enabled: "no", enabledAt: "ontem" },
+  },
+  {
+    name: "createPortalSessionRequest",
+    schema: createPortalSessionRequest,
+    body: { cpf: "52998224725" },
+    invalid: { cpf: "529.982.247-25" },
+  },
+  {
+    name: "portalLoanListResponse",
+    schema: portalLoanListResponse,
+    body: { items: [] },
+    invalid: { items: "nenhum" },
+  },
+  {
+    name: "portalLoanDetailResponse",
+    schema: portalLoanDetailResponse,
+    body: {
+      id: id(2),
+      loanNumber: "2026-0012",
+      situation: "PAID_OFF",
+      principalCents: 500000,
+      totalCents: 575000,
+      paidCents: 575000,
+      outstandingCents: 0,
+      lateChargesCents: 0,
+      nextInstallment: null,
+      installments: [],
+      payments: [],
+    },
+    invalid: { id: "x", loanNumber: "12", situation: "LATE", principalCents: -1, installments: "nenhuma" },
   },
   {
     name: "activateLoanRequest",
