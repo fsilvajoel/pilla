@@ -167,6 +167,7 @@ Resposta `200`:
 | 409 | `LOAN_NOT_ACTIVE` | confirmar pagamento de contrato que não está ACTIVE (ex.: DRAFT) |
 | 409 | `PAYMENT_NOT_PENDING` | confirmar ou rejeitar pagamento que não está PENDING_REVIEW |
 | 409 | `PAYMENT_NOT_CONFIRMED` | estornar pagamento que não está CONFIRMED |
+| 409 | `IMPORT_ALREADY_DONE` | importar planilha cujo conteúdo (SHA-256) já foi importado; devolve o id do lote existente |
 | 422 | `LOAN_NOT_EDITABLE` | editar contrato fora de DRAFT |
 | 422 | `INSUFFICIENT_ACCOUNT_BALANCE` | RN-C10 |
 | 422 | `FIRST_DUE_DATE_BEFORE_DISBURSEMENT` | RN-C04 |
