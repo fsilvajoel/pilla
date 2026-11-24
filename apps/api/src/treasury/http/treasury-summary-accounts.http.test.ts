@@ -11,7 +11,12 @@ import { migratedTestDb } from "../../db/test-db";
 import { BASE_ACCOUNT_ID } from "../infra/account-repository";
 
 // D6 (E12-F04): totais do mês só das contas ativas, como o caixa, e teto vindo da conta base.
-const env: ApiEnv = { host: "127.0.0.1", port: 3000, databaseUrl: "postgres://u:p@127.0.0.1:1/pilla" };
+const env: ApiEnv = {
+  host: "127.0.0.1",
+  port: 3000,
+  databaseUrl: "postgres://u:p@127.0.0.1:1/pilla",
+  accessHashKey: "chave-de-teste-do-hash-com-mais-de-32-caracteres",
+};
 const uuid = (n: number): string => `01970000-0000-7000-8000-${String(1000000000000 + n).slice(1)}`;
 const OLD_ACTIVE = uuid(2);
 const INACTIVE = uuid(3);

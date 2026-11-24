@@ -12,7 +12,12 @@ import { DATABASE_HANDLE } from "../../db/database";
 import { migratedTestDb } from "../../db/test-db";
 
 // Modo PILLA_AUTH_ENFORCED=false (só desenvolvimento): sem sessão a API age como um admin ativo do banco.
-const base: ApiEnv = { host: "127.0.0.1", port: 3000, databaseUrl: "postgres://u:p@127.0.0.1:1/pilla" };
+const base: ApiEnv = {
+  host: "127.0.0.1",
+  port: 3000,
+  databaseUrl: "postgres://u:p@127.0.0.1:1/pilla",
+  accessHashKey: "chave-de-teste-do-hash-com-mais-de-32-caracteres",
+};
 const ADMIN = "01970000-0000-7000-8000-000000000f11";
 const PROBE = "/api/v1/probe-disabled";
 
