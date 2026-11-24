@@ -449,6 +449,17 @@ describe("GET /portal/loans/{id}", () => {
   });
 });
 
+describe("a loan with no installments", () => {
+  it("C4b: shows an empty schedule, no next installment and nothing outstanding", async () => {
+    const empty = uuid(21);
+    await seedLoan(empty, "2026-0011", BETO);
+    const list = (await portal("/loans", `pilla_portal=${TOKEN_BETO}`)).body as { items: ListItem[] };
+    expect(list.items.find((item) => item.id === empty)).toMatchObject({ outstandingCents: 0, nextDueDate: null });
+    const body = (await portal(`/loans/${empty}`, `pilla_portal=${TOKEN_BETO}`)).body as Detail;
+    expect(body).toMatchObject({ installments: [], nextInstallment: null, totalCents: 0, paidCents: 0, payments: [] });
+  });
+});
+
 describe("isolation (CA-09)", () => {
   it("C9 (A5): another person's loan and an unknown id give the same 404 body", async () => {
     const theirs = await portal(`/loans/${BETO_LOAN}`);
