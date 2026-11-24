@@ -176,6 +176,7 @@ Resposta `200`:
 | 422 | `REVERSAL_BLOCKED_BY_SUCCESSOR` | RN-R11 |
 | 422 | `RECEIPT_REQUIRED` | RN-R06 |
 | 422 | `DUPLICATE_PIX_TRANSACTION` | mesmo `pixEndToEndId` já registrado |
+| 422 | `PERSON_WITHOUT_CPF` | habilitar o acesso ao portal de pessoa sem CPF (RF-60) |
 | 429 | `TOO_MANY_REQUESTS` | limite do portal/login |
 | 500 | `INTERNAL_ERROR` | erro inesperado; o `detail` é fixo ("Erro interno do servidor."), sem mensagem interna nem stack |
 
