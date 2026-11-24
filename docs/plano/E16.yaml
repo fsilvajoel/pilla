@@ -267,7 +267,7 @@ cards:
     kind: implement
     assignee: haiku
     rules: [RF-70]
-    skills: [editar-arquivo, coding-guidelines, next-best-practices]
+    skills: [editar-arquivo, coding-guidelines, react-best-practices]
     refs: [PRD-001 RF-70, docs/plano/E16.md D11, docs/plano/E16-F05/plano.md]
     dependsOn: [E16-T08]
     allowedPaths:
