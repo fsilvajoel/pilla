@@ -14,6 +14,7 @@ const api = vi.hoisted(() => ({
 const cache = vi.hoisted(() => ({ revalidatePath: vi.fn() }));
 vi.mock("@/lib/api/people", () => api);
 vi.mock("next/cache", () => cache);
+vi.mock("@/lib/api/portal-access", () => ({ setPortalAccess: vi.fn() }));
 
 import type { CreateAddressRequest, CreatePixKeyRequest } from "@pilla/schemas";
 import { ApiProblem } from "@/lib/api/problem";
