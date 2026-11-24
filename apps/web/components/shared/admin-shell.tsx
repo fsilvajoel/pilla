@@ -11,8 +11,9 @@ import {
 } from "@/components/ui/sidebar";
 import { Toaster } from "@/components/ui/sonner";
 import { AdminNav } from "./admin-nav";
+import { LogoutButton } from "./logout-button";
 
-export function AdminShell({ children }: { children: ReactNode }): ReactElement {
+export function AdminShell({ username, children }: { username: string; children: ReactNode }): ReactElement {
   return (
     <SidebarProvider>
       <Sidebar>
@@ -31,6 +32,10 @@ export function AdminShell({ children }: { children: ReactNode }): ReactElement 
       <SidebarInset>
         <header className="flex h-16 items-center gap-4 border-b px-4">
           <SidebarTrigger className="-ml-4" />
+          <div className="ml-auto flex items-center gap-3">
+            <span className="text-sm text-muted-foreground">{username}</span>
+            <LogoutButton />
+          </div>
         </header>
         <main className="flex-1 p-4">{children}</main>
         <Toaster theme="light" />
