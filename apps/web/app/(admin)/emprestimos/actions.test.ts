@@ -6,6 +6,7 @@ const api = vi.hoisted(() => ({
   cancelLoan: vi.fn(),
   renewLoan: vi.fn(),
   renegotiateLoan: vi.fn(),
+  updateLoan: vi.fn(),
   writeOffLoan: vi.fn(),
 }));
 const cache = vi.hoisted(() => ({ revalidatePath: vi.fn() }));
@@ -18,10 +19,23 @@ import {
   createLoanAction,
   renegotiateLoanAction,
   renewLoanAction,
+  updateLoanAction,
   writeOffLoanAction,
 } from "./actions";
 
 const ID = "01890a5d-ac96-774b-bcce-b302099a8057";
+const validCreate = {
+  personId: ID,
+  type: "INSTALLMENT",
+  principalCents: 500000,
+  monthlyInterestRateBps: 633,
+  installmentCount: 6,
+  frequency: { unit: "MONTH", interval: 1 },
+  firstDueDate: "2026-12-14",
+  lateFeeBps: 200,
+  lateInterestMonthlyBps: 100,
+  gracePeriodDays: 0,
+};
 
 beforeEach(() => {
   vi.resetAllMocks();
@@ -78,5 +92,26 @@ describe("emprestimos/actions", () => {
     expect((await writeOffLoanAction(ID, 3, { reason: "" })).ok).toBe(false);
     api.writeOffLoan.mockRejectedValue(new Error("x"));
     expect((await writeOffLoanAction(ID, 3, { reason: "Perda" })).ok).toBe(false);
+  });
+
+  it("edita o rascunho com a versão; entrada inválida não chama a API; erro volta sem vazar", async () => {
+    api.updateLoan.mockResolvedValue({ id: ID });
+    expect(await updateLoanAction(ID, 2, {})).toEqual({ ok: true, id: ID });
+    expect(api.updateLoan).toHaveBeenCalledWith(ID, 2, {});
+    expect(cache.revalidatePath).toHaveBeenCalledWith(`/emprestimos/${ID}`);
+    api.updateLoan.mockClear();
+    expect((await updateLoanAction(ID, 2, { principalCents: -1 })).ok).toBe(false);
+    expect(api.updateLoan).not.toHaveBeenCalled();
+    api.updateLoan.mockRejectedValue(new Error("stack interno"));
+    expect((await updateLoanAction(ID, 2, {})).ok).toBe(false);
+  });
+
+  it("criação válida devolve o id e o aviso de contratos ativos; erro da API falha", async () => {
+    api.createLoanDraft.mockResolvedValue({ id: ID, warning: { activeLoansCount: 2 } });
+    const result = await createLoanAction(validCreate);
+    expect(result).toEqual({ ok: true, id: ID, activeLoansCount: 2 });
+    expect(cache.revalidatePath).toHaveBeenCalledWith("/emprestimos");
+    api.createLoanDraft.mockRejectedValue(new Error("x"));
+    expect((await createLoanAction(validCreate)).ok).toBe(false);
   });
 });

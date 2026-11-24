@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatCpf, formatPhone } from "./format";
+import { formatCpf, formatPhone, formatPortalAccessDate } from "./format";
 
 describe("formatCpf", () => {
   it("formata 11 dígitos", () => {
@@ -30,5 +30,15 @@ describe("formatPhone", () => {
   it("inválido devolve o original", () => {
     expect(formatPhone("+5511987654321")).toBe("+5511987654321");
     expect(formatPhone("123")).toBe("123");
+  });
+});
+
+describe("formatPortalAccessDate", () => {
+  it("usa a data civil de Brasília (UTC-3)", () => {
+    expect(formatPortalAccessDate("2026-11-20T15:30:00Z")).toBe("20/11/2026");
+    expect(formatPortalAccessDate("2026-11-21T02:00:00Z")).toBe("20/11/2026");
+  });
+  it("data inválida volta sem mudança", () => {
+    expect(formatPortalAccessDate("ontem")).toBe("ontem");
   });
 });
