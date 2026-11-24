@@ -1,0 +1,54 @@
+{
+  "feature": "E12-F03",
+  "stages": {
+    "plan": {
+      "status": "done",
+      "worker": "sonnet",
+      "commit": "7de9f72"
+    },
+    "refinement": {
+      "status": "done",
+      "worker": "sonnet",
+      "commit": "3f55fc2"
+    },
+    "tests": {
+      "status": "done",
+      "worker": "sonnet",
+      "commits": [
+        "88131a1",
+        "50a2e14"
+      ]
+    },
+    "testReview": {
+      "status": "pending"
+    },
+    "implement": {
+      "status": "done",
+      "worker": "sonnet",
+      "commit": "7a44143"
+    },
+    "review": {
+      "status": "pending"
+    }
+  },
+  "sources": [
+    "apps/api/src/treasury/application/**",
+    "apps/api/src/treasury/http/**",
+    "apps/api/src/treasury/infra/**",
+    "apps/api/src/treasury/public/account-balance.ts",
+    "packages/schemas/src/api/treasury/account-statement.ts",
+    "packages/schemas/src/api/treasury/account-summary.ts",
+    "packages/schemas/src/index.ts",
+    "packages/schemas/src/api/api.test.ts",
+    "apps/api/src/app.module.ts"
+  ],
+  "domainSources": [],
+  "exemptSources": [],
+  "tests": [
+    "apps/api/src/treasury/http/account-statement.http.test.ts",
+    "apps/api/src/treasury/http/accounts.http.test.ts",
+    "packages/schemas/src/api/treasury/account-statement.test.ts",
+    "packages/schemas/src/api/treasury/account-summary.test.ts"
+  ],
+  "e2e": []
+}

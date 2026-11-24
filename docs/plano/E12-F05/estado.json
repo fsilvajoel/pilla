@@ -1,0 +1,46 @@
+{
+  "feature": "E12-F05",
+  "stages": {
+    "plan": {
+      "status": "done",
+      "worker": "sonnet",
+      "commit": "7de9f72"
+    },
+    "refinement": {
+      "status": "done",
+      "worker": "sonnet",
+      "commit": "3f55fc2"
+    },
+    "tests": {
+      "status": "pending"
+    },
+    "testReview": {
+      "status": "pending"
+    },
+    "implement": {
+      "status": "done",
+      "worker": "sonnet",
+      "commits": [
+        "c4578af",
+        "da264bf",
+        "474d53a"
+      ]
+    },
+    "review": {
+      "status": "pending"
+    }
+  },
+  "sources": [
+    "apps/web/lib/api/treasury.ts",
+    "apps/web/app/(admin)/caixa/**",
+    "apps/web/components/treasury/**",
+    "apps/web/components/shared/admin-nav.tsx",
+    "apps/web/components/loans/loan-draft-actions.tsx",
+    "apps/web/lib/labels.ts",
+    "apps/web/lib/labels.test.ts"
+  ],
+  "domainSources": [],
+  "exemptSources": [],
+  "tests": [],
+  "e2e": []
+}

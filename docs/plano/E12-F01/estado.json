@@ -1,0 +1,48 @@
+{
+  "feature": "E12-F01",
+  "stages": {
+    "plan": {
+      "status": "done",
+      "worker": "sonnet",
+      "commit": "7de9f72"
+    },
+    "refinement": {
+      "status": "done",
+      "worker": "sonnet",
+      "commit": "3f55fc2"
+    },
+    "tests": {
+      "status": "done",
+      "worker": "sonnet",
+      "commit": "c72e391"
+    },
+    "testReview": {
+      "status": "pending"
+    },
+    "implement": {
+      "status": "done",
+      "worker": "sonnet",
+      "commit": "07ef865"
+    },
+    "review": {
+      "status": "pending"
+    }
+  },
+  "sources": [
+    "apps/api/src/core/infra/outbox-dispatcher.ts",
+    "apps/api/src/core/infra/outbox-poller.ts",
+    "apps/api/src/core/infra/system-actor.ts",
+    "apps/api/src/treasury/application/**",
+    "apps/api/src/treasury/infra/**",
+    "apps/api/src/treasury/public/outbox-consumers.ts",
+    "apps/api/src/app.module.ts"
+  ],
+  "domainSources": [],
+  "exemptSources": [],
+  "tests": [
+    "apps/api/src/core/infra/outbox-dispatcher.test.ts",
+    "apps/api/src/treasury/application/ledger-consumer.test.ts",
+    "apps/api/src/treasury/http/ledger-from-events.http.test.ts"
+  ],
+  "e2e": []
+}

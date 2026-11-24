@@ -1,0 +1,49 @@
+{
+  "feature": "E12-F04",
+  "stages": {
+    "plan": {
+      "status": "done",
+      "worker": "sonnet",
+      "commit": "7de9f72"
+    },
+    "refinement": {
+      "status": "done",
+      "worker": "sonnet",
+      "commit": "3f55fc2"
+    },
+    "tests": {
+      "status": "done",
+      "worker": "sonnet",
+      "commits": [
+        "0a69071",
+        "aa9394d"
+      ]
+    },
+    "testReview": {
+      "status": "pending"
+    },
+    "implement": {
+      "status": "done",
+      "worker": "sonnet",
+      "commit": "1b7eae0"
+    },
+    "review": {
+      "status": "pending"
+    }
+  },
+  "sources": [
+    "apps/api/src/treasury/**",
+    "apps/api/src/lending/public/portfolio-figures.ts",
+    "packages/schemas/src/api/treasury/treasury-summary.ts",
+    "packages/schemas/src/index.ts",
+    "apps/api/src/app.module.ts"
+  ],
+  "domainSources": [],
+  "exemptSources": [],
+  "tests": [
+    "apps/api/src/treasury/http/treasury-summary.http.test.ts",
+    "apps/api/src/lending/public/portfolio-figures.test.ts",
+    "packages/schemas/src/api/treasury/treasury-summary.test.ts"
+  ],
+  "e2e": []
+}
