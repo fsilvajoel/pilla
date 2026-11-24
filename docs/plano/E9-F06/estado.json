@@ -9,21 +9,19 @@
       "verdict": "ajustado",
       "round": 2
     },
-    "tests": {
-      "status": "skipped",
-      "note": "fora do fluxo de feature (ADR-0017): só revisão visual; E9-T12 removido em 19/11/2026 (sem teste de front nesta fase)"
-    },
-    "testReview": {
-      "status": "skipped",
-      "note": "fora do fluxo de feature (ADR-0017): só revisão visual; E9-T12 removido em 19/11/2026 (sem teste de front nesta fase)"
-    },
     "implement": {
-      "status": "skipped",
-      "note": "fora do fluxo de feature (ADR-0017): só revisão visual"
+      "status": "done",
+      "worker": "claude",
+      "commits": [
+        "ad5f2b7",
+        "75b1a12",
+        "6b34dc2"
+      ],
+      "note": "E9-T11 (shadcn + paleta) e E9-T13 (compostos shared + ADMIN shell); sem teste (emenda de 19/11 à ADR-0017); typecheck do web limpo em 23/11"
     },
     "review": {
-      "status": "skipped",
-      "note": "fora do fluxo de feature (ADR-0017): só revisão visual"
+      "status": "pending",
+      "note": "revisão visual no navegador não registrada"
     }
   },
   "sources": [],
@@ -77,5 +75,6 @@
       "reason": "só devolve <AdminShell>{children}</AdminShell>, sem condição nem estado; revisão visual no navegador"
     }
   ],
-  "outOfFlow": true
+  "outOfFlow": true,
+  "outOfFlowNote": "tests/testReview removidos do estado: frontend sem teste por emenda de 19/11/2026 à ADR-0017 (E9-T12 removido)"
 }

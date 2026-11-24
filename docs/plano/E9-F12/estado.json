@@ -1,0 +1,31 @@
+{
+  "feature": "E9-F12",
+  "stages": {
+    "plan": {
+      "status": "done",
+      "note": "cartão detalhado em docs/plano/E9.yaml e E9.md; sem plano.md por feature"
+    },
+    "refinement": {
+      "status": "pending",
+      "note": "sem refinamento funcional formal; frontend sem teste (ADR-0017, emenda de 19/11)"
+    },
+    "implement": {
+      "status": "done",
+      "worker": "claude",
+      "commits": [
+        "dce0924"
+      ],
+      "note": "E9-T23 link Criar contrato aponta para rota existente"
+    },
+    "review": {
+      "status": "pending",
+      "note": "revisão visual no navegador não registrada"
+    }
+  },
+  "sources": [],
+  "domainSources": [],
+  "exemptSources": [],
+  "tests": [],
+  "e2e": [],
+  "outOfFlow": true
+}
