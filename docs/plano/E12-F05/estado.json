@@ -12,10 +12,13 @@
       "commit": "3f55fc2"
     },
     "tests": {
-      "status": "pending"
+      "status": "pending",
+      "note": "sem teste de tela (ADR-0017); entry-actions.test.ts e treasury-format.test.ts existem e passam, mas não estão em tests; aviso RN-C10 só coberto pelo E2E da F06"
     },
     "testReview": {
-      "status": "pending"
+      "status": "needs_input",
+      "worker": "opus",
+      "note": "nada a revisar além dos testes de lógica; depende do E2E da F06"
     },
     "implement": {
       "status": "done",
@@ -27,7 +30,10 @@
       ]
     },
     "review": {
-      "status": "pending"
+      "status": "needs_input",
+      "worker": "opus",
+      "verdict": "aprovado com ressalvas",
+      "note": "A1-A6 sem evidência de execução (E2E F06 não rodado); gates tests-reviewed/coverage em FAIL (estado sem criteria/scenarios/testShas; sources com glob); mutation/e2e não rodados; achados em D6"
     }
   },
   "sources": [
