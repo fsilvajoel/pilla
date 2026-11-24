@@ -319,9 +319,9 @@ describe("POST /auth/admin/logout", () => {
     expect((await me(second)).status).toBe(200);
   });
 
-  it("C18: without a cookie it also gives 204", async () => {
+  it("C18: without a cookie it gives 401 UNAUTHENTICATED under the global guard", async () => {
     await loggedIn();
-    expect((await logout()).status).toBe(204);
+    expectProblem(await logout(), 401, "UNAUTHENTICATED");
     expect(await sessionRows()).toHaveLength(1);
   });
 });

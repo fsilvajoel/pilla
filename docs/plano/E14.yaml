@@ -238,6 +238,26 @@ cards:
       - apps/api/src/access/application/sessions.ts
       - apps/api/src/access/http/auth.controller.ts
       - .dependency-cruiser.cjs
+  - id: E14-T05b
+    title: Adjust C18 of auth.http.test.ts, logout without a cookie is 401 under the global guard
+    kind: test-author
+    assignee: claude
+    rules: [RN-A01]
+    skills: [escrever-teste]
+    refs: [docs/plano/E14.md D1, docs/plano/E14-F03/plano.md, E14-T05 C8]
+    dependsOn: [E14-T06]
+    allowedPaths:
+      - apps/api/src/access/http/auth.http.test.ts
+    protectedTests: []
+    checks:
+      - '! pnpm --filter @pilla/api exec vitest run src/access/http/auth.http.test.ts'
+      - pnpm --filter @pilla/api typecheck
+    done:
+      - 'C18: POST /api/v1/auth/admin/logout without a cookie gives 401 UNAUTHENTICATED and leaves the session rows untouched; the F02 expectation of 204 was superseded by the global guard (logout and me are not public), authorized by Joel as a test card'
+    budget: {attempts: 2, toolCalls: 15, minutes: 10}
+    readFirst:
+      - apps/api/src/access/http/admin-session.guard.test.ts
+      - apps/api/src/app.auth.test.ts
   # ---------------------------------------------------------------- E14-F04: ator real na auditoria e created_by
   - id: E14-T07
     title: Write the tests that admin actions record the session admin as actor and creator
