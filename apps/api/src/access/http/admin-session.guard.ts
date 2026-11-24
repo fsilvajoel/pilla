@@ -5,7 +5,8 @@ import { ProblemException } from "../../core/http/problem-exception";
 import { IS_PUBLIC } from "../../core/http/public";
 import { readSessionCookie } from "../../core/http/session-cookie";
 import { DATABASE, type Database } from "../../db/database";
-import { resolveSession } from "../application/sessions";
+import { resolveDevAdmin, resolveSession } from "../application/sessions";
+import { AUTH_ENFORCED } from "./auth-enforced";
 import { clientIp, type ClientRequest } from "./client-ip";
 
 const NO_SESSION = "Sessão ausente ou expirada.";
@@ -20,9 +21,16 @@ export class AdminSessionGuard implements CanActivate {
   private readonly db: Database;
   private readonly reflector: Reflector;
 
-  constructor(@Inject(DATABASE) db: Database, @Inject(Reflector) reflector: Reflector) {
+  private readonly enforced: boolean;
+
+  constructor(
+    @Inject(DATABASE) db: Database,
+    @Inject(Reflector) reflector: Reflector,
+    @Inject(AUTH_ENFORCED) enforced: boolean,
+  ) {
     this.db = db;
     this.reflector = reflector;
+    this.enforced = enforced;
   }
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -34,6 +42,12 @@ export class AdminSessionGuard implements CanActivate {
     const request = context.switchToHttp().getRequest<ClientRequest & ActorRequest>();
     const token = readSessionCookie(request.headers.cookie);
     const session = token === undefined ? null : await resolveSession(this.db, token);
+    if (session === null && !this.enforced) {
+      // Só desenvolvimento (PILLA_AUTH_ENFORCED=false): sem sessão, age como o admin ativo do banco.
+      const dev = await resolveDevAdmin(this.db);
+      request.actor = { type: "ADMIN", adminUserId: dev.id, ip: clientIp(request) };
+      return true;
+    }
     if (session === null) throw new ProblemException("UNAUTHENTICATED", NO_SESSION);
     if (session.role !== "ADMIN") throw new ProblemException("FORBIDDEN", ADMIN_ONLY);
     request.actor = { type: "ADMIN", adminUserId: session.admin.id, ip: clientIp(request) };

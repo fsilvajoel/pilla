@@ -405,6 +405,8 @@ cards:
     allowedPaths:
       - apps/web/app/login/**
       - apps/web/app/(admin)/layout.tsx
+      - apps/web/proxy.ts
+      - apps/web/proxy.test.ts
       - apps/web/lib/api/client.ts
       - apps/web/lib/api/session.ts
       - apps/web/lib/api/auth.ts
@@ -419,7 +421,7 @@ cards:
     done:
       - '/login shows username and password fields with labels, a submit button and the generic error "Usuário ou senha inválidos." on 401 and "Muitas tentativas. Aguarde um minuto." on 429; the password field is never echoed back in the page'
       - 'the login server action calls POST /auth/admin/login with X-Forwarded-For from the request, copies the pilla_session value to a Next cookie with HttpOnly, Secure, SameSite=Lax, Path=/ and redirects to the "next" query only when it is an internal path, else to /'
-      - '(admin)/layout.tsx calls GET /auth/me and redirects to /login?next=<path> without a valid session; apiFetch forwards the cookie on every call and a 401 redirects to /login'
+      - '(admin)/layout.tsx calls GET /auth/me and redirects to /login?next=<path> without a valid session, and apps/web/proxy.ts redirects admin routes to /login?next=<path+query> when the pilla_session cookie is absent (D12 reopened); apiFetch forwards the cookie on every call and a 401 redirects to /login'
       - 'AdminShell shows the username and a "Sair" button whose server action calls POST /auth/admin/logout, deletes the Next cookie and redirects to /login'
       - no unit test for screens in this phase (E13 D10); behaviour is covered by E14-T12
     budget: {attempts: 3, toolCalls: 45, minutes: 35}
@@ -443,6 +445,7 @@ cards:
     dependsOn: [E14-T08, E14-T10, E14-T11]
     allowedPaths:
       - apps/web/e2e/auth.e2e.ts
+      - apps/web/proxy.ts
       - apps/web/e2e/global-setup.ts
       - apps/web/e2e/.auth/.gitignore
       - apps/web/playwright.config.ts

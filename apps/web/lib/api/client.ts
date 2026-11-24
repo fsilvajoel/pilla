@@ -1,4 +1,5 @@
 import type { z } from "zod";
+import { authEnforced } from "../auth-enforced";
 import { ApiProblem, parseProblem } from "./problem";
 import { SESSION_COOKIE, readSessionToken, redirectToLogin } from "./session";
 
@@ -64,7 +65,7 @@ export async function apiFetch<T>(req: ApiRequest<T>): Promise<T> {
     cache: "no-store",
   });
   const json = await readJson(res);
-  if (res.status === 401 && req.redirectOnUnauthorized !== false) redirectToLogin();
+  if (res.status === 401 && req.redirectOnUnauthorized !== false && authEnforced()) redirectToLogin();
   if (!res.ok) throw parseProblem(res.status, json);
   const parsed = req.schema.safeParse(json);
   if (!parsed.success) throw new ApiProblem(res.status, null);

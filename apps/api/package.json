@@ -12,6 +12,7 @@
     "db:generate": "drizzle-kit generate --config drizzle-kit/core.config.ts && drizzle-kit generate --config drizzle-kit/people.config.ts && drizzle-kit generate --config drizzle-kit/access.config.ts && drizzle-kit generate --config drizzle-kit/lending.config.ts && drizzle-kit generate --config drizzle-kit/payments.config.ts && drizzle-kit generate --config drizzle-kit/treasury.config.ts",
     "db:regen": "node scripts/db-regen.mjs",
     "start": "node --env-file=../../.env --import tsx --eval \"import('./src/main.ts').then((m) => m.bootstrap(process.env))\"",
+    "smoke": "node --env-file=../../.env --import tsx scripts/smoke.mts",
     "db:migrate": "node --env-file=../../.env --import tsx scripts/migrate.mts",
     "db:seed": "node --env-file=../../.env --import tsx scripts/seed.mts",
     "db:seed-admin": "node --env-file=../../.env --import tsx scripts/seed-admin.mts"

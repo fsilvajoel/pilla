@@ -1,6 +1,12 @@
 // Leitura e validação das variáveis de ambiente da API (docs/travas.md: o app não sobe com config inválida).
 // As mensagens de erro nunca incluem o valor lido (DATABASE_URL carrega a senha).
-export type ApiEnv = { readonly host: "127.0.0.1"; readonly port: number; readonly databaseUrl: string };
+export type ApiEnv = {
+  readonly host: "127.0.0.1";
+  readonly port: number;
+  readonly databaseUrl: string;
+  /** Ausente vale `true`. `false` (PILLA_AUTH_ENFORCED=false) desliga a exigência de sessão: só desenvolvimento. */
+  readonly authEnforced?: boolean;
+};
 
 const PORT_HELP = "informe um inteiro de 1024 a 65535.";
 const URL_HELP = "informe postgres://usuario:senha@host:porta/banco.";
@@ -38,5 +44,6 @@ export function readApiEnv(env: Readonly<Record<string, string | undefined>>): A
     host: "127.0.0.1",
     port: readPort(env["PILLA_API_PORT"]),
     databaseUrl: readDatabaseUrl(env["DATABASE_URL"]),
+    authEnforced: env["PILLA_AUTH_ENFORCED"]?.trim() !== "false",
   };
 }

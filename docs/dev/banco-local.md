@@ -46,3 +46,5 @@ pnpm --filter @pilla/api db:seed
 ```
 
 `down -v` apaga o volume `pilla-pgdata` e todos os dados.
+
+Em teste manual por http://IP-da-LAN o navegador descarta cookie Secure: ponha `PILLA_COOKIE_SECURE=false` no `.env` (padrão `true`).

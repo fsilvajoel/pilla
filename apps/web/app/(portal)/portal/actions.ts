@@ -3,6 +3,7 @@
 import { cpfSchema } from "@pilla/schemas";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import { cookieSecure } from "@/lib/api/cookie-secure";
 import { createPortalSession, deletePortalSession, PORTAL_COOKIE } from "@/lib/api/portal";
 import { ApiProblem } from "@/lib/api/problem";
 import { stripCpfPunctuation } from "@/lib/portal-format";
@@ -24,7 +25,7 @@ export async function enterAction(_previous: EnterState, formData: FormData): Pr
     const store = await cookies();
     store.set(PORTAL_COOKIE, session.token, {
       httpOnly: true,
-      secure: true,
+      secure: cookieSecure(),
       sameSite: "lax",
       // A API usa Path=/api/v1/portal; o navegador só fala com o Next, então o cookie vale para as rotas /portal.
       path: "/portal",
