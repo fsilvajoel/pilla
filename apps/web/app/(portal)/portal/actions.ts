@@ -24,7 +24,7 @@ export async function enterAction(_previous: EnterState, formData: FormData): Pr
     const store = await cookies();
     store.set(PORTAL_COOKIE, session.token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
+      secure: true,
       sameSite: "lax",
       // A API usa Path=/api/v1/portal; o navegador só fala com o Next, então o cookie vale para as rotas /portal.
       path: "/portal",
