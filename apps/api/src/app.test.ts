@@ -12,7 +12,13 @@ import { migratedTestDb } from "./db/test-db";
 import { bootstrap } from "./main";
 
 const databaseUrl = "postgres://u:p@127.0.0.1:1/pilla";
-const env: ApiEnv = { host: "127.0.0.1", port: 3000, databaseUrl };
+const accessHashKey = "chave-de-teste-do-hash-com-mais-de-32-caracteres";
+const env: ApiEnv = {
+  host: "127.0.0.1",
+  port: 3000,
+  databaseUrl,
+  accessHashKey: "chave-de-teste-do-hash-com-mais-de-32-caracteres",
+};
 let app: INestApplication | undefined;
 
 afterEach(async () => {
@@ -88,7 +94,11 @@ describe("createDatabase", () => {
 describe("bootstrap", () => {
   it("escuta em 127.0.0.1 na porta pedida com o prefixo /api/v1", async () => {
     const port = await freePort();
-    app = await bootstrap({ PILLA_API_PORT: String(port), DATABASE_URL: databaseUrl });
+    app = await bootstrap({
+      PILLA_API_PORT: String(port),
+      DATABASE_URL: databaseUrl,
+      PILLA_ACCESS_HASH_KEY: accessHashKey,
+    });
     expect(await app.getUrl()).toBe(`http://127.0.0.1:${String(port)}`);
     const res = await fetch(`http://127.0.0.1:${String(port)}/api/v1/health`);
     expect(res.status).toBe(200);
@@ -96,9 +106,9 @@ describe("bootstrap", () => {
   });
 
   it("rejeita ambiente inválido com as mensagens de env", async () => {
-    await expect(bootstrap({ PILLA_API_PORT: "80", DATABASE_URL: databaseUrl })).rejects.toThrow(
-      "PILLA_API_PORT inválida: informe um inteiro de 1024 a 65535.",
-    );
+    await expect(
+      bootstrap({ PILLA_API_PORT: "80", DATABASE_URL: databaseUrl, PILLA_ACCESS_HASH_KEY: accessHashKey }),
+    ).rejects.toThrow("PILLA_API_PORT inválida: informe um inteiro de 1024 a 65535.");
     await expect(bootstrap({ PILLA_API_PORT: "3000" })).rejects.toThrow(
       "DATABASE_URL ausente: informe postgres://usuario:senha@host:porta/banco.",
     );

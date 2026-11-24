@@ -17,7 +17,12 @@ const ACTIVE_LOAN_ID = "01970000-0000-7000-8000-0000000000a1";
 const CANCELLED_LOAN_ID = "01970000-0000-7000-8000-0000000000a2";
 const UNKNOWN_LOAN_ID = "01970000-0000-7000-8000-0000000000ff";
 
-const env: ApiEnv = { host: "127.0.0.1", port: 3000, databaseUrl: "postgres://u:p@127.0.0.1:1/pilla" };
+const env: ApiEnv = {
+  host: "127.0.0.1",
+  port: 3000,
+  databaseUrl: "postgres://u:p@127.0.0.1:1/pilla",
+  accessHashKey: "chave-de-teste-do-hash-com-mais-de-32-caracteres",
+};
 
 const validBody = {
   personId: PERSON_ID,

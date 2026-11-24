@@ -1,4 +1,5 @@
 import { eq, inArray } from "drizzle-orm";
+import type { PgDatabase, PgQueryResultHKT } from "drizzle-orm/pg-core";
 import type { Database } from "../../db/database";
 import { persons } from "../infra/schema";
 
@@ -16,4 +17,11 @@ export async function findPersonNames(db: Database, ids: readonly string[]): Pro
 export async function personExists(db: Database, id: string): Promise<boolean> {
   const rows = await db.select({ id: persons.id }).from(persons).where(eq(persons.id, id));
   return rows.length > 0;
+}
+
+/** Diz se a pessoa tem CPF cadastrado; `null` quando a pessoa não existe. Só o fato sai de `people`, nunca o CPF. */
+export async function personHasCpf(db: PgDatabase<PgQueryResultHKT>, id: string): Promise<boolean | null> {
+  const rows = await db.select({ cpf: persons.cpf }).from(persons).where(eq(persons.id, id));
+  const row = rows[0];
+  return row === undefined ? null : row.cpf !== null;
 }

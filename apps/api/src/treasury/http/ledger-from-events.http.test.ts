@@ -13,7 +13,12 @@ import { migratedTestDb } from "../../db/test-db";
 import { treasuryOutboxConsumers } from "../public/outbox-consumers";
 
 // E12-F01 C23, C24 (A14): ativar e confirmar pela API, rodar o despachante e conferir o saldo da conta no ledger.
-const env: ApiEnv = { host: "127.0.0.1", port: 3000, databaseUrl: "postgres://u:p@127.0.0.1:1/pilla" };
+const env: ApiEnv = {
+  host: "127.0.0.1",
+  port: 3000,
+  databaseUrl: "postgres://u:p@127.0.0.1:1/pilla",
+  accessHashKey: "chave-de-teste-do-hash-com-mais-de-32-caracteres",
+};
 const uuid = (n: number): string => `01970000-0000-7000-8000-${String(1000000000000 + n).slice(1)}`;
 const PERSON = uuid(1);
 const ACCOUNT = uuid(2);

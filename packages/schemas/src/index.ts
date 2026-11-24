@@ -18,6 +18,7 @@ export * from "./api/access/admin-login";
 export * from "./api/access/admin-me";
 export * from "./api/access/portal-access";
 export * from "./api/access/portal-session";
+export * from "./api/access/portal-loans";
 export * from "./api/lending/activate-loan";
 export * from "./api/lending/write-off-loan";
 export * from "./api/lending/renew-loan";

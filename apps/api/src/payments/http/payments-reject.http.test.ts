@@ -11,7 +11,12 @@ import { DATABASE_HANDLE } from "../../db/database";
 import { migratedTestDb, type MigratedTestDb } from "../../db/test-db";
 import { listPendingReviewPayments } from "../public/pending-payments";
 
-const env: ApiEnv = { host: "127.0.0.1", port: 3000, databaseUrl: "postgres://u:p@127.0.0.1:1/pilla" };
+const env: ApiEnv = {
+  host: "127.0.0.1",
+  port: 3000,
+  databaseUrl: "postgres://u:p@127.0.0.1:1/pilla",
+  accessHashKey: "chave-de-teste-do-hash-com-mais-de-32-caracteres",
+};
 const uuid = (n: number): string => `01970000-0000-7000-8000-${String(1000000000000 + n).slice(1)}`;
 const PERSON = uuid(1);
 const ACCOUNT = uuid(3);

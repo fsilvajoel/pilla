@@ -18,7 +18,12 @@ import { treasuryOutboxConsumers } from "../public/outbox-consumers";
 // Juros simples (ADR-0004): 3.000.000 × 5% × 3 = 450.000; cada parcela = P 1.000.000 + I 150.000 = 1.150.000,
 // com vencimentos 2026-11-30, 2026-12-30 e 2027-01-30. Multa 2% sem juros de mora nem carência: a parcela 1 paga em
 // 2026-12-05 leva 2% × 1.150.000 = 23.000 de encargos.
-const env: ApiEnv = { host: "127.0.0.1", port: 3000, databaseUrl: "postgres://u:p@127.0.0.1:1/pilla" };
+const env: ApiEnv = {
+  host: "127.0.0.1",
+  port: 3000,
+  databaseUrl: "postgres://u:p@127.0.0.1:1/pilla",
+  accessHashKey: "chave-de-teste-do-hash-com-mais-de-32-caracteres",
+};
 const uuid = (n: number): string => `01970000-0000-7000-8000-${String(1000000000000 + n).slice(1)}`;
 const PERSON = uuid(1);
 const ACCOUNT = uuid(2);

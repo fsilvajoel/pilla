@@ -10,7 +10,12 @@ import { DATABASE_HANDLE } from "../../db/database";
 import { migratedTestDb } from "../../db/test-db";
 
 // E12-F02 C1 a C16 (A1 a A10): POST /api/v1/accounts/{id}/entries. O saldo prévio entra direto no ledger.
-const env: ApiEnv = { host: "127.0.0.1", port: 3000, databaseUrl: "postgres://u:p@127.0.0.1:1/pilla" };
+const env: ApiEnv = {
+  host: "127.0.0.1",
+  port: 3000,
+  databaseUrl: "postgres://u:p@127.0.0.1:1/pilla",
+  accessHashKey: "chave-de-teste-do-hash-com-mais-de-32-caracteres",
+};
 const uuid = (n: number): string => `01970000-0000-7000-8000-${String(1000000000000 + n).slice(1)}`;
 const ACCOUNT = uuid(2);
 const INACTIVE = uuid(3);

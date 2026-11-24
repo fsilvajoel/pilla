@@ -178,3 +178,18 @@ export async function markAllocationsReversed(
     .where(and(eq(paymentAllocations.paymentId, paymentId), isNull(paymentAllocations.reversedAt)))
     .returning();
 }
+
+/** Data, valor e forma de um pagamento confirmado: o que o portal mostra e nada mais (E15 D9). */
+export type ConfirmedPaymentView = { readonly paidAt: string; readonly amountCents: number; readonly method: string };
+
+/** Pagamentos CONFIRMED e não estornados do contrato, os mais antigos primeiro (desempate pelo id). */
+export async function selectConfirmedPayments(
+  db: PgDatabase<PgQueryResultHKT>,
+  loanId: string,
+): Promise<ConfirmedPaymentView[]> {
+  return db
+    .select({ paidAt: payments.paidAt, amountCents: payments.amountCents, method: payments.method })
+    .from(payments)
+    .where(and(eq(payments.loanId, loanId), eq(payments.status, "CONFIRMED"), isNull(payments.reversedAt)))
+    .orderBy(asc(payments.paidAt), asc(payments.id));
+}

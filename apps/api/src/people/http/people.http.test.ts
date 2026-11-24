@@ -27,7 +27,12 @@ const LOTE_CPF = "39053344705";
 const ANA_PHONE = "+5511987654321";
 const OTHER_PHONE = "+5511987654322";
 
-const env: ApiEnv = { host: "127.0.0.1", port: 3000, databaseUrl: "postgres://u:p@127.0.0.1:1/pilla" };
+const env: ApiEnv = {
+  host: "127.0.0.1",
+  port: 3000,
+  databaseUrl: "postgres://u:p@127.0.0.1:1/pilla",
+  accessHashKey: "chave-de-teste-do-hash-com-mais-de-32-caracteres",
+};
 
 type SeedPerson = {
   id: string;
