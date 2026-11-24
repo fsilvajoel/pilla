@@ -12,6 +12,8 @@ import {
   listPeople,
   updatePerson,
 } from "@/lib/api/people";
+import { setPortalAccess } from "@/lib/api/portal-access";
+import type { PortalAccessActionResult } from "@/components/people/portal-access-card";
 import { checkCreateRequest, checkUpdateRequest } from "@/components/people/person-form-request";
 import { toActionError, type PersonActionResult } from "@/lib/people-action-result";
 
@@ -116,5 +118,17 @@ export async function searchPeopleAction(term: string): Promise<readonly PersonS
     return items;
   } catch {
     return [];
+  }
+}
+
+/** Liga ou desliga o acesso da pessoa ao portal (RF-60); erro da API volta como resultado, sem lançar. */
+export async function setPortalAccessAction(personId: string, enabled: boolean): Promise<PortalAccessActionResult> {
+  try {
+    const access = await setPortalAccess(personId, enabled);
+    revalidatePath(`/pessoas/${personId}`);
+    return { ok: true, access };
+  } catch (error) {
+    const result = toActionError(error);
+    return { ok: false, code: result.code, message: result.message };
   }
 }

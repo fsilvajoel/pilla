@@ -13,3 +13,12 @@ export function formatPhone(phone: string): string {
   if (digits.length === 10) return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`;
   return phone;
 }
+
+/** Instante ISO (ou data) em dd/mm/aaaa, pela data civil de Brasília (UTC−3 fixo, sem horário de verão). */
+export function formatPortalAccessDate(iso: string): string {
+  const instant = new Date(iso);
+  if (Number.isNaN(instant.getTime())) return iso;
+  const day = new Date(instant.getTime() - 3 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  const [year = "", month = "", date = ""] = day.split("-");
+  return `${date}/${month}/${year}`;
+}
