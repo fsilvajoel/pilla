@@ -75,7 +75,7 @@ beforeAll(async () => {
   const migrated = await migratedTestDb();
   client = migrated.client;
   const moduleRef = await Test.createTestingModule({
-    imports: [AppModule.forRoot(env)],
+    imports: [AppModule.forRoot(env, { outboxPoller: false })],
     controllers: [ProbeController],
   })
     .overrideProvider(DATABASE_HANDLE)

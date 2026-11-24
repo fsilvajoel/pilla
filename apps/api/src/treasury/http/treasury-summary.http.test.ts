@@ -58,7 +58,7 @@ beforeAll(async () => {
   const migrated = await migratedTestDb();
   client = migrated.client;
   db = migrated.db;
-  const moduleRef = await Test.createTestingModule({ imports: [AppModule.forRoot(env)] })
+  const moduleRef = await Test.createTestingModule({ imports: [AppModule.forRoot(env, { outboxPoller: false })] })
     .overrideProvider(DATABASE_HANDLE)
     .useValue({ db: migrated.db, close: () => Promise.resolve() })
     .compile();

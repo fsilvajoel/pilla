@@ -30,7 +30,7 @@ let baseUrl: string;
 beforeAll(async () => {
   handle = await migratedTestDb();
   client = handle.client;
-  const moduleRef = await Test.createTestingModule({ imports: [AppModule.forRoot(env)] })
+  const moduleRef = await Test.createTestingModule({ imports: [AppModule.forRoot(env, { outboxPoller: false })] })
     .overrideProvider(DATABASE_HANDLE)
     .useValue({ db: handle.db, close: () => Promise.resolve() })
     .compile();

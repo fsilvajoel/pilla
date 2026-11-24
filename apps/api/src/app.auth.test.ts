@@ -70,7 +70,7 @@ beforeAll(async () => {
     `insert into access.admin_users (id, username, password_hash, active) values ($1, 'joana', $2, true)`,
     [ADMIN, await hashPassword(PASSWORD)],
   );
-  const moduleRef = await Test.createTestingModule({ imports: [AppModule.forRoot(env)] })
+  const moduleRef = await Test.createTestingModule({ imports: [AppModule.forRoot(env, { outboxPoller: false })] })
     .overrideProvider(DATABASE_HANDLE)
     .useValue({ db: migrated.db, close: () => Promise.resolve() })
     .compile();

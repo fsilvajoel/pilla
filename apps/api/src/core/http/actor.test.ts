@@ -43,7 +43,7 @@ describe("actor ip through the real guard", () => {
       [ADMIN, await hashPassword(PASSWORD)],
     );
     const moduleRef = await Test.createTestingModule({
-      imports: [AppModule.forRoot(env)],
+      imports: [AppModule.forRoot(env, { outboxPoller: false })],
       controllers: [ProbeController],
     })
       .overrideProvider(DATABASE_HANDLE)

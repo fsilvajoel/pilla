@@ -22,7 +22,9 @@ export class AppModule implements OnApplicationShutdown {
     this.handle = handle;
   }
 
-  static forRoot(env: ApiEnv): DynamicModule {
+  /** `outboxPoller: false` desliga o agendador do outbox (testes que limpam tabelas não podem correr com ele). */
+  static forRoot(env: ApiEnv, options: { readonly outboxPoller?: boolean } = {}): DynamicModule {
+    const { outboxPoller = true } = options;
     return {
       module: AppModule,
       global: true,
@@ -34,7 +36,7 @@ export class AppModule implements OnApplicationShutdown {
         // Guard global ADMIN (E14 D7): ligado uma vez só, aqui.
         { provide: APP_GUARD, useClass: AdminSessionGuard },
         { provide: OUTBOX_CONSUMERS, useValue: treasuryOutboxConsumers },
-        OutboxPoller,
+        ...(outboxPoller ? [OutboxPoller] : []),
       ],
       exports: [DATABASE],
     };
