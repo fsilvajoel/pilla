@@ -1,6 +1,7 @@
 import { Body, Controller, Get, Headers, HttpCode, Inject, Post, Req, Res, UseGuards } from "@nestjs/common";
 import { adminLoginRequest, type AdminLoginRequest, type AdminMeResponse } from "@pilla/schemas";
 import { ProblemException } from "../../core/http/problem-exception";
+import { Public } from "../../core/http/public";
 import { expiredSessionCookie, readSessionCookie, sessionCookie } from "../../core/http/session-cookie";
 import { ZodValidationPipe } from "../../core/http/zod-validation.pipe";
 import { DATABASE, type Database } from "../../db/database";
@@ -14,7 +15,7 @@ type HeaderSetter = { setHeader(name: string, value: string): unknown };
 const INVALID_LOGIN = "Usuário ou senha inválidos.";
 const NO_SESSION = "Sessão ausente ou expirada.";
 
-// Entrada do ADMIN (E14 D5). Até a F03 (guard global), logout e me resolvem a sessão aqui mesmo.
+// Entrada do ADMIN (E14 D5). Só o login é público; logout e me passam pelo guard global (E14 D7).
 @Controller("auth")
 export class AuthController {
   private readonly db: Database;
@@ -23,6 +24,7 @@ export class AuthController {
     this.db = db;
   }
 
+  @Public()
   @Post("admin/login")
   @HttpCode(200)
   @UseGuards(LoginThrottlerGuard)
