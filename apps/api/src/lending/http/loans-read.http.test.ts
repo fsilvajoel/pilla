@@ -2,8 +2,8 @@ import type { PGlite } from "@electric-sql/pglite";
 import type { INestApplication } from "@nestjs/common";
 import { Test } from "@nestjs/testing";
 import { loanDetailResponse, loanListResponse } from "@pilla/schemas";
-import request from "supertest";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { type AdminAgent, loginAsAdmin } from "../../core/http/test-admin-agent";
 import { AppModule } from "../../app.module";
 import { configureApp } from "../../core/http/configure-app";
 import type { ApiEnv } from "../../core/http/env";
@@ -20,6 +20,7 @@ let counter = 100;
 const nextId = (): string => uuid(++counter);
 
 let client: PGlite;
+let admin: AdminAgent;
 let app: INestApplication;
 let baseUrl: string;
 
@@ -35,6 +36,7 @@ beforeAll(async () => {
   app.useLogger(false);
   await app.listen(0, "127.0.0.1");
   baseUrl = await app.getUrl();
+  admin = await loginAsAdmin(baseUrl, client);
 });
 afterAll(async () => {
   await app.close();
@@ -168,7 +170,7 @@ type ListBody = {
 };
 
 async function list(query = ""): Promise<{ status: number; body: ListBody }> {
-  const res = await request(baseUrl).get(`/api/v1/loans${query}`);
+  const res = await admin.get(`/api/v1/loans${query}`);
   return { status: res.status, body: res.body as ListBody };
 }
 
@@ -292,7 +294,7 @@ type DetailBody = {
 };
 
 async function detail(id: string): Promise<{ status: number; body: DetailBody }> {
-  const res = await request(baseUrl).get(`/api/v1/loans/${id}`);
+  const res = await admin.get(`/api/v1/loans/${id}`);
   return { status: res.status, body: res.body as DetailBody };
 }
 
@@ -320,11 +322,11 @@ describe("GET /api/v1/loans/{id} (E10-F05, A4 to A6)", () => {
     await client.query("insert into treasury.accounts (id, name, active) values ($1, 'Conta ativa', true)", [ACCOUNT]);
     await seedLoan({ id: A, number: "2026-0001", status: "DRAFT" });
     expect((await detail(A)).body.version).toBe(1);
-    const edited = await request(baseUrl).patch(`/api/v1/loans/${A}`).set("If-Match", "1").send({ gracePeriodDays: 5 });
+    const edited = await admin.patch(`/api/v1/loans/${A}`).set("If-Match", "1").send({ gracePeriodDays: 5 });
     expect(edited.status).toBe(200);
     const after = await detail(A);
     expect(after.body.version).toBe(2);
-    const activated = await request(baseUrl)
+    const activated = await admin
       .post(`/api/v1/loans/${A}/activate`)
       .set("If-Match", String(after.body.version))
       .send({ disbursedAt: "2026-08-20", accountId: ACCOUNT });

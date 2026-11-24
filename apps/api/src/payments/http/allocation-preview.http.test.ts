@@ -2,8 +2,8 @@ import type { PGlite } from "@electric-sql/pglite";
 import type { INestApplication } from "@nestjs/common";
 import { Test } from "@nestjs/testing";
 import { allocationPreviewResponse } from "@pilla/schemas";
-import request from "supertest";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { type AdminAgent, loginAsAdmin } from "../../core/http/test-admin-agent";
 import { AppModule } from "../../app.module";
 import { configureApp } from "../../core/http/configure-app";
 import type { ApiEnv } from "../../core/http/env";
@@ -21,6 +21,7 @@ let counter = 100;
 const nextId = (): string => uuid(++counter);
 
 let client: PGlite;
+let admin: AdminAgent;
 let app: INestApplication;
 let baseUrl: string;
 
@@ -36,6 +37,7 @@ beforeAll(async () => {
   app.useLogger(false);
   await app.listen(0, "127.0.0.1");
   baseUrl = await app.getUrl();
+  admin = await loginAsAdmin(baseUrl, client);
 });
 afterAll(async () => {
   await app.close();
@@ -147,7 +149,7 @@ type PreviewBody = {
 type Result = { status: number; body: PreviewBody };
 
 async function preview(payload: Record<string, unknown>): Promise<Result> {
-  const res = await request(baseUrl).post("/api/v1/payments/allocation-preview").send(payload);
+  const res = await admin.post("/api/v1/payments/allocation-preview").send(payload);
   return { status: res.status, body: res.body as PreviewBody };
 }
 const previewOf = (amountCents: number, paidAt = "2026-11-20", loanId = LOAN): Promise<Result> =>
@@ -297,7 +299,7 @@ describe("POST /api/v1/payments/allocation-preview: balances (E11-F01, A5, A6)",
   it("C7 (A5): the balance before equals the loan outstanding balance and the balance after is smaller by the amount", async () => {
     await seedLoan(LOAN, "2026-0001", "ACTIVE");
     await seedSchedule();
-    const detail = await request(baseUrl).get(`/api/v1/loans/${LOAN}`);
+    const detail = await admin.get(`/api/v1/loans/${LOAN}`);
     const { body } = await previewOf(100000);
     expect(body.outstandingBeforeCents).toBe(613500);
     expect(body.outstandingBeforeCents).toBe((detail.body as { outstandingCents: number }).outstandingCents);

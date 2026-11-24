@@ -1,8 +1,8 @@
 import type { PGlite } from "@electric-sql/pglite";
 import type { INestApplication } from "@nestjs/common";
 import { Test } from "@nestjs/testing";
-import request from "supertest";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { type AdminAgent, loginAsAdmin } from "../../core/http/test-admin-agent";
 import { AppModule } from "../../app.module";
 import { configureApp } from "../../core/http/configure-app";
 import type { ApiEnv } from "../../core/http/env";
@@ -17,6 +17,7 @@ const USER = uuid(4);
 const LOAN = uuid(11);
 
 let client: PGlite;
+let admin: AdminAgent;
 let app: INestApplication;
 let baseUrl: string;
 
@@ -32,6 +33,7 @@ beforeAll(async () => {
   app.useLogger(false);
   await app.listen(0, "127.0.0.1");
   baseUrl = await app.getUrl();
+  admin = await loginAsAdmin(baseUrl, client);
 });
 afterAll(async () => {
   await app.close();
@@ -85,7 +87,7 @@ async function seedPayment(id: string, amountCents: number): Promise<void> {
 }
 
 const confirmCall = (id: string): Promise<{ status: number; code: string | undefined }> =>
-  request(baseUrl)
+  admin
     .post(`/api/v1/payments/${id}/confirm`)
     .set("If-Match", "1")
     .send({})

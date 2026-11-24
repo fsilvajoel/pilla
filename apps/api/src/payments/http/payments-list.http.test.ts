@@ -2,8 +2,8 @@ import type { PGlite } from "@electric-sql/pglite";
 import type { INestApplication } from "@nestjs/common";
 import { Test } from "@nestjs/testing";
 import { paymentListResponse } from "@pilla/schemas";
-import request from "supertest";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { type AdminAgent, loginAsAdmin } from "../../core/http/test-admin-agent";
 import { AppModule } from "../../app.module";
 import { configureApp } from "../../core/http/configure-app";
 import type { ApiEnv } from "../../core/http/env";
@@ -20,6 +20,7 @@ const LOAN_ANA = uuid(11);
 const LOAN_BRUNO = uuid(12);
 
 let client: PGlite;
+let admin: AdminAgent;
 let app: INestApplication;
 let baseUrl: string;
 
@@ -35,6 +36,7 @@ beforeAll(async () => {
   app.useLogger(false);
   await app.listen(0, "127.0.0.1");
   baseUrl = await app.getUrl();
+  admin = await loginAsAdmin(baseUrl, client);
 });
 afterAll(async () => {
   await app.close();
@@ -86,7 +88,7 @@ type Page = { items: Item[]; nextCursor: string | null; code?: string; errors?: 
 type Result = { status: number; body: Page };
 
 async function list(query = ""): Promise<Result> {
-  const res = await request(baseUrl).get(`/api/v1/payments${query}`);
+  const res = await admin.get(`/api/v1/payments${query}`);
   return { status: res.status, body: res.body as Page };
 }
 const idsOf = (page: Page): string[] => page.items.map((item) => item.id);

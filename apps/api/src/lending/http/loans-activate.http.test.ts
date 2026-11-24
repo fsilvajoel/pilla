@@ -2,8 +2,8 @@ import type { PGlite } from "@electric-sql/pglite";
 import type { INestApplication } from "@nestjs/common";
 import { Test } from "@nestjs/testing";
 import { loanActivatedV1, loanRenegotiatedV1, loanRenewedV1 } from "@pilla/schemas";
-import request from "supertest";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { type AdminAgent, loginAsAdmin } from "../../core/http/test-admin-agent";
 import { AppModule } from "../../app.module";
 import { configureApp } from "../../core/http/configure-app";
 import type { ApiEnv } from "../../core/http/env";
@@ -57,6 +57,7 @@ type OutboxDbRow = {
 };
 
 let client: PGlite;
+let admin: AdminAgent;
 let app: INestApplication;
 let baseUrl: string;
 
@@ -72,6 +73,7 @@ beforeAll(async () => {
   app.useLogger(false);
   await app.listen(0, "127.0.0.1");
   baseUrl = await app.getUrl();
+  admin = await loginAsAdmin(baseUrl, client);
 });
 afterAll(async () => {
   await app.close();
@@ -132,7 +134,7 @@ async function seedLoan(
 }
 
 function activate(id: string, version: string | undefined, payload: object) {
-  const req = request(baseUrl).post(`/api/v1/loans/${id}/activate`);
+  const req = admin.post(`/api/v1/loans/${id}/activate`);
   return (version === undefined ? req : req.set("If-Match", version)).send(payload);
 }
 
@@ -384,10 +386,7 @@ describe("POST /api/v1/loans/{id}/activate: tipos de contrato (cobertura dos ram
 describe("PATCH /api/v1/loans/{id}: troca para SINGLE_PAYMENT", () => {
   it("C17: switching an installment draft to SINGLE_PAYMENT without count 1 answers 400 on installmentCount", async () => {
     await seedLoan(DRAFT_ID, "2026-0001", "DRAFT");
-    const res = await request(baseUrl)
-      .patch(`/api/v1/loans/${DRAFT_ID}`)
-      .set("If-Match", "1")
-      .send({ type: "SINGLE_PAYMENT" });
+    const res = await admin.patch(`/api/v1/loans/${DRAFT_ID}`).set("If-Match", "1").send({ type: "SINGLE_PAYMENT" });
     expect(res.status).toBe(400);
     expect((res.body as LoanBody).errors?.map((e) => e.field)).toEqual(["installmentCount"]);
     expect(await dbLoan(DRAFT_ID)).toMatchObject({ status: "DRAFT", version: 1 });
@@ -427,20 +426,18 @@ describe("rascunho: ramos restantes de criar e editar", () => {
   });
 
   it("C19: creating without default terms answers 500, writing nothing", async () => {
-    const res = await request(baseUrl).post("/api/v1/loans").send(draftBody);
+    const res = await admin.post("/api/v1/loans").send(draftBody);
     expect(res.status).toBe(500);
     expect((await client.query("select 1 from lending.loans")).rows).toHaveLength(0);
   });
 
   it("C20: internal notes are kept on create and the frequency can be changed on edit", async () => {
     await insertTerms();
-    const created = await request(baseUrl)
-      .post("/api/v1/loans")
-      .send({ ...draftBody, internalNotes: "cliente antigo" });
+    const created = await admin.post("/api/v1/loans").send({ ...draftBody, internalNotes: "cliente antigo" });
     const loan = created.body as LoanBody & { internalNotes?: string };
     expect(created.status).toBe(201);
     expect(loan.internalNotes).toBe("cliente antigo");
-    const edited = await request(baseUrl)
+    const edited = await admin
       .patch(`/api/v1/loans/${loan.id}`)
       .set("If-Match", "1")
       .send({ frequency: { unit: "DAY", interval: 30 } });

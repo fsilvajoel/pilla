@@ -4,6 +4,7 @@ import { Test } from "@nestjs/testing";
 import { defaultTermsResponse } from "@pilla/schemas";
 import request from "supertest";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { type AdminAgent, loginAsAdmin } from "../../core/http/test-admin-agent";
 import { AppModule } from "../../app.module";
 import { configureApp } from "../../core/http/configure-app";
 import type { ApiEnv } from "../../core/http/env";
@@ -58,6 +59,7 @@ type AuditDbRow = {
 };
 
 let client: PGlite;
+let admin: AdminAgent;
 let app: INestApplication;
 let baseUrl: string;
 
@@ -72,6 +74,7 @@ beforeAll(async () => {
   configureApp(app);
   await app.listen(0, "127.0.0.1");
   baseUrl = await app.getUrl();
+  admin = await loginAsAdmin(baseUrl, client);
 });
 afterAll(async () => {
   await app.close();
@@ -101,7 +104,7 @@ afterEach(() => {
 });
 
 async function put(body: Record<string, unknown>): Promise<request.Response> {
-  return request(baseUrl).put("/api/v1/settings/default-terms").send(body);
+  return admin.put("/api/v1/settings/default-terms").send(body);
 }
 
 async function termsRows(): Promise<TermsDbRow[]> {
@@ -166,7 +169,7 @@ describe("PUT /api/v1/settings/default-terms: update (E13-F01, A1 to A4)", () =>
 
   it("C3 (A3): the GET right after returns the new values", async () => {
     await put(NEW_TERMS);
-    const res = await request(baseUrl).get("/api/v1/settings/default-terms");
+    const res = await admin.get("/api/v1/settings/default-terms");
     expect(res.status).toBe(200);
     expect(res.body).toEqual(NEW_TERMS);
   });
@@ -181,7 +184,7 @@ describe("PUT /api/v1/settings/default-terms: update (E13-F01, A1 to A4)", () =>
     expect(res.status).toBe(200);
     expect(res.body).toEqual(last);
     expect(await termsRows()).toHaveLength(3);
-    const current = await request(baseUrl).get("/api/v1/settings/default-terms");
+    const current = await admin.get("/api/v1/settings/default-terms");
     expect(current.body).toEqual(last);
   });
 
@@ -231,18 +234,18 @@ describe("PUT /api/v1/settings/default-terms: audit (A5)", () => {
     const rows = await termsRows();
     expect(rows).toHaveLength(1);
     expect(rows[0]?.id).toBe(SEED_TERMS_ID);
-    const current = await request(baseUrl).get("/api/v1/settings/default-terms");
+    const current = await admin.get("/api/v1/settings/default-terms");
     expect(current.body).toEqual(SEED);
   });
 });
 
 describe("PUT /api/v1/settings/default-terms: loans created before and after (A6, A7, CA-10)", () => {
   it("C10 (A6): a loan created before the PUT keeps its late fee, late interest, grace and rounding step", async () => {
-    const created = await request(baseUrl).post("/api/v1/loans").send(loanBodyFor(SEED));
+    const created = await admin.post("/api/v1/loans").send(loanBodyFor(SEED));
     expect(created.status).toBe(201);
     const before = created.body as LoanBody;
     await put(NEW_TERMS);
-    const res = await request(baseUrl).get(`/api/v1/loans/${before.id}`);
+    const res = await admin.get(`/api/v1/loans/${before.id}`);
     expect(res.status).toBe(200);
     const loan = res.body as LoanBody;
     expect(loan.lateFeeBps).toBe(SEED.lateFeeBps);
@@ -252,7 +255,7 @@ describe("PUT /api/v1/settings/default-terms: loans created before and after (A6
   });
 
   it("C11 (A6): the stored loan row is untouched by the PUT", async () => {
-    const created = await request(baseUrl).post("/api/v1/loans").send(loanBodyFor(SEED));
+    const created = await admin.post("/api/v1/loans").send(loanBodyFor(SEED));
     const id = (created.body as LoanBody).id;
     const stored = await client.query("select * from lending.loans where id = $1", [id]);
     await put(NEW_TERMS);
@@ -262,10 +265,8 @@ describe("PUT /api/v1/settings/default-terms: loans created before and after (A6
 
   it("C12 (A7): a loan created after the PUT, prefilled from the GET, carries the new values", async () => {
     await put(NEW_TERMS);
-    const terms = await request(baseUrl).get("/api/v1/settings/default-terms");
-    const created = await request(baseUrl)
-      .post("/api/v1/loans")
-      .send(loanBodyFor(terms.body as typeof SEED));
+    const terms = await admin.get("/api/v1/settings/default-terms");
+    const created = await admin.post("/api/v1/loans").send(loanBodyFor(terms.body as typeof SEED));
     expect(created.status).toBe(201);
     const loan = created.body as LoanBody;
     expect(loan.lateFeeBps).toBe(NEW_TERMS.lateFeeBps);
@@ -275,7 +276,7 @@ describe("PUT /api/v1/settings/default-terms: loans created before and after (A6
 
   it("C13 (A7): the rounding step is copied from the new terms on creation", async () => {
     await put(NEW_TERMS);
-    const created = await request(baseUrl).post("/api/v1/loans").send(loanBodyFor(NEW_TERMS));
+    const created = await admin.post("/api/v1/loans").send(loanBodyFor(NEW_TERMS));
     expect(created.status).toBe(201);
     expect((created.body as LoanBody).roundingStepCents).toBe(NEW_TERMS.roundingStepCents);
   });

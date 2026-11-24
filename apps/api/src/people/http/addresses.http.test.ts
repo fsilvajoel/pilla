@@ -2,8 +2,8 @@ import type { PGlite } from "@electric-sql/pglite";
 import type { INestApplication } from "@nestjs/common";
 import { Test } from "@nestjs/testing";
 import { addressSchema, problemSchema } from "@pilla/schemas";
-import request from "supertest";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { type AdminAgent, loginAsAdmin } from "../../core/http/test-admin-agent";
 import { AppModule } from "../../app.module";
 import { configureApp } from "../../core/http/configure-app";
 import type { ApiEnv } from "../../core/http/env";
@@ -29,6 +29,7 @@ const UNKNOWN_ADDRESS = "01970000-0000-7000-8000-000000000299";
 const env: ApiEnv = { host: "127.0.0.1", port: 3000, databaseUrl: "postgres://u:p@127.0.0.1:1/pilla" };
 
 let client: PGlite;
+let admin: AdminAgent;
 let app: INestApplication;
 let baseUrl: string;
 
@@ -43,6 +44,7 @@ beforeAll(async () => {
   configureApp(app);
   await app.listen(0, "127.0.0.1");
   baseUrl = await app.getUrl();
+  admin = await loginAsAdmin(baseUrl, client);
 });
 
 afterAll(async () => {
@@ -81,7 +83,7 @@ const notFoundProblem: Problem = {
 type HttpResult = { status: number; body: unknown; contentType: string; location: string | undefined; text: string };
 
 async function send(method: "post" | "patch" | "delete", path: string, body?: object): Promise<HttpResult> {
-  const call = request(baseUrl)[method](path);
+  const call = admin[method](path);
   const res = body === undefined ? await call : await call.send(body);
   const location: unknown = res.headers["location"];
   return {

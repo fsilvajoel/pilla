@@ -2,8 +2,8 @@ import type { PGlite } from "@electric-sql/pglite";
 import type { INestApplication } from "@nestjs/common";
 import { Test } from "@nestjs/testing";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
-import request from "supertest";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { type AdminAgent, loginAsAdmin } from "../../core/http/test-admin-agent";
 import { AppModule } from "../../app.module";
 import { configureApp } from "../../core/http/configure-app";
 import type { ApiEnv } from "../../core/http/env";
@@ -25,6 +25,7 @@ const PRINCIPAL = 500000;
 const FIRST_INSTALLMENT = 115000;
 
 let client: PGlite;
+let admin: AdminAgent;
 let db: PgliteDatabase;
 let app: INestApplication;
 let baseUrl: string;
@@ -42,6 +43,7 @@ beforeAll(async () => {
   app.useLogger(false);
   await app.listen(0, "127.0.0.1");
   baseUrl = await app.getUrl();
+  admin = await loginAsAdmin(baseUrl, client);
 });
 afterAll(async () => {
   await app.close();
@@ -96,7 +98,7 @@ async function ledgerTypes(): Promise<string[]> {
 }
 
 async function activateAndConfirm(): Promise<void> {
-  const activated = await request(baseUrl)
+  const activated = await admin
     .post(`/api/v1/loans/${LOAN}/activate`)
     .set("If-Match", "1")
     .send({ disbursedAt: "2026-11-14", accountId: ACCOUNT });
@@ -107,7 +109,7 @@ async function activateAndConfirm(): Promise<void> {
      values ($1, $2, $3, $4, '2026-11-20', $5, 'PIX', 'ADMIN', 'PENDING_REVIEW', $6, 1)`,
     [PAYMENT, LOAN, PERSON, ACCOUNT, FIRST_INSTALLMENT, USER],
   );
-  const confirmed = await request(baseUrl).post(`/api/v1/payments/${PAYMENT}/confirm`).set("If-Match", "1").send({});
+  const confirmed = await admin.post(`/api/v1/payments/${PAYMENT}/confirm`).set("If-Match", "1").send({});
   expect(confirmed.status).toBe(200);
 }
 
@@ -123,7 +125,7 @@ describe("ledger a partir dos eventos, pela API (E12-F01 C23, C24, A14)", () => 
   it("C24: reversing the payment and dispatching again brings the balance back to -principal", async () => {
     await activateAndConfirm();
     await dispatchOutbox(db, treasuryOutboxConsumers);
-    const reversed = await request(baseUrl)
+    const reversed = await admin
       .post(`/api/v1/payments/${PAYMENT}/reverse`)
       .set("If-Match", "2")
       .send({ reason: "pagamento lançado em duplicidade" });

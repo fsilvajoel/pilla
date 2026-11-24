@@ -1,8 +1,8 @@
 import type { PGlite } from "@electric-sql/pglite";
 import type { INestApplication } from "@nestjs/common";
 import { Test } from "@nestjs/testing";
-import request from "supertest";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { type AdminAgent, loginAsAdmin } from "../../core/http/test-admin-agent";
 import { AppModule } from "../../app.module";
 import { configureApp } from "../../core/http/configure-app";
 import type { ApiEnv } from "../../core/http/env";
@@ -16,6 +16,7 @@ const OTHER = uuid(2);
 const OTHER_ENTRY = uuid(50);
 
 let client: PGlite;
+let admin: AdminAgent;
 let app: INestApplication;
 let baseUrl: string;
 
@@ -31,6 +32,7 @@ beforeAll(async () => {
   app.useLogger(false);
   await app.listen(0, "127.0.0.1");
   baseUrl = await app.getUrl();
+  admin = await loginAsAdmin(baseUrl, client);
   await client.query("insert into treasury.accounts (id, name) values ($1, 'A'), ($2, 'B')", [ACCOUNT, OTHER]);
   await client.query(
     `insert into treasury.ledger_entries (id, account_id, type, amount_cents, entry_date, created_by)
@@ -48,7 +50,7 @@ describe("GET /api/v1/accounts/{id}/entries cursor", () => {
     "refuses a well-formed cursor that is not an entry of the account (%s)",
     async (id) => {
       const cursor = Buffer.from(id, "utf8").toString("base64url");
-      const res = await request(baseUrl).get(`/api/v1/accounts/${ACCOUNT}/entries?cursor=${cursor}`);
+      const res = await admin.get(`/api/v1/accounts/${ACCOUNT}/entries?cursor=${cursor}`);
       expect(res.status).toBe(400);
       expect((res.body as { code: string }).code).toBe("VALIDATION_FAILED");
     },

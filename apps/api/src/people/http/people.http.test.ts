@@ -2,8 +2,8 @@ import type { PGlite } from "@electric-sql/pglite";
 import type { INestApplication } from "@nestjs/common";
 import { Test } from "@nestjs/testing";
 import { personDetailResponse, personListResponse, problemSchema } from "@pilla/schemas";
-import request from "supertest";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { type AdminAgent, loginAsAdmin } from "../../core/http/test-admin-agent";
 import { AppModule } from "../../app.module";
 import { configureApp } from "../../core/http/configure-app";
 import type { ApiEnv } from "../../core/http/env";
@@ -54,6 +54,7 @@ type PersonDbRow = {
 };
 
 let client: PGlite;
+let admin: AdminAgent;
 let app: INestApplication;
 let baseUrl: string;
 
@@ -68,6 +69,7 @@ beforeAll(async () => {
   configureApp(app);
   await app.listen(0, "127.0.0.1");
   baseUrl = await app.getUrl();
+  admin = await loginAsAdmin(baseUrl, client);
 });
 
 afterAll(async () => {
@@ -145,7 +147,7 @@ const versionConflictProblem: Problem = {
 type HttpResult = { status: number; body: unknown; contentType: string; location: string | undefined };
 
 async function send(method: "get" | "post" | "patch", path: string, body?: object): Promise<HttpResult> {
-  const call = request(baseUrl)[method](path);
+  const call = admin[method](path);
   const res = body === undefined ? await call : await call.send(body);
   const location: unknown = res.headers["location"];
   return {
@@ -537,7 +539,7 @@ describe("PATCH /api/v1/people/:id", () => {
 
   it("C10 (A10): sem version dá 400 VALIDATION_FAILED, não 428; If-Match não substitui o corpo", async () => {
     await seedAna(2);
-    const res = await request(baseUrl).patch(`/api/v1/people/${ANA_ID}`).set("If-Match", '"2"').send({ fullName: "X" });
+    const res = await admin.patch(`/api/v1/people/${ANA_ID}`).set("If-Match", '"2"').send({ fullName: "X" });
     const body: unknown = res.body;
 
     expect(res.status).toBe(400);
@@ -548,7 +550,7 @@ describe("PATCH /api/v1/people/:id", () => {
 
   it("C10 (A10): sucesso não devolve ETag", async () => {
     await seedAna(2);
-    const res = await request(baseUrl).patch(`/api/v1/people/${ANA_ID}`).send({ version: 2, fullName: "Ana Souza" });
+    const res = await admin.patch(`/api/v1/people/${ANA_ID}`).send({ version: 2, fullName: "Ana Souza" });
 
     expect(res.status).toBe(200);
     expect(res.headers["etag"]).toBeUndefined();

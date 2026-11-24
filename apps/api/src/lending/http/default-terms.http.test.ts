@@ -2,8 +2,8 @@ import type { PGlite } from "@electric-sql/pglite";
 import type { INestApplication } from "@nestjs/common";
 import { Test } from "@nestjs/testing";
 import { defaultTermsResponse } from "@pilla/schemas";
-import request from "supertest";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { type AdminAgent, loginAsAdmin } from "../../core/http/test-admin-agent";
 import { AppModule } from "../../app.module";
 import { configureApp } from "../../core/http/configure-app";
 import type { ApiEnv } from "../../core/http/env";
@@ -14,6 +14,7 @@ const ADMIN_ID = "01970000-0000-7000-8000-000000000009";
 const env: ApiEnv = { host: "127.0.0.1", port: 3000, databaseUrl: "postgres://u:p@127.0.0.1:1/pilla" };
 
 let client: PGlite;
+let admin: AdminAgent;
 let app: INestApplication;
 let baseUrl: string;
 
@@ -28,6 +29,7 @@ beforeAll(async () => {
   configureApp(app);
   await app.listen(0, "127.0.0.1");
   baseUrl = await app.getUrl();
+  admin = await loginAsAdmin(baseUrl, client);
 });
 afterAll(async () => {
   await app.close();
@@ -50,7 +52,7 @@ describe("GET /api/v1/settings/default-terms (E10-F03, A10)", () => {
   it("C17: answers the row with the greatest effective_from in the defaultTermsResponse schema", async () => {
     await seedTerms("01970000-0000-7000-8000-000000000001", "2026-01-01T00:00:00Z", 200, 500);
     await seedTerms("01970000-0000-7000-8000-000000000002", "2026-06-01T00:00:00Z", 350, 1000);
-    const res = await request(baseUrl).get("/api/v1/settings/default-terms");
+    const res = await admin.get("/api/v1/settings/default-terms");
     expect(res.status).toBe(200);
     expect(defaultTermsResponse.parse(res.body)).toEqual({
       lateFeeBps: 350,
@@ -62,7 +64,7 @@ describe("GET /api/v1/settings/default-terms (E10-F03, A10)", () => {
   });
 
   it("answers 404 NOT_FOUND when there is no default terms row", async () => {
-    const res = await request(baseUrl).get("/api/v1/settings/default-terms");
+    const res = await admin.get("/api/v1/settings/default-terms");
     expect(res.status).toBe(404);
     expect((res.body as { code: string }).code).toBe("NOT_FOUND");
   });

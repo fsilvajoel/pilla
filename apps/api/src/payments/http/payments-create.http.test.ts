@@ -2,8 +2,8 @@ import type { PGlite } from "@electric-sql/pglite";
 import type { INestApplication } from "@nestjs/common";
 import { Test } from "@nestjs/testing";
 import { paymentResponse } from "@pilla/schemas";
-import request from "supertest";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { type AdminAgent, loginAsAdmin } from "../../core/http/test-admin-agent";
 import { AppModule } from "../../app.module";
 import { configureApp } from "../../core/http/configure-app";
 import type { ApiEnv } from "../../core/http/env";
@@ -23,6 +23,7 @@ let counter = 100;
 const nextId = (): string => uuid(++counter);
 
 let client: PGlite;
+let admin: AdminAgent;
 let app: INestApplication;
 let baseUrl: string;
 
@@ -38,6 +39,7 @@ beforeAll(async () => {
   app.useLogger(false);
   await app.listen(0, "127.0.0.1");
   baseUrl = await app.getUrl();
+  admin = await loginAsAdmin(baseUrl, client);
 });
 afterAll(async () => {
   await app.close();
@@ -144,7 +146,7 @@ function payload(fields: Record<string, unknown> = {}): Record<string, unknown> 
 }
 
 async function register(fields: Record<string, unknown> = {}, key?: string): Promise<Result> {
-  const call = request(baseUrl).post("/api/v1/payments");
+  const call = admin.post("/api/v1/payments");
   const res = await (key === undefined ? call : call.set("Idempotency-Key", key)).send(payload(fields));
   return { status: res.status, body: res.body as Body };
 }
@@ -168,7 +170,7 @@ async function expectNothingWritten(call: () => Promise<Result>): Promise<Result
 }
 
 async function loanDetail(): Promise<Body> {
-  const res = await request(baseUrl).get(`/api/v1/loans/${LOAN}`);
+  const res = await admin.get(`/api/v1/loans/${LOAN}`);
   return res.body as Body;
 }
 
@@ -407,7 +409,7 @@ describe("POST /api/v1/payments: refusals (E11-F02, A8 to A13)", () => {
       expect(body.code).toBe("VALIDATION_FAILED");
     }
     const missing = await expectNothingWritten(async () => {
-      const res = await request(baseUrl).post("/api/v1/payments").send({ loanId: LOAN });
+      const res = await admin.post("/api/v1/payments").send({ loanId: LOAN });
       return { status: res.status, body: res.body as Body };
     });
     expect(missing.status).toBe(400);

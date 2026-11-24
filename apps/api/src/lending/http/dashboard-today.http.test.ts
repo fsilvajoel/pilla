@@ -3,8 +3,8 @@ import type { INestApplication } from "@nestjs/common";
 import { Test } from "@nestjs/testing";
 import { bps, cents, isoDate, lateChargesAt, type LateTerms } from "@pilla/finance";
 import { dashboardTodayResponse, type DashboardTodayResponse } from "@pilla/schemas";
-import request from "supertest";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { type AdminAgent, loginAsAdmin } from "../../core/http/test-admin-agent";
 import { AppModule } from "../../app.module";
 import { configureApp } from "../../core/http/configure-app";
 import type { ApiEnv } from "../../core/http/env";
@@ -25,6 +25,7 @@ const TODAY = "2026-11-20";
 const WEEK_END = "2026-11-27";
 
 let client: PGlite;
+let admin: AdminAgent;
 let app: INestApplication;
 let baseUrl: string;
 
@@ -40,6 +41,7 @@ beforeAll(async () => {
   app.useLogger(false);
   await app.listen(0, "127.0.0.1");
   baseUrl = await app.getUrl();
+  admin = await loginAsAdmin(baseUrl, client);
 });
 afterAll(async () => {
   await app.close();
@@ -139,7 +141,7 @@ function expectedCharges(dueDate: string, openPrincipal: number, openInterest: n
 }
 
 async function today(): Promise<{ status: number; body: DashboardTodayResponse }> {
-  const res = await request(baseUrl).get("/api/v1/dashboard/today");
+  const res = await admin.get("/api/v1/dashboard/today");
   return { status: res.status, body: res.body as DashboardTodayResponse };
 }
 
@@ -483,7 +485,7 @@ describe("GET /api/v1/dashboard/today reference date (E13-F02A, D3)", () => {
   it("C27: an unknown query parameter is ignored", async () => {
     await seedLoan({ id: D, number: "2026-0003" });
     await seedInstallment(D, 1, TODAY);
-    const res = await request(baseUrl).get("/api/v1/dashboard/today?foo=bar");
+    const res = await admin.get("/api/v1/dashboard/today?foo=bar");
     expect(res.status).toBe(200);
   });
 });

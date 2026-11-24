@@ -2,8 +2,8 @@ import type { PGlite } from "@electric-sql/pglite";
 import type { INestApplication } from "@nestjs/common";
 import { Test } from "@nestjs/testing";
 import { accountListResponse } from "@pilla/schemas";
-import request from "supertest";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { type AdminAgent, loginAsAdmin } from "../../core/http/test-admin-agent";
 import { AppModule } from "../../app.module";
 import { configureApp } from "../../core/http/configure-app";
 import type { ApiEnv } from "../../core/http/env";
@@ -25,6 +25,7 @@ interface AccountsBody {
 
 let handle: MigratedTestDb;
 let client: PGlite;
+let admin: AdminAgent;
 let app: INestApplication;
 let baseUrl: string;
 
@@ -39,6 +40,7 @@ beforeAll(async () => {
   configureApp(app);
   await app.listen(0, "127.0.0.1");
   baseUrl = await app.getUrl();
+  admin = await loginAsAdmin(baseUrl, client);
 });
 afterAll(async () => {
   await app.close();
@@ -50,7 +52,7 @@ beforeEach(async () => {
 });
 
 async function getAccounts(): Promise<{ status: number; body: unknown }> {
-  const res = await request(baseUrl).get("/api/v1/accounts");
+  const res = await admin.get("/api/v1/accounts");
   return { status: res.status, body: res.body as unknown };
 }
 
@@ -98,7 +100,7 @@ describe("GET /api/v1/accounts", () => {
     const list = await getAccounts();
     const byId = new Map((list.body as AccountsBody).items.map((item) => [item.id, item]));
     expect(byId.get(ACTIVE_ID)).toMatchObject({ balanceCents: 75000 });
-    const statement = await request(baseUrl).get(`/api/v1/accounts/${ACTIVE_ID}/entries`);
+    const statement = await admin.get(`/api/v1/accounts/${ACTIVE_ID}/entries`);
     expect(statement.status).toBe(200);
     expect((statement.body as { closingBalanceCents: number }).closingBalanceCents).toBe(75000);
   });

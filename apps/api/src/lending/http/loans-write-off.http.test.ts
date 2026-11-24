@@ -2,8 +2,8 @@ import type { PGlite } from "@electric-sql/pglite";
 import type { INestApplication } from "@nestjs/common";
 import { Test } from "@nestjs/testing";
 import { loanWrittenOffV1 } from "@pilla/schemas";
-import request from "supertest";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { type AdminAgent, loginAsAdmin } from "../../core/http/test-admin-agent";
 import { AppModule } from "../../app.module";
 import { configureApp } from "../../core/http/configure-app";
 import type { ApiEnv } from "../../core/http/env";
@@ -24,6 +24,7 @@ type DbLoan = { status: string; version: number; write_off_reason: string | null
 type OutboxDbRow = { event_type: string; event_version: number; aggregate_id: string; payload: unknown };
 
 let client: PGlite;
+let admin: AdminAgent;
 let app: INestApplication;
 let baseUrl: string;
 
@@ -39,6 +40,7 @@ beforeAll(async () => {
   app.useLogger(false);
   await app.listen(0, "127.0.0.1");
   baseUrl = await app.getUrl();
+  admin = await loginAsAdmin(baseUrl, client);
 });
 afterAll(async () => {
   await app.close();
@@ -132,7 +134,7 @@ async function auditActions(): Promise<string[]> {
 }
 
 function writeOff(id: string, version: string | undefined, payload: object) {
-  const req = request(baseUrl).post(`/api/v1/loans/${id}/write-off`);
+  const req = admin.post(`/api/v1/loans/${id}/write-off`);
   return (version === undefined ? req : req.set("If-Match", version)).send(payload);
 }
 

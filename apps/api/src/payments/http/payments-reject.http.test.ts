@@ -2,8 +2,8 @@ import type { PGlite } from "@electric-sql/pglite";
 import type { INestApplication } from "@nestjs/common";
 import { Test } from "@nestjs/testing";
 import { paymentResponse } from "@pilla/schemas";
-import request from "supertest";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { type AdminAgent, loginAsAdmin } from "../../core/http/test-admin-agent";
 import { AppModule } from "../../app.module";
 import { configureApp } from "../../core/http/configure-app";
 import type { ApiEnv } from "../../core/http/env";
@@ -23,6 +23,7 @@ const nextId = (): string => uuid(++counter);
 
 let handle: MigratedTestDb;
 let client: PGlite;
+let admin: AdminAgent;
 let app: INestApplication;
 let baseUrl: string;
 
@@ -38,6 +39,7 @@ beforeAll(async () => {
   app.useLogger(false);
   await app.listen(0, "127.0.0.1");
   baseUrl = await app.getUrl();
+  admin = await loginAsAdmin(baseUrl, client);
 });
 afterAll(async () => {
   await app.close();
@@ -112,7 +114,7 @@ type Result = { status: number; body: Body };
 const MISSING = Symbol("missing reason");
 
 async function reject(id: string, reason: unknown = REASON, version: string | number | null = 1): Promise<Result> {
-  const call = request(baseUrl).post(`/api/v1/payments/${id}/reject`);
+  const call = admin.post(`/api/v1/payments/${id}/reject`);
   const res = await (version === null ? call : call.set("If-Match", String(version))).send(
     reason === MISSING ? {} : { reason },
   );
@@ -120,12 +122,12 @@ async function reject(id: string, reason: unknown = REASON, version: string | nu
 }
 
 async function reverse(id: string): Promise<Result> {
-  const res = await request(baseUrl).post(`/api/v1/payments/${id}/reverse`).set("If-Match", "1").send({ reason: "x" });
+  const res = await admin.post(`/api/v1/payments/${id}/reverse`).set("If-Match", "1").send({ reason: "x" });
   return { status: res.status, body: res.body as Body };
 }
 
 async function confirm(id: string): Promise<Result> {
-  const res = await request(baseUrl).post(`/api/v1/payments/${id}/confirm`).set("If-Match", "1").send({});
+  const res = await admin.post(`/api/v1/payments/${id}/confirm`).set("If-Match", "1").send({});
   return { status: res.status, body: res.body as Body };
 }
 
@@ -154,7 +156,7 @@ async function loanDetail(): Promise<{
   outstandingCents: number | undefined;
   status: string | undefined;
 }> {
-  const res = await request(baseUrl).get(`/api/v1/loans/${LOAN}`);
+  const res = await admin.get(`/api/v1/loans/${LOAN}`);
   const body = res.body as Body;
   return { paidCents: body.paidCents, outstandingCents: body.outstandingCents, status: body.status };
 }
@@ -206,7 +208,7 @@ describe("POST /api/v1/payments/{id}/reject: rejection (E11-F04, A1 to A3)", () 
     const id = await seedPayment();
     const other = await seedPayment();
     await reject(id);
-    const res = await request(baseUrl).get("/api/v1/payments?status=REJECTED");
+    const res = await admin.get("/api/v1/payments?status=REJECTED");
     const items = (res.body as { items: { id: string; status: string }[] }).items;
     expect(res.status).toBe(200);
     expect(items.map((item) => item.id)).toEqual([id]);
@@ -219,7 +221,7 @@ describe("POST /api/v1/payments/{id}/reject: rejection (E11-F04, A1 to A3)", () 
     await seedLoan("ACTIVE");
     const id = await seedPayment();
     await reject(id);
-    const res = await request(baseUrl).get("/api/v1/payments?status=REJECTED");
+    const res = await admin.get("/api/v1/payments?status=REJECTED");
     const items = (res.body as { items: Record<string, unknown>[] }).items;
     expect(items[0]).toMatchObject({ id, loanNumber: "2026-0001", personName: "Ana Souza", amountCents: 100000 });
   });
@@ -321,7 +323,7 @@ describe("POST /api/v1/payments/{id}/reject: refusals (E11-F04, A5, A6)", () => 
     await seedLoan("ACTIVE");
     const id = await seedPayment();
     const before = await countRows();
-    const res = await request(baseUrl)
+    const res = await admin
       .post(`/api/v1/payments/${id}/reject`)
       .set("If-Match", "1")
       .send({ reason: REASON, status: "CONFIRMED" });

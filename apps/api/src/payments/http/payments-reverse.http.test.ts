@@ -2,8 +2,8 @@ import type { PGlite } from "@electric-sql/pglite";
 import type { INestApplication } from "@nestjs/common";
 import { Test } from "@nestjs/testing";
 import { loanReopenedV1, paymentResponse, paymentReversedV1 } from "@pilla/schemas";
-import request from "supertest";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { type AdminAgent, loginAsAdmin } from "../../core/http/test-admin-agent";
 import { AppModule } from "../../app.module";
 import { configureApp } from "../../core/http/configure-app";
 import type { ApiEnv } from "../../core/http/env";
@@ -22,6 +22,7 @@ let counter = 100;
 const nextId = (): string => uuid(++counter);
 
 let client: PGlite;
+let admin: AdminAgent;
 let app: INestApplication;
 let baseUrl: string;
 
@@ -37,6 +38,7 @@ beforeAll(async () => {
   app.useLogger(false);
   await app.listen(0, "127.0.0.1");
   baseUrl = await app.getUrl();
+  admin = await loginAsAdmin(baseUrl, client);
 });
 afterAll(async () => {
   await app.close();
@@ -128,7 +130,7 @@ type Result = { status: number; body: Body };
 const MISSING = Symbol("missing reason");
 
 async function confirm(id: string): Promise<Result> {
-  const res = await request(baseUrl).post(`/api/v1/payments/${id}/confirm`).set("If-Match", "1").send({});
+  const res = await admin.post(`/api/v1/payments/${id}/confirm`).set("If-Match", "1").send({});
   return { status: res.status, body: res.body as Body };
 }
 
@@ -145,7 +147,7 @@ async function reverse(
   version: string | number | null = 2,
   extra: Record<string, unknown> = {},
 ): Promise<Result> {
-  const call = request(baseUrl).post(`/api/v1/payments/${id}/reverse`);
+  const call = admin.post(`/api/v1/payments/${id}/reverse`);
   const res = await (version === null ? call : call.set("If-Match", String(version))).send(
     reason === MISSING ? { ...extra } : { reason, ...extra },
   );
@@ -177,7 +179,7 @@ async function expectNothingWritten(id: string, call: () => Promise<Result>): Pr
 }
 
 async function loanDetail(): Promise<Body> {
-  const res = await request(baseUrl).get(`/api/v1/loans/${LOAN}`);
+  const res = await admin.get(`/api/v1/loans/${LOAN}`);
   return res.body as Body;
 }
 

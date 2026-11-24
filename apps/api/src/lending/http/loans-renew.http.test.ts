@@ -1,8 +1,8 @@
 import type { PGlite } from "@electric-sql/pglite";
 import type { INestApplication } from "@nestjs/common";
 import { Test } from "@nestjs/testing";
-import request from "supertest";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { type AdminAgent, loginAsAdmin } from "../../core/http/test-admin-agent";
 import { AppModule } from "../../app.module";
 import { configureApp } from "../../core/http/configure-app";
 import type { ApiEnv } from "../../core/http/env";
@@ -52,6 +52,7 @@ type DbLoan = {
 };
 
 let client: PGlite;
+let admin: AdminAgent;
 let app: INestApplication;
 let baseUrl: string;
 
@@ -67,6 +68,7 @@ beforeAll(async () => {
   app.useLogger(false);
   await app.listen(0, "127.0.0.1");
   baseUrl = await app.getUrl();
+  admin = await loginAsAdmin(baseUrl, client);
 });
 afterAll(async () => {
   await app.close();
@@ -173,7 +175,7 @@ const UNTOUCHED = { outbox: 0, ledger: 0, payments: 1, installments: 5 };
 const FRESH = "2027-01-15";
 
 async function renew(id: string, payload: object): Promise<{ status: number; body: LoanBody; location: unknown }> {
-  const res = await request(baseUrl).post(`/api/v1/loans/${id}/renew`).send(payload);
+  const res = await admin.post(`/api/v1/loans/${id}/renew`).send(payload);
   return { status: res.status, body: res.body as LoanBody, location: res.headers["location"] };
 }
 

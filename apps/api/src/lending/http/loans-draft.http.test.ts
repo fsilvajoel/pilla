@@ -1,8 +1,8 @@
 import type { PGlite } from "@electric-sql/pglite";
 import type { INestApplication } from "@nestjs/common";
 import { Test } from "@nestjs/testing";
-import request from "supertest";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { type AdminAgent, loginAsAdmin } from "../../core/http/test-admin-agent";
 import { AppModule } from "../../app.module";
 import { configureApp } from "../../core/http/configure-app";
 import type { ApiEnv } from "../../core/http/env";
@@ -61,6 +61,7 @@ type LoanDbRow = {
 };
 
 let client: PGlite;
+let admin: AdminAgent;
 let app: INestApplication;
 let baseUrl: string;
 
@@ -75,6 +76,7 @@ beforeAll(async () => {
   configureApp(app);
   await app.listen(0, "127.0.0.1");
   baseUrl = await app.getUrl();
+  admin = await loginAsAdmin(baseUrl, client);
 });
 afterAll(async () => {
   await app.close();
@@ -125,7 +127,7 @@ async function seedLoan(id: string, loanNumber: string, status: string, personId
 }
 
 async function createDraft(): Promise<LoanBody> {
-  const res = await request(baseUrl).post("/api/v1/loans").send(validBody);
+  const res = await admin.post("/api/v1/loans").send(validBody);
   expect(res.status).toBe(201);
   return res.body as LoanBody;
 }
@@ -150,7 +152,7 @@ async function auditActions(entityId: string): Promise<string[]> {
 
 describe("POST /api/v1/loans (E10-F03, A1 to A4)", () => {
   it("C1 (A1): answers 201 DRAFT with number AAAA-NNNN, no account and the three charges", async () => {
-    const res = await request(baseUrl).post("/api/v1/loans").send(validBody);
+    const res = await admin.post("/api/v1/loans").send(validBody);
     const body = res.body as LoanBody;
     expect(res.status).toBe(201);
     expect(body.status).toBe("DRAFT");
@@ -177,9 +179,7 @@ describe("POST /api/v1/loans (E10-F03, A1 to A4)", () => {
   });
 
   it("C3 (A3): unknown personId answers 400 VALIDATION_FAILED (catalog status) on personId, writing nothing", async () => {
-    const res = await request(baseUrl)
-      .post("/api/v1/loans")
-      .send({ ...validBody, personId: UNKNOWN_PERSON_ID });
+    const res = await admin.post("/api/v1/loans").send({ ...validBody, personId: UNKNOWN_PERSON_ID });
     const body = res.body as LoanBody;
     expect(res.status).toBe(400);
     expect(body.code).toBe("VALIDATION_FAILED");
@@ -189,25 +189,19 @@ describe("POST /api/v1/loans (E10-F03, A1 to A4)", () => {
   });
 
   it("C4: principal zero answers 400 VALIDATION_FAILED on principalCents", async () => {
-    const res = await request(baseUrl)
-      .post("/api/v1/loans")
-      .send({ ...validBody, principalCents: 0 });
+    const res = await admin.post("/api/v1/loans").send({ ...validBody, principalCents: 0 });
     expect(res.status).toBe(400);
     expect((res.body as LoanBody).errors?.map((e) => e.field)).toEqual(["principalCents"]);
   });
 
   it("C5: invalid installment count answers 400 VALIDATION_FAILED on installmentCount", async () => {
-    const res = await request(baseUrl)
-      .post("/api/v1/loans")
-      .send({ ...validBody, type: "SINGLE_PAYMENT", installmentCount: 3 });
+    const res = await admin.post("/api/v1/loans").send({ ...validBody, type: "SINGLE_PAYMENT", installmentCount: 3 });
     expect(res.status).toBe(400);
     expect((res.body as LoanBody).errors?.map((e) => e.field)).toEqual(["installmentCount"]);
   });
 
   it("C6 (D10): INTEREST_ONLY is refused with VALIDATION_FAILED on type", async () => {
-    const res = await request(baseUrl)
-      .post("/api/v1/loans")
-      .send({ ...validBody, type: "INTEREST_ONLY" });
+    const res = await admin.post("/api/v1/loans").send({ ...validBody, type: "INTEREST_ONLY" });
     expect(res.status).toBe(400);
     expect((res.body as LoanBody).errors?.map((e) => e.field)).toEqual(["type"]);
   });
@@ -228,11 +222,9 @@ describe("POST /api/v1/loans (E10-F03, A1 to A4)", () => {
   it("C8 (RN-C11): the response warns with the count of active loans of the person", async () => {
     await seedLoan(ACTIVE_LOAN_ID, "2026-0900", "ACTIVE");
     await seedLoan(CANCELLED_LOAN_ID, "2026-0901", "CANCELLED");
-    const withActive = await request(baseUrl).post("/api/v1/loans").send(validBody);
+    const withActive = await admin.post("/api/v1/loans").send(validBody);
     expect((withActive.body as LoanBody).warning).toEqual({ activeLoansCount: 1 });
-    const other = await request(baseUrl)
-      .post("/api/v1/loans")
-      .send({ ...validBody, personId: OTHER_PERSON_ID });
+    const other = await admin.post("/api/v1/loans").send({ ...validBody, personId: OTHER_PERSON_ID });
     expect((other.body as LoanBody).warning).toEqual({ activeLoansCount: 0 });
   });
 
@@ -245,7 +237,7 @@ describe("POST /api/v1/loans (E10-F03, A1 to A4)", () => {
 
 describe("PATCH /api/v1/loans/{id} (E10-F03, A5 to A7)", () => {
   const patch = (id: string, version: string | undefined, payload: object) => {
-    const req = request(baseUrl).patch(`/api/v1/loans/${id}`);
+    const req = admin.patch(`/api/v1/loans/${id}`);
     return (version === undefined ? req : req.set("If-Match", version)).send(payload);
   };
 
@@ -311,7 +303,7 @@ describe("PATCH /api/v1/loans/{id} (E10-F03, A5 to A7)", () => {
 
 describe("POST /api/v1/loans/{id}/cancel (E10-F03, A8 and A9)", () => {
   const cancel = (id: string, version: string | undefined) => {
-    const req = request(baseUrl).post(`/api/v1/loans/${id}/cancel`);
+    const req = admin.post(`/api/v1/loans/${id}/cancel`);
     return version === undefined ? req.send() : req.set("If-Match", version).send();
   };
 

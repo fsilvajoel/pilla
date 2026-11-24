@@ -2,8 +2,8 @@ import type { PGlite } from "@electric-sql/pglite";
 import type { INestApplication } from "@nestjs/common";
 import { Test } from "@nestjs/testing";
 import { installmentPaidV1, loanPaidOffV1, paymentConfirmedV1, paymentResponse } from "@pilla/schemas";
-import request from "supertest";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { type AdminAgent, loginAsAdmin } from "../../core/http/test-admin-agent";
 import { AppModule } from "../../app.module";
 import { configureApp } from "../../core/http/configure-app";
 import type { ApiEnv } from "../../core/http/env";
@@ -22,6 +22,7 @@ let counter = 100;
 const nextId = (): string => uuid(++counter);
 
 let client: PGlite;
+let admin: AdminAgent;
 let app: INestApplication;
 let baseUrl: string;
 
@@ -37,6 +38,7 @@ beforeAll(async () => {
   app.useLogger(false);
   await app.listen(0, "127.0.0.1");
   baseUrl = await app.getUrl();
+  admin = await loginAsAdmin(baseUrl, client);
 });
 afterAll(async () => {
   await app.close();
@@ -153,7 +155,7 @@ type Body = {
 type Result = { status: number; body: Body };
 
 async function confirm(id: string, version: string | number | null = 1): Promise<Result> {
-  const call = request(baseUrl).post(`/api/v1/payments/${id}/confirm`);
+  const call = admin.post(`/api/v1/payments/${id}/confirm`);
   const res = await (version === null ? call : call.set("If-Match", String(version))).send({});
   return { status: res.status, body: res.body as Body };
 }
@@ -182,7 +184,7 @@ async function expectRefused(id: string, call: () => Promise<Result>): Promise<R
 }
 
 async function loanDetail(): Promise<Body> {
-  const res = await request(baseUrl).get(`/api/v1/loans/${LOAN}`);
+  const res = await admin.get(`/api/v1/loans/${LOAN}`);
   return res.body as Body;
 }
 
@@ -257,7 +259,7 @@ describe("POST /api/v1/payments/{id}/confirm: allocation (E11-F03, A1 to A5)", (
       [id],
     );
     expect(stored.rows[0]).toMatchObject({ status: "CONFIRMED", version: 2 });
-    const listed = await request(baseUrl).get("/api/v1/payments?status=CONFIRMED");
+    const listed = await admin.get("/api/v1/payments?status=CONFIRMED");
     expect((listed.body as { items: { id: string; version: number }[] }).items).toEqual([
       expect.objectContaining({ id, version: 2 }),
     ]);
@@ -297,7 +299,7 @@ describe("POST /api/v1/payments/{id}/confirm: allocation (E11-F03, A1 to A5)", (
     await seedLoan(LOAN, "2026-0001", "ACTIVE");
     await seedSchedule();
     const id = await seedPayment(150000);
-    const preview = await request(baseUrl)
+    const preview = await admin
       .post("/api/v1/payments/allocation-preview")
       .send({ loanId: LOAN, amountCents: 150000, paidAt: "2026-11-20" });
     const previewed = (preview.body as { allocations: (Allocation & { dueDate: string })[] }).allocations.map(
@@ -479,7 +481,7 @@ describe("POST /api/v1/payments/{id}/confirm: PAID_OFF (E11-F03, A9 to A11)", ()
     await seedLoan(LOAN, "2026-0001", "ACTIVE");
     await seedSchedule();
     // Em 19/11 a parcela 4 (vence 20/11) e a 5 ainda não têm encargos: o saldo é outro.
-    const quote = await request(baseUrl).get(`/api/v1/loans/${LOAN}/payoff-quote?date=2026-11-19`);
+    const quote = await admin.get(`/api/v1/loans/${LOAN}/payoff-quote?date=2026-11-19`);
     const amount = (quote.body as { amountCents: number }).amountCents;
     await confirm(await seedPayment(amount, { paidAt: "2026-11-19" }));
     const events = await outboxOf("LoanPaidOff");
@@ -501,7 +503,7 @@ describe("POST /api/v1/payments/{id}/confirm: PAID_OFF (E11-F03, A9 to A11)", ()
   it("C14 (A11): a payment equal to the payoff quote of the date pays the loan off", async () => {
     await seedLoan(LOAN, "2026-0001", "ACTIVE");
     await seedSchedule();
-    const quote = await request(baseUrl).get(`/api/v1/loans/${LOAN}/payoff-quote?date=2026-11-20`);
+    const quote = await admin.get(`/api/v1/loans/${LOAN}/payoff-quote?date=2026-11-20`);
     const amount = (quote.body as { amountCents: number }).amountCents;
     expect(amount).toBe(613500);
     const { body } = await confirm(await seedPayment(amount));
@@ -522,7 +524,7 @@ describe("POST /api/v1/payments/{id}/confirm: DRAFT loan (E11-F03, A12, A13)", (
     await seedLoan(LOAN, "2026-0001", "DRAFT");
     const id = await seedPayment(10000);
     expect((await confirm(id)).status).toBe(409);
-    const activated = await request(baseUrl)
+    const activated = await admin
       .post(`/api/v1/loans/${LOAN}/activate`)
       .set("If-Match", "1")
       .send({ disbursedAt: "2026-08-20", accountId: ACCOUNT });
@@ -668,10 +670,7 @@ describe("POST /api/v1/payments/{id}/confirm: refusals (E11-F03, A15 to A20)", (
     await seedLoan(LOAN, "2026-0001", "ACTIVE");
     await seedSchedule();
     const id = await seedPayment(126000);
-    const res = await request(baseUrl)
-      .post(`/api/v1/payments/${id}/confirm`)
-      .set("If-Match", "1")
-      .send({ amountCents: 1 });
+    const res = await admin.post(`/api/v1/payments/${id}/confirm`).set("If-Match", "1").send({ amountCents: 1 });
     expect(res.status).toBe(400);
     expect((res.body as Body).code).toBe("VALIDATION_FAILED");
     expect((await countRows())["payments.payment_allocations"]).toBe(0);
@@ -681,7 +680,7 @@ describe("POST /api/v1/payments/{id}/confirm: refusals (E11-F03, A15 to A20)", (
     await seedLoan(LOAN, "2026-0001", "ACTIVE");
     await seedSchedule();
     const id = await seedPayment(126000);
-    const res = await request(baseUrl).post(`/api/v1/payments/${id}/confirm`).set("If-Match", "1");
+    const res = await admin.post(`/api/v1/payments/${id}/confirm`).set("If-Match", "1");
     expect(res.status).toBe(200);
   });
 });

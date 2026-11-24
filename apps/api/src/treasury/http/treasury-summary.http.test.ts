@@ -2,8 +2,8 @@ import type { PGlite } from "@electric-sql/pglite";
 import type { INestApplication } from "@nestjs/common";
 import { Test } from "@nestjs/testing";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
-import request from "supertest";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { type AdminAgent, loginAsAdmin } from "../../core/http/test-admin-agent";
 import { AppModule } from "../../app.module";
 import { configureApp } from "../../core/http/configure-app";
 import type { ApiEnv } from "../../core/http/env";
@@ -46,9 +46,13 @@ type Summary = {
 };
 
 let client: PGlite;
+let admin: AdminAgent;
 let db: PgliteDatabase;
 let app: INestApplication;
 let baseUrl: string;
+
+/** Entra de novo no relógio atual do teste: a sessão não pode parecer vencida quando o teste muda a data. */
+const signIn = (): Promise<AdminAgent> => loginAsAdmin(baseUrl, client);
 
 beforeAll(async () => {
   const migrated = await migratedTestDb();
@@ -71,6 +75,7 @@ afterAll(async () => {
 beforeEach(async () => {
   vi.useFakeTimers({ toFake: ["Date"] });
   vi.setSystemTime(new Date("2026-12-05T15:00:00Z"));
+  admin = await signIn();
   for (const table of [
     "treasury.ledger_entries",
     "payments.payment_allocations",
@@ -116,7 +121,7 @@ async function seedCapital(id: string, amountCents: number, type: "CAPITAL_IN" |
 }
 
 async function activate(): Promise<void> {
-  const res = await request(baseUrl)
+  const res = await admin
     .post(`/api/v1/loans/${LOAN}/activate`)
     .set("If-Match", "1")
     .send({ disbursedAt: "2026-11-14", accountId: ACCOUNT });
@@ -131,13 +136,13 @@ async function pay(paidAt: string, amountCents: number): Promise<void> {
      values ($1, $2, $3, $4, $5, $6, 'PIX', 'ADMIN', 'PENDING_REVIEW', $7, 1)`,
     [PAYMENT, LOAN, PERSON, ACCOUNT, paidAt, amountCents, USER],
   );
-  const res = await request(baseUrl).post(`/api/v1/payments/${PAYMENT}/confirm`).set("If-Match", "1").send({});
+  const res = await admin.post(`/api/v1/payments/${PAYMENT}/confirm`).set("If-Match", "1").send({});
   expect(res.status).toBe(200);
   await dispatch();
 }
 
 async function reverse(): Promise<void> {
-  const res = await request(baseUrl)
+  const res = await admin
     .post(`/api/v1/payments/${PAYMENT}/reverse`)
     .set("If-Match", "2")
     .send({ reason: "pagamento lançado em duplicidade" });
@@ -146,7 +151,7 @@ async function reverse(): Promise<void> {
 }
 
 async function writeOff(): Promise<void> {
-  const res = await request(baseUrl)
+  const res = await admin
     .post(`/api/v1/loans/${LOAN}/write-off`)
     .set("If-Match", "2")
     .send({ reason: "Devedor sem localização há 120 dias" });
@@ -160,7 +165,7 @@ async function dispatch(): Promise<void> {
 }
 
 async function summary(month?: string): Promise<Summary> {
-  const req = request(baseUrl).get("/api/v1/treasury/summary");
+  const req = admin.get("/api/v1/treasury/summary");
   const res = await (month === undefined ? req : req.query({ month }));
   expect(res.status).toBe(200);
   return res.body as Summary;
@@ -234,6 +239,7 @@ describe("GET /api/v1/treasury/summary (E12-F04, D7)", () => {
     await activate();
     await pay("2026-12-05", INSTALLMENT + FIRST_LATE_FEE);
     vi.setSystemTime(new Date("2027-01-05T15:00:00Z"));
+    admin = await signIn();
     await reverse();
     // O estorno é lançado em 2027-01-05: janeiro recebe os componentes negativos, dezembro fica como estava.
     // Previsão de janeiro: parcela 3 (vence 2027-01-30), 1.150.000; as parcelas 1 e 2 vencem fora do mês.
@@ -256,6 +262,7 @@ describe("GET /api/v1/treasury/summary (E12-F04, D7)", () => {
 
   it("C5 (A5): writing off moves the principal from lent to losses; recovery goes to cash, not to interest", async () => {
     vi.setSystemTime(new Date("2026-11-20T15:00:00Z"));
+    admin = await signIn();
     await seedCapital(CAPITAL_ENTRY, CAPITAL, "CAPITAL_IN");
     await activate();
     await writeOff();
@@ -315,7 +322,7 @@ describe("GET /api/v1/treasury/summary (E12-F04, D7)", () => {
   });
 
   it.each(["2027-13", "2027-1", "01/2027", "1999-12"])("C8 a C10 (A9): month %j answers 400", async (month) => {
-    const res = await request(baseUrl).get("/api/v1/treasury/summary").query({ month });
+    const res = await admin.get("/api/v1/treasury/summary").query({ month });
     expect(res.status).toBe(400);
     expect(res.body).toMatchObject({ code: "VALIDATION_FAILED" });
   });
